@@ -1,0 +1,16 @@
+{
+  "slug": "story-engine",
+  "title": "Story Engine",
+  "tagline": "A branching story where some choices only appear once you carry the right thing, and a page to paste in your own.",
+  "category": "casual",
+  "kind": "nodegx",
+  "play": "play/index.html",
+  "readiness": "A",
+  "readinessNote": "The whole story is one JSON list of passages (Story/Source) with four words: goto, gives, requires, and no choices for an ending. Readers can paste their own story on the remix page and play it at once, with mistakes named in plain words.",
+  "buildYourOwn": "Your own story: passages, choices, things to carry and locked choices.",
+  "controls": "Click or tap",
+  "devices": ["desktop", "tablet", "phone"],
+  "languages": ["en"],
+  "tags": ["interactive-fiction", "story", "writing", "nodegx"],
+  "licence": "GPL-3.0 for the project (as in the NodeGX repository it came from); MIT for the NodeGX runtime in play/; assets as listed in CREDITS.md"
+}

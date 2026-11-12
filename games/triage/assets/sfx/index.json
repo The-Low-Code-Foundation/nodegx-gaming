@@ -1,0 +1,265 @@
+{
+ "shot": [
+  "shot-01.mp3",
+  "shot-02.mp3",
+  "shot-03.mp3",
+  "shot-04.mp3",
+  "shot-05.mp3",
+  "shot-06.mp3",
+  "shot-07.mp3",
+  "shot-08.mp3"
+ ],
+ "smg": [
+  "smg-01.mp3",
+  "smg-02.mp3",
+  "smg-03.mp3",
+  "smg-04.mp3",
+  "smg-05.mp3",
+  "smg-06.mp3"
+ ],
+ "rifle": [
+  "rifle-01.mp3",
+  "rifle-02.mp3",
+  "rifle-03.mp3",
+  "rifle-04.mp3",
+  "rifle-05.mp3",
+  "rifle-06.mp3",
+  "rifle-07.mp3"
+ ],
+ "shotgun": [
+  "shotgun-01.mp3",
+  "shotgun-02.mp3",
+  "shotgun-03.mp3",
+  "shotgun-04.mp3",
+  "shotgun-05.mp3",
+  "shotgun-06.mp3"
+ ],
+ "rack": [
+  "rack-01.mp3",
+  "rack-02.mp3",
+  "rack-03.mp3"
+ ],
+ "reload": [
+  "reload-01.mp3",
+  "reload-02.mp3",
+  "reload-03.mp3",
+  "reload-04.mp3",
+  "reload-05.mp3"
+ ],
+ "empty": [
+  "empty-01.mp3",
+  "empty-02.mp3",
+  "empty-03.mp3",
+  "empty-04.mp3",
+  "empty-05.mp3"
+ ],
+ "impact": [
+  "impact-01.mp3",
+  "impact-02.mp3",
+  "impact-03.mp3",
+  "impact-04.mp3",
+  "impact-05.mp3",
+  "impact-06.mp3",
+  "impact-07.mp3",
+  "impact-08.mp3"
+ ],
+ "flesh": [
+  "flesh-01.mp3",
+  "flesh-02.mp3",
+  "flesh-03.mp3",
+  "flesh-04.mp3",
+  "flesh-05.mp3",
+  "flesh-06.mp3",
+  "flesh-07.mp3",
+  "flesh-08.mp3"
+ ],
+ "headshot": [
+  "headshot-01.mp3",
+  "headshot-02.mp3",
+  "headshot-03.mp3",
+  "headshot-04.mp3",
+  "headshot-05.mp3",
+  "headshot-06.mp3"
+ ],
+ "swing": [
+  "swing-01.mp3",
+  "swing-02.mp3",
+  "swing-03.mp3",
+  "swing-04.mp3",
+  "swing-05.mp3",
+  "swing-06.mp3",
+  "swing-07.mp3"
+ ],
+ "stab": [
+  "stab-01.mp3",
+  "stab-02.mp3",
+  "stab-03.mp3",
+  "stab-04.mp3"
+ ],
+ "bat": [
+  "bat-01.mp3",
+  "bat-02.mp3",
+  "bat-03.mp3",
+  "bat-04.mp3",
+  "bat-05.mp3",
+  "bat-06.mp3",
+  "bat-07.mp3",
+  "bat-08.mp3"
+ ],
+ "growl": [
+  "growl-01.mp3",
+  "growl-02.mp3",
+  "growl-03.mp3",
+  "growl-04.mp3",
+  "growl-05.mp3",
+  "growl-06.mp3",
+  "growl-07.mp3",
+  "growl-08.mp3",
+  "growl-09.mp3",
+  "growl-10.mp3",
+  "growl-11.mp3",
+  "growl-12.mp3",
+  "growl-13.mp3",
+  "growl-14.mp3",
+  "growl-15.mp3",
+  "growl-16.mp3",
+  "growl-17.mp3",
+  "growl-18.mp3",
+  "growl-19.mp3"
+ ],
+ "snarl": [
+  "snarl-01.mp3",
+  "snarl-02.mp3",
+  "snarl-03.mp3",
+  "snarl-04.mp3",
+  "snarl-05.mp3",
+  "snarl-06.mp3",
+  "snarl-07.mp3",
+  "snarl-08.mp3",
+  "snarl-09.mp3",
+  "snarl-10.mp3",
+  "snarl-11.mp3",
+  "snarl-12.mp3",
+  "snarl-13.mp3",
+  "snarl-14.mp3",
+  "snarl-15.mp3",
+  "snarl-16.mp3"
+ ],
+ "moan": [
+  "moan-01.mp3",
+  "moan-02.mp3",
+  "moan-03.mp3",
+  "moan-04.mp3",
+  "moan-05.mp3",
+  "moan-06.mp3",
+  "moan-07.mp3",
+  "moan-08.mp3",
+  "moan-09.mp3",
+  "moan-10.mp3",
+  "moan-11.mp3",
+  "moan-12.mp3",
+  "moan-13.mp3",
+  "moan-14.mp3",
+  "moan-15.mp3",
+  "moan-16.mp3",
+  "moan-17.mp3",
+  "moan-18.mp3",
+  "moan-19.mp3"
+ ],
+ "zdeath": [
+  "zdeath-01.mp3",
+  "zdeath-02.mp3",
+  "zdeath-03.mp3",
+  "zdeath-04.mp3",
+  "zdeath-05.mp3",
+  "zdeath-06.mp3",
+  "zdeath-07.mp3"
+ ],
+ "bite": [
+  "bite-01.mp3",
+  "bite-02.mp3",
+  "bite-03.mp3",
+  "bite-04.mp3",
+  "bite-05.mp3",
+  "bite-06.mp3",
+  "bite-07.mp3"
+ ],
+ "bang": [
+  "bang-01.mp3",
+  "bang-02.mp3",
+  "bang-03.mp3",
+  "bang-04.mp3",
+  "bang-05.mp3",
+  "bang-06.mp3",
+  "bang-07.mp3",
+  "bang-08.mp3"
+ ],
+ "fall": [
+  "fall-01.mp3",
+  "fall-02.mp3",
+  "fall-03.mp3",
+  "fall-04.mp3",
+  "fall-05.mp3",
+  "fall-06.mp3"
+ ],
+ "crawl": [
+  "crawl-01.mp3",
+  "crawl-02.mp3",
+  "crawl-03.mp3",
+  "crawl-04.mp3",
+  "crawl-05.mp3"
+ ],
+ "scream": [
+  "scream-01.mp3",
+  "scream-02.mp3",
+  "scream-03.mp3",
+  "scream-04.mp3"
+ ],
+ "hurt": [
+  "hurt-01.mp3",
+  "hurt-02.mp3",
+  "hurt-03.mp3",
+  "hurt-04.mp3",
+  "hurt-05.mp3",
+  "hurt-06.mp3",
+  "hurt-07.mp3"
+ ],
+ "door": [
+  "door-01.mp3",
+  "door-02.mp3",
+  "door-03.mp3",
+  "door-04.mp3",
+  "door-05.mp3",
+  "door-06.mp3"
+ ],
+ "pickup": [
+  "pickup-01.mp3",
+  "pickup-02.mp3",
+  "pickup-03.mp3",
+  "pickup-04.mp3"
+ ],
+ "heal": [
+  "heal-01.mp3",
+  "heal-02.mp3",
+  "heal-03.mp3"
+ ],
+ "heart": [
+  "heart-01.mp3",
+  "heart-02.mp3",
+  "heart-03.mp3",
+  "heart-04.mp3",
+  "heart-05.mp3"
+ ],
+ "step": [
+  "step-01.mp3",
+  "step-02.mp3",
+  "step-03.mp3",
+  "step-04.mp3",
+  "step-05.mp3",
+  "step-06.mp3",
+  "step-07.mp3",
+  "step-08.mp3",
+  "step-09.mp3",
+  "step-10.mp3"
+ ]
+}

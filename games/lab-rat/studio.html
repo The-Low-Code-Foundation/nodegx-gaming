@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Lab Rat — model studio</title>
+    <style>
+      html, body { margin: 0; height: 100%; background: #0b0c0e; color: #cfd3d8; font: 13px ui-monospace, Menlo, monospace; overflow: hidden; }
+      #bar { position: fixed; top: 10px; left: 10px; display: flex; gap: 6px; flex-wrap: wrap; z-index: 2; }
+      #bar button { background: #1a1d21; color: #cfd3d8; border: 1px solid #2c3036; padding: 6px 10px; cursor: pointer; font: inherit; }
+      #bar button.on { background: #e8a33a; color: #111; border-color: #e8a33a; }
+      #hint { position: fixed; bottom: 10px; left: 10px; opacity: 0.6; }
+    </style>
+    <script type="importmap">
+      { "imports": { "three": "./vendor/three/three.module.js", "three/addons/": "./vendor/three-addons/" } }
+    </script>
+  </head>
+  <body>
+    <div id="bar"></div>
+    <div id="hint">drag to turn · wheel to zoom · ?m=skitter&amp;a=windup&amp;dark=1</div>
+    <script type="module" src="src/studio.mjs"></script>
+  </body>
+</html>

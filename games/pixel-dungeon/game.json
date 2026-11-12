@@ -1,0 +1,16 @@
+{
+  "slug": "pixel-dungeon",
+  "title": "Pixel Dungeon",
+  "tagline": "A five-room turn-based dungeon: grab the coins, find the way out, and watch what follows you.",
+  "category": "casual",
+  "kind": "nodegx",
+  "play": "play/index.html",
+  "readiness": "A",
+  "readinessNote": "Every room is a 12×9 text grid in one JSON list (Pages/Play): walls, floor, coins, creatures, start and exit are characters. Add a room by adding an entry; no code. New tile kinds need a state in Game/Cell and a check in Game/Move.",
+  "buildYourOwn": "Rooms, tile looks, the number of hearts; new tile kinds with a little graph work.",
+  "controls": "Arrow keys or WASD",
+  "devices": ["desktop"],
+  "languages": ["en"],
+  "tags": ["dungeon", "turn-based", "puzzle", "nodegx"],
+  "licence": "GPL-3.0 for the project (as in the NodeGX repository it came from); MIT for the NodeGX runtime in play/; assets as listed in CREDITS.md"
+}

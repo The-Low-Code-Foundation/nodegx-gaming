@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Triage · weapons</title>
+    <!-- A dev page: the weapon models of src/guns.mjs side by side. ?only=pistol for a close-up, &yaw=deg, &pitch=deg,
+         &side=1 for a flat side view, &markers=1 for the grip (blue), muzzle (red) and support (green) points,
+         &dim=1 for something like the ward's light. -->
+    <style>
+      html, body { margin: 0; height: 100%; background: #8c8f93; overflow: hidden; }
+      #info { position: fixed; left: 8px; top: 6px; font: 12px/1.4 ui-monospace, Menlo, monospace; color: #111; white-space: pre; }
+    </style>
+    <script type="importmap">
+      { "imports": { "three": "./vendor/three/three.module.js", "three/addons/": "./vendor/three-addons/" } }
+    </script>
+  </head>
+  <body>
+    <div id="info"></div>
+    <script type="module" src="./src/guns-view.mjs"></script>
+  </body>
+</html>

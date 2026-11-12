@@ -1,0 +1,213 @@
+/* The life prototype's own pieces, on top of ../style.css (the spike's panels and buttons). Big and plain: it is for
+   children on a tablet. */
+#hud { width: 250px; }
+#clock { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
+#speeds button { min-width: 44px; font-size: 16px; }
+
+#mood { display: flex; align-items: center; gap: 10px; font-size: 18px; font-weight: 600; }
+#mood .face { font-size: 34px; line-height: 1; }
+#moodlets { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+.moodlet { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 12px; font-size: 12px; background: #eef6ee; border: 1px solid #cfe5cf; }
+.moodlet.bad { background: #fbeeee; border-color: #efcfcf; }
+.moodlet small { color: var(--muted); }
+
+.need { display: grid; grid-template-columns: 22px 64px 1fr; align-items: center; gap: 6px; margin: 4px 0; font-size: 13px; }
+.need .icon { font-size: 16px; text-align: center; }
+.bar { height: 12px; border-radius: 6px; background: rgba(0, 0, 0, 0.08); overflow: hidden; }
+.bar > i { display: block; height: 100%; border-radius: 6px; transition: width 0.3s linear, background-color 0.3s; }
+
+.skill { display: grid; grid-template-columns: 22px 1fr auto; align-items: center; gap: 6px; font-size: 13px; }
+.skill .bar { grid-column: 2 / 4; }
+.skill .bar > i { background: #6b7fd7; }
+
+#self button { font-size: 13px; }
+#fw-row { font-size: 13px; cursor: pointer; }
+
+#todo { position: fixed; left: 50%; bottom: 64px; transform: translateX(-50%); display: flex; gap: 8px; align-items: flex-end; }
+#todo .task { position: relative; width: 58px; height: 58px; border-radius: 14px; background: var(--panel); box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15); display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; border: 2px solid transparent; font-size: 22px; }
+#todo .task.now { width: 72px; height: 72px; border-color: var(--accent); font-size: 28px; }
+#todo .task small { font-size: 9px; line-height: 1.1; text-align: center; color: var(--muted); max-width: 64px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+#todo .task .by { position: absolute; top: -6px; right: -6px; font-size: 13px; }
+#todo .task .progress { position: absolute; left: 6px; right: 6px; bottom: 4px; height: 3px; border-radius: 2px; background: rgba(0, 0, 0, 0.08); }
+#todo .task .progress i { display: block; height: 100%; background: var(--accent); border-radius: 2px; }
+#todo .empty { background: var(--panel); padding: 7px 14px; border-radius: 14px; font-size: 13px; color: var(--muted); }
+
+#menu { position: fixed; z-index: 5; background: var(--panel); border-radius: 14px; padding: 6px; box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25); display: flex; flex-direction: column; gap: 4px; min-width: 170px; }
+#menu button { text-align: left; font-size: 15px; padding: 8px 12px; display: flex; gap: 8px; align-items: center; }
+#menu .gain { margin-left: auto; font-size: 12px; color: var(--muted); }
+
+.bubble { position: fixed; z-index: 4; transform: translate(-50%, -100%); background: #fff; border-radius: 18px; padding: 6px 12px; box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2); font-size: 14px; white-space: nowrap; pointer-events: none; display: flex; align-items: center; gap: 6px; }
+.bubble .icon { font-size: 24px; }
+.bubble::after { content: ''; position: absolute; left: 50%; bottom: -8px; width: 14px; height: 14px; background: #fff; border-radius: 50%; transform: translateX(-50%); }
+.bubble[hidden] { display: none; }
+.heart { position: fixed; z-index: 4; font-size: 22px; pointer-events: none; transform: translate(-50%, -50%); animation: float-up 2.2s ease-out forwards; opacity: 0; }
+@keyframes float-up { 0% { opacity: 0; transform: translate(-50%, 0) scale(0.6); } 15% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -90px) scale(1.15); } }
+
+/* Who lives here (top right): pick who you look after; the friendship and romance between them. Settings below it. */
+#right { position: fixed; top: 12px; right: 12px; width: 230px; display: flex; flex-direction: column; gap: 8px; }
+.setting { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); }
+.setting select { font: inherit; font-size: 14px; padding: 4px 6px; border-radius: 8px; border: 1px solid var(--line); color: var(--ink); background: #fff; }
+#who { gap: 6px; }
+#who button { font-size: 14px; display: flex; align-items: center; gap: 6px; padding: 6px 10px; }
+#who .face { font-size: 18px; line-height: 1; }
+.pair { margin-top: 8px; font-size: 12px; color: var(--muted); }
+.bond { display: grid; grid-template-columns: 20px auto 1fr; align-items: center; gap: 4px 6px; font-size: 13px; margin-top: 4px; }
+.bond b { font-size: 12px; text-align: right; font-weight: 600; }
+.bond .bar { grid-column: 1 / 4; }
+.bar.two { position: relative; }
+.bar.two > i { position: absolute; top: 0; }
+.bar.two::after { content: ''; position: absolute; left: 50%; top: 0; bottom: 0; width: 2px; background: rgba(0, 0, 0, 0.25); }
+#menu .with { font-weight: 700; padding: 4px 10px 2px; display: flex; flex-direction: column; }
+#menu .with small { font-weight: 400; color: var(--muted); font-size: 12px; }
+#menu .note { padding: 6px 10px; color: var(--muted); }
+#menu button[disabled] { opacity: 0.5; cursor: default; }
+#todo .task .with { font-size: 9px; color: var(--muted); }
+
+#toasts { position: fixed; top: 72px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; gap: 6px; align-items: center; pointer-events: none; }
+#toasts div { background: var(--ink); color: #fff; padding: 7px 14px; border-radius: 20px; font-size: 14px; }
+#loading:empty { display: none; }
+
+/* Money and the job (round 8). */
+#money { margin-top: 6px; font-size: 17px; font-weight: 700; font-variant-numeric: tabular-nums; }
+#self .cost { font-size: 11px; color: var(--muted); }
+#self button[disabled] { opacity: 0.5; cursor: default; }
+#self button[hidden] { display: none; }
+#job { font-size: 13px; }
+#job .title { font-size: 15px; }
+#job .line { color: var(--muted); font-size: 12px; margin-top: 2px; }
+#job .none { font-weight: 600; }
+#job .promo { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 8px; margin-top: 6px; font-size: 12px; }
+#job .promo .bar > i { background: #e6a23c; }
+#job .note { margin-top: 6px; font-size: 12px; }
+#job .note.review { font-weight: 600; color: #b5641b; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+#job .quit { margin-top: 8px; font-size: 11px; color: var(--muted); padding: 3px 8px; }
+#todo .task .by { pointer-events: none; }
+
+/* A card (the jobs going; a promotion's STEM task): big and calm, in the middle, the game waiting behind it. */
+#card-back { position: fixed; inset: 0; z-index: 8; background: rgba(20, 28, 40, 0.35); }
+#card { position: fixed; z-index: 9; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(520px, calc(100% - 32px)); max-height: calc(100% - 32px); overflow-y: auto; box-sizing: border-box; background: var(--panel); border-radius: 18px; padding: 20px 22px; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3); }
+#card[hidden], #card-back[hidden] { display: none; }
+#card h2 { margin: 0 0 10px; font-size: 20px; }
+#card .intro { margin: 0 0 6px; color: var(--muted); font-size: 15px; }
+#card .question { font-size: 21px; line-height: 1.35; margin: 8px 0 14px; font-weight: 600; }
+#card .answers { display: flex; flex-direction: column; gap: 10px; }
+#card .answers button { font-size: 20px; padding: 14px; border-radius: 14px; border-width: 2px; text-align: center; }
+#card .answers button.right { background: #e3f4e3; border-color: #4caf50; }
+#card .answers button.wrong { background: #fbeaea; border-color: #e07a6a; }
+#card .answers button[disabled] { cursor: default; color: var(--ink); }
+#card .calm { color: var(--muted); font-size: 13px; margin: 12px 0 0; }
+#card .result { margin-top: 14px; padding: 12px 14px; border-radius: 12px; font-size: 16px; line-height: 1.4; }
+#card .result.yes { background: #eef8ee; }
+#card .result.no { background: #fdf5e8; }
+#card .actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+#card .actions button, #card .go { font-size: 16px; padding: 9px 16px; border-radius: 12px; }
+#card .go { background: var(--accent); color: #fff; border-color: var(--accent); }
+#card .offer { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; padding: 10px 0; font-size: 14px; }
+#card .offer .big { font-size: 34px; }
+
+/* Round 9: where (home, work, the park: the one shown, and who is in each), the stations at work, a station's card. */
+#places { position: fixed; top: 12px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; z-index: 3; }
+#places button { display: flex; flex-direction: column; align-items: center; font-size: 15px; padding: 6px 14px; border-radius: 14px; background: var(--panel); box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15); min-width: 84px; }
+#places button.on { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 700; }
+#places button.on small { color: rgba(255, 255, 255, 0.85); }
+#places small { font-size: 11px; color: var(--muted); font-weight: 400; }
+#job .stations { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-top: 8px; }
+#job .stations .line { grid-column: 1 / 3; }
+#job .stations button { font-size: 12px; padding: 5px 6px; text-align: left; }
+#job .stations button.done { background: #eef8ee; border-color: #9fd49f; }
+#job .stations b { color: #2f9e5b; }
+#job .hint { color: var(--muted); font-size: 12px; margin: 6px 0 0; }
+#workmates h3 { margin: 12px 0 0; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+#card .levels { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 6px 0 10px; font-size: 13px; color: var(--muted); }
+#card .levels button { font-size: 15px; padding: 6px 10px; border-radius: 10px; min-width: 48px; }
+#card .levels button.on { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 700; }
+#card .what { font-weight: 600; margin: 4px 0 8px; font-size: 16px; }
+#card .topics { display: flex; flex-direction: column; gap: 8px; }
+#card .topics button { font-size: 17px; padding: 11px 14px; border-radius: 12px; text-align: left; }
+#card .topics button.mix { font-weight: 700; }
+#card .topics small { color: var(--muted); font-size: 12px; }
+#card .count { color: var(--muted); font-size: 13px; margin: 0; }
+#card .question { white-space: pre-line; }
+
+/* Round 10: the buy menu, placing what is bought, the start, create-a-Sim, a new look. */
+#buy { margin-top: 8px; width: 100%; font-size: 15px; padding: 8px 10px; border-radius: 12px; font-weight: 600; }
+#buy[hidden] { display: none; }
+#card .tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 4px; }
+#card .tabs button { font-size: 14px; padding: 6px 12px; border-radius: 12px; }
+#card .tabs button.on { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 700; }
+#card .lovely { margin: 4px 0; font-size: 14px; color: var(--muted); }
+#card .lovely b { color: #d65d8f; letter-spacing: 2px; }
+#card .offer button[disabled] { opacity: 0.45; cursor: default; }
+#place-bar { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 6; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: center; background: var(--panel); padding: 10px 14px; border-radius: 16px; box-shadow: 0 4px 18px rgba(0, 0, 0, 0.25); font-size: 15px; max-width: calc(100% - 32px); box-sizing: border-box; }
+#place-bar[hidden] { display: none; }
+#place-bar button { font-size: 15px; padding: 7px 12px; border-radius: 12px; }
+#place-bar small { flex-basis: 100%; text-align: center; color: var(--muted); font-size: 13px; }
+body:has(#place-bar:not([hidden])) #todo, body:has(#place-bar:not([hidden])) #hint { display: none; }
+#settings .saved { margin-top: 10px; font-size: 12px; color: var(--muted); }
+#settings #new-game { margin-top: 6px; font-size: 12px; padding: 4px 10px; }
+
+/* The look rows (create-a-Sim and the chest of drawers). */
+.look h3, #create h3 { margin: 12px 0 4px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+.chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.chips button { padding: 4px 9px; font-size: 13px; border-radius: 10px; }
+.chips button.on { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 600; }
+.swatches { display: flex; flex-wrap: wrap; gap: 5px; margin: 2px 0; }
+.swatches button { width: 28px; height: 28px; padding: 0; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 0 1px var(--line); }
+.swatches button.on { box-shadow: 0 0 0 3px var(--accent); }
+.swatches button.plain { width: auto; border-radius: 10px; padding: 0 10px; font-size: 12px; background: #fff; color: var(--ink); }
+.slider { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
+.slider input { flex: 1; }
+.slider span { width: 52px; }
+.slider span:last-child { text-align: right; }
+.note { font-size: 12px; color: var(--muted); min-height: 1em; margin: 6px 0 0; }
+.note.warn { color: #b5641b; font-weight: 600; }
+#card.side { left: 12px; top: 12px; transform: none; width: min(380px, calc(100% - 24px)); max-height: calc(100% - 24px); }
+#card-back.clear { background: transparent; }
+
+/* Create your own Sim: a panel on the left, the Sim on a stand beside it; the game's panels hidden meanwhile. */
+body.creating #hud, body.creating #right, body.creating #places, body.creating #todo, body.creating #hint, body.creating #toasts { display: none; }
+#create { position: fixed; z-index: 7; left: 12px; top: 12px; bottom: 12px; width: min(380px, calc(100% - 24px)); overflow-y: auto; box-sizing: border-box; background: var(--panel); border-radius: 18px; padding: 18px 20px; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2); }
+#create[hidden] { display: none; }
+#create h2 { margin: 0 0 4px; font-size: 22px; }
+#create .intro { margin: 0 0 6px; color: var(--muted); font-size: 14px; }
+#create .who { display: flex; align-items: flex-start; gap: 6px; }
+#create .who > button { font-size: 16px; padding: 4px 8px; }
+#create input#create-name { font: inherit; font-size: 18px; padding: 6px 10px; border-radius: 10px; border: 1px solid var(--line); width: 100%; box-sizing: border-box; }
+#create .levels { display: flex; flex-wrap: wrap; gap: 6px; }
+#create .levels button { font-size: 15px; padding: 6px 10px; border-radius: 10px; min-width: 48px; }
+#create .levels button.on { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 700; }
+#create .actions { display: flex; gap: 8px; margin-top: 16px; position: sticky; bottom: -18px; background: var(--panel); padding: 10px 0; }
+#create .actions button { font-size: 16px; padding: 10px 14px; border-radius: 12px; }
+#create .go { flex: 1; background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 700; }
+#create .go[disabled] { opacity: 0.5; cursor: default; }
+
+/* Round 12: a baby — in the "Who lives here" panel, and the welcome card's name field and blanket swatches. */
+.baby { margin-top: 8px; padding: 6px 8px; border-radius: 10px; background: #fff6fa; border: 1px solid var(--line); }
+.baby .who { display: flex; align-items: center; gap: 6px; font-size: 13px; }
+.baby .who .face { font-size: 18px; line-height: 1; }
+.baby .who small { color: var(--muted); }
+.baby .need { grid-template-columns: 22px 1fr; margin: 2px 0; }
+/* Round 13: who looks after the babies while everyone is out. */
+.care { margin-top: 6px; font-size: 12px; }
+.care .where { margin-bottom: 4px; font-weight: 700; }
+.care .choice { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.care .choice span { color: var(--muted); margin-right: 2px; }
+.care .choice button { font-size: 12px; padding: 3px 8px; border-radius: 10px; }
+.care .choice button.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+#card .levels button.swatch { min-width: 0; width: 30px; height: 30px; padding: 0; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 0 1px var(--line); }
+#card .levels button.swatch.on { box-shadow: 0 0 0 3px var(--accent); background-clip: padding-box; }
+#card .baby-name input { font: inherit; font-size: 16px; padding: 6px 10px; border-radius: 10px; border: 1px solid var(--line); width: 160px; }
+
+/* Round 14: the town. Friends (colleagues and neighbours) with a way round to theirs and a way to ask them round; the
+   town card's rows with two buttons; the extension's price under its label. */
+#workmates { max-height: 38vh; overflow-y: auto; }
+.friend { padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+.friend:last-child { border-bottom: 0; }
+.friend-go { display: flex; align-items: center; gap: 4px; margin-top: 4px; }
+.friend-go small { flex: 1; font-size: 11px; color: var(--muted); }
+.friend-go button { font-size: 12px; padding: 3px 8px; border-radius: 10px; }
+#card .town .btns { display: flex; gap: 6px; align-items: center; }
+#card .town .btns button { display: flex; flex-direction: column; align-items: center; line-height: 1.15; }
+#card .town .btns button small { font-size: 11px; opacity: 0.85; }
+#card .town b small { font-weight: 400; color: var(--muted); font-size: 11px; }
+#card .actions small { font-size: 12px; }

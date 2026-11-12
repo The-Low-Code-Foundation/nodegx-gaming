@@ -1,0 +1,31 @@
+{
+  "$schema": "https://opennoodl.dev/schemas/connections-v2.json",
+  "componentId": "9d2b9019-80ee-566b-9716-7230a5a52a4f",
+  "version": 1,
+  "connections": [
+    {
+      "fromId": "oliveswitchIn",
+      "fromProperty": "nonce",
+      "toId": "oliveswitchFn",
+      "toProperty": "in-nonce"
+    },
+    {
+      "fromId": "oliveswitchFn",
+      "fromProperty": "out-on",
+      "toId": "oliveswitchOut",
+      "toProperty": "on"
+    },
+    {
+      "fromId": "oliveswitchFn",
+      "fromProperty": "out-off",
+      "toId": "oliveswitchOut",
+      "toProperty": "off"
+    },
+    {
+      "fromId": "oliveswitchFn",
+      "fromProperty": "out-checked",
+      "toId": "oliveswitchOut",
+      "toProperty": "checked"
+    }
+  ]
+}

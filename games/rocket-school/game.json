@@ -1,0 +1,16 @@
+{
+  "slug": "rocket-school",
+  "title": "Rocket School",
+  "tagline": "Race the computer to a planet by answering maths, French, English, history and typing questions; four games, one learner model.",
+  "category": "educational",
+  "kind": "nodegx",
+  "play": "play/index.html",
+  "readiness": "A",
+  "readinessNote": "The curriculum is data: 108 skills in one JSON list (Data/Curriculum), 26 explainer cards and every word on screen in two more. A fact bank needs no code at all; a new kind of generated question is one function in Logic/Pick next question. Star Class, beside it, is the same game re-cut for another school system.",
+  "buildYourOwn": "Your own school: other classes, subjects, question banks and explainers, another language for the interface, new rocket parts for the hangar.",
+  "controls": "Mouse or touch; the keyboard for typed answers and the arrow keys in Make Ten Merge",
+  "devices": ["desktop", "tablet", "phone"],
+  "languages": ["en", "fr"],
+  "tags": ["maths", "french", "typing", "kids", "quiz", "nodegx"],
+  "licence": "GPL-3.0 for the project (as in the NodeGX repository it came from); MIT for the NodeGX runtime in play/; assets as listed in CREDITS.md"
+}

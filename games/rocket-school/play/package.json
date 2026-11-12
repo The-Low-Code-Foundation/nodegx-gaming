@@ -1,0 +1,8 @@
+{
+  "name": "rocket-school",
+  "private": true,
+  "description": "Rocket School, deployed from NodeGX. See DEPLOY.md.",
+  "scripts": {
+    "start": "node serve.js"
+  }
+}

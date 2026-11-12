@@ -1,0 +1,8 @@
+{
+  "name": "story-engine",
+  "private": true,
+  "description": "Story engine, deployed from NodeGX. See DEPLOY.md.",
+  "scripts": {
+    "start": "node serve.js"
+  }
+}

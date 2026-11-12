@@ -1,0 +1,1999 @@
+// The life prototype (public/life/): realistic flatmates with needs, moods, free will, a to-do list, what they do
+// together (social.mjs), and (round 9) three places: home, the office they work at, and the park. You see one place at
+// a time, the one the Sim you look after is in: when they go to work, you go with them.
+//   ?person=0…11 (who moves in; default 0)  ?flatmate=0…11 | none (default: anyone else, at random)  ?speed=0…3
+//   ?needs=hunger:10,energy:80 (start values; ?needs2= for the flatmate)  ?freewill=0  ?start=07:30 (the clock)
+//   ?seed=1 (free will's dice, for tests)  ?year=CE2 (the school year the work questions are pitched at)
+//   ?colleagues=2,3,4,5 (who works at the office; default four others, at random) | none
+// Round 10: a plain /life/ starts with "carry on, or a new game?" (a save in this browser) or the create-a-Sim screen,
+// and saves as it goes. A test's URL (?seed=, ?person= or ?flatmate=) starts straight in as before and saves nothing;
+// ?menu adds the start back (and saving) to a test's URL; ?save=1 saves without it.
+// Round 12: two Sims in love who live together can have a baby (baby.mjs): a cot in the flat, a name on a card.
+// Round 14 (town.mjs): the town — the colleagues and two neighbours live in houses you can go round to (parties most
+// evenings, invited or not), houses for sale to look round and buy, an extension to build; everything in your home can
+// be moved, sold or put away in the boxes, and the shop has a lot more in it.
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { makeSky, tick as tickDressing, daylight, partyDecor } from '../dressing.mjs';
+import { CANDIDATES, loadTemplate } from '../characters.mjs';
+import { buildPlace, STATIONS, MADE, measure, ghost, placementOf, houseFurniture } from '../world.mjs';
+import { Sim } from '../sim.mjs';
+import { Life, SPEEDS, SKILL_LEVELS, skillLevel } from './life.mjs';
+import { NEEDS, MOODLETS, EMOTIONS } from './needs.mjs';
+import { offersFor, offerById } from './actions.mjs';
+import { INTERACTIONS, interactionById, bondOf, lockOf, friendshipLevel, romanceLevel, allBonds, setBonds, spouseOf } from './social.mjs';
+import { CAREERS, START_MONEY, TASK, weekday, levelOfJob, nextLevel, careerOf } from './work.mjs';
+import { YEARS, DEFAULT_YEAR, ask, record, topicsFor } from './school/school.mjs';
+import { t } from './strings.mjs';
+import { Props } from './props.mjs';
+import { people } from './looks.mjs';
+import { createSim, lookControls } from './create.mjs';
+import { readSave, writeSave, clearSave, lifeState, restoreLife } from './save.mjs';
+import { SHOP, SHOP_KINDS, shopItem, CAMP_BED, COT, sellPrice, LOVELY, LOOK_COST, kindOf, FLAT_FURNITURE } from './shop.mjs';
+import { SIZES, EXTENSION, HOUSES, houseById, FLAT_LOOK, COLLEAGUE_HOUSES, NEIGHBOURS, awake, PARTY, INVITED, partyHouse, partyNow, GUEST, HOME_PARTY, STREET } from './town.mjs';
+import { blankLook } from './looks.mjs';
+import { makeProp, wear } from './props.mjs';
+import { Baby, BABY_NEEDS, BABY_NAMES, BLANKETS, MAX_BABIES } from './baby.mjs';
+import { CHILDCARE, NURSERY_CARED, careNow, careCost, nurseryOpen } from './childcare.mjs';
+
+const params = new URLSearchParams(location.search);
+const $ = (id) => document.getElementById(id);
+for (const el of document.querySelectorAll('[data-t]')) el.textContent = t(el.dataset.t);
+$('hint').textContent = t('ui.hint');
+$('loading').textContent = t('ui.loading');
+
+// A seeded random for tests (?seed=), Math.random otherwise.
+const seeded = (seed) => () => {
+  seed = (seed + 0x6d2b79f5) | 0;
+  let x = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+  x = (x + Math.imul(x ^ (x >>> 7), 61 | x)) ^ x;
+  return ((x ^ (x >>> 14)) >>> 0) / 4294967296;
+};
+const random = params.has('seed') ? seeded(Number(params.get('seed'))) : Math.random;
+
+// ---- the scene ----
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+renderer.setPixelRatio(1);
+renderer.setSize(innerWidth, innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+$('view').appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+// Round 11 (polish): a soft room light for the shiny things to reflect (ceramic, metal, glossy tiles: `shine` below,
+// once the places are built; on every surface it was half the frame in software, and the tablet pays per pixel too),
+// a sky that follows the clock, and a haze its colour so the ground fades into it instead of ending at an edge.
+const pmrem = new THREE.PMREMGenerator(renderer);
+const roomLight = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+pmrem.dispose();
+const shiny = [];
+const skyDome = makeSky();
+scene.add(skyDome.mesh);
+scene.fog = new THREE.Fog(0xcfe2ee, 24, 60);
+const camera = new THREE.PerspectiveCamera(35, innerWidth / innerHeight, 0.1, 200);
+skyDome.update(12, camera);
+const controls = new OrbitControls(camera, renderer.domElement);
+Object.assign(controls, { minPolarAngle: 0.45, maxPolarAngle: 1.15, minDistance: 4, enableDamping: true, screenSpacePanning: false });
+const sky = new THREE.HemisphereLight(0xe6eeff, 0x8a7458, 1.4);
+const sun = new THREE.DirectionalLight(0xfff2dd, 2.2);
+const lamp = new THREE.PointLight(0xffd9a0, 0, 9, 1.4);
+lamp.position.set(-0.5, 2.3, 0.3);
+sun.castShadow = true;
+sun.shadow.mapSize.set(1024, 1024);
+sun.shadow.bias = -0.0005;
+sun.shadow.normalBias = 0.02;
+sun.shadow.radius = 2.5; // soft edges (PCF)
+scene.add(sky, sun, sun.target, lamp);
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+
+// ---- the places ----
+// All three sit at the world's origin; only the one you are looking at is shown (and only the Sims in it).
+const labels = Object.fromEntries(STATIONS.map((s) => [s.id, t(`station.${s.id}`)]));
+// Round 14: the flat is built empty (its door only) and furnished by the page from the household's furniture (below),
+// so anything in it can be moved, sold or put away. `home` is whichever home the household has now: the flat, the flat
+// with an extension, or a house they bought (`rehome`). The town's houses are built the first time someone goes.
+const [flat, office, park] = await Promise.all([buildPlace('lifeHome', { empty: true }), buildPlace('lifeOffice', { labels }), buildPlace('lifePark')]);
+let home = flat;
+home.house = 'flat';
+const places = { home, office, park };
+// The shiny things take the room light; matte ones (walls, floors, cloth, wood) don't need it.
+function shine(p) {
+  p.group.traverse((o) => {
+    for (const m of o.material ? [o.material].flat() : [])
+      if (m.isMeshStandardMaterial && !m.envMap && (m.metalness > 0.3 || m.roughness < 0.3) && !shiny.includes(m)) (m.envMap = roomLight), shiny.push(m);
+  });
+}
+for (const p of [home, office, park]) shine(p);
+const allPlaces = () => [...new Set(Object.values(places))];
+const nameOf = (p) => Object.keys(places).find((k) => places[k] === p);
+for (const p of [home, office, park]) scene.add(p.group);
+const place = home; // the flat as it was at the start (round 8's name, kept for the checks)
+let view = null;
+// `centre`: where to look (the Sim you look after, when the view goes with them); the camera keeps the place's angle.
+function setView(p, centre = null) {
+  if (view === p) return;
+  view = p;
+  for (const q of allPlaces()) q.group.visible = q === p;
+  controls.target.set(...p.view.target);
+  camera.position.set(...p.view.camera);
+  // The flat is seen whole; anywhere bigger (round 14: a house too), the camera starts on the one you look after.
+  if (centre && p.bounds.w > 8) {
+    const shift = centre.clone().setY(p.view.target[1]).sub(controls.target);
+    controls.target.add(shift);
+    camera.position.add(shift);
+  }
+  controls.maxDistance = p.view.max;
+  controls.update();
+  Object.assign(sun.shadow.camera, { left: -p.shadow, right: p.shadow, top: p.shadow, bottom: -p.shadow, near: 1, far: 40 + p.shadow * 2 });
+  sun.shadow.camera.updateProjectionMatrix();
+  if (p.view.fog) [scene.fog.near, scene.fog.far] = p.view.fog;
+  $('menu').hidden = true;
+}
+setView(home);
+
+// ---- the Sims ----
+// People 0–5 are women, 6–11 men. The flatmate is anyone else, new on every load (the brief, 10-29: "a random character on
+// page load for now"); ?flatmate= picks one (the checks: 7, Hugo), ?flatmate=none lives alone, the single-Sim control.
+// Math.random, never the seeded dice: drawing from those would move the first Sim's seeded choices.
+const hhmm = (m) => `${String(Math.floor((m % 1440) / 60)).padStart(2, '0')}:${String(Math.floor(m % 60)).padStart(2, '0')}`;
+const NAMES = ['Ada', 'Bea', 'Cleo', 'Dora', 'Eva', 'Flo', 'Gus', 'Hugo', 'Ivan', 'Jules', 'Kofi', 'Leo'];
+const quick = ['seed', 'person', 'flatmate'].some((k) => params.has(k)) && !params.has('menu');
+const saving = !quick || params.has('save');
+const template = await loadTemplate(CANDIDATES.find((c) => c.id === 'rocketbox'), { renderer, scene, camera });
+// Every Sim is a clone of their person; the person's own body stays aside to lend its hair and clothes (looks.mjs).
+const folk = people(template);
+
+// ---- the start (round 10): carry on, or a new game made on the create-a-Sim screen ----
+const YEAR_STORED = (() => {
+  try {
+    return localStorage.getItem('lifesim.year');
+  } catch {
+    return null;
+  }
+})();
+let start = null;
+if (!quick) start = await startScreen(readSave());
+const saved = start?.kind === 'continue' ? start.save : null;
+const person = start?.kind === 'new' ? start.who : saved ? saved.lives[0].who : Number(params.get('person') ?? 0);
+// Not in a saved game: everyone is who they were.
+const mate = saved ? null : params.get('flatmate') === 'none' ? null : Number(params.get('flatmate') ?? (person + 1 + Math.floor(Math.random() * 11)) % 12);
+
+// Carry on (a save in this browser), or a new game. With no save, straight to making a Sim.
+async function startScreen(save) {
+  renderer.render(scene, camera);
+  if (save) {
+    const names = save.lives.map((l) => l.name).join(', ');
+    const when = `${t('ui.day', { day: Math.floor(save.minutes / 1440) + 1, weekday: t(`day.${Math.floor(save.minutes / 1440) % 7}`) })} · ${hhmm(save.minutes)}`;
+    const choice = await new Promise((resolve) => {
+      $('card').innerHTML = `<h2>${t('ui.start.title')}</h2>
+        <div class="offer"><div class="big">🏠</div><div><b>${t('ui.start.carryOn', { names })}</b><div>${when} · ${t('ui.coins', { n: save.money })}</div></div><button class="go" id="start-continue">${t('ui.start.continue')}</button></div>
+        <div class="offer"><div class="big">✨</div><div><b>${t('ui.start.new')}</b><div>${t('ui.start.newHint')}</div></div><button id="start-new">${t('ui.start.newButton')}</button></div>`;
+      $('card').hidden = $('card-back').hidden = false;
+      $('start-continue').onclick = () => resolve('continue');
+      $('start-new').onclick = () => {
+        $('card').innerHTML = `<h2>${t('ui.start.sure')}</h2><p class="intro">${t('ui.start.sureText', { names })}</p>
+          <div class="actions"><button id="start-back">${t('ui.start.back')}</button><button class="go" id="start-yes">${t('ui.start.yes')}</button></div>`;
+        $('start-back').onclick = () => resolve(startScreen(save));
+        $('start-yes').onclick = () => resolve('new');
+      };
+    });
+    if (typeof choice === 'object') return choice;
+    $('card').hidden = $('card-back').hidden = true;
+    if (choice === 'continue') return { kind: 'continue', save };
+  }
+  $('loading').textContent = '';
+  for (const p of allPlaces()) p.group.visible = false;
+  sun.position.set(3, 6, 5);
+  sun.target.position.set(0, 0, 0);
+  Object.assign(sun.shadow.camera, { left: -3, right: 3, top: 3, bottom: -1, near: 1, far: 20 });
+  sun.shadow.camera.updateProjectionMatrix();
+  const yearNow = [params.get('year'), YEAR_STORED, DEFAULT_YEAR].find((y) => YEARS.includes(y));
+  // Its own light backdrop and stand: no sky or haze there (round 11).
+  const haze = scene.fog;
+  scene.fog = null;
+  skyDome.mesh.visible = false;
+  const made = await createSim({ renderer, scene, camera, controls, folk, t, names: NAMES, years: YEARS, year: yearNow, person: Number(params.get('person') ?? Math.floor(Math.random() * 12)) });
+  scene.fog = haze;
+  skyDome.mesh.visible = true;
+  view = null;
+  setView(home);
+  return { kind: 'new', ...made };
+}
+
+// A bubble a Sim, a column to click them by, and their place in the game. `body`: one already made (the create-a-Sim
+// screen's); otherwise their person, dressed in `look`.
+const proxyGeo = new THREE.CylinderGeometry(0.28, 0.28, 1.75, 8).translate(0, 0.875, 0);
+const proxyMat = new THREE.MeshBasicMaterial({ visible: false });
+const lives = []; // who lives here (the household)
+const everyone = []; // and the colleagues at the office
+// ---- the household's home (round 14): which one, and how big. The flat ('flat', size 0) to begin with; a house in the
+// town once bought (`paid`: what it cost, and its extensions: what it sells for when they move on). ----
+let homeState = { id: saved?.home?.id ?? 'flat', size: saved?.home?.size ?? 0, paid: saved?.home?.paid ?? 0 };
+// A house, empty but for its door, for the household to furnish: the flat as it was made, or any size (town.mjs SIZES).
+async function buildHomePlace(st) {
+  const p = st.id === 'flat' && !st.size ? await buildPlace('lifeHome', { empty: true }) : await buildPlace('lifeHouse', { ...SIZES[st.size], look: st.id === 'flat' ? FLAT_LOOK : houseById(st.id).look });
+  p.house = st.id;
+  shine(p);
+  scene.add(p.group);
+  return p;
+}
+if (homeState.id !== 'flat' || homeState.size) {
+  const p = await buildHomePlace(homeState);
+  scene.remove(flat.group);
+  home = places.home = p;
+  view = null;
+  setView(home);
+}
+// The money is the household's: whoever earns it, anyone can spend it.
+// `childcare` (round 13): who looks after the babies while everyone is out, 'nanny' or 'nursery' (null: ask).
+const household = { money: saved?.money ?? START_MONEY, childcare: saved?.childcare ?? null };
+async function makeSim(who, at, i, { name = null, look = null, body = null, ...opts } = {}) {
+  const sim = new Sim(body ?? (await folk.body(who, look)), at);
+  scene.add(sim.group);
+  if (sim.blob) scene.add(sim.blob);
+  // Each Sim their own dice: the others' fidgets don't move the first Sim's seeded choices (the round 6 checks).
+  const dice = i && params.has('seed') ? seeded(Number(params.get('seed')) + 1000 * i) : i ? Math.random : random;
+  const life = new Life(sim, at, { name: name || NAMES[who] || `Sim ${i + 1}`, random: dice, ...opts });
+  life.who = who;
+  life.look = look;
+  // A click on a Sim lands on this (an invisible column the size of a person): the body is skinned, so its triangles
+  // are not where the raycaster would look for them.
+  const proxy = new THREE.Mesh(proxyGeo, proxyMat);
+  proxy.userData.life = life;
+  life.proxy = proxy;
+  sim.group.add(proxy);
+  life.places = places;
+  life.everyone = everyone;
+  life.clock = () => minutes;
+  life.onMoveIn = moveIn;
+  life.onBaby = haveBaby;
+  life.onDressUp = dressUp;
+  life.mayLeave = mayLeave;
+  life.onArrive = arrived;
+  life.titleOf = (p) => titleOf(p);
+  everyone.push(life);
+  return life;
+}
+// Who moves in: the Sim you made (or person 0 in a test) and a flatmate at random (the brief, 10-29: "a random character
+// on page load for now"; ?flatmate= picks one, ?flatmate=none lives alone, the single-Sim control), or the saved
+// household. Math.random picks the flatmate, never the seeded dice: drawing from those would move the first Sim's
+// seeded choices.
+const members = saved
+  ? saved.lives.map((s) => ({ who: s.who, name: s.name, look: s.look, s }))
+  : [{ who: person, name: start?.name, look: start?.look ?? null, body: start?.body ?? null, year: start?.year }, ...(mate != null ? [{ who: mate }] : [])];
+for (const [i, m] of members.entries()) {
+  const life = await makeSim(m.who, home, i, { household, name: m.name, look: m.look, body: m.body });
+  // The flatmate starts on the rug (the second start spot is behind the TV in this flat).
+  life.sim.position.copy(home.freeSpot(i === 0 ? 0 : i === 1 ? 2 : i + 1));
+  const startNeeds = params.get(i ? 'needs2' : 'needs');
+  if (startNeeds) for (const kv of startNeeds.split(',')) life.needs[kv.split(':')[0]] = Number(kv.split(':')[1]);
+  if (m.s) restoreLife(life, m.s, saved.minutes);
+  if (m.year) life.year = m.year;
+  life.freeWill = params.get('freewill') !== '0';
+  lives.push(life);
+}
+if (saved) setBonds(saved.bonds);
+// What stands in the household's home, in order: saved, and put back. Round 14: all of it, the flat's own things too
+// (shop.mjs FLAT_FURNITURE, `base`: they came with the flat, and make it no lovelier), so anything can be moved, sold
+// or put in the boxes. `extras` (round 10's name, the checks'): what was added, bought or a cot or a camp bed.
+// `storage`: the boxes, things put away to put out again (shop.mjs ids).
+const furniture = [];
+const extras = () => furniture.filter((e) => !e.base);
+const storage = Array.isArray(saved?.storage) ? saved.storage.filter((id) => kindOf(id)) : [];
+// The flat's own things among them (ids, once each): put out again, they are still the flat's own (no lovelier).
+const boxedBase = Array.isArray(saved?.boxedBase) ? [...saved.boxedBase] : [];
+const srcOf = (s) => (s.made ? MADE[s.made] : `assets/furniture/${s.model}.glb`);
+// Placed in one go (one instanced mesh a model, as world.mjs furnishes a place).
+async function placeFurniture(list) {
+  const ok = list.filter((e) => kindOf(e.id));
+  const items = await home.add(ok.map(placementOf));
+  // The shiny ones (the loo's ceramic, the fridge's metal) take the room light, as the places' own things do.
+  shine(home);
+  return ok.map((e, i) => {
+    const s = kindOf(e.id), item = items[i];
+    Object.assign(item, { bought: s, beauty: e.base ? 0 : s.beauty ?? 0 });
+    furniture.push({ id: e.id, x: e.x, z: e.z, turn: e.turn ?? 0, ...(e.width ? { width: e.width } : {}), ...(e.base ? { base: true } : {}), item });
+    return item;
+  });
+}
+const placeExtra = async (e) => (await placeFurniture([e]))[0];
+const entryOf = (item) => furniture.find((e) => e.item === item) ?? null;
+function removeExtra(item) {
+  const k = furniture.findIndex((e) => e.item === item);
+  if (k >= 0) furniture.splice(k, 1);
+  for (const l of everyone) if (l.home === item) l.home = null;
+  home.remove(item);
+}
+// A new game: the flat as it comes. A round-13 save (v1): the flat as it came, and what they had added to it.
+await placeFurniture(saved?.furniture ?? [...FLAT_FURNITURE.map((e) => ({ ...e, base: true })), ...(saved?.extras ?? [])]);
+
+// ---- a wedding (round 12, social.mjs `marry`) ----
+// Wedding clothes for as long as it lasts: a bride's outfit all white with a long skirt, a veil and flowers; a groom's
+// a dark suit with a bow tie and a rose (props.mjs `wear`). Then their own clothes again, as they were.
+const BRIDE = ['#fbf8f2', '#fbf8f2', '#fbf8f2'], GROOM = ['#1f2a44', '#1f2a44', '#15181f'];
+const isWoman = (l) => /^Female/.test(folk.cast[l.who]?.name ?? '');
+// `later`: just married, so the clothes stay on a moment for the hearts (real time: it is a moment to see).
+function dressUp(list, on, later = false) {
+  for (const l of list) {
+    clearTimeout(l.undressLater);
+    if (!on && later) {
+      l.undressLater = setTimeout(() => dressUp([l], false), 3000);
+      continue;
+    }
+    l.undress?.();
+    l.undress = null;
+    const own = l.look ?? blankLook();
+    if (!on) {
+      folk.redress(l.sim.body, own);
+      continue;
+    }
+    const kind = isWoman(l) ? 'bride' : 'groom';
+    folk.redress(l.sim.body, { ...structuredClone(own), outfit: { from: own.outfit?.from ?? null, colours: kind === 'bride' ? BRIDE : GROOM } });
+    l.undress = wear(l.sim, kind);
+  }
+}
+
+// A kiss (round 12, an interaction's `kiss`): Rocketbox has no kissing clip, so while it is 'said' the two lean in to
+// each other from the spine, on top of whatever the body plays, and straighten up after. `leanTo` remembers what was
+// set: a frame where the clip did not write the spine again must not lean twice.
+const leanQ = new THREE.Quaternion(), parentQ = new THREE.Quaternion(), leanAxis = new THREE.Vector3();
+function lean(l, dt) {
+  const d = l.doing, ld = d?.role === 'partner' ? d.lead : d;
+  const want = ld?.offer.kiss && ld.started && ld.phase === 'say' ? 1 : 0;
+  l.kissLean = (l.kissLean ?? 0) + (want - (l.kissLean ?? 0)) * Math.min(1, dt * 2.5);
+  const spine = l.sim.body.outer.getObjectByName('ls_spine');
+  if (!spine) return;
+  if (l.leanTo && spine.quaternion.equals(l.leanTo)) spine.quaternion.copy(l.leanFrom);
+  l.leanTo = null;
+  if (l.kissLean < 0.01) return;
+  l.leanFrom = spine.quaternion.clone();
+  const turn = l.sim.group.rotation.y;
+  leanAxis.set(Math.cos(turn), 0, -Math.sin(turn)); // up × forward: tips the top of the body forward
+  spine.parent.updateWorldMatrix(true, false);
+  spine.parent.getWorldQuaternion(parentQ);
+  leanQ.setFromAxisAngle(leanAxis, 0.24 * l.kissLean);
+  spine.quaternion.premultiply(parentQ.clone().invert().multiply(leanQ).multiply(parentQ));
+  l.leanTo = spine.quaternion.clone();
+}
+
+// ---- babies (round 12, baby.mjs) ----
+// Each in their own cot (an extra, like a camp bed: moved like something bought, never sold), drawn lying in it, out
+// of it while someone cuddles them (they are in that Sim's arms: props.mjs).
+const babies = [];
+const newBabies = []; // born, waiting for the welcome card (their name)
+function addBaby(baby, cot) {
+  baby.cot = cot;
+  cot.baby = baby;
+  if (!baby.mesh) dressBaby(baby);
+  if (!baby.bubble) makeBubble(baby);
+  if (!babies.includes(baby)) babies.push(baby);
+}
+// The baby in their blanket's colour (again when it is changed on the welcome card).
+function dressBaby(baby) {
+  baby.mesh?.removeFromParent();
+  baby.mesh = makeProp(`baby:${baby.colour}`);
+  baby.mesh.rotation.order = 'YXZ';
+  home.group.add(baby.mesh);
+}
+// "Have a baby" went well (life.mjs haveBaby): a cot where it fits, the baby in it, and the welcome card.
+async function haveBaby(a, b) {
+  if (babies.length >= MAX_BABIES) return;
+  const baby = new Baby({ girl: Math.random() < 0.5, parents: [a.name, b.name], born: minutes });
+  babies.push(baby);
+  a.events.push({ key: 'ui.baby.born', vars: { name: a.name, other: b.name } });
+  addBaby(baby, await placeExtra(await spotFor(COT, { id: 'cot', x: -0.6, z: -1.6, turn: 0 })));
+  newBabies.push(baby);
+}
+// The cot they lie in: its place among what was added (a v1 save), or in the furniture (v2).
+for (const s of saved?.babies ?? []) {
+  const e = (saved.v >= 2 ? furniture : extras())[s.cot];
+  if (e?.item && e.id === 'cot') addBaby(new Baby(s), e.item);
+}
+const babyAt = new THREE.Vector3();
+const UP = new THREE.Vector3(0, 1, 0);
+function drawBabies(seconds) {
+  const held = new Set(everyone.filter((l) => l.present && l.place === home && l.showing?.offer === 'cuddleBaby').map((l) => l.showing.item));
+  for (const b of babies) {
+    const m = b.mesh, cot = b.cot;
+    // Just born: the cot is still being put in.
+    if (!m) continue;
+    m.visible = view === home && !held.has(cot) && !b.away;
+    if (!m.visible) continue;
+    const turn = cot.obj.rotation.y;
+    m.position.set(0.03, 0.565, 0).applyAxisAngle(UP, turn).add(cot.obj.position);
+    // Breathing, slower asleep; a wriggle while crying.
+    b.wiggle = (b.wiggle ?? 0) + seconds;
+    const state = b.state;
+    m.userData.face(state);
+    m.scale.set(1, 1 + Math.sin(b.wiggle * (state === 'asleep' ? 1.6 : 3)) * 0.03, 1);
+    m.rotation.set(state === 'crying' ? Math.sin(b.wiggle * 9) * 0.08 : 0, turn, 0);
+  }
+}
+// The welcome card: a girl or a boy, a name (typed, or one suggested), a blanket colour. The game waits.
+const cleanName = (s) => s.replace(/[<>&"]/g, '').trim().slice(0, 14);
+function babyCard(b) {
+  const pick = () => BABY_NAMES[b.girl ? 'girl' : 'boy'][Math.floor(Math.random() * 10)];
+  let name = '', hint = pick();
+  const draw = () => {
+    openCard(sel, 'baby', `<h2>👶 ${t('ui.baby.title')}</h2><p class="intro">${t('ui.baby.intro', { a: b.parents[0], b: b.parents[1] })}</p>
+      <div class="levels"><span>${t('ui.baby.is')}</span><button data-girl="1" class="${b.girl ? 'on' : ''}">👧 ${t('ui.baby.girl')}</button><button data-girl="0" class="${b.girl ? '' : 'on'}">👦 ${t('ui.baby.boy')}</button></div>
+      <div class="levels baby-name"><span>${t('ui.baby.name')}</span><input id="baby-name" maxlength="14" placeholder="${hint}" value="${name}"><button id="baby-dice" title="${t('ui.baby.another')}">🎲</button></div>
+      <div class="levels"><span>${t('ui.baby.blanket')}</span>${BLANKETS.map((c) => `<button data-colour="${c}" class="swatch ${c === b.colour ? 'on' : ''}" style="background:${c}"></button>`).join('')}</div>
+      <div class="actions"><button class="go" id="baby-welcome">${t('ui.baby.welcome')}</button></div>`);
+    $('baby-name').oninput = () => (name = cleanName($('baby-name').value));
+    for (const el of $('card').querySelectorAll('[data-girl]'))
+      el.onclick = () => {
+        const girl = el.dataset.girl === '1';
+        if (girl === b.girl) return;
+        // The blanket follows, unless one was chosen.
+        if (b.colour === BLANKETS[b.girl ? 0 : 1]) (b.colour = BLANKETS[girl ? 0 : 1]), dressBaby(b);
+        b.girl = girl;
+        hint = pick();
+        draw();
+      };
+    $('baby-dice').onclick = () => ((name = pick()), draw());
+    for (const el of $('card').querySelectorAll('[data-colour]')) el.onclick = () => ((b.colour = el.dataset.colour), dressBaby(b), draw());
+    $('baby-welcome').onclick = () => {
+      b.name = name || hint;
+      closeCard();
+      toast(t('ui.baby.home', { name: b.name }));
+      save();
+    };
+  };
+  draw();
+}
+
+// ---- childcare (round 13, childcare.mjs): a baby is never home alone ----
+// The last grown-up out of the door goes only if someone will look after the babies (Life `mayLeave`): the nanny, who
+// comes to the flat (a person you can watch at the cot), or the nursery, where the babies go with them. With neither
+// possible now (not chosen yet; the nursery shut), a card asks: choose one, or stay at home. Whoever comes home first
+// takes over: the nanny is paid and goes, the babies come back from the nursery.
+let caring = null; // { kind: 'nanny' | 'nursery', since (game minutes) }
+let careAsk = null; // { life, entry }: someone at the door, waiting for the card
+let nurseryPaidDay = -1;
+let nanny = null; // her Life, made the first time she is needed
+const babyNames = () => babies.filter((b) => b.name).map((b) => b.name).join(' & ') || t('ui.care.theBaby');
+const someoneHome = (but = null) => lives.some((l) => l !== but && l.present && l.place === home);
+// Paid from the purse; short of coins, what there is (no debt in this game).
+function payCare(cost) {
+  const paid = Math.min(cost, household.money);
+  household.money -= paid;
+  return paid;
+}
+function mayLeave(l, d) {
+  if (!babies.length || someoneHome(l)) return true;
+  const kind = careAsk ? null : careNow(household.childcare, minutes);
+  const entry = { offer: d.offer, item: d.item, by: d.by, endsAt: d.endsAt, why: d.why };
+  // The nanny not here yet (her first time: she is loaded): they wait at the door for her.
+  if (kind === 'nanny' && !nanny) {
+    nannyLife().then(() => goAgain(l, entry));
+    return false;
+  }
+  if (kind) return beginCare(kind, l), true;
+  if (!careAsk) careAsk = { life: l, entry };
+  renderCards();
+  return false;
+}
+// Out of the door again, now that someone can look after the babies: before anything they chose meanwhile.
+function goAgain(l, entry) {
+  l.queue.unshift(entry);
+  if (l.doing && l.doing.by === 'self') l.stop('you');
+}
+function beginCare(kind, leaver = null) {
+  caring = { kind, since: minutes };
+  if (kind === 'nursery') {
+    for (const b of babies) b.goAway('nursery');
+    const day = Math.floor(minutes / 1440);
+    const paid = nurseryPaidDay === day ? null : payCare(CHILDCARE.nursery.perDay);
+    nurseryPaidDay = day;
+    toast(t('ui.care.nursery.drop', { name: leaver?.name ?? '', baby: babyNames() }) + (paid != null ? ` (−${paid} 🪙)` : ''));
+    return;
+  }
+  if (!nanny) return void nannyLife().then(() => caring?.kind === 'nanny' && nannyArrives());
+  nannyArrives();
+}
+function nannyArrives() {
+  const n = nanny;
+  // Still here from last time (gone out again before she left): she stays.
+  if (n.present && n.place === home) {
+    n.queue = [];
+    if (n.doing?.offer.travel) (n.doing = null), n.sim.finish();
+  } else {
+    n.present = true;
+    n.arrive(home);
+  }
+  toast(t('ui.care.nanny.comes', { nanny: n.name, baby: babyNames() }));
+}
+function endCare() {
+  const c = caring;
+  caring = null;
+  const back = lives.find((l) => l.present && l.place === home);
+  if (c.kind === 'nursery') {
+    for (const b of babies) b.home(NURSERY_CARED);
+    return toast(t('ui.care.nursery.back', { name: back?.name ?? '', baby: babyNames() }));
+  }
+  const paid = payCare(careCost('nanny', c.since, minutes));
+  if (nanny) {
+    if (nanny.doing) nanny.stop('home');
+    nanny.queue = [{ offer: { id: 'goHome', act: 'travel', travel: 'away', minutes: 1, gives: {}, icon: '🏠', free: false }, by: 'self' }];
+  }
+  toast(t('ui.care.nanny.paid', { nanny: nanny?.name ?? '', coins: paid }));
+}
+// Every step: whoever is home takes over; and, should the babies ever be on their own some other way, the nanny comes.
+// Someone home again while the card waits (back from the park for the loo): no question any more, out they go.
+function minding() {
+  if (!babies.length) return;
+  if (careAsk && someoneHome(careAsk.life)) {
+    const { life: l, entry } = careAsk;
+    careAsk = null;
+    if (card?.kind === 'care') closeCard();
+    goAgain(l, entry);
+  }
+  const anyone = someoneHome();
+  if (anyone && caring) endCare();
+  else if (!anyone && !caring && !careAsk) beginCare(careNow(household.childcare, minutes) ?? 'nanny');
+}
+// The nanny: someone who is neither in the household nor at the office, a woman if one is free. Not clickable.
+let nannyMade = null;
+function nannyLife() {
+  return (nannyMade ??= (async () => {
+    const taken = new Set([...lives, ...colleagues, ...neighbours].map((l) => l.who));
+    const free = [...Array(12).keys()].filter((n) => !taken.has(n));
+    const women = free.filter((n) => /^Female/.test(folk.cast[n]?.name ?? ''));
+    const pool = women.length ? women : free.length ? free : [0];
+    const who = pool[Math.floor(Math.random() * pool.length)];
+    const n = await makeSim(who, home, 20, { household: { money: 0 } });
+    Object.assign(n, { homePlace: null, present: false, carer: true, freeWill: true });
+    for (const id of Object.keys(n.needs)) n.needs[id] = 90;
+    n.proxy.userData.life = null;
+    n.sim.group.visible = false;
+    makeBubble(n);
+    return (nanny = n);
+  })());
+}
+// The card: who looks after the babies while they are out. The game waits. Choosing one is remembered.
+function careCard() {
+  const { life: l, entry } = careAsk;
+  const open = nurseryOpen(minutes), work = entry.by === 'job';
+  const row = (kind, price, note, ok = true) => `<div class="offer"><div class="big">${CHILDCARE[kind].icon}</div><div><b>${t(`ui.care.${kind}`)}</b><div>${price} · ${note}</div></div>
+    <button class="go" data-care="${kind}" ${ok ? '' : 'disabled'}>${t('ui.care.choose')}</button></div>`;
+  openCard(l, 'care', `<h2>👶 ${t('ui.care.title', { baby: babyNames() })}</h2><p class="intro">${t('ui.care.intro', { name: l.name, baby: babyNames() })}</p>
+    ${row('nanny', t('ui.care.nanny.price', { coins: CHILDCARE.nanny.perHour }), t('ui.care.nanny.note'))}
+    ${row('nursery', t('ui.care.nursery.price', { coins: CHILDCARE.nursery.perDay }), open ? t('ui.care.nursery.note', { from: hhmm(CHILDCARE.nursery.opens), to: hhmm(CHILDCARE.nursery.closes) }) : t('ui.care.nursery.shut', { from: hhmm(CHILDCARE.nursery.opens) }), open)}
+    <div class="actions"><button id="care-stay">🏠 ${t(work ? 'ui.care.stay.work' : 'ui.care.stay', { name: l.name })}</button></div>`);
+  for (const b of $('card').querySelectorAll('[data-care]'))
+    b.onclick = () => {
+      household.childcare = b.dataset.care;
+      if (b.dataset.care === 'nanny') nannyLife();
+      careAsk = null;
+      closeCard();
+      goAgain(l, entry);
+      save();
+    };
+  $('care-stay').onclick = () => {
+    careAsk = null;
+    closeCard();
+    toast(t(work ? 'ui.care.stayed.work' : 'ui.care.stayed', { name: l.name, baby: babyNames() }));
+  };
+}
+// A bed each: free will leaves the other's alone (you can still send anyone to either). A saved game: the beds they had.
+const beds = home.items.filter((i) => i.name === 'Bed_Single');
+const sleepers = () => home.items.filter((i) => i.use?.act === 'sleep');
+if (saved) saved.lives.forEach((s, i) => { const b = sleepers()[s.bed]; if (b) (b.owner = lives[i]), (lives[i].home = b); });
+else if (lives.length > 1) lives.forEach((l, i) => beds[i] && ((beds[i].owner = l), (l.home = beds[i])));
+const [life] = lives;
+const sim = life.sim;
+// The Sim you look after: the panels show them, your clicks are for them. The others get on with their lives.
+let sel = life;
+$('freewill').checked = life.freeWill;
+$('freewill').onchange = () => lives.forEach((l) => (l.freeWill = $('freewill').checked));
+
+// The desks at the office: one each, handed out as people start there (the first six).
+const desks = office.items.filter((i) => i.use?.offers === 'desk');
+const giveDesk = (l) => {
+  if (desks.some((d) => d.owner === l)) return;
+  const free = desks.find((d) => !d.owner);
+  if (free) free.owner = l;
+};
+
+// The colleagues (round 9): four other people who work at the office, there on work days from 08:30 to 15:00, each
+// with free will. Loaded once the flat is up (they are not needed before the first work day). Math.random picks them,
+// never the seeded dice. ?colleagues=2,3 pins them; ?colleagues=none: nobody.
+const colleagues = [];
+async function loadColleagues() {
+  const taken = new Set(lives.map((l) => l.who));
+  const pinned = params.get('colleagues');
+  let who;
+  // A saved game: the same colleagues, at the same levels.
+  if (saved) who = (saved.colleagues ?? []).map((c) => c.who).filter((n) => !taken.has(n));
+  else if (pinned === 'none') who = [];
+  else if (pinned) who = pinned.split(',').map(Number).filter((n) => !taken.has(n));
+  else {
+    const pool = [...Array(12).keys()].filter((n) => !taken.has(n));
+    for (let i = pool.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [pool[i], pool[j]] = [pool[j], pool[i]];
+    }
+    who = pool.slice(0, 4);
+  }
+  for (const [k, n] of who.entries()) {
+    const c = await makeSim(n, office, 10 + k, { household: { money: 0 } });
+    c.homePlace = null;
+    c.present = false;
+    // They come in a few minutes apart, not in a crowd at the door.
+    c.lateBy = 4 + k * 9;
+    c.sim.group.visible = false;
+    c.freeWill = true;
+    // They have worked there a while: some higher up than others.
+    c.job = { career: 'office', level: Math.floor(Math.random() * 4), performance: 0, lastDay: -1 };
+    const was = saved?.colleagues?.find((x) => x.who === n);
+    if (was?.job) c.job = { ...was.job, lastDay: -1 };
+    giveDesk(c);
+    // Round 14: where they live (town.mjs): you can go round, outside work.
+    c.house = COLLEAGUE_HOUSES[k] ?? 'h3';
+    colleagues.push(c);
+    makeBubble(c);
+  }
+}
+
+// Someone moves in (social.mjs "Ask to move in"): into "Who lives here", with a bed. The flat has two; a third
+// person gets a camp bed in the free floor by the bookshelf (round 9; a real bed is something to buy later).
+async function moveIn(other) {
+  if (lives.includes(other)) return;
+  lives.push(other);
+  // Round 14: a neighbour can move in too (not a colleague: `indexOf` -1 took the last colleague away).
+  for (const list of [colleagues, neighbours]) if (list.includes(other)) list.splice(list.indexOf(other), 1);
+  other.house = null;
+  guests.splice(0, guests.length, ...guests.filter((g) => g.life !== other));
+  other.freeWill = $('freewill').checked;
+  // Met at their own house (round 14): they come home with you.
+  if (other.present && other.place !== home && !other.shift) other.queue.push({ offer: GO_HOME, by: 'self' });
+  let bed = home.items.find((i) => i.use?.act === 'sleep' && !i.owner);
+  // By the bookshelf (round 9), or, with things bought since, wherever it fits.
+  if (!bed) bed = await placeExtra(await spotFor(CAMP_BED, { id: 'campBed', x: 0.2, z: -1.2, turn: Math.PI / 2 }));
+  bed.owner = other;
+  other.home = bed;
+  for (const l of lives) if (!l.home) {
+    const b = home.items.find((i) => i.use?.act === 'sleep' && !i.owner);
+    if (b) (b.owner = l), (l.home = b);
+  }
+  save();
+}
+// Where `s` (a shop item) fits in the flat: `want` if it does there, else the first free place, scanning the floor.
+async function spotFor(s, want) {
+  const at = async (x, z, turn) => (home.fits(await measure(srcOf(s), x, z, turn, s.fit, s.use)).ok ? { id: want.id, x, z, turn } : null);
+  const first = await at(want.x, want.z, want.turn);
+  if (first) return first;
+  for (let z = -2.4; z <= 2.4; z += 0.5)
+    for (let x = -2.9; x <= 2.9; x += 0.5) for (const turn of [0, Math.PI / 2]) {
+      const ok = await at(x, z, turn);
+      if (ok) return ok;
+    }
+  return want;
+}
+
+// ---- the town (round 14, town.mjs) ----
+// The design brief, 11-11: "multiple houses available in the town with real NPCs, either colleagues or not … parties
+// at neighbour's houses … everyone they work with is accessible as a 'friend' to go hang out with … invited or not?
+// could be funny … free houses the player can visit with the intention to buy". A house is built the first time someone
+// goes there. The people who live in it are there only while someone from the household is (as the colleagues are at
+// the office only on work days): they come into view when you arrive, and go when you leave.
+const GO_HOME = { id: 'goHome', act: 'travel', travel: 'home', minutes: 1, gives: {}, icon: '🏠', free: false };
+const GO_AWAY = { id: 'goHome', act: 'travel', travel: 'away', minutes: 1, gives: {}, icon: '🏠', free: false };
+const goTo = (id) => ({ id: 'goVisit', act: 'travel', travel: id, minutes: 1, gives: {}, icon: houseById(id)?.kind === 'sale' ? '🪧' : '🏡', free: false });
+const neighbours = [];
+const guests = []; // { life, comesAt, until, arrived }: friends invited round to your home
+let homeParty = null; // { until, decor }
+const npcs = () => [...colleagues, ...neighbours];
+const residentsOf = (id) => npcs().filter((l) => l.house === id);
+const owned = (id) => homeState.id === id;
+// Their names, for the house's name: "Dora's house", "Dora and Kofi's house".
+function houseTitle(id) {
+  const h = houseById(id);
+  if (owned(id)) return t('place.home');
+  if (h.kind === 'sale') return t(`house.${id}`);
+  const names = residentsOf(id).map((l) => l.name);
+  return names.length ? t(names.length > 1 ? 'house.of2' : 'house.of', { a: names[0], b: names[1] }) : t('house.empty', { no: h.no });
+}
+// The two neighbours who don't work with you (no. 9): anyone not in the household, not a colleague, and not the nanny
+// (a woman is left free for her when one can be). Loaded the first time they are needed; kept in the save.
+let neighboursMade = null;
+function loadNeighbours() {
+  return (neighboursMade ??= (async () => {
+    await colleaguesLoaded;
+    const taken = new Set([...lives, ...colleagues, ...(nanny ? [nanny] : [])].map((l) => l.who));
+    let who = (saved?.town?.neighbours ?? []).filter((n) => !taken.has(n));
+    if (!saved?.town) {
+      const free = [...Array(12).keys()].filter((n) => !taken.has(n));
+      for (let i = free.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [free[i], free[j]] = [free[j], free[i]];
+      }
+      const woman = (n) => /^Female/.test(folk.cast[n]?.name ?? '');
+      // Keep one woman back for the nanny when there is one to keep.
+      const keep = free.filter(woman).length === 1 ? free.find(woman) : null;
+      who = free.filter((n) => n !== keep).slice(0, NEIGHBOURS);
+    }
+    for (const [k, n] of who.entries()) {
+      const l = await makeSim(n, park, 30 + k, { household: { money: 0 } });
+      Object.assign(l, { homePlace: null, present: false, house: 'h4', freeWill: true });
+      l.sim.group.visible = false;
+      makeBubble(l);
+      neighbours.push(l);
+    }
+    return neighbours;
+  })());
+}
+// A house of the town, built the first time it is needed (empty and with a sign when it is for sale).
+const building = new Map();
+function housePlace(id) {
+  if (owned(id)) return Promise.resolve(home);
+  if (places[id]) return Promise.resolve(places[id]);
+  if (!building.has(id))
+    building.set(id, (async () => {
+      const h = houseById(id), { w, d } = SIZES[h.size], living = residentsOf(id);
+      const furnished = h.kind === 'lived' ? houseFurniture(w, d, Math.max(1, Math.min(2, living.length)), h.no) : [];
+      const p = await buildPlace('lifeHouse', { w, d, look: h.look, forSale: h.kind === 'sale', furniture: furnished });
+      p.house = id;
+      shine(p);
+      scene.add(p.group);
+      p.group.visible = view === p;
+      // A bed each for whoever lives there.
+      const sleep = p.items.filter((i) => i.use?.act === 'sleep');
+      living.forEach((l, i) => sleep[i] && ((sleep[i].owner = l), (l.home = sleep[i])));
+      places[id] = p;
+      building.delete(id);
+      return p;
+    })());
+  return building.get(id);
+}
+const titleOf = (p) => (p === home ? t('place.home') : p.house ? houseTitle(p.house) : t(`place.${nameOf(p)}`));
+// At home to visit now: awake, not at work, not round somewhere else.
+const workDayNow = (l) => l.job && weekday(minutes) < 5 && (minutes % 1440) >= 8 * 60 && (minutes % 1440) < careerOf(l.job).ends;
+function homeNow(l) {
+  if (!l.house || l.shift || !awake(minutes) || workDayNow(l)) return false;
+  return !(l.present && l.place !== places[l.house]);
+}
+// Can someone go round now? { ok, why } — the town card says why not.
+function visitState(id) {
+  const h = houseById(id);
+  if (owned(id)) return { ok: false, why: 'yours' };
+  if (h.kind === 'sale') return { ok: true, why: 'sale' };
+  const living = residentsOf(id);
+  if (!living.length) return { ok: false, why: 'nobody' };
+  if (!awake(minutes)) return { ok: false, why: 'asleep' };
+  if (partyAt(id)) return { ok: true, why: 'party' };
+  if (living.some(homeNow)) return { ok: true, why: 'home' };
+  // Round somewhere else (at a party, or at yours), or at work.
+  return { ok: false, why: living.some((l) => l.shift || workDayNow(l)) ? 'atWork' : 'out' };
+}
+// The parties: an evening at one of the lived-in houses (town.mjs PARTY), and who is invited.
+const livedIn = () => HOUSES.filter((h) => h.kind === 'lived' && residentsOf(h.id).length).map((h) => h.id);
+const partyToday = () => (colleaguesIn ? partyHouse(minutes, livedIn()) : null);
+const partyAt = (id) => partyNow(minutes) && partyToday() === id;
+const invited = (id) => residentsOf(id).some((r) => lives.some((l) => bondOf(l, r).friendship >= INVITED));
+// Who else comes: the household's best friends among everyone else who is free, a few of them.
+function partyGuests(id) {
+  const best = (l) => Math.max(...lives.map((h) => bondOf(h, l).friendship));
+  return npcs().filter((l) => l.house !== id && !l.shift && !guests.some((g) => g.life === l)).sort((a, b) => best(b) - best(a) || a.who - b.who).slice(0, PARTY.guests);
+}
+// Someone in view (they live there, or came to the party), or not.
+// At a party (`party`), they come fed, rested and in the mood for fun and company: they dance, chat and joke, not study
+// or cook dinner in someone else's kitchen.
+function appear(l, p, inside = true, party = false) {
+  if (l.doing) l.stop('away');
+  l.queue = [];
+  l.present = true;
+  for (const id of Object.keys(l.needs)) l.needs[id] = Math.max(l.needs[id], 60 + Math.random() * 30);
+  if (party) Object.assign(l.needs, { energy: Math.max(l.needs.energy, 85), hunger: Math.max(l.needs.hunger, 75), fun: 25 + Math.random() * 15, social: 25 + Math.random() * 15 });
+  l.arrive(p);
+  if (inside) l.sim.position.copy(p.freeSpot(npcs().indexOf(l) + 1));
+}
+function vanish(l) {
+  if (l.doing) l.stop('away');
+  l.queue = [];
+  l.travel('away');
+}
+function sendHome(l, key) {
+  if (l.doing && l.doing.by !== 'job') l.stop('home');
+  l.queue = l.queue.filter((e) => e.by === 'job');
+  l.queue.unshift({ offer: GO_HOME, by: 'self' });
+  if (key) toast(t(key, { name: l.name }));
+}
+// Arriving somewhere (Life `onArrive`): a welcome at a friend's, a party's welcome (or a gatecrasher's), a house to buy.
+function arrived(l, p) {
+  if (!lives.includes(l) || !p.house || p === home) return;
+  l.visitOver = false;
+  const id = p.house, h = houseById(id);
+  if (h.kind === 'sale') return toast(t('ui.sale.look', { name: l.name, house: houseTitle(id), price: h.price }));
+  const host = residentsOf(id).find(homeNow) ?? residentsOf(id)[0];
+  if (!host) return;
+  if (partyAt(id)) {
+    const asked = invited(id);
+    bondOf(l, host).friendship += asked ? 3 : -3;
+    l.addMoodlet(asked ? 'party' : 'gatecrasher');
+    toast(t(asked ? 'ui.party.welcome' : 'ui.party.crash', { name: l.name, host: host.name }));
+  } else toast(t('ui.visit.welcome', { name: l.name, host: host.name }));
+}
+// Every step: who is where in the town. A house with someone from the household in it has its people in view (and,
+// during its party, the guests); the others are out of sight. Late at night everyone is sent home.
+let partyNoted = -1;
+function townTick() {
+  if (!colleaguesIn) return;
+  const day = Math.floor(minutes / 1440), host = partyToday();
+  // The day's invitation (once a day, from 09:00): who is having a party, and whether you're asked.
+  if (host && partyNoted !== day && (minutes % 1440) >= 9 * 60 && (minutes % 1440) < PARTY.to) {
+    partyNoted = day;
+    toast(t(invited(host) ? 'ui.party.invite' : 'ui.party.notInvited', { house: houseTitle(host), from: hhmm(PARTY.from) }));
+  }
+  for (const h of HOUSES) {
+    const p = places[h.id];
+    if (!p || p === home) continue;
+    const party = partyAt(h.id);
+    if (p.decor) p.decor.visible = party;
+    else if (party) (p.decor = partyDecor(p.bounds.w, p.bounds.d)), p.group.add(p.decor);
+    if (h.kind !== 'lived') continue;
+    const visitors = lives.filter((l) => l.present && l.place === p);
+    const want = new Set();
+    if (visitors.length) {
+      for (const r of residentsOf(h.id)) if (homeNow(r)) want.add(r);
+      if (party) for (const g of partyGuests(h.id)) want.add(g);
+    }
+    for (const n of npcs()) {
+      const here = n.present && n.place === p;
+      if (here && !want.has(n) && !n.shift) vanish(n);
+      else if (!here && want.has(n) && !n.present) appear(n, p, n.house === h.id, party);
+    }
+    // Bedtime: the visitors go home (once each: you can send them back). The party's last evening says so.
+    if (party) p.partyDay = Math.floor(minutes / 1440);
+    if (!awake(minutes)) for (const l of visitors) if (!l.visitOver) (l.visitOver = true), sendHome(l, p.partyDay === Math.floor((minutes - 60) / 1440) ? 'ui.party.over' : 'ui.visit.late');
+  }
+  guestsTick();
+}
+// Friends round to yours (the phone, "Who lives here"): at the door a little later, a while with you, then home.
+// A party at home: everyone the household is Friends with.
+function inviteOver(other, quiet = false, stay = GUEST.stays) {
+  if (lives.includes(other) || guests.some((g) => g.life === other)) return false;
+  if (!awake(minutes) || other.shift || workDayNow(other)) {
+    if (!quiet) toast(t('ui.guest.cant', { name: other.name }));
+    return false;
+  }
+  guests.push({ life: other, comesAt: minutes + GUEST.comes + (quiet ? Math.random() * 25 : 0), until: minutes + GUEST.comes + stay, arrived: false });
+  if (!quiet) toast(t('ui.guest.asked', { name: sel.name, other: other.name }));
+  return true;
+}
+async function throwParty() {
+  if (homeParty || household.money < HOME_PARTY.cost) return;
+  await loadNeighbours();
+  const friends = npcs().filter((l) => lives.some((h) => bondOf(h, l).friendship >= INVITED));
+  household.money -= HOME_PARTY.cost;
+  homeParty = { until: minutes + HOME_PARTY.minutes, decor: partyDecor(home.bounds.w, home.bounds.d) };
+  home.group.add(homeParty.decor);
+  for (const l of lives) if (l.present && l.place === home) l.addMoodlet('party');
+  const came = friends.filter((f) => inviteOver(f, true, HOME_PARTY.minutes));
+  toast(t(came.length ? 'ui.party.home' : 'ui.party.homeNobody', { n: came.length }));
+  save();
+}
+function guestsTick() {
+  const someone = lives.some((l) => l.present && l.place === home);
+  if (homeParty && (minutes >= homeParty.until || !awake(minutes))) {
+    homeParty.decor.removeFromParent();
+    homeParty = null;
+    toast(t('ui.party.homeOver'));
+  }
+  for (const g of [...guests]) {
+    const l = g.life;
+    const over = minutes >= g.until || !awake(minutes) || (g.arrived && !someone);
+    if (over) {
+      if (l.present && l.place === home) {
+        if (l.doing) l.stop('home');
+        l.queue = [GO_AWAY].map((offer) => ({ offer, by: 'self' }));
+        if (someone) toast(t('ui.guest.bye', { name: l.name }));
+      }
+      guests.splice(guests.indexOf(g), 1);
+      continue;
+    }
+    if (!g.arrived && minutes >= g.comesAt && someone && !l.shift && !(l.present && l.place !== home && lives.some((h) => h.present && h.place === l.place))) {
+      g.arrived = true;
+      appear(l, home, false, !!homeParty);
+      toast(t('ui.guest.here', { name: l.name }));
+    }
+  }
+}
+// ---- a bigger home: an extension, or a house bought (round 14) ----
+// The household's furniture goes with them: what stood against a wall stands against the same wall (it moves with it),
+// the rest keeps its place in the room as the room grows (the TV in front of the sofa); then the nearest place it fits;
+// what fits nowhere goes in the boxes.
+// `v` along a wall `half` from the middle, in a room growing to `next`: a metre from the wall or nearer, with the wall.
+const along = (v, half, next) => (Math.abs(v) >= half - 1.0 ? v + Math.sign(v) * (next - half) : v * (next / half));
+// The babies go in their cots. Everyone at home stops what they were doing and stands by the new front door.
+async function fitSpot(s, e, tries = 3) {
+  const at = async (x, z, turn) => (home.fits(await measure(srcOf(s), x, z, turn, e.width ? { width: e.width } : s.fit, s.use ? { ...s.use } : null)).ok ? { x, z, turn } : null);
+  const first = await at(e.x, e.z, e.turn ?? 0);
+  if (first) return first;
+  // A few centimetres first: the flat's own things stood a little into its walls (they were never fitted).
+  for (const d of [0.05, 0.1, 0.15, 0.2, 0.3])
+    for (const [dx, dz] of [[0, 1], [0, -1], [1, 0], [-1, 0], [1, 1], [1, -1], [-1, 1], [-1, -1]]) {
+      const ok = await at(e.x + dx * d, e.z + dz * d, e.turn ?? 0);
+      if (ok) return ok;
+    }
+  for (let r = 0.5; r <= tries; r += 0.5)
+    for (let k = 0; k < 8 * r; k++) {
+      const a = (k / (8 * r)) * Math.PI * 2;
+      for (const turn of [e.turn ?? 0, (e.turn ?? 0) + Math.PI / 2]) {
+        const ok = await at(Math.round((e.x + Math.cos(a) * r) * 4) / 4, Math.round((e.z + Math.sin(a) * r) * 4) / 4, turn % (Math.PI * 2));
+        if (ok) return ok;
+      }
+    }
+  return null;
+}
+let moving = false;
+async function rehome(st) {
+  if (moving) return;
+  moving = true;
+  const was = speed;
+  setSpeed(0);
+  $('loading').textContent = t('ui.moving');
+  const old = home, from = old.bounds;
+  const p = await buildHomePlace(st);
+  // Stop what anyone is doing with the old home's things.
+  const there = everyone.filter((l) => l.present && l.place === old);
+  for (const l of there) if (l.doing && l.doing.by !== 'job') l.stop('move');
+  for (const l of everyone) l.queue = l.queue.filter((e) => !e.item || !old.items.includes(e.item));
+  const van = furniture.splice(0).map((e) => ({ e, owner: e.item.owner ?? null, baby: e.item.baby ?? null }));
+  for (const l of everyone) if (l.home && old.items.includes(l.home)) l.home = null;
+  scene.remove(old.group);
+  // The house bought may be the one they are looking round (bought at its own front door): whoever is in it comes into
+  // the new home, and the view with them. Its old names go (it is `home` now; the home left is for sale again).
+  const looking = places[st.id] && places[st.id] !== old ? places[st.id] : null;
+  const visitors = looking ? everyone.filter((l) => l.present && l.place === looking) : [];
+  for (const l of visitors) if (l.doing && l.doing.by !== 'job') l.stop('move');
+  if (looking) scene.remove(looking.group);
+  for (const k of Object.keys(places)) if (k !== 'home' && (places[k] === old || places[k] === looking)) delete places[k];
+  home = places.home = p;
+  for (const l of everyone) if (l.homePlace === old) l.homePlace = p;
+  homeState = { ...st };
+  const to = p.bounds;
+  const boxed = [];
+  // The cots first (a baby must have one), then the beds, then the rest.
+  const order = [...van].sort((a, b) => (b.baby ? 2 : b.e.id.match(/bed/i) ? 1 : 0) - (a.baby ? 2 : a.e.id.match(/bed/i) ? 1 : 0));
+  for (const { e, owner, baby } of order) {
+    const s = kindOf(e.id), want = { ...e, x: along(e.x, from.w / 2, to.w / 2), z: along(e.z, from.d / 2, to.d / 2) };
+    const spot = (await fitSpot(s, want)) ?? (baby || e.id === 'campBed' ? await fitSpot(s, { ...want, x: 0, z: 0 }, 6) : null);
+    if (!spot) {
+      if (e.id !== 'campBed' && e.id !== 'cot') boxed.push(e.id), storage.push(e.id), e.base && boxedBase.push(e.id);
+      continue;
+    }
+    const item = await placeExtra({ ...e, ...spot });
+    if (owner) (item.owner = owner), (owner.home = item);
+    if (baby) addBaby(baby, item), home.group.add(baby.mesh);
+  }
+  for (const l of [...there, ...visitors]) l.arrive(p);
+  if (view === old || view === looking || there.includes(sel) || visitors.includes(sel)) (view = null), setView(p);
+  $('loading').textContent = '';
+  moving = false;
+  setSpeed(was);
+  save();
+  return boxed;
+}
+async function extendHome() {
+  const next = homeState.size + 1, cost = EXTENSION[next];
+  if (!SIZES[next] || household.money < cost) return;
+  household.money -= cost;
+  const boxed = await rehome({ ...homeState, size: next, paid: homeState.paid + cost });
+  toast(t('ui.extend.done', { w: SIZES[next].w, d: SIZES[next].d }));
+  if (boxed?.length) toast(t('ui.move.boxed', { n: boxed.length }));
+}
+// Buying a house: the one you live in now is sold for what it cost you (the flat is rented: nothing back).
+const buyCost = (id) => houseById(id).price - homeState.paid;
+async function buyHouse(id) {
+  const h = houseById(id);
+  if (h.kind !== 'sale' || owned(id) || household.money < buyCost(id)) return;
+  household.money -= buyCost(id);
+  const boxed = await rehome({ id, size: h.size, paid: h.price });
+  toast(t('ui.move.done', { house: t(`house.${id}`) }));
+  if (boxed?.length) toast(t('ui.move.boxed', { n: boxed.length }));
+}
+
+// The clock: game minutes since midnight of day 1.
+const [h0, m0] = (params.get('start') ?? '07:30').split(':').map(Number);
+let minutes = saved?.minutes ?? h0 * 60 + m0;
+let speed = Number(params.get('speed') ?? 1);
+// Day 1 is a Monday (work.mjs: the work days are Monday to Friday).
+const clockText = () => `${t('ui.day', { day: Math.floor(minutes / 1440) + 1, weekday: t(`day.${weekday(minutes)}`) })} · ${hhmm(minutes)}`;
+const SPEED_ICONS = ['⏸', '▶', '⏩', '⏭'];
+$('speeds').innerHTML = SPEEDS.map((_, i) => `<button data-speed="${i}" title="${t(i ? `ui.speed.${i}` : 'ui.speed.pause')}">${SPEED_ICONS[i]}</button>`).join('');
+const setSpeed = (i) => {
+  speed = i;
+  for (const b of $('speeds').children) b.classList.toggle('on', Number(b.dataset.speed) === i);
+};
+for (const b of $('speeds').children) b.onclick = () => setSpeed(Number(b.dataset.speed));
+setSpeed(speed);
+addEventListener('keydown', (e) => {
+  if (placing) {
+    if (e.key === 'r' || e.key === 'R') turnPlacing();
+    if (e.key === 'Escape') stopPlacing();
+    return;
+  }
+  if (card) return; // a card is open: the game waits for it
+  if (e.key === ' ') setSpeed(speed ? 0 : 1);
+  if (['1', '2', '3'].includes(e.key)) setSpeed(Number(e.key));
+});
+
+// Day and night: the sky, the sun and a lamp that comes on in the evening at home, from the clock.
+// Round 11: the sun crosses the sky (east in the morning, west in the evening, warmer and lower at either end), so the
+// shadows turn through the day; the sky's colours and the haze follow the hour.
+const sunWarm = new THREE.Color(0xffb27a), sunNoon = new THREE.Color(0xfff2dd), sunOffset = new THREE.Vector3();
+function light() {
+  const hour = (minutes % 1440) / 60;
+  const day = daylight(hour); // 0 at night, 1 from 8 to 19
+  const arc = THREE.MathUtils.clamp((hour - 6) / 15, 0, 1) * Math.PI; // 0 at 06:00, π at 21:00
+  const high = Math.sin(arc);
+  sunOffset.set(Math.cos(arc) * 7, 6 + 5 * high, 6);
+  const s = skyDome.update(hour, camera, sunOffset);
+  scene.fog.color.copy(s.horizon);
+  sky.intensity = 0.45 + 0.95 * day;
+  sun.intensity = 2.2 * day;
+  sun.color.copy(sunWarm).lerp(sunNoon, Math.min(1, high * 1.6));
+  for (const m of shiny) m.envMapIntensity = 0.25 + 0.6 * day;
+  lamp.intensity = view.house ? 6 * (1 - day) : 0;
+}
+
+// ---- where: the places, and who is in each. You see the one the Sim you look after is in ----
+const PLACE_ICONS = { home: '🏠', office: '🏢', park: '🌳' };
+let followed = null; // the place sel was in last frame: when it changes, the view goes with them
+// Round 14: a house in the town shows here while someone from the household is in it (or you are looking at it), and
+// 🗺️ Town opens the street: who lives where, the parties, the houses for sale, an extension.
+function renderPlaces() {
+  const shown = [home, office, park, ...allPlaces().filter((p) => p.house && p !== home && (view === p || lives.some((l) => l.present && l.place === p)))];
+  $('places').innerHTML = shown
+    .map((p) => {
+      const k = nameOf(p);
+      const here = [...lives, ...(nanny ? [nanny] : [])].filter((l) => l.present && l.place === p).map((l) => (l.carer ? `${CHILDCARE.nanny.icon} ${l.name}` : l.name)).join(', ');
+      const icon = PLACE_ICONS[k] ?? (partyAt(p.house) ? '🎉' : houseById(p.house)?.kind === 'sale' ? '🪧' : '🏡');
+      return `<button data-place="${k}" class="${view === p ? 'on' : ''}">${icon} ${titleOf(p)}${here ? `<small>${here}</small>` : ''}</button>`;
+    })
+    .join('') + `<button data-town>🗺️ ${t('ui.town.button')}<small>${STREET}</small></button>`;
+  for (const b of $('places').children) b.onclick = () => (b.dataset.town != null ? openTown() : setView(places[b.dataset.place]));
+}
+// In the office and the park the camera keeps the one you look after in the middle (the flat is small enough to see whole).
+const follow = new THREE.Vector3();
+function followSel() {
+  if (sel.place !== followed) {
+    followed = sel.place;
+    if (sel.present) setView(sel.place, sel.sim.position);
+  }
+  if (view.bounds.w <= 8 || sel.place !== view || !sel.present || card) return;
+  follow.copy(sel.sim.position).setY(controls.target.y).sub(controls.target).multiplyScalar(0.04);
+  if (follow.lengthSq() < 1e-6) return;
+  controls.target.add(follow);
+  camera.position.add(follow);
+}
+
+// ---- clicking: a thing → its menu; the floor → go there; someone → what to do with them ----
+const ray = new THREE.Raycaster();
+const inView = (l) => l.present && l.place === view;
+let down = null;
+renderer.domElement.addEventListener('pointerdown', (e) => {
+  down = [e.clientX, e.clientY];
+  $('menu').hidden = true;
+});
+renderer.domElement.addEventListener('pointerup', (e) => {
+  if (!down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 6) return;
+  // Placing something bought: the click puts it down (or says why it can't go there).
+  if (placing) return placeHere(e.clientX, e.clientY);
+  // Not where they are: the click is only for looking.
+  if (sel.place !== view || !sel.present) return;
+  ray.setFromCamera(new THREE.Vector2((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1), camera);
+  // Round 14: everything in the home can be clicked (to move, box or sell it), so something with nothing to do with it
+  // (the TV, a plant) no longer stops a click on what stands behind it (a cot behind the TV: parked-lifesim-r14-tvcot).
+  // It is the click's only if nothing usable is further along.
+  let only = null;
+  for (const h of ray.intersectObjects([...everyone.filter((l) => inView(l) && !l.carer).map((l) => l.proxy), view.floor, ...view.clickable], false)) {
+    const who = h.object.userData.life;
+    if (who) return who === sel ? undefined : openSocialMenu(who, e.clientX, e.clientY);
+    const item = h.object.isInstancedMesh ? h.object.userData.items[h.instanceId] : null;
+    if (item?.gone) continue;
+    if (item && offersFor(item).length) return openMenu(item, e.clientX, e.clientY);
+    if (item && item.bought && item.bought.id !== 'campBed') {
+      only ??= item;
+      continue;
+    }
+    if (h.object === view.floor) {
+      if (only) return openMenu(only, e.clientX, e.clientY);
+      if (view.grid.free(h.point)) openMenu(null, e.clientX, e.clientY, h.point.setY(0));
+      return;
+    }
+  }
+  if (only) openMenu(only, e.clientX, e.clientY);
+});
+function openMenu(item, x, y, point = null) {
+  const atHome = view === home;
+  // Round 14: a front door's "Go home" is for anyone's door but your own.
+  const offers = item ? offersFor(item).filter((o) => o.offered !== false && !(o.baby && item.baby?.away) && !(o.away && atHome)) : [{ id: 'goHere', act: 'walk' }];
+  const gain = (o) =>
+    Object.entries(o.advertises ?? o.gives ?? {})
+      .filter(([, v]) => v > 0)
+      .map(([id]) => NEEDS.find((n) => n.id === id).icon)
+      .join('') + (o.skill ? '🔬' : '');
+  // A work station says what its job is and the subject it asks.
+  const st = item?.use?.station;
+  const baby = item?.baby;
+  const head = st
+    ? `<div class="with">${STATIONS.find((s) => s.id === st).icon} ${t(`station.${st}`)}<small>${t(`subject.${st}`)} · ${t(`station.${st}.job`)}</small></div>`
+    : baby ? `<div class="with">👶 ${baby.name}<small>${t(`ui.baby.state.${baby.state}`)}${baby.crying ? ` · ${t(`baby.need.${baby.crying}`)}` : ''}</small></div>` : '';
+  // Anything in the home (round 10: what was bought; round 14: all of it): moved, put away in the boxes, or sold back
+  // for half. Not while someone uses it or sleeps in it, and never the last loo, fridge or shower. A cot (round 12)
+  // only moves (a baby is in it); the camp bed does none of these.
+  const bought = atHome && item?.bought && item.bought.id !== 'campBed' && entryOf(item) ? item.bought : null;
+  const keep = bought && (item.user || item.owner ? t('ui.shop.inUse') : lastNeed(item) ? t(`ui.shop.need.${bought.need}`) : '');
+  const extra = bought
+    ? `<button data-move>↔ ${t('ui.shop.move')}</button>${bought.price ? `<button data-store ${keep ? 'disabled' : ''}>📥 ${t('ui.shop.store')}<span class="gain">${keep || ''}</span></button><button data-sell ${keep ? 'disabled' : ''}>📦 ${t('ui.shop.sell')}<span class="gain">${keep || `+${t('ui.cost', { cost: sellPrice(bought) })}`}</span></button>` : ''}`
+    : '';
+  // A way out (a front door, the bus stop): anywhere in the town (round 14); and a house for sale's door: buy it.
+  const out = item && (item.use?.act === 'door' || item.use?.offers === 'busStop');
+  const sale = out && view.house && houseById(view.house)?.kind === 'sale' && !owned(view.house) ? houseById(view.house) : null;
+  const doorRows = out ? `<button data-town>🗺️ ${t('ui.town.go')}</button>${sale ? `<button data-buyhouse>🏡 ${t('ui.sale.buy')}<span class="gain">${t('ui.cost', { cost: sale.price })}</span></button>` : ''}` : '';
+  $('menu').innerHTML = head + offers.map((o, i) => `<button data-i="${i}">${o.baby ? `${o.icon} ` : ''}${t(`action.${o.id}`)}<span class="gain">${o.task ? '🪙' : gain(o)}</span></button>`).join('') + extra + doorRows;
+  for (const b of $('menu').querySelectorAll('button[data-i]'))
+    b.onclick = () => {
+      sel.command(offers[b.dataset.i], item, point);
+      $('menu').hidden = true;
+    };
+  if (bought) {
+    $('menu').querySelector('[data-move]').onclick = () => (($('menu').hidden = true), startPlacing(bought, item));
+    const sellButton = $('menu').querySelector('[data-sell]');
+    if (sellButton) sellButton.onclick = () => (($('menu').hidden = true), sell(item));
+    const storeButton = $('menu').querySelector('[data-store]');
+    if (storeButton) storeButton.onclick = () => (($('menu').hidden = true), store(item));
+  }
+  if (out) $('menu').querySelector('[data-town]').onclick = () => (($('menu').hidden = true), openTown());
+  if (sale) $('menu').querySelector('[data-buyhouse]').onclick = () => (($('menu').hidden = true), openBuy(sale.id));
+  showMenu(x, y, offers.length + (head ? 1 : 0) + (bought ? (bought.price ? 3 : 1) : 0) + (out ? (sale ? 2 : 1) : 0));
+}
+function showMenu(x, y, rows) {
+  Object.assign($('menu').style, { left: `${Math.min(x, innerWidth - 240)}px`, top: `${Math.max(8, Math.min(y, innerHeight - 46 * rows - 40))}px` });
+  $('menu').hidden = false;
+}
+// Clicking someone else: what your Sim can do with them. The ones the friendship isn't ready for are shown greyed,
+// with the level they need ("Needs: Friends"), so the way to a hug is there to see. Asking someone to move in is only
+// for someone who doesn't live with you.
+function openSocialMenu(other, x, y) {
+  const bond = bondOf(sel, other);
+  const busy = other.busyFor(sel);
+  const asleep = busy === 'asleep' || busy === 'away';
+  const shown = INTERACTIONS.filter((ix) =>
+    ix.only === 'notHousehold' ? !lives.includes(other) : ix.only === 'household' ? lives.includes(other) : ix.only === 'unmarried' ? !spouseOf(sel, everyone) && !spouseOf(other, everyone) : true
+  );
+  const head = `<div class="with">${t('ui.menu.with', { name: other.name })}<small>${t(`friendship.${friendshipLevel(bond).id}`)}${bond.married ? ` · 💍 ${t('ui.married.short')}` : bond.romance > 0 ? ` · 💗 ${t(`romance.${romanceLevel(bond).id}`)}` : ''}</small></div>`;
+  const rows = asleep
+    ? `<div class="note">${t(`ui.busy.${busy}`, { name: other.name })}</div>`
+    : shown
+        .map((ix) => {
+          const lock = lockOf(ix, bond);
+          // A baby needs a cot, and the flat has room for MAX_BABIES (round 12).
+          const full = !lock && ix.after === 'baby' && babies.length >= MAX_BABIES;
+          const why = lock ? `<span class="gain">🔒 ${t('ui.locked', { level: t(`${lock.kind}.${lock.level}`) })}</span>` : full ? `<span class="gain">🔒 ${t('ui.baby.full')}</span>` : '';
+          return `<button data-id="${ix.id}" ${lock || full ? 'disabled' : ''}>${ix.icon} ${t(`action.${ix.id}`)}${why}</button>`;
+        })
+        .join('');
+  $('menu').innerHTML = head + rows;
+  for (const b of $('menu').querySelectorAll('button'))
+    b.onclick = () => {
+      sel.command(interactionById(b.dataset.id), null, null, other);
+      $('menu').hidden = true;
+    };
+  showMenu(x, y, asleep ? 2 : shown.length + 1);
+}
+// Your Sim's own things to do. One that costs shows its price, and waits greyed out until there is the money; looking
+// for a job is there until they have one.
+const SELF = offersFor(null).filter((o) => o.offered !== false);
+$('self').innerHTML = SELF.map((o, i) => `<button data-i="${i}" data-id="${o.id}">${o.icon ?? (o.id === 'phone' ? '📞' : '📱')} ${t(`action.${o.id}`)}${o.cost ? ` <span class="cost">${t('ui.cost', { cost: o.cost })}</span>` : ''}</button>`).join('');
+for (const b of $('self').children) b.onclick = () => sel.command(SELF[b.dataset.i]);
+function renderSelf() {
+  // The buy menu: at home (what is bought goes in the flat), not while placing.
+  $('buy').hidden = view !== home || !!placing;
+  $('buy').disabled = !!card;
+  for (const b of $('self').children) {
+    const o = SELF[b.dataset.i];
+    // A pizza is delivered to the flat; a job is looked for once.
+    b.hidden = (o.id === 'findJob' && !!sel.job) || (o.id === 'orderPizza' && sel.place !== home);
+    b.disabled = !!o.cost && household.money < o.cost;
+    b.title = b.disabled ? t('ui.money.short', { name: sel.name, cost: o.cost }) : '';
+  }
+}
+
+// Who lives here: click someone to look after them. The bonds between them, and the friends they have at work.
+function select(l) {
+  sel = l;
+  $('menu').hidden = true;
+  renderYear();
+}
+$('people').innerHTML = `<h2>${t('ui.people')}</h2><div class="row" id="who"></div><div id="babies"></div><div id="bonds"></div><div id="workmates"></div>`;
+const bondRows = (a, b) => {
+  const bond = bondOf(a, b);
+  const f = bond.friendship;
+  // Friendship runs -100…100 from the middle of its bar; romance 0…100, shown once there is any or they are friends.
+  const fBar = `<div class="bar two"><i style="left:${f < 0 ? 50 + f / 2 : 50}%;width:${Math.abs(f) / 2}%;background:${f < 0 ? '#e05a47' : '#4caf50'}"></i></div>`;
+  const romance = bond.romance > 0 || f >= 25
+    ? `<div class="bond"><span>💗</span><span>${t('ui.romance')}</span><b>${t(`romance.${romanceLevel(bond).id}`)}</b><div class="bar"><i style="width:${bond.romance}%;background:#e46aa0"></i></div></div>`
+    : '';
+  return `<div class="pair">${a.name} & ${b.name}${bond.married ? ` · 💍 ${t('ui.married.short')}` : ''}</div><div class="bond"><span>🤝</span><span>${t('ui.friendship')}</span><b>${t(`friendship.${friendshipLevel(bond).id}`)}</b>${fBar}</div>${romance}`;
+};
+let friendsShown = null;
+function renderPeople() {
+  $('who').innerHTML = lives.map((l, i) => `<button data-i="${i}" class="${l === sel ? 'on' : ''}" title="${t('ui.people.hint')}"><span class="face">${EMOTIONS[l.mood.emotion].icon}</span>${l.name}</button>`).join('');
+  for (const b of $('who').children) b.onclick = () => select(lives[b.dataset.i]);
+  // The babies (round 12): how each is, and their three needs. Round 13: who is looking after them while everyone is
+  // out (the nanny, the nursery), and the household's choice, changed here.
+  const named = babies.filter((b) => b.name);
+  const where = caring?.kind === 'nursery' ? `${CHILDCARE.nursery.icon} ${t('ui.care.atNursery')}` : caring && nanny?.present ? `${CHILDCARE.nanny.icon} ${t('ui.care.withNanny', { nanny: nanny.name })}` : '';
+  const choice = Object.keys(CHILDCARE).map((k) => `<button data-care="${k}" class="${household.childcare === k ? 'on' : ''}">${CHILDCARE[k].icon} ${t(`ui.care.${k}.short`)}</button>`).join('');
+  const babiesHtml = named
+    .map((b) => `<div class="baby"><div class="who"><span class="face">${b.away ? CHILDCARE.nursery.icon : b.asleep ? '😴' : b.crying ? '😭' : '😊'}</span><b>${b.name}</b><small>${t(b.girl ? 'ui.baby.girl' : 'ui.baby.boy')}</small></div>${BABY_NEEDS.map((n) => `<div class="need" title="${t(`baby.need.${n.id}`)}"><span class="icon">${n.icon}</span><div class="bar"><i style="width:${b.needs[n.id]}%;background:${barColour(b.needs[n.id])}"></i></div></div>`).join('')}</div>`)
+    .join('') + (named.length ? `<div class="care">${where ? `<div class="where">${where}</div>` : ''}<div class="choice"><span title="${t('ui.care.hint')}">${t('ui.care.when')}</span>${choice}</div></div>` : '');
+  if ($('babies').innerHTML !== babiesHtml) $('babies').innerHTML = babiesHtml;
+  for (const b of $('babies').querySelectorAll('[data-care]'))
+    b.onclick = () => {
+      household.childcare = b.dataset.care;
+      if (b.dataset.care === 'nanny') nannyLife();
+      save();
+    };
+  $('bonds').innerHTML = lives.flatMap((a, i) => lives.slice(i + 1).map((b) => bondRows(a, b))).join('');
+  // The colleagues and neighbours the one you look after has got to know (talked to at least once). Round 14 (the brief:
+  // "everyone they work with is accessible as a 'friend' to go hang out with"): go round to theirs 🏡, or ask them
+  // round 📞.
+  const known = npcs().filter((c) => { const b = bondOf(sel, c); return b.friendship !== 5 || b.romance > 0; });
+  const friendsHtml = known.length
+    ? `<h3>${t('ui.friends')}</h3>${known.map((c) => `<div class="friend">${bondRows(sel, c)}<div class="friend-go"><small>${t(c.job ? 'ui.friend.colleague' : 'ui.friend.neighbour')}</small><button data-visit="${c.house}" title="${t('ui.friend.visit', { name: c.name })}" ${visitState(c.house).ok ? '' : 'disabled'}>🏡 ${t('ui.friend.visitShort')}</button><button data-invite="${c.name}" title="${t('ui.friend.invite', { name: c.name })}" ${homeNow(c) && !guests.some((g) => g.life === c) ? '' : 'disabled'}>📞 ${t('ui.friend.inviteShort')}</button></div></div>`).join('')}`
+    : '';
+  if (friendsShown !== friendsHtml) {
+    $('workmates').innerHTML = friendsShown = friendsHtml;
+    for (const b of $('workmates').querySelectorAll('[data-visit]')) b.onclick = () => goVisit(b.dataset.visit);
+    for (const b of $('workmates').querySelectorAll('[data-invite]')) b.onclick = () => inviteOver(npcs().find((c) => c.name === b.dataset.invite));
+  }
+}
+
+// ---- the panels ----
+const barColour = (v) => (v > 60 ? '#4caf50' : v > 30 ? '#e6b729' : '#e05a47');
+$('needs').innerHTML = NEEDS.map((n) => `<div class="need"><span class="icon">${n.icon}</span><span>${t(`need.${n.id}`)}</span><div class="bar"><i id="need-${n.id}"></i></div></div>`).join('');
+const SKILL_ICONS = { science: '🔬', maths: '🔢', geography: '🌍', french: '📝', english: '☎️', history: '🏺' };
+function renderPanels() {
+  $('clock').textContent = clockText();
+  $('money').textContent = t('ui.coins', { n: household.money });
+  renderJob();
+  renderSelf();
+  renderPlaces();
+  for (const n of NEEDS) {
+    const v = sel.needs[n.id];
+    Object.assign($(`need-${n.id}`).style, { width: `${v}%`, backgroundColor: barColour(v) });
+  }
+  const emo = sel.mood.emotion;
+  $('mood').innerHTML = `<span class="face">${EMOTIONS[emo].icon}</span><span>${t(`emotion.${emo}`)}</span>`;
+  $('moodlets').innerHTML = sel.moodlets
+    .map((id) => {
+      const m = MOODLETS[id];
+      const left = sel.timed.get(id);
+      const time = left ? `<small>${left >= 60 ? `${Math.round(left / 60)} h` : `${Math.ceil(left)} min`}</small>` : '';
+      return `<span class="moodlet ${m.emotion === 'happy' ? '' : 'bad'}" title="${t(`moodlet.${id}.text`)}">${m.icon} ${t(`moodlet.${id}`)} ${time}</span>`;
+    })
+    .join('');
+  // Science always (the bookshelf); the others once they have begun.
+  $('skills').innerHTML = Object.keys(SKILL_ICONS)
+    .filter((id) => id === 'science' || sel.skills[id] > 0)
+    .map((id) => {
+      const v = sel.skills[id] ?? 0, lvl = skillLevel(v);
+      const into = lvl >= 10 ? 1 : (v - SKILL_LEVELS[lvl]) / (SKILL_LEVELS[lvl + 1] - SKILL_LEVELS[lvl]);
+      return `<div class="skill" data-skill="${id}"><span>${SKILL_ICONS[id]}</span><span>${t(`skill.${id}`)}</span><b>${lvl}</b><div class="bar"><i style="width:${into * 100}%"></i></div></div>`;
+    })
+    .join('');
+  const plan = sel.plan;
+  $('todo').innerHTML = plan.length
+    ? plan
+        .map((e, i) => {
+          const progress = e.now && e.started && Number.isFinite(e.length ?? e.offer.minutes) ? `<div class="progress"><i style="width:${Math.min(100, (e.minutes / (e.length ?? e.offer.minutes)) * 100)}%"></i></div>` : '';
+          return `<div class="task ${e.now ? 'now' : ''}" data-i="${e.now ? -1 : i - (plan[0].now ? 1 : 0)}" title="${t('ui.queue.cancel')}">${e.icon}<small>${t(`action.${e.offer.id}`)}</small>${e.other ? `<span class="with">${e.other.name}</span>` : ''}${e.by === 'self' || e.by === 'partner' ? '<span class="by">💭</span>' : ''}${e.by === 'job' ? '<span class="by">🔒</span>' : ''}${progress}</div>`;
+        })
+        .join('')
+    : `<div class="empty">${t('ui.queue.empty')}</div>`;
+  for (const el of $('todo').querySelectorAll('.task')) el.onclick = () => sel.cancel(Number(el.dataset.i));
+}
+
+// The Job panel: the job, its pay and hours, the promotion bar; at work, the stations (Among Us's task list: each with
+// how many times it was done today; click one to go and do it) and what today has earned.
+function renderJob() {
+  const job = sel.job;
+  if (!job) {
+    $('job').innerHTML = `<div class="none">${t('ui.job.none')}</div><p>${t('ui.job.none.hint')}</p>`;
+    return;
+  }
+  const c = careerOf(job), lvl = levelOfJob(job), next = nextLevel(job);
+  const when = sel.shift ? t('ui.job.atWork', { time: hhmm(sel.shift.endsAt) }) : t('ui.job.next', { weekday: t(`day.${nextWorkDay(job)}`), time: hhmm(c.leave) });
+  const promo = next ? `<div class="promo"><span>${t('ui.job.promotion')}</span><div class="bar"><i style="width:${job.performance}%"></i></div></div>` : `<div class="note">${t('ui.job.top')}</div>`;
+  const stations = sel.shift
+    ? `<div class="stations"><div class="line">${t('ui.job.today', { right: sel.today.right, coins: sel.today.coins })}</div>${STATIONS.map((s) => {
+        const n = sel.today.tasks[s.id] ?? 0;
+        return `<button data-station="${s.id}" class="${n ? 'done' : ''}">${s.icon} ${t(`subject.${s.id}`)}${n ? ` <b>✓${n > 1 ? n : ''}</b>` : ''}</button>`;
+      }).join('')}</div>`
+    : `<p class="hint">${t('ui.job.tasksHint')}</p>`;
+  $('job').innerHTML = `<div class="title">${c.icon} <b>${t(`job.${job.career}.${lvl.id}`)}</b></div>
+    <div class="line">${t('ui.job.pay', { pay: lvl.pay })} · ${t('ui.job.hours', { from: hhmm(c.starts), to: hhmm(c.ends), days: t('ui.job.weekdays') })}</div>
+    <div class="line">${when}</div>${promo}${stations}
+    ${sel.shift || sel.doing?.by === 'job' ? '' : `<button class="quit" id="quit-job">${t('ui.job.quitButton')}</button>`}`;
+  for (const b of $('job').querySelectorAll('[data-station]'))
+    b.onclick = () => {
+      const item = office.items.find((i) => i.use?.station === b.dataset.station);
+      sel.command(offersFor(item)[0], item);
+    };
+  if ($('quit-job')) $('quit-job').onclick = () => sel.quitJob();
+}
+// The next day they go in: today if it is a work day and they haven't gone yet.
+function nextWorkDay(job) {
+  const c = careerOf(job), today = Math.floor(minutes / 1440);
+  for (let k = 0; k < 8; k++) {
+    const day = today + k;
+    if (c.days.includes(day % 7) && !(k === 0 && (job.lastDay === day || minutes % 1440 >= c.ends - 30))) return day % 7;
+  }
+  return c.days[0];
+}
+
+// ---- cards: the jobs going, and a work station's questions ----
+// The game waits while a card is open (no clock on a question: time pressure puts young players off), and goes on at the
+// speed it was at when the card is closed.
+let card = null; // { life, kind, speed }
+function openCard(life, kind, html) {
+  card = { life, kind, speed: card?.speed ?? speed };
+  setSpeed(0);
+  $('card').innerHTML = html;
+  $('card').hidden = false;
+  $('card-back').hidden = false;
+}
+function closeCard() {
+  if (!card) return;
+  $('card').hidden = $('card-back').hidden = true;
+  setSpeed(card.speed);
+  card = null;
+}
+function openJobs(life) {
+  life.card = null;
+  const rows = Object.entries(CAREERS)
+    .map(([id, c]) => {
+      const lvl = c.levels[0];
+      return `<div class="offer"><div class="big">${c.icon}</div><div><b>${t('ui.card.jobs.offer', { job: t(`job.${id}.${lvl.id}`), place: t(`job.${id}.place`) })}</b>
+        <div>${t('ui.job.pay', { pay: lvl.pay })} · ${t('ui.job.hours', { from: hhmm(c.starts), to: hhmm(c.ends), days: t('ui.job.weekdays') })}</div></div>
+        <button class="go" data-career="${id}">${t('ui.card.take')}</button></div>`;
+    })
+    .join('');
+  openCard(life, 'jobs', `<h2>${t('ui.card.jobs.title')}</h2>${rows}<div class="actions"><button id="card-close">${t('ui.card.notNow')}</button></div>`);
+  for (const b of $('card').querySelectorAll('[data-career]'))
+    b.onclick = () => {
+      life.takeJob(b.dataset.career);
+      giveDesk(life);
+      closeCard();
+    };
+  $('card-close').onclick = closeCard;
+}
+
+// A work station (round 9). The brief, 10-29: "let the kids choose what they want to practise, and make the menu level
+// based like CE2 / 6eme for each player, and within that the sub topics". The station is the subject; the card asks
+// the level (each Sim keeps their own, so each player can have theirs) and the topic, then TASK.questions questions in a
+// row. A right answer pays at once; a wrong one shows the right answer and why, and costs nothing.
+const yearOf = (l) => l.year ?? year;
+function openStation(life) {
+  const station = life.card.station;
+  const s = STATIONS.find((x) => x.id === station);
+  const head = `<h2>${s.icon} ${t(`station.${station}`)}</h2><p class="intro">${t(`subject.${station}`)} · ${t(`station.${station}.job`)}</p>`;
+  let round = { right: 0, asked: 0 };
+  const done = (more) => {
+    life.taskDone(station, round.right, round.asked, more);
+    round = { right: 0, asked: 0 };
+  };
+  const choose = () => {
+    const y = yearOf(life);
+    const topics = topicsFor(station, y);
+    const levels = YEARS.map((v) => `<button data-year="${v}" class="${v === y ? 'on' : ''}">${v}</button>`).join('');
+    const rows = [`<button data-topic="" class="mix">🎲 ${t('ui.card.station.mix')}</button>`, ...topics.map((tp) => `<button data-topic="${tp.id}">${tp.name}${tp.above ? ` <small>${t('ui.card.station.from', { year: tp.from })}</small>` : ''}</button>`)].join('');
+    openCard(life, 'station', `${head}<div class="levels"><span>${t('ui.card.station.level')}</span>${levels}</div>
+      <p class="what">${t('ui.card.station.what', { name: life.name })}</p><div class="topics">${rows}</div>
+      <div class="actions"><button id="card-close">${t('ui.card.notNow')}</button></div>`);
+    for (const b of $('card').querySelectorAll('[data-year]'))
+      b.onclick = () => {
+        life.year = b.dataset.year;
+        if (life === sel) renderYear();
+        choose();
+      };
+    for (const b of $('card').querySelectorAll('[data-topic]')) b.onclick = () => question(b.dataset.topic || null, 1);
+    $('card-close').onclick = () => (done(false), closeCard());
+  };
+  const question = (topic, n) => {
+    const q = (life.question = ask({ subject: station, topic, year: yearOf(life) }));
+    openCard(life, 'station', `${head}<p class="count">${t('ui.card.station.count', { n, of: TASK.questions })}</p>
+      <p class="question">${q.prompt}</p><div class="answers">${q.choices.map((c, i) => `<button data-i="${i}">${c}</button>`).join('')}</div>
+      <p class="calm">${t('ui.card.station.calm')}</p>`);
+    for (const b of $('card').querySelectorAll('.answers button'))
+      b.onclick = () => {
+        const right = Number(b.dataset.i) === q.answer;
+        for (const x of $('card').querySelectorAll('.answers button')) {
+          x.disabled = true;
+          if (Number(x.dataset.i) === q.answer) x.classList.add('right');
+          else if (x === b) x.classList.add('wrong');
+        }
+        record(q, right);
+        const coins = life.taskAnswer(station, right);
+        round.asked++;
+        round.right += right ? 1 : 0;
+        life.question = { ...q, chose: Number(b.dataset.i), right };
+        const last = n >= TASK.questions;
+        $('card').querySelector('.calm').outerHTML = `<div class="result ${right ? 'yes' : 'no'}"><b>${right ? `🎉 ${t('ui.card.station.right', { coins })}` : t('ui.card.station.wrong', { answer: q.choices[q.answer] })}</b> ${q.explain ?? ''}</div>
+          <div class="actions"><button id="card-next" class="go">${last ? t('ui.card.station.done') : t('ui.card.station.next')}</button></div>`;
+        $('card-next').onclick = () => (last ? summary(topic) : question(topic, n + 1));
+      };
+  };
+  const summary = (topic) => {
+    const { right, asked } = round;
+    const coins = right * TASK.pay(life.job?.level ?? 0);
+    openCard(life, 'station', `${head}<div class="result ${right * 3 >= asked * 2 ? 'yes' : 'no'}"><b>${right === asked ? '🌟 ' : ''}${t('ui.card.station.done')}</b> ${t('ui.card.station.summary', { right, of: asked, coins })}</div>
+      <div class="actions"><button id="card-again">${t('ui.card.station.again')}</button><button id="card-close" class="go">${t('ui.card.station.finish')}</button></div>`);
+    $('card-again').onclick = () => (done(true), question(topic, 1));
+    $('card-close').onclick = () => (done(false), closeCard());
+  };
+  choose();
+}
+// A card someone is owed: the jobs after looking on the phone; a station's questions when the Sim you look after gets
+// there (someone else's waits until you look after them).
+function renderCards() {
+  if (card || placing) return;
+  if (sel.card?.kind === 'station') return openStation(sel);
+  if (sel.card === 'look') return openLook(sel);
+  if (newBabies.length) return babyCard(newBabies.shift());
+  if (careAsk) return careCard();
+  for (const l of [sel, ...lives.filter((o) => o !== sel)]) if (l.card === 'jobs') return openJobs(l);
+}
+
+// The school year the questions are pitched at: ?year=, else the last one chosen on this device, else CE2. Each Sim can
+// have their own (the station card, or this setting for the one you look after).
+const stored = (() => {
+  try {
+    return localStorage.getItem('lifesim.year');
+  } catch {
+    return null;
+  }
+})();
+let year = [params.get('year'), stored, DEFAULT_YEAR].find((y) => YEARS.includes(y));
+// A new game: the year chosen on the create-a-Sim screen, remembered on this device.
+if (start?.kind === 'new' && YEARS.includes(start.year)) {
+  year = start.year;
+  try {
+    localStorage.setItem('lifesim.year', year);
+  } catch {}
+}
+$('settings').innerHTML = `<h2>${t('ui.settings')}</h2><label class="setting"><span>${t('ui.year')}</span><select id="year">${YEARS.map((y) => `<option value="${y}">${t(`year.${y}`)}</option>`).join('')}</select></label>
+  ${saving ? `<div class="saved" id="saved"></div><button id="new-game">✨ ${t('ui.start.new')}</button>` : ''}`;
+function renderYear() {
+  $('year').value = yearOf(sel);
+}
+renderYear();
+$('year').onchange = () => {
+  sel.year = $('year').value;
+  if (sel === life) {
+    year = sel.year;
+    try {
+      localStorage.setItem('lifesim.year', year);
+    } catch {}
+  }
+};
+
+// ---- saving (round 10, save.mjs) ----
+// Every game hour, after anything bought, sold or changed, and when the page is put away. Not in a test's URL.
+let savedAt = null;
+function snapshot() {
+  const beds = sleepers();
+  return {
+    minutes, money: household.money, childcare: household.childcare, year,
+    lives: lives.map((l) => ({ ...lifeState(l), bed: beds.indexOf(l.home) })),
+    // Before they have loaded (the first save comes straight away), the ones the save had.
+    colleagues: colleaguesIn ? colleagues.map((c) => ({ who: c.who, job: c.job && { ...c.job } })) : saved?.colleagues ?? [],
+    bonds: allBonds(),
+    // Round 14 (v2): everything in the home, where it is; the boxes; which home, and how big; the neighbours.
+    furniture: furniture.map(({ item, ...e }) => e),
+    // What was added (round 10's name; read by its check and by nothing else since v2).
+    extras: extras().map(({ id, x, z, turn }) => ({ id, x, z, turn })),
+    storage: [...storage],
+    boxedBase: [...boxedBase],
+    home: { ...homeState },
+    town: { neighbours: neighbours.map((n) => n.who) },
+    // Each baby, with the cot they lie in (its place in `furniture`).
+    babies: babies.filter((b) => b.cot).map((b) => ({ ...b.saved(), cot: furniture.findIndex((e) => e.item === b.cot) }))
+  };
+}
+function save() {
+  if (!saving) return false;
+  const ok = writeSave(snapshot());
+  if (ok) savedAt = minutes;
+  if ($('saved')) $('saved').textContent = ok ? t('ui.saved', { when: clockText() }) : t('ui.saved.no');
+  return ok;
+}
+addEventListener('pagehide', save);
+document.addEventListener('visibilitychange', () => document.hidden && save());
+if ($('new-game'))
+  $('new-game').onclick = () => {
+    const names = lives.map((l) => l.name).join(', ');
+    openCard(sel, 'newGame', `<h2>${t('ui.start.sure')}</h2><p class="intro">${t('ui.start.sureText', { names })}</p>
+      <div class="actions"><button id="card-close">${t('ui.start.back')}</button><button class="go" id="new-yes">${t('ui.start.yes')}</button></div>`);
+    $('card-close').onclick = closeCard;
+    $('new-yes').onclick = () => {
+      clearSave();
+      removeEventListener('pagehide', save);
+      location.href = location.pathname;
+    };
+  };
+
+// ---- buying (round 10, shop.mjs) ----
+// The buy menu is a card (the game waits); buying something picks it up: a see-through copy follows the pointer over
+// the floor, green where it fits and red where it doesn't, ↻ turns it, a click puts it down and pays. Something bought
+// can be moved or sold back for half (its menu).
+let shopTab = 'sleep';
+const beauty = () => furniture.reduce((sum, e) => sum + (e.item.beauty ?? 0), 0);
+function openShop() {
+  if (card || placing) return;
+  const b = beauty();
+  // Round 14: the boxes (what was put away) are a tab of their own while there is something in them.
+  if (shopTab === 'boxes' && !storage.length) shopTab = 'sleep';
+  const kinds = [...SHOP_KINDS, ...(storage.length ? ['boxes'] : [])];
+  const tabs = kinds.map((k) => `<button data-kind="${k}" class="${k === shopTab ? 'on' : ''}">${k === 'boxes' ? `📦 ${t('shop.kind.boxes', { n: storage.length })}` : t(`shop.kind.${k}`)}</button>`).join('');
+  const rows = shopTab === 'boxes'
+    ? [...new Set(storage)].map((id) => {
+        const s = kindOf(id), n = storage.filter((x) => x === id).length;
+        return `<div class="offer"><div class="big">${s.icon}</div><div><b>${t(`shop.${id}`)}${n > 1 ? ` ×${n}` : ''}</b><div>${t(`shop.${id}.does`)}</div></div>
+          <button class="go" data-unbox="${id}">${t('ui.shop.unbox')}</button></div>`;
+      }).join('')
+    : SHOP.filter((s) => s.kind === shopTab)
+    .map((s) => {
+      const short = household.money < s.price;
+      return `<div class="offer"><div class="big">${s.icon}</div><div><b>${t(`shop.${s.id}`)}</b><div>${t(`shop.${s.id}.does`)}${s.beauty ? ` · 🌸 ${t('ui.shop.lovely')}` : ''}</div></div>
+        <button class="go" data-buy="${s.id}" ${short ? `disabled title="${t('ui.money.short', { name: sel.name, cost: s.price })}"` : ''}>${t('ui.cost', { cost: s.price })}</button></div>`;
+    })
+    .join('');
+  openCard(sel, 'shop', `<h2>🛒 ${t('ui.shop.title')}</h2><p class="intro">${t('ui.shop.intro', { coins: household.money })}</p>
+    <p class="lovely">🌸 ${t('ui.shop.howLovely')} <b>${'✿'.repeat(Math.min(b, 6))}${'·'.repeat(Math.max(0, 6 - b))}</b> ${b >= LOVELY ? t('ui.shop.lovelyYes') : t('ui.shop.lovelyNo', { n: LOVELY - b })}</p>
+    <div class="tabs">${tabs}</div><div class="rows">${rows}</div><div class="actions"><button id="card-close">${t('ui.shop.done')}</button></div>`);
+  for (const el of $('card').querySelectorAll('[data-kind]')) el.onclick = () => ((shopTab = el.dataset.kind), closeCard(), openShop());
+  for (const el of $('card').querySelectorAll('[data-buy]')) el.onclick = () => startPlacing(shopItem(el.dataset.buy));
+  for (const el of $('card').querySelectorAll('[data-unbox]')) el.onclick = () => startPlacing(kindOf(el.dataset.unbox), null, true);
+  $('card-close').onclick = closeCard;
+}
+$('buy').textContent = `🛒 ${t('ui.shop.button')}`;
+$('buy').onclick = openShop;
+
+// ---- the town card (round 14): Sunny Lane, house by house. The game waits while it is open. ----
+// Your home (and an extension), who lives in each house (and whether they're in, a party tonight, invited or not), the
+// houses for sale (go and look round; buy), the park, a party at yours. "Go" sends the one you look after.
+function openTown() {
+  if (card || placing || moving) return;
+  const who = sel, money = household.money;
+  const busy = !!who.shift || who.doing?.by === 'job' || !who.present;
+  const size = (n) => t('town.size', SIZES[n]);
+  const row = (icon, title, note, buttons) => `<div class="offer"><div class="big">${icon}</div><div><b>${title}</b><div>${note}</div></div><div class="btns">${buttons}</div></div>`;
+  const next = SIZES[homeState.size + 1], ext = EXTENSION[homeState.size + 1];
+  const yourNo = homeState.id === 'flat' ? 1 : houseById(homeState.id).no;
+  const rows = [
+    row('🏠', t('town.yours', { no: yourNo, street: STREET }), `${homeState.id === 'flat' ? t('town.flat') : t(`house.${homeState.id}`)} · ${size(homeState.size)}`,
+      next ? `<button class="go" data-extend ${money < ext ? 'disabled' : ''}>🔨 ${t('town.extend', next)} <small>${t('ui.cost', { cost: ext })}</small></button>` : `<small>${t('town.biggest')}</small>`)
+  ];
+  for (const h of [...HOUSES].sort((a, b) => a.no - b.no)) {
+    if (owned(h.id)) continue;
+    const v = visitState(h.id), addr = `${h.no} ${STREET}`;
+    if (h.kind === 'sale') {
+      const cost = buyCost(h.id);
+      rows.push(row('🪧', `${t(`house.${h.id}`)} <small>${addr}</small>`, `${t('town.forSale')} · ${size(h.size)} · ${t('ui.cost', { cost: h.price })}${homeState.paid ? ` · ${t('town.trade', { cost: Math.max(0, cost) })}` : ''}`,
+        `<button data-go="${h.id}" ${busy ? 'disabled' : ''}>👀 ${t('town.look')}</button><button class="go" data-buyhouse="${h.id}" ${money < cost ? `disabled title="${t('ui.money.short', { name: who.name, cost })}"` : ''}>🏡 ${t('town.buy')}</button>`));
+      continue;
+    }
+    const living = residentsOf(h.id);
+    const people = living.map((l) => `${l.name} <small>(${t(`friendship.${friendshipLevel(bondOf(who, l)).id}`)}${l.job ? ` · ${t('ui.friend.colleague')}` : ''})</small>`).join(', ');
+    const party = partyToday() === h.id && (minutes % 1440) < PARTY.to
+      ? ` · 🎉 ${t(partyAt(h.id) ? 'town.partyNow' : 'town.partyTonight', { from: hhmm(PARTY.from) })} ${invited(h.id) ? `✉️ ${t('town.invited')}` : `🙊 ${t('town.notInvited')}`}` : '';
+    rows.push(row(partyAt(h.id) ? '🎉' : '🏡', `${houseTitle(h.id)} <small>${addr}</small>`, `${people || t('town.nobody')}${party} · ${t(`town.why.${v.why}`)}`,
+      `<button class="go" data-go="${h.id}" ${v.ok && !busy ? '' : 'disabled'}>${partyAt(h.id) ? '🎉' : '🚶'} ${t('town.go')}</button>`));
+  }
+  rows.push(row('🌳', t('place.park'), t('town.park'), `<button data-park ${busy ? 'disabled' : ''}>🚶 ${t('town.go')}</button>`));
+  const partyButton = homeParty ? `<small>🎉 ${t('town.partyOn')}</small>` : `<button data-party ${money < HOME_PARTY.cost || !awake(minutes) ? 'disabled' : ''}>🎉 ${t('town.throwParty')} <small>${t('ui.cost', { cost: HOME_PARTY.cost })}</small></button>`;
+  openCard(who, 'town', `<h2>🗺️ ${STREET}</h2><p class="intro">${t(busy ? 'town.introBusy' : 'town.intro', { name: who.name, coins: money })}</p>
+    <div class="rows town">${rows.join('')}</div><div class="actions">${partyButton}<button id="card-close">${t('ui.shop.done')}</button></div>`);
+  $('card-close').onclick = closeCard;
+  for (const b of $('card').querySelectorAll('[data-go]')) b.onclick = () => goVisit(b.dataset.go);
+  for (const b of $('card').querySelectorAll('[data-buyhouse]')) b.onclick = () => (closeCard(), openBuy(b.dataset.buyhouse));
+  $('card').querySelector('[data-park]')?.addEventListener('click', () => (closeCard(), who.command(offerById('Door_1', 'goPark'))));
+  $('card').querySelector('[data-extend]')?.addEventListener('click', () => (closeCard(), openExtend()));
+  $('card').querySelector('[data-party]')?.addEventListener('click', () => (closeCard(), throwParty()));
+}
+// Off to a house in the town: built first if it hasn't been (a second, the first time), then out of the door.
+async function goVisit(id) {
+  const who = sel;
+  closeCard();
+  if (!id || owned(id)) return;
+  await loadNeighbours();
+  await housePlace(id);
+  who.command(goTo(id));
+}
+// Sure? cards: buying a house, building an extension.
+function openBuy(id) {
+  const h = houseById(id), cost = buyCost(id);
+  if (card || !h || owned(id)) return;
+  const back = homeState.paid ? t('ui.sale.sellOld', { coins: homeState.paid }) : t('ui.sale.rented');
+  openCard(sel, 'buy', `<h2>🏡 ${t('ui.sale.title', { house: t(`house.${id}`) })}</h2><p class="intro">${t('ui.sale.intro', { size: t('town.size', SIZES[h.size]), price: h.price })} ${back}</p>
+    <p class="intro">${t('ui.sale.van')}</p>
+    <div class="actions"><button id="card-close">${t('ui.start.back')}</button><button class="go" id="buy-yes" ${household.money < cost ? 'disabled' : ''}>🏡 ${t('ui.sale.yes', { cost: Math.max(0, cost) })}</button></div>`);
+  $('card-close').onclick = closeCard;
+  $('buy-yes').onclick = () => (closeCard(), buyHouse(id));
+}
+function openExtend() {
+  const next = SIZES[homeState.size + 1], cost = EXTENSION[homeState.size + 1];
+  if (card || !next) return;
+  openCard(sel, 'extend', `<h2>🔨 ${t('ui.extend.title')}</h2><p class="intro">${t('ui.extend.intro', { from: t('town.size', SIZES[homeState.size]), to: t('town.size', next), cost })}</p>
+    <div class="actions"><button id="card-close">${t('ui.start.back')}</button><button class="go" id="extend-yes" ${household.money < cost ? 'disabled' : ''}>🔨 ${t('ui.extend.yes', { cost })}</button></div>`);
+  $('card-close').onclick = closeCard;
+  $('extend-yes').onclick = () => (closeCard(), extendHome());
+}
+
+let placing = null; // { s, move (the item being moved), turn, ghost, item (measured here), ok, why, speed }
+async function startPlacing(s, move = null, fromBox = false) {
+  const was = card?.speed ?? speed;
+  closeCard();
+  setView(home);
+  const g = await ghost(srcOf(s));
+  scene.add(g);
+  g.visible = false;
+  placing = { s, move, fromBox, turn: move ? entryOf(move)?.turn ?? 0 : 0, ghost: g, item: null, ok: false, speed: was };
+  setSpeed(0);
+  $('place-bar').innerHTML = `<span>${s.icon} ${t(move ? 'ui.place.moving' : fromBox ? 'ui.place.unboxing' : 'ui.place.buying', { thing: t(`shop.${s.id}`), cost: s.price })}</span><button id="place-turn">↻ ${t('ui.place.turn')}</button><button id="place-stop">✕ ${t(move || fromBox ? 'ui.place.stopMove' : 'ui.place.stop')}</button><small id="place-why"></small>`;
+  $('place-bar').hidden = false;
+  $('place-turn').onclick = turnPlacing;
+  $('place-stop').onclick = stopPlacing;
+  // Start it where it is (moving) or in the middle of the floor.
+  const at = move ? move.obj.position : new THREE.Vector3(0.3, 0, 0.2);
+  await hover(at.x, at.z);
+}
+function stopPlacing() {
+  if (!placing) return;
+  placing.ghost.removeFromParent();
+  $('place-bar').hidden = true;
+  setSpeed(placing.speed);
+  placing = null;
+}
+function turnPlacing() {
+  if (!placing) return;
+  placing.turn = (placing.turn + Math.PI / 2) % (Math.PI * 2);
+  if (placing.item) hover(placing.item.obj.position.x, placing.item.obj.position.z);
+}
+// What a new bed replaces: the camp bed of whoever sleeps on it.
+const campBedNow = () => furniture.find((e) => e.id === 'campBed')?.item ?? null;
+let hoverTicket = 0;
+async function hover(x, z) {
+  const p = placing;
+  if (!p) return;
+  const snap = (v) => Math.round(v / 0.25) * 0.25;
+  const ticket = ++hoverTicket;
+  const item = await measure(srcOf(p.s), snap(x), snap(z), p.turn, p.s.fit, p.s.use ? { ...p.s.use } : null);
+  if (ticket !== hoverTicket || placing !== p) return;
+  const except = [p.move, p.s.id === 'bed' ? campBedNow() : null].filter(Boolean);
+  const { ok, why } = home.fits(item, except);
+  Object.assign(p, { item, ok, why });
+  p.ghost.matrixAutoUpdate = false;
+  p.ghost.matrix.copy(item.obj.matrix);
+  p.ghost.visible = true;
+  p.ghost.userData.tint(ok);
+  $('place-why').textContent = ok ? t('ui.place.ok') : t(`ui.place.${why}`);
+}
+const floorAt = (cx, cy) => {
+  ray.setFromCamera(new THREE.Vector2((cx / innerWidth) * 2 - 1, -(cy / innerHeight) * 2 + 1), camera);
+  return ray.intersectObject(home.floor, false)[0]?.point ?? null;
+};
+renderer.domElement.addEventListener('pointermove', (e) => {
+  if (!placing || e.buttons) return;
+  const at = floorAt(e.clientX, e.clientY);
+  if (at) hover(at.x, at.z);
+});
+async function placeHere(cx, cy) {
+  const p = placing;
+  const at = floorAt(cx, cy);
+  if (!p || !at) return;
+  await hover(at.x, at.z);
+  if (placing !== p) return;
+  if (!p.ok) return toast(t(`ui.place.${p.why}`));
+  const { x, z } = p.item.obj.position;
+  if (!p.move && !p.fromBox && household.money < p.s.price) return toast(t('ui.money.short', { name: sel.name, cost: p.s.price }));
+  stopPlacing();
+  // A thing moved keeps who it belongs to (a bed's sleeper), and stays one of the flat's own (`base`) if it was.
+  const owner = p.move?.owner ?? null;
+  const was = p.move ? entryOf(p.move) : null;
+  if (p.move) removeExtra(p.move);
+  let base = !!was?.base;
+  if (p.fromBox) {
+    storage.splice(storage.indexOf(p.s.id), 1);
+    if (boxedBase.includes(p.s.id)) (base = true), boxedBase.splice(boxedBase.indexOf(p.s.id), 1);
+  } else if (!p.move) household.money -= p.s.price;
+  const item = await placeExtra({ id: p.s.id, x, z, turn: p.turn, ...(was?.width ? { width: was.width } : {}), ...(base ? { base: true } : {}) });
+  if (owner) (item.owner = owner), (owner.home = item);
+  // A cot moved keeps its baby.
+  if (p.move?.baby) addBaby(p.move.baby, item);
+  // A new bed: for whoever slept on the camp bed (folded away), or anyone without a bed.
+  if (!p.move && item.use?.act === 'sleep') {
+    const camp = campBedNow();
+    const sleeper = (camp && lives.find((l) => l.home === camp)) ?? lives.find((l) => !l.home);
+    if (sleeper) {
+      if (camp && sleeper.home === camp) removeExtra(camp);
+      item.owner = sleeper;
+      sleeper.home = item;
+      toast(t('ui.shop.bedFor', { name: sleeper.name }));
+    }
+  }
+  toast(t(p.move ? 'ui.shop.moved' : p.fromBox ? 'ui.shop.unboxed' : 'ui.shop.bought', { thing: t(`shop.${p.s.id}`) }));
+  save();
+}
+// The last loo, fridge or shower/bath in the home (shop.mjs `need`): it can be moved, not sold or put away.
+const lastNeed = (item) => !!item?.bought?.need && furniture.filter((e) => kindOf(e.id).need === item.bought.need).length <= 1;
+// Round 14: put away in the boxes (free), to put out again from the shop's 📦 tab.
+function store(item) {
+  const e = entryOf(item);
+  if (!e || !item.bought?.price || item.user || item.owner || lastNeed(item)) return;
+  storage.push(e.id);
+  if (e.base) boxedBase.push(e.id);
+  removeExtra(item);
+  toast(t('ui.shop.stored', { thing: t(`shop.${e.id}`) }));
+  save();
+}
+function sell(item) {
+  if (!item?.bought?.price || item.user || item.owner || lastNeed(item)) return;
+  household.money += sellPrice(item.bought);
+  removeExtra(item);
+  toast(t('ui.shop.sold', { thing: t(`shop.${item.bought.id}`), coins: sellPrice(item.bought) }));
+  save();
+}
+function toast(text) {
+  const el = document.createElement('div');
+  el.textContent = text;
+  $('toasts').appendChild(el);
+  setTimeout(() => el.remove(), 3500);
+}
+// A flat lovely enough (what is bought: shop.mjs `beauty`) cheers up whoever is at home.
+let lovelySaid = false;
+function lovely() {
+  if (beauty() < LOVELY) return;
+  for (const l of lives) if (l.present && l.place === home) l.timed.set('lovelyHome', Math.max(l.timed.get('lovelyHome') ?? 0, 30));
+  if (!lovelySaid) (lovelySaid = true), toast(t('ui.shop.lovelyNow'));
+}
+
+// ---- a new look (round 10): the chest of drawers' card ----
+// Clothes and hair (the body was chosen when the Sim was made), tried on live, kept for LOOK_COST, or put back. The card
+// sits at the side and the camera comes close, so the Sim is seen while you choose.
+function openLook(l) {
+  l.card = null;
+  const before = structuredClone(l.look ?? blankLook());
+  const look = structuredClone(before);
+  const keepCam = { target: controls.target.clone(), camera: camera.position.clone(), min: controls.minDistance };
+  const p = l.sim.position, away = new THREE.Vector3(-p.x, 0, 1.2 - p.z).normalize();
+  controls.minDistance = 1;
+  controls.target.set(p.x, 1.05, p.z);
+  camera.position.set(p.x + away.x * 2.4 + 0.4, 1.7, p.z + away.z * 2.4);
+  controls.update();
+  openCard(l, 'look', `<h2>👗 ${t('ui.look.title', { name: l.name })}</h2><div id="look-rows" class="look"></div>
+    <div class="actions"><button id="look-cancel">${t('ui.look.cancel')}</button><button class="go" id="look-keep"></button></div>`);
+  $('card').classList.add('side');
+  $('card-back').classList.add('clear');
+  const changed = () => JSON.stringify(look) !== JSON.stringify(before);
+  const updateKeep = () => {
+    const short = household.money < LOOK_COST;
+    $('look-keep').disabled = !changed() || short;
+    $('look-keep').textContent = short ? t('ui.money.short', { name: l.name, cost: LOOK_COST }) : t('ui.look.keep', { cost: LOOK_COST });
+  };
+  const ctl = lookControls($('look-rows'), {
+    folk, t, who: l.who, look, names: NAMES,
+    onChange: async () => {
+      ctl.fabrics((await folk.redress(l.sim.body, look)).fabrics);
+      updateKeep();
+    }
+  });
+  folk.redress(l.sim.body, look).then((r) => ctl.fabrics(r.fabrics));
+  updateKeep();
+  const close = () => {
+    $('card').classList.remove('side');
+    $('card-back').classList.remove('clear');
+    controls.minDistance = keepCam.min;
+    controls.target.copy(keepCam.target);
+    camera.position.copy(keepCam.camera);
+    closeCard();
+  };
+  $('look-cancel').onclick = async () => {
+    await folk.redress(l.sim.body, before);
+    close();
+  };
+  $('look-keep').onclick = () => {
+    household.money -= LOOK_COST;
+    l.look = look;
+    l.addMoodlet('newLook');
+    close();
+    save();
+  };
+}
+
+// Over each head: a thought bubble, and hearts floating up after a hug or a flirt that went well. Over the head of the
+// one you look after, a green diamond (who your clicks are for).
+const headPos = new THREE.Vector3();
+const screenOf = (l, up) => {
+  l.sim.head.getWorldPosition(headPos);
+  headPos.y += up;
+  headPos.project(camera);
+  return [((headPos.x + 1) / 2) * innerWidth, ((1 - headPos.y) / 2) * innerHeight];
+};
+function makeBubble(l) {
+  l.bubble = document.createElement('div');
+  l.bubble.className = 'bubble';
+  l.bubble.hidden = true;
+  $('bubbles').appendChild(l.bubble);
+}
+for (const l of lives) makeBubble(l);
+const marker = new THREE.Mesh(new THREE.OctahedronGeometry(0.09).scale(0.8, 1.6, 0.8), new THREE.MeshStandardMaterial({ color: 0x3ad16a, emissive: 0x1f8a3d, roughness: 0.35 }));
+scene.add(marker);
+function renderBubbles(now) {
+  const placed = [];
+  for (const l of everyone) {
+    const th = l.thought;
+    if (!th || !l.sim.head || !l.sim.group.visible) {
+      l.bubble.hidden = true;
+      continue;
+    }
+    let [x, y] = screenOf(l, 0.5);
+    const html = `<span class="icon">${th.icon}</span><span>${t(th.key, { name: l.name })}</span>`;
+    // Two Sims thinking the same thing side by side ("This is so romantic." on a date): one bubble says it for both
+    // (round 11; round 10's shots had two of the same, one on top of the other).
+    if (placed.some(([px, py, , said]) => said === html && Math.abs(px - x) < 160 && Math.abs(py - y) < 120)) {
+      l.bubble.hidden = true;
+      continue;
+    }
+    // Two Sims side by side (a chat, a hug): the second bubble goes above the first instead of on top of it.
+    for (const [px, py, pw] of placed) if (Math.abs(px - x) < pw && Math.abs(py - y) < 44) y = py - 48;
+    l.bubble.hidden = false;
+    if (l.bubble.innerHTML !== html) l.bubble.innerHTML = html;
+    Object.assign(l.bubble.style, { left: `${x}px`, top: `${y}px` });
+    placed.push([x, y, l.bubble.offsetWidth || 200, html]);
+  }
+  for (const l of everyone)
+    for (const h of l.hearts.splice(0)) {
+      if (!l.sim.group.visible) continue;
+      const [x, y] = screenOf(l, 0.3);
+      for (let k = 0; k < 5; k++) {
+        const el = document.createElement('div');
+        el.className = 'heart';
+        el.textContent = k ? '❤️' : h.icon;
+        Object.assign(el.style, { left: `${x + (k - 2) * 16}px`, top: `${y}px`, animationDelay: `${k * 0.15}s` });
+        $('bubbles').appendChild(el);
+        setTimeout(() => el.remove(), 2600);
+      }
+    }
+  // Over a baby's cot: crying (and for what), or asleep.
+  for (const b of babies) {
+    if (!b.bubble) continue;
+    const say = b.mesh.visible && b.name ? (b.crying ? [BABY_NEEDS.find((n) => n.id === b.crying).icon, `baby.cry.${b.crying}`] : b.asleep ? ['💤', 'baby.asleep'] : null) : null;
+    b.bubble.hidden = !say;
+    if (!say) continue;
+    b.mesh.getWorldPosition(babyAt);
+    babyAt.y += 0.55;
+    babyAt.project(camera);
+    const html = `<span class="icon">${say[0]}</span><span>${t(say[1], { name: b.name })}</span>`;
+    if (b.bubble.innerHTML !== html) b.bubble.innerHTML = html;
+    Object.assign(b.bubble.style, { left: `${((babyAt.x + 1) / 2) * innerWidth}px`, top: `${((1 - babyAt.y) / 2) * innerHeight}px` });
+  }
+  marker.visible = sel.sim.group.visible;
+  sel.sim.head?.getWorldPosition(marker.position);
+  marker.position.y += 0.3 + Math.sin(now / 400) * 0.03;
+  marker.rotation.y = now / 700;
+}
+// The household's news, and a colleague's only when it is about someone who lives here (a date, moving in).
+function renderToasts() {
+  for (const b of babies) for (const ev of b.events.splice(0)) if (b.name) toast(t(ev.key, ev.vars));
+  for (const l of everyone)
+    for (const ev of l.events.splice(0)) {
+      if (!lives.includes(l) && !/date|movedIn/.test(ev.key)) continue;
+      const el = document.createElement('div');
+      // A value with a dot in it is itself a key (a level's name: 'friendship.friends').
+      const vars = Object.fromEntries(Object.entries(ev.vars ?? {}).map(([k, v]) => [k, typeof v === 'string' && v.includes('.') ? t(v) : v]));
+      el.textContent = t(ev.key, vars);
+      $('toasts').appendChild(el);
+      setTimeout(() => el.remove(), 3500);
+    }
+}
+
+// ---- the loop ----
+const props = new Props(scene);
+const timer = new THREE.Timer();
+let uiAt = 0;
+function frame(now) {
+  requestAnimationFrame(frame);
+  timer.update(now);
+  const dt = Math.min(timer.getDelta(), 0.1);
+  const gameDt = dt * SPEEDS[speed]; // game minutes; also the Sim's animation seconds (1 game minute = 1 s at normal)
+  minutes += gameDt;
+  for (const l of everyone) if (l.present) l.sim.update(gameDt, []);
+  for (const l of everyone) if (l.present) lean(l, dt);
+  for (const l of everyone) l.tick(gameDt, dt);
+  minding();
+  townTick();
+  for (const b of babies) b.tick(gameDt, (minutes % 1440) / 60);
+  // Round 14: the blob shadow too (it was only hidden by a Sim's own update, which someone out of sight never gets: a
+  // shadow lay in the middle of every floor).
+  for (const l of everyone) if (!(l.sim.group.visible = inView(l)) && l.sim.blob) l.sim.blob.visible = false;
+  // What is in their hands and on the table; the fridge door, the TV picture, the shower water (round 10), in real time
+  // (at ⏭ a fridge visit is a quarter of a second of game time: the door would never get open).
+  props.update(everyone, view, dt);
+  drawBabies(dt);
+  followSel();
+  view.update(camera, controls.target);
+  controls.update();
+  light();
+  sun.target.position.copy(controls.target).setY(0);
+  sun.position.copy(sun.target.position).add(sunOffset);
+  tickDressing(dt, { minutes, hour: (minutes % 1440) / 60 });
+  renderer.render(scene, camera);
+  renderBubbles(now);
+  if (now - uiAt > 250) {
+    uiAt = now;
+    lovely();
+    if (Math.floor(minutes / 60) !== Math.floor((savedAt ?? -60) / 60)) save();
+    renderPanels();
+    renderPeople();
+    renderToasts();
+    renderCards();
+  }
+}
+$('loading').textContent = '';
+requestAnimationFrame(frame);
+let colleaguesIn = false;
+const colleaguesLoaded = loadColleagues().then(() => (colleaguesIn = true));
+// A household that has a nanny: she is ready before she is needed (the first time she is loaded, ~a second).
+colleaguesLoaded.then(() => household.childcare === 'nanny' && babies.length && nannyLife());
+// Round 14: the two neighbours, after the nanny (who must not be one of them).
+const neighboursLoaded = colleaguesLoaded.then(() => nannyMade).then(loadNeighbours);
+
+// For tests: the game's own steps without drawing, `n` game minutes in steps of one (a headless Chrome draws a few
+// frames a second, and a day at work at ⏭ ran out of time in round 8). The cards still stop it: it waits for no one.
+function advance(n) {
+  for (let k = 0; k < n && !card; k++) {
+    minutes += 1;
+    for (const l of everyone) if (l.present) l.sim.update(1, []);
+    for (const l of everyone) l.tick(1, 1 / 60);
+    minding();
+    townTick();
+    for (const b of babies) b.tick(1, (minutes % 1440) / 60);
+    // Round 14: the blob shadow too (it was only hidden by a Sim's own update, which someone out of sight never gets: a
+  // shadow lay in the middle of every floor).
+  for (const l of everyone) if (!(l.sim.group.visible = inView(l)) && l.sim.blob) l.sim.blob.visible = false;
+    followSel();
+    renderCards();
+  }
+}
+
+// For tests (tests/*.json): an offer by thing and id.
+window.__offerOf = offerById;
+window.__offerOfSocial = interactionById;
+window.__life = {
+  life, sim, lives, everyone, colleagues, place, places, camera, controls, renderer, t, bondOf, select, beds, household, ask, closeCard, openStation, setView, desks, props,
+  get card() { return card; }, get year() { return year; }, get speed() { return speed; }, get view() { return nameOf(view); },
+  get sel() { return sel; }, colleaguesLoaded,
+  folk, get extras() { return extras(); }, furniture, storage, save, snapshot, openShop, startPlacing, stopPlacing, turnPlacing, placeHere, hover, sell, beauty, openLook, get home() { return home; }, saving,
+  get placing() { return placing; }, get start() { return start?.kind ?? null; },
+  setSpeed, advance, get minutes() { return minutes; }, set minutes(v) { minutes = v; },
+  babies, haveBaby, get newBabies() { return newBabies.length; }, dressUp, spouseOf: (l) => spouseOf(l, everyone),
+  get caring() { return caring && { ...caring }; }, get nanny() { return nanny; }, get careAsk() { return !!careAsk; }, nannyLife,
+  // Round 14: the town.
+  measure, kindOf, srcOf,
+  neighbours, neighboursLoaded, guests, get homeState() { return { ...homeState }; }, get homeParty() { return !!homeParty; }, housePlace, residentsOf, visitState,
+  partyToday, partyAt, invited, openTown, goVisit, openBuy, buyHouse, openExtend, extendHome, inviteOver, throwParty, store, rehome, homeNow, titleOf, get moving() { return moving; },
+  ready: true
+};
+colleaguesLoaded.then(() => (window.__life.colleaguesReady = true));

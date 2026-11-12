@@ -1,0 +1,16 @@
+{
+  "slug": "lab-rat",
+  "title": "Lab Rat",
+  "tagline": "A first-person night shift in a research annex gone wrong: a pipe wrench, three alien species, and a notebook of how they behave.",
+  "category": "casual",
+  "kind": "static",
+  "play": "index.html",
+  "readiness": "B",
+  "readinessNote": "One complete test level (5 to 10 minutes) with checkpoints, a scripted run from the lab to the freight lift and an end card. Rooms, doors, props, lights and pickups are data in src/map.mjs, but that file holds exactly one level and the beats are scripted in src/main.mjs by room id; a second level means turning map.mjs into a list of levels and moving the beats into data first.",
+  "buildYourOwn": "Rooms, doors, props, pickups and lights; creature placements; field-note observations; new creatures (procedural body in models.mjs, behaviour in creatures.mjs).",
+  "controls": "Keyboard and mouse (WASD, mouse look, pointer lock)",
+  "devices": ["desktop"],
+  "languages": ["en"],
+  "tags": ["3d", "fps", "sci-fi", "creatures", "three.js"],
+  "licence": "GPL-3.0 for the code (as in the NodeGX repository it came from); assets as listed in CREDITS.md"
+}

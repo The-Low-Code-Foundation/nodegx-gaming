@@ -1,0 +1,11 @@
+{
+  "$schema": "https://opennoodl.dev/schemas/component-v2.json",
+  "id": "9d2b9019-80ee-566b-9716-7230a5a52a4f",
+  "name": "Olive switch",
+  "path": "/Logic/Olive switch",
+  "type": "visual",
+  "created": "2026-11-12T00:00:00.000Z",
+  "modified": "2026-11-12T00:00:00.000Z",
+  "modifiedBy": "nodegx-gaming",
+  "description": "Is Olive (the small language model) switched on? Reads OLIVE_ON in scripts/olive.js. On is true only when it is; Off is its opposite. Place it with Nonce 1 and wire On to the Mounted of anything that needs the model."
+}

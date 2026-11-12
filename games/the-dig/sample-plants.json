@@ -1,0 +1,44 @@
+{
+  "written": "2026-11-12",
+  "by": "sample",
+  "note": "Sample rooms. Write your own in this file (CLAUDE.md has the format).",
+  "plants": [
+    {
+      "id": "sample-tidy-desk",
+      "kind": "task",
+      "title": "The drawer nobody opens",
+      "instructions": "Every house has one drawer that collects everything. Don't sort the whole house. Pick that one drawer and decide what to do with it.",
+      "ask": "Which drawer, and when will you empty it? Write the day and the time.",
+      "world": {
+        "name": "The Clockwork Field",
+        "theme": "field",
+        "accent": "#e0c050",
+        "enemies": "robots",
+        "treasure": [
+          { "id": "sample-gear", "name": "Brass gear", "description": "Twelve teeth, one of them chipped. It still turns." },
+          { "id": "sample-key", "name": "Small iron key", "description": "Nobody remembers which lock it opens." }
+        ],
+        "notes": [{ "title": "On a fence post", "text": "Small jobs with a time on them get done. Big jobs with no time on them get carried around." }]
+      }
+    },
+    {
+      "id": "sample-stars",
+      "kind": "learn",
+      "title": "Why the deep is warm",
+      "instructions": "The deeper a mine goes, the warmer the rock gets: a few degrees for every hundred metres, from heat left over inside the planet and from rock that is slowly decaying.",
+      "ask": "Write one thing you would want to know before going a kilometre down.",
+      "world": {
+        "name": "The Glass Jungle",
+        "theme": "jungle",
+        "accent": "#60e0a0",
+        "foliage": "#2f9a5a",
+        "enemies": "bugs",
+        "treasure": [
+          { "id": "sample-crystal", "name": "Warm crystal", "description": "It holds the heat of the rock it grew in." },
+          { "id": "sample-shell", "name": "Spiral shell", "description": "From a sea that was here before the jungle was." }
+        ],
+        "notes": []
+      }
+    }
+  ]
+}

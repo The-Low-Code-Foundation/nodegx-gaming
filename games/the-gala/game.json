@@ -1,0 +1,16 @@
+{
+  "slug": "the-gala",
+  "title": "Le Gala de danse",
+  "tagline": "Run a dance school's gala night: the running order, the formations, the snacks and the car park are maths problems, and the evening shows you what you got right.",
+  "category": "educational",
+  "kind": "static",
+  "play": "index.html",
+  "readiness": "B",
+  "readinessNote": "Four seasons play end to end. Costumes, moves, furniture, snacks, shop items, classes and numbers are rows in src/data.js, and the day is a pure, tested function (src/engine.js simulate). A new kind of challenge (like season 2's car park) is engine code, a sheet tab in src/ui.js and sentences in src/i18n.js.",
+  "buildYourOwn": "New dances, costumes, moves and dressing-room furniture as data; new seasons and new challenges (a lighting plan, ticket sales, a bus timetable) in the engine.",
+  "controls": "Mouse or touch: tap and drag in the side sheet, drag to pan the 3D view, wheel or pinch to zoom; arrow keys pan, Q / E turn",
+  "devices": ["desktop", "tablet"],
+  "languages": ["fr", "en"],
+  "tags": ["3d", "maths", "simulation", "management", "dance"],
+  "licence": "GPL-3.0 for the code; assets as listed in CREDITS.md"
+}

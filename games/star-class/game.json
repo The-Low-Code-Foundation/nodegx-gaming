@@ -1,0 +1,16 @@
+{
+  "slug": "star-class",
+  "title": "Star Class",
+  "tagline": "Rocket School re-cut for P1 to JSS3 in sub-Saharan Africa: maths, English, Science, Reasoning, Geography and French, with prices in naira.",
+  "category": "educational",
+  "kind": "nodegx",
+  "play": "play/index.html",
+  "readiness": "A",
+  "readinessNote": "The worked example of a curriculum swap: the same game as Rocket School with another school in its data. 154 skills in one JSON list (Data/Curriculum); a fact bank needs no code, a new generated kind is one function. CLAUDE.md lists every place the classes, subjects, money and name live, for making your own edition.",
+  "buildYourOwn": "Your own country's edition: its classes, subjects, question banks, money and explainers; new rocket parts.",
+  "controls": "Mouse or touch; the keyboard for typed answers and the arrow keys in Make Ten Merge",
+  "devices": ["desktop", "tablet", "phone"],
+  "languages": ["en"],
+  "tags": ["maths", "science", "geography", "kids", "quiz", "africa", "nodegx"],
+  "licence": "GPL-3.0 for the project (as in the NodeGX repository it came from); MIT for the NodeGX runtime in play/; assets as listed in CREDITS.md"
+}

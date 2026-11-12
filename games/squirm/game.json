@@ -1,0 +1,16 @@
+{
+  "slug": "squirm",
+  "title": "Squirm",
+  "tagline": "Evolve a creature that runs on a real worm's nervous system, from a drop of water to a whole species, in three stages.",
+  "category": "educational",
+  "kind": "static",
+  "play": "index.html",
+  "readiness": "B",
+  "readinessNote": "Three stages play end to end (about 20 minutes) with an ending. Body parts are a data table (S.PARTS in src/creature.js), but each stage is its own hand-written file with its world, rules and drawing in code; a fourth stage is a card only.",
+  "buildYourOwn": "New body parts (stats, cost, the nerve cell they grow), new species in the Crawl, new mutations, a fourth stage.",
+  "controls": "Keyboard and mouse",
+  "devices": ["desktop"],
+  "languages": ["en"],
+  "tags": ["biology", "evolution", "connectome", "c-elegans", "canvas"],
+  "licence": "GPL-3.0 for the code (as in the NodeGX repository it came from); connectome data and fonts as listed in CREDITS.md"
+}

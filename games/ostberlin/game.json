@@ -1,0 +1,16 @@
+{
+  "slug": "ostberlin",
+  "title": "Es war einmal in Ost-Berlin",
+  "tagline": "A point-and-click museum of growing up in 1980s East Berlin and 1990s Berlin: 8 places, 73 things to find, and a question for mum or dad on every card.",
+  "category": "educational",
+  "kind": "static",
+  "play": "index.html",
+  "readiness": "A",
+  "readinessNote": "Every place and every thing is a data entry in js/rooms-*.js (position, drawing, German name, English, text, question), and every photo and film is one line in js/media.js. You can add things, cards and photos without touching the engine. A new place on the street needs a drawing in js/hub.js too.",
+  "buildYourOwn": "Your own museum: another city, another decade, your own family's childhood. New things, TV channels, records, dishes, photos and film clips.",
+  "controls": "One left click for everything: mouse, touch, or a TV pointer remote (LG Magic Remote). No keys, no dragging.",
+  "devices": ["tv", "desktop", "tablet"],
+  "languages": ["de", "en"],
+  "tags": ["point-and-click", "history", "museum", "family", "tv"],
+  "licence": "GPL-3.0 for the code; photos and films as listed in CREDITS.md"
+}

@@ -1,0 +1,16 @@
+{
+  "slug": "the-castle-holds",
+  "title": "The Castle Holds",
+  "tagline": "A tower defence for one or two players where you program each defender by wiring cards: if the enemy is big, crossbow; else, arrow.",
+  "category": "educational",
+  "kind": "static",
+  "play": "index.html",
+  "readiness": "B",
+  "readinessNote": "Plays end to end: stages, waves, a village to build, recruits, machines, and a castle that grows or collapses. Enemy, weapon, building and cosmetic stats are tables at the top of the script, but waves come from a formula (waveFor) and every stage rule is in one 185 KB file; split it and make a wave format first.",
+  "buildYourOwn": "Monsters, weapons, conditions for the boards, buildings, outfits and mounts, hand-made waves, new castle parts.",
+  "controls": "Mouse or touch; keyboard for camera views and walking a villager",
+  "devices": ["desktop", "tablet"],
+  "languages": ["fr", "en"],
+  "tags": ["3d", "tower-defence", "visual-programming", "kids", "two-player", "three.js"],
+  "licence": "GPL-3.0 for the code (as in the NodeGX repository it came from); three.js MIT (vendor/three/LICENSE)"
+}

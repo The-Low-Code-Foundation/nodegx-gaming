@@ -1,0 +1,8 @@
+{
+  "name": "star-class",
+  "private": true,
+  "description": "Star Class, deployed from NodeGX. See DEPLOY.md.",
+  "scripts": {
+    "start": "node serve.js"
+  }
+}

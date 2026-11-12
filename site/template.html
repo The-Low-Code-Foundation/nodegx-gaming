@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>NodeGX Games</title>
+  <meta name="description" content="Free browser games from the NodeGX project. Play them here, then clone one into your AI coder and build your own levels." />
+  <meta property="og:title" content="NodeGX Games" />
+  <meta property="og:description" content="Free browser games to play, and to clone into your AI coder as a starting point." />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg viewBox=%220 0 1024 1024%22 fill=%22none%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cdefs%3E%3ClinearGradient id=%22w%22 x1=%22276%22 y1=%22314%22 x2=%22748%22 y2=%22710%22 gradientUnits=%22userSpaceOnUse%22%3E%3Cstop offset=%220%22 stop-color=%22%234DA3FF%22/%3E%3Cstop offset=%221%22 stop-color=%22%231570EF%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width=%221024%22 height=%221024%22 rx=%22229%22 fill=%22%230B0E12%22/%3E%3Cpath d=%22M276 314C588 314 436 710 748 710%22 stroke=%22url(%23w)%22 stroke-width=%2266%22 stroke-linecap=%22round%22/%3E%3Ccircle cx=%22276%22 cy=%22314%22 r=%2281%22 fill=%22%23EEF2F6%22/%3E%3Ccircle cx=%22748%22 cy=%22710%22 r=%2281%22 fill=%22%234DA3FF%22/%3E%3C/svg%3E" />
+  <style>
+    :root {
+      --ground: #f6f8fa; --panel: #ffffff; --panel-2: #f0f3f6; --ink: #12161c; --ink-soft: #495260; --ink-faint: #79828f;
+      --line: #dce1e8; --signal: #0b8f81; --signal-wash: #e0f2ef; --signal-ink: #ffffff;
+      --amber: #9a5f1c; --amber-wash: #f7ecdc; --violet: #6b4fc4; --violet-wash: #ece7fb; --grey-wash: #eceff3;
+      --shadow: 0 1px 2px rgba(18,22,28,.04), 0 8px 24px -12px rgba(18,22,28,.14);
+      --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      --mono: ui-monospace, "SF Mono", Menlo, "Cascadia Mono", "Roboto Mono", monospace;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --ground: #0e1116; --panel: #161b22; --panel-2: #1b212a; --ink: #eef1f5; --ink-soft: #b3bcc8; --ink-faint: #7c8695;
+        --line: #262d38; --signal: #2dd4bf; --signal-wash: rgba(45,212,191,0.12); --signal-ink: #06231f;
+        --amber: #e0a458; --amber-wash: rgba(224,164,88,0.14); --violet: #b4a2f5; --violet-wash: rgba(180,162,245,0.14); --grey-wash: #222a34;
+        --shadow: 0 1px 2px rgba(0,0,0,.3), 0 12px 32px -14px rgba(0,0,0,.6);
+      }
+    }
+    :root[data-theme="dark"] {
+      --ground: #0e1116; --panel: #161b22; --panel-2: #1b212a; --ink: #eef1f5; --ink-soft: #b3bcc8; --ink-faint: #7c8695;
+      --line: #262d38; --signal: #2dd4bf; --signal-wash: rgba(45,212,191,0.12); --signal-ink: #06231f;
+      --amber: #e0a458; --amber-wash: rgba(224,164,88,0.14); --violet: #b4a2f5; --violet-wash: rgba(180,162,245,0.14); --grey-wash: #222a34;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 12px 32px -14px rgba(0,0,0,.6);
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--ground); color: var(--ink); font: 16px/1.5 var(--sans); }
+    a { color: var(--signal); }
+    .wrap { max-width: 1180px; margin: 0 auto; padding: 0 16px; }
+    .top { border-bottom: 1px solid var(--line); background: var(--panel); }
+    .top .wrap { display: flex; align-items: center; justify-content: space-between; gap: 12px; height: 56px; }
+    .brand { display: flex; align-items: center; gap: 10px; color: var(--ink); text-decoration: none; font-weight: 650; }
+    .brand svg { width: 26px; height: 26px; }
+    .top nav { display: flex; gap: 18px; font-size: 14px; }
+    .top nav a { color: var(--ink-soft); text-decoration: none; }
+    .top nav a:hover { color: var(--ink); }
+    .hero { padding: 48px 0 24px; }
+    .hero h1 { font-size: clamp(30px, 5vw, 46px); line-height: 1.1; margin: 0 0 12px; letter-spacing: -0.02em; }
+    .hero p { max-width: 680px; color: var(--ink-soft); font-size: 18px; margin: 0 0 20px; }
+    .how { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; max-width: 900px; margin: 0; padding: 0; list-style: none; counter-reset: s; }
+    .how li { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; font-size: 14px; color: var(--ink-soft); counter-increment: s; }
+    .how li::before { content: counter(s); display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--signal-wash); color: var(--signal); font-weight: 700; font-size: 12px; margin-right: 8px; }
+    .how b { color: var(--ink); }
+    .filters { display: flex; gap: 8px; margin: 28px 0 8px; flex-wrap: wrap; }
+    .filters button { font: inherit; font-size: 14px; padding: 6px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel); color: var(--ink-soft); cursor: pointer; }
+    .filters button[aria-pressed="true"] { background: var(--ink); color: var(--ground); border-color: var(--ink); }
+    .shelf { padding: 20px 0 8px; }
+    .shelf > header h2 { margin: 0; font-size: 22px; }
+    .shelf > header p { margin: 4px 0 16px; color: var(--ink-faint); font-size: 15px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 18px; }
+    .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; box-shadow: var(--shadow); }
+    .thumb { display: block; aspect-ratio: 16 / 9; background: var(--panel-2); overflow: hidden; }
+    .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .25s ease; }
+    .thumb:hover img { transform: scale(1.03); }
+    .body { padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
+    .meta { display: flex; gap: 6px; flex-wrap: wrap; }
+    .badge { font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 6px; }
+    .rA { background: var(--signal-wash); color: var(--signal); }
+    .rB { background: var(--amber-wash); color: var(--amber); }
+    .rC { background: var(--grey-wash); color: var(--ink-soft); }
+    .nodegx { background: var(--violet-wash); color: var(--violet); }
+    .card h3 { margin: 2px 0 0; font-size: 19px; }
+    .tagline { margin: 0; color: var(--ink); }
+    .note { margin: 0; color: var(--ink-soft); font-size: 14px; }
+    dl { margin: 4px 0 0; display: grid; gap: 4px; font-size: 13px; }
+    dl div { display: grid; grid-template-columns: 112px 1fr; gap: 8px; }
+    dt { color: var(--ink-faint); }
+    dd { margin: 0; color: var(--ink-soft); }
+    .actions { display: flex; gap: 8px; margin-top: auto; padding-top: 8px; }
+    .btn { font-size: 14px; font-weight: 600; text-decoration: none; padding: 7px 14px; border-radius: 8px; border: 1px solid var(--line); color: var(--ink); background: var(--panel); }
+    .btn.play { background: var(--signal); border-color: var(--signal); color: var(--signal-ink); }
+    .clone { display: flex; align-items: center; gap: 6px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 4px 4px 4px 10px; }
+    .clone code { font: 12px/1.4 var(--mono); color: var(--ink-soft); overflow-x: auto; white-space: nowrap; flex: 1; scrollbar-width: none; }
+    .clone button { font: inherit; font-size: 12px; padding: 4px 10px; border-radius: 6px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); cursor: pointer; }
+    .legend { margin: 40px 0 0; padding: 20px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; font-size: 14px; color: var(--ink-soft); }
+    .legend p { margin: 6px 0 0; }
+    footer { margin: 40px 0 0; padding: 24px 0 40px; border-top: 1px solid var(--line); color: var(--ink-faint); font-size: 14px; }
+    footer .wrap { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+    [hidden] { display: none !important; }
+    @media (max-width: 720px) {
+      .how, .legend { grid-template-columns: 1fr; }
+      .top nav a.hide-sm { display: none; }
+      .grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header class="top">
+    <div class="wrap">
+      <a class="brand" href="./">
+        <svg viewBox="0 0 1024 1024" aria-hidden="true"><rect width="1024" height="1024" rx="229" fill="#0B0E12"/><path d="M276 314C588 314 436 710 748 710" stroke="#4DA3FF" stroke-width="66" stroke-linecap="round" fill="none"/><circle cx="276" cy="314" r="81" fill="#EEF2F6"/><circle cx="748" cy="710" r="81" fill="#4DA3FF"/></svg>
+        NodeGX Games
+      </a>
+      <nav>
+        <a href="#educational">Educational</a>
+        <a href="#casual">Casual</a>
+        <a class="hide-sm" href="https://github.com/The-Low-Code-Foundation/nodegx-gaming">GitHub</a>
+        <a href="https://nodegx.io">NodeGX</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="hero">
+      <h1>Play it here. Then make it yours.</h1>
+      <p><!--COUNT--> free browser games from the NodeGX project. Each one is a starting point: copy it, open it with your AI coder, and build your own levels, art and rules.</p>
+      <ol class="how">
+        <li><b>Play</b> it in your browser. No account, no download.</li>
+        <li><b>Copy</b> the one-line command on its card. It fetches only that game.</li>
+        <li><b>Open</b> the folder with Claude Code or any AI coder. Its <code>CLAUDE.md</code> says how to add a level.</li>
+      </ol>
+      <div class="filters" role="group" aria-label="Show">
+        <button type="button" data-filter="all" aria-pressed="true">All</button>
+        <button type="button" data-filter="educational" aria-pressed="false">Educational</button>
+        <button type="button" data-filter="casual" aria-pressed="false">Casual</button>
+      </div>
+    </section>
+<!--SHELVES-->
+
+    <section class="legend" aria-label="What the readiness labels mean">
+      <div><span class="badge rA">A · Build levels today</span><p>Levels and content are data files. Add your own without touching the engine.</p></div>
+      <div><span class="badge rB">B · Playable</span><p>Plays from start to finish, but levels live in code. Ask your AI coder for a level format first.</p></div>
+      <div><span class="badge rC">C · Prototype</span><p>A slice or a toy with a good idea in it. Finish the game loop before building levels.</p></div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <span>Made by <a href="https://nodegx.io/foundation/">The Low Code Foundation</a>, the non-profit building <a href="https://nodegx.io">NodeGX</a>. Code under GPL-3.0, like NodeGX; assets as each game's CREDITS.md says.</span>
+      <a href="https://nodegx.io/foundation/">Support the work</a>
+    </div>
+  </footer>
+
+  <script>
+    document.querySelectorAll('[data-copy]').forEach((b) => b.addEventListener('click', async () => {
+      try { await navigator.clipboard.writeText(b.dataset.copy); b.textContent = 'Copied'; }
+      catch { b.textContent = 'Select it'; }
+      setTimeout(() => (b.textContent = 'Copy'), 1600);
+    }));
+    const buttons = document.querySelectorAll('[data-filter]');
+    buttons.forEach((b) => b.addEventListener('click', () => {
+      buttons.forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+      document.querySelectorAll('.shelf').forEach((s) => (s.hidden = b.dataset.filter !== 'all' && s.dataset.category !== b.dataset.filter));
+    }));
+  </script>
+</body>
+</html>

@@ -1,0 +1,161 @@
+{
+ "v": 1,
+ "id": "d001-sandbox",
+ "night": "sandbox",
+ "name": "The Sample District",
+ "style": "st-01",
+ "size": "village",
+ "ruin": 0.6,
+ "place": {
+  "near": "ship",
+  "dist": [
+   25,
+   60
+  ],
+  "depth": [
+   20,
+   40
+  ]
+ },
+ "practices": [],
+ "texts": [
+  {
+   "id": "t01",
+   "kind": "lintel",
+   "body": "Mind the step. The rock remembers every foot."
+  },
+  {
+   "id": "t02",
+   "kind": "lintel",
+   "body": "Mind the step. The rock remembers every foot."
+  },
+  {
+   "id": "t03",
+   "kind": "lintel",
+   "body": "Mind the step. The rock remembers every foot."
+  },
+  {
+   "id": "t04",
+   "kind": "lintel",
+   "body": "Mind the step. The rock remembers every foot."
+  },
+  {
+   "id": "t05",
+   "kind": "lintel",
+   "body": "Mind the step. The rock remembers every foot."
+  },
+  {
+   "id": "t06",
+   "kind": "lintel",
+   "body": "Mind the step. The rock remembers every foot."
+  },
+  {
+   "id": "t07",
+   "kind": "lintel",
+   "body": "Mind the step. The rock remembers every foot."
+  },
+  {
+   "id": "t08",
+   "kind": "mural",
+   "body": "Diggers in a line, passing stones hand to hand up a long stair."
+  },
+  {
+   "id": "t09",
+   "kind": "song",
+   "title": "Sample song 9",
+   "body": "Down by the lamp and down by the line, the rock is cold but the hands are fine. Sing while you cut and the shift goes by."
+  },
+  {
+   "id": "t10",
+   "kind": "song",
+   "title": "Sample song 10",
+   "body": "Down by the lamp and down by the line, the rock is cold but the hands are fine. Sing while you cut and the shift goes by."
+  },
+  {
+   "id": "t11",
+   "kind": "note",
+   "body": "Left the good lamp on the shelf by the cistern. Whoever finds it, trim the wick before you light it, or it smokes."
+  },
+  {
+   "id": "t12",
+   "kind": "note",
+   "body": "Left the good lamp on the shelf by the cistern. Whoever finds it, trim the wick before you light it, or it smokes."
+  },
+  {
+   "id": "t13",
+   "kind": "note",
+   "body": "Left the good lamp on the shelf by the cistern. Whoever finds it, trim the wick before you light it, or it smokes."
+  },
+  {
+   "id": "t14",
+   "kind": "note",
+   "body": "Left the good lamp on the shelf by the cistern. Whoever finds it, trim the wick before you light it, or it smokes."
+  },
+  {
+   "id": "t15",
+   "kind": "note",
+   "body": "Left the good lamp on the shelf by the cistern. Whoever finds it, trim the wick before you light it, or it smokes."
+  },
+  {
+   "id": "t16",
+   "kind": "tablet",
+   "title": "Sample tablet 16",
+   "body": "Placeholder tablet. Write your own text here: a record of the place, its work, the people who kept it running. This sample only shows where a tablet sits and how a longer text reads on the page when the player stops to read it."
+  },
+  {
+   "id": "t17",
+   "kind": "tablet",
+   "title": "Sample tablet 17",
+   "body": "Placeholder tablet. Write your own text here: a record of the place, its work, the people who kept it running. This sample only shows where a tablet sits and how a longer text reads on the page when the player stops to read it."
+  },
+  {
+   "id": "t18",
+   "kind": "tablet",
+   "title": "Sample tablet 18",
+   "body": "Placeholder tablet. Write your own text here: a record of the place, its work, the people who kept it running. This sample only shows where a tablet sits and how a longer text reads on the page when the player stops to read it."
+  },
+  {
+   "id": "t19",
+   "kind": "stone",
+   "title": "Sample stone 19",
+   "body": "Placeholder reading-stone. Write your own text here: something the people of this place did every day, told in their own voice, as if they were explaining it to a visitor. This sample only shows how the longest kind of text sits on a stone and how it reads on the page when the player stops in front of it."
+  },
+  {
+   "id": "t20",
+   "kind": "stone",
+   "title": "Sample stone 20",
+   "body": "Placeholder reading-stone. Write your own text here: something the people of this place did every day, told in their own voice, as if they were explaining it to a visitor. This sample only shows how the longest kind of text sits on a stone and how it reads on the page when the player stops in front of it."
+  },
+  {
+   "id": "t21",
+   "kind": "stone",
+   "title": "Sample stone 21",
+   "body": "Placeholder reading-stone. Write your own text here: something the people of this place did every day, told in their own voice, as if they were explaining it to a visitor. This sample only shows how the longest kind of text sits on a stone and how it reads on the page when the player stops in front of it."
+  }
+ ],
+ "secret": {
+  "id": "chamber",
+  "way": {
+   "kind": "behind",
+   "text": "t11"
+  },
+  "cache": true,
+  "texts": [
+   {
+    "id": "s01",
+    "kind": "tablet",
+    "title": "Sample tablet 1",
+    "body": "Placeholder tablet. Write your own text here: a record of the place, its work, the people who kept it running. This sample only shows where a tablet sits and how a longer text reads on the page when the player stops to read it."
+   },
+   {
+    "id": "s02",
+    "kind": "note",
+    "body": "Left the good lamp on the shelf by the cistern. Whoever finds it, trim the wick before you light it, or it smokes."
+   }
+  ]
+ },
+ "tuning": {
+  "text": "t16",
+  "reach": 40
+ }
+}

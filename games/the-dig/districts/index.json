@@ -1,0 +1,6 @@
+{
+  "about": "The districts the game builds, oldest first. Each is <id>.json in this folder; its style is in styles.json.",
+  "districts": [
+    "d001-sandbox"
+  ]
+}

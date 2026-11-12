@@ -1,0 +1,16 @@
+{
+  "slug": "the-dig",
+  "title": "The Dig",
+  "tagline": "Dig down through an endless blocky deep, find the rooms planted for you, and step through their portals.",
+  "category": "casual",
+  "kind": "static",
+  "play": "index.html",
+  "readiness": "A",
+  "readinessNote": "Plays end to end, saves in the browser. Rooms, districts of ruins and their building styles are JSON files (sample-plants.json, districts/): CLAUDE.md gives each format field by field. This copy ships two sample rooms and one sample district; the first thing to build is your own.",
+  "buildYourOwn": "Rooms with a question on a stone and a portal world behind it (theme, colours, enemies, treasure, notes); districts of ruins with texts carved on their walls and a sealed chamber; building styles for them.",
+  "controls": "Keyboard and mouse, or touch (landscape) with a move stick, look, and on-screen buttons",
+  "devices": ["desktop", "phone", "tablet"],
+  "languages": ["en"],
+  "tags": ["3d", "voxel", "first-person", "exploration", "three.js"],
+  "licence": "GPL-3.0 for the code (as the original project declares); three.js MIT; sounds CC0, as listed in CREDITS.md"
+}

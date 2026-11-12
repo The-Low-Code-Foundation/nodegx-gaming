@@ -1,0 +1,25 @@
+{
+  "$schema": "https://opennoodl.dev/schemas/connections-v2.json",
+  "componentId": "ebce3d90-e791-5d83-8019-0300a3afaff0",
+  "version": 1,
+  "connections": [
+    {
+      "fromId": "datarequestsData",
+      "fromProperty": "items",
+      "toId": "datarequestsOlive",
+      "toProperty": "in-requests"
+    },
+    {
+      "fromId": "datarequestsOlive",
+      "fromProperty": "out-requests",
+      "toId": "datarequestsOut",
+      "toProperty": "requests"
+    },
+    {
+      "fromId": "datarequestsOlive",
+      "fromProperty": "out-count",
+      "toId": "datarequestsOut",
+      "toProperty": "count"
+    }
+  ]
+}

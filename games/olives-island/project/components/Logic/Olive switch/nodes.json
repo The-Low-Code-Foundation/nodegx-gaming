@@ -1,0 +1,86 @@
+{
+  "$schema": "https://opennoodl.dev/schemas/nodes-v2.json",
+  "componentId": "9d2b9019-80ee-566b-9716-7230a5a52a4f",
+  "version": 1,
+  "nodes": [
+    {
+      "id": "oliveswitchIn",
+      "type": "Component Inputs",
+      "label": "What the caller gives",
+      "ports": [
+        {
+          "name": "nonce",
+          "plug": "output",
+          "type": "number"
+        }
+      ],
+      "x": 40,
+      "y": 40
+    },
+    {
+      "id": "oliveswitchFn",
+      "type": "JavaScriptFunction",
+      "label": "Olive switch",
+      "parameters": {
+        "functionScript": "\n// The one switch: OLIVE_ON in scripts/olive.js (off in the browser build).\nvar on = Scripts.olive.OLIVE_ON === true;\nOutputs.on = on;\nOutputs.off = !on;\nOutputs.checked = Inputs.nonce;\n",
+        "uses": "olive.js"
+      },
+      "x": 40,
+      "y": 160,
+      "ports": [
+        {
+          "name": "in-nonce",
+          "displayName": "nonce",
+          "plug": "input",
+          "type": "*",
+          "group": "Inputs"
+        },
+        {
+          "name": "out-on",
+          "displayName": "on",
+          "plug": "output",
+          "type": "*",
+          "group": "Outputs"
+        },
+        {
+          "name": "out-off",
+          "displayName": "off",
+          "plug": "output",
+          "type": "*",
+          "group": "Outputs"
+        },
+        {
+          "name": "out-checked",
+          "displayName": "checked",
+          "plug": "output",
+          "type": "*",
+          "group": "Outputs"
+        }
+      ]
+    },
+    {
+      "id": "oliveswitchOut",
+      "type": "Component Outputs",
+      "label": "What it answers",
+      "ports": [
+        {
+          "name": "on",
+          "plug": "input",
+          "type": "boolean"
+        },
+        {
+          "name": "off",
+          "plug": "input",
+          "type": "boolean"
+        },
+        {
+          "name": "checked",
+          "plug": "input",
+          "type": "*"
+        }
+      ],
+      "x": 40,
+      "y": 280
+    }
+  ]
+}

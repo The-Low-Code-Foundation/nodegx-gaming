@@ -1,0 +1,16 @@
+{
+  "slug": "chateau-lumiere",
+  "title": "Château Lumière",
+  "tagline": "A junior sorceress wins back a haunted château room by room, casting spells with right answers.",
+  "category": "educational",
+  "kind": "static",
+  "play": "index.html",
+  "readiness": "B",
+  "readinessNote": "Plays end to end: two wings, six rooms, turn-based battles, five mini-games, a save in the browser. Room rules, rewards and creature stats are data (src/data.mjs) and the questions are a data bank (src/school/), but each room's 3D furniture is a function in src/castle.mjs and each hub's doors are placed by hand, so a new room means writing code there first.",
+  "buildYourOwn": "New rooms and rewards, new creatures (recoloured variants are one line), and a different curriculum: other times tables, another subject, your own question banks.",
+  "controls": "Tap or click to walk, drag to turn the camera; or arrow keys / WASD, Shift to sprint, Enter to use a door",
+  "devices": ["desktop", "tablet"],
+  "languages": ["en"],
+  "tags": ["3d", "maths", "rpg", "quiz", "anime"],
+  "licence": "GPL-3.0 for the code; assets as listed in CREDITS.md"
+}

@@ -1,0 +1,16 @@
+{
+  "slug": "triage",
+  "title": "Triage",
+  "tagline": "A third-person shooter on one dark hospital floor: free the people locked in the rooms before the infected break in.",
+  "category": "casual",
+  "kind": "static",
+  "play": "index.html",
+  "readiness": "B",
+  "readinessNote": "One floor plays start to finish (rescue, bites and an infection clock, the stairs, a score and skills). The floor plan is already a text map in src/map.mjs, but only one floor exists and \"Next floor\" replays it with more infected; the first job is a list of floors chosen by ?floor=. Contains guns and zombie violence.",
+  "buildYourOwn": "Floor plans drawn as text (walls, doors, locked rooms, cover, pickups, infected), weapons and their numbers, pickups, skills, sounds.",
+  "controls": "Keyboard and mouse (WASD, mouse to aim and fire)",
+  "devices": ["desktop"],
+  "languages": ["en"],
+  "tags": ["3d", "shooter", "zombies", "third-person", "three.js", "rocketbox"],
+  "licence": "GPL-3.0 for the code (as in the NodeGX repository it came from); assets as listed in CREDITS.md"
+}

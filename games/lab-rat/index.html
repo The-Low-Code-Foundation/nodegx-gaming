@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Lab Rat</title>
+    <link rel="stylesheet" href="style.css" />
+    <script type="importmap">
+      { "imports": { "three": "./vendor/three/three.module.js", "three/addons/": "./vendor/three-addons/" } }
+    </script>
+  </head>
+  <body>
+    <div id="view"></div>
+    <div id="vignette"></div>
+    <div id="hurt"></div>
+    <div id="hud" hidden>
+      <div id="crosshair"></div>
+      <div id="hitdir"><i></i></div>
+      <div id="prompt"></div>
+      <div id="subtitle"></div>
+      <div id="toasts"></div>
+      <div id="place"></div>
+      <div id="timer" hidden></div>
+      <div id="health"><span class="lbl">HEALTH</span><span id="hp">100</span><div class="bar"><div id="hpbar"></div></div></div>
+      <div id="ammo"><span id="cans"></span><span id="weapon"></span><span id="mag"></span></div>
+    </div>
+    <div id="notes" hidden></div>
+    <div id="terminal" hidden></div>
+    <div id="fade"></div>
+    <div id="screen"></div>
+    <script type="module" src="src/main.mjs"></script>
+  </body>
+</html>

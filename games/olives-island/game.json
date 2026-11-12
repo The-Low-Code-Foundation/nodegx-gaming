@@ -1,0 +1,16 @@
+{
+  "slug": "olives-island",
+  "title": "Olive’s Island",
+  "tagline": "Teach little robots with real coding blocks, then put them to work on a 3D island where the neighbours need a hand.",
+  "category": "educational",
+  "kind": "nodegx",
+  "play": "play/index.html",
+  "readiness": "A",
+  "readinessNote": "A request (a level) is one JSON entry in Data/Requests: its 8×6 map in letters, the things on it, the goal as named checks, the blocks offered, the reward, plus its words in Data/Words. A new goal kind, block or tile is engine code in scripts/engine.js. The optional AI helper is switched off (OLIVE_ON in scripts/olive.js) and four requests that need it are hidden.",
+  "buildYourOwn": "New requests and islanders, new things on the island, rewards, robots and their upgrades, shop items, and your own words in English and French.",
+  "controls": "Mouse or touch: tap or drag blocks; drag the island to look around, pinch or wheel to zoom",
+  "devices": ["desktop", "tablet"],
+  "languages": ["en", "fr"],
+  "tags": ["coding", "blockly", "3d", "robots", "kids", "nodegx"],
+  "licence": "GPL-3.0 for the project (as in the NodeGX repository it came from); MIT for the NodeGX runtime in play/; assets as listed in CREDITS.md"
+}

@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Triage people</title>
+    <style>
+      html, body { margin: 0; height: 100%; background: #20232a; overflow: hidden; }
+      #view { position: fixed; inset: 0; }
+      #label { position: fixed; left: 12px; top: 10px; font: 13px/1.4 system-ui, sans-serif; color: #e8e8e8; text-shadow: 0 1px 2px #000; white-space: pre; }
+    </style>
+    <script type="importmap">
+      { "imports": { "three": "./vendor/three/three.module.js", "three/addons/": "./vendor/three-addons/" } }
+    </script>
+  </head>
+  <body>
+    <div id="view"></div>
+    <div id="label">Loading…</div>
+    <script type="module" src="src/people-view.mjs"></script>
+  </body>
+</html>

@@ -1,0 +1,8 @@
+{
+  "name": "pixel-dungeon",
+  "private": true,
+  "description": "Pixel dungeon, deployed from NodeGX. See DEPLOY.md.",
+  "scripts": {
+    "start": "node serve.js"
+  }
+}

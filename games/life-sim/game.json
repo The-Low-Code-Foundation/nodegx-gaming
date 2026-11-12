@@ -1,0 +1,16 @@
+{
+  "slug": "life-sim",
+  "title": "Life Sim",
+  "tagline": "Look after a little household: needs, friends, a job, a baby, a house to furnish and a street of neighbours.",
+  "category": "casual",
+  "kind": "static",
+  "play": "index.html",
+  "readiness": "B",
+  "readinessNote": "Plays end to end and saves in the browser. Things to buy, what they offer, conversations, jobs, houses and every word are data tables; the places themselves (flat, office, park, house layouts) are built in code in src/world.mjs, and src/game/page.mjs is one large file. A taker-over would first split page.mjs or add a place format.",
+  "buildYourOwn": "Furniture and things to buy, what each thing lets a Sim do, conversations and romance steps, careers, houses on the street, work-station questions, and new languages.",
+  "controls": "Mouse (click the floor to walk, click a thing for what to do with it, drag to look around)",
+  "devices": ["desktop", "tablet"],
+  "languages": ["en"],
+  "tags": ["3d", "life-sim", "three.js", "rocketbox"],
+  "licence": "GPL-3.0 for the code (as in the NodeGX repository it came from); assets as listed in CREDITS.md"
+}

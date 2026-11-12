@@ -1,0 +1,43 @@
+:root {
+  --panel: rgba(255, 252, 245, 0.92);
+  --ink: #2c2a26;
+  --muted: #7a7266;
+  --accent: #2f9e4f;
+  --line: rgba(60, 50, 40, 0.15);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; overflow: hidden; background: #bfd8e8; color: var(--ink); font: 14px/1.4 system-ui, 'Segoe UI', sans-serif; }
+#view canvas { display: block; touch-action: none; }
+#hud { position: fixed; top: 12px; left: 12px; width: 270px; display: flex; flex-direction: column; gap: 8px; max-height: calc(100% - 24px); overflow-y: auto; }
+.panel { background: var(--panel); border-radius: 12px; padding: 10px 12px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12); }
+.panel h2 { margin: 0 0 6px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+.panel p { margin: 6px 0 0; font-size: 12px; color: var(--muted); }
+.row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 3px 0; }
+button { font: inherit; border: 1px solid var(--line); background: #fff; border-radius: 8px; padding: 5px 10px; cursor: pointer; }
+button.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+select { font: inherit; }
+#stats div { font-variant-numeric: tabular-nums; }
+#stats b { font-size: 22px; }
+#stats span { color: var(--muted); }
+#stats .doing { color: var(--accent); font-weight: 600; min-height: 1.4em; }
+#dress-list { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 8px; }
+#dress-list label { display: flex; align-items: center; gap: 6px; font-size: 12px; text-transform: capitalize; }
+#dress-list input { width: 26px; height: 22px; padding: 0; border: none; background: none; }
+#hint { position: fixed; bottom: 14px; left: 50%; transform: translateX(-50%); background: var(--panel); padding: 7px 14px; border-radius: 20px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12); }
+#loading { position: fixed; top: 14px; left: 50%; transform: translateX(-50%); background: var(--ink); color: #fff; padding: 7px 14px; border-radius: 20px; }
+#results { position: fixed; inset: 60px 40px auto 300px; background: var(--panel); border-radius: 12px; padding: 14px 18px; box-shadow: 0 6px 30px rgba(0, 0, 0, 0.25); max-height: calc(100% - 120px); overflow: auto; }
+#results h3 { margin: 0 0 4px; }
+#results table { border-collapse: collapse; margin: 10px 0; font-variant-numeric: tabular-nums; }
+#results td, #results th { padding: 4px 8px; border-bottom: 1px solid var(--line); text-align: right; font-size: 13px; }
+#results td:first-child, #results th:first-child { text-align: left; }
+[hidden] { display: none !important; }
+
+.duel { display: flex; gap: 16px; margin: 12px 0; }
+.duel-card { flex: 1; border-radius: 12px; padding: 12px 16px; text-align: center; background: #fff; border: 3px solid var(--line); }
+.duel-card.good { border-color: var(--accent); }
+.duel-card.bad { border-color: #d9534f; }
+.duel-card p { margin: 0; }
+.duel-card .big { font-size: 40px; font-weight: 700; line-height: 1.1; margin-top: 8px; }
+.duel-card .verdict { font-size: 22px; font-weight: 700; margin-top: 10px; }
+.duel-card.good .verdict { color: var(--accent); }
+.duel-card.bad .verdict { color: #d9534f; }

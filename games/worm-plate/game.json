@@ -1,0 +1,16 @@
+{
+  "slug": "worm-plate",
+  "title": "The Worm Plate",
+  "tagline": "A worm on a dish with a real brain: four brains, from two wires to the full C. elegans connectome, then an evolving population, then the argument about whether anyone is home.",
+  "category": "educational",
+  "kind": "static",
+  "play": "index.html",
+  "readiness": "C",
+  "readinessNote": "A simulation and debate toy, not a game: five tabs you watch and poke (add lights, tap a worm, cut cells, move the toxic patch, switch the predator on). There is no goal or score. Each tab is a hand-written object in src/app.js.",
+  "buildYourOwn": "A new tab (another brain or experiment), new mutation kinds on the evolution plate, new stimuli, another lens in the debate.",
+  "controls": "Mouse (click and buttons)",
+  "devices": ["desktop", "tablet"],
+  "languages": ["en"],
+  "tags": ["biology", "neuroscience", "connectome", "c-elegans", "simulation", "philosophy"],
+  "licence": "GPL-3.0 for the code (as in the NodeGX repository it came from); connectome data and fonts as listed in CREDITS.md"
+}

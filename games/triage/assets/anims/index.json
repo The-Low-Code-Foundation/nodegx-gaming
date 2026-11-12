@@ -1,0 +1,412 @@
+{
+ "clips": [
+  {
+   "name": "idle",
+   "gender": "f",
+   "file": "f_idle_neutral_01.glb",
+   "seconds": 15.53,
+   "travel": 0,
+   "bytes": 162140
+  },
+  {
+   "name": "idle",
+   "gender": "m",
+   "file": "m_idle_neutral_01.glb",
+   "seconds": 11.67,
+   "travel": 0,
+   "bytes": 130200
+  },
+  {
+   "name": "idle2",
+   "gender": "f",
+   "file": "f_idle_neutral_02.glb",
+   "seconds": 11.23,
+   "travel": 0,
+   "bytes": 106412
+  },
+  {
+   "name": "idle2",
+   "gender": "m",
+   "file": "m_idle_neutral_02.glb",
+   "seconds": 15.5,
+   "travel": 0,
+   "bytes": 156276
+  },
+  {
+   "name": "breathe",
+   "gender": "f",
+   "file": "f_idle_breathe_01.glb",
+   "seconds": 2.67,
+   "travel": 0,
+   "bytes": 58964
+  },
+  {
+   "name": "breathe",
+   "gender": "m",
+   "file": "m_idle_breathe_01.glb",
+   "seconds": 2.73,
+   "travel": 0,
+   "bytes": 73888
+  },
+  {
+   "name": "lookAround",
+   "gender": "f",
+   "file": "f_idle_look_around_01.glb",
+   "seconds": 4.47,
+   "travel": 0,
+   "bytes": 94504
+  },
+  {
+   "name": "lookAround",
+   "gender": "m",
+   "file": "m_idle_look_around_01.glb",
+   "seconds": 4.63,
+   "travel": 0,
+   "bytes": 95716
+  },
+  {
+   "name": "walk",
+   "gender": "f",
+   "file": "f_walk_neutral_01.glb",
+   "seconds": 1.2,
+   "travel": 121.38,
+   "bytes": 58620
+  },
+  {
+   "name": "walk",
+   "gender": "m",
+   "file": "m_walk_neutral_01.glb",
+   "seconds": 1.2,
+   "travel": 101.17,
+   "bytes": 59252
+  },
+  {
+   "name": "walkSlow",
+   "gender": "f",
+   "file": "f_walk_slow_01.glb",
+   "seconds": 1.5,
+   "travel": 88.73,
+   "bytes": 61388
+  },
+  {
+   "name": "walkSlow",
+   "gender": "m",
+   "file": "m_walk_slow_01.glb",
+   "seconds": 1.47,
+   "travel": 82.1,
+   "bytes": 61692
+  },
+  {
+   "name": "talk",
+   "gender": "f",
+   "file": "f_gestic_talk_relaxed_01.glb",
+   "seconds": 27.5,
+   "travel": 0,
+   "bytes": 378400
+  },
+  {
+   "name": "talk",
+   "gender": "m",
+   "file": "m_gestic_talk_relaxed_01.glb",
+   "seconds": 32.33,
+   "travel": 0,
+   "bytes": 436276
+  },
+  {
+   "name": "phone",
+   "gender": "f",
+   "file": "f_cell_phone_textmessage.glb",
+   "seconds": 20.53,
+   "travel": 0,
+   "bytes": 221236
+  },
+  {
+   "name": "phone",
+   "gender": "m",
+   "file": "m_cell_phone_textmessage.glb",
+   "seconds": 34.47,
+   "travel": 0,
+   "bytes": 448244
+  },
+  {
+   "name": "sprint",
+   "gender": "f",
+   "file": "f_run_fast_01.glb",
+   "seconds": 0.7,
+   "travel": 537.86,
+   "bytes": 56156
+  },
+  {
+   "name": "sprint",
+   "gender": "m",
+   "file": "m_run_fast_01.glb",
+   "seconds": 0.6,
+   "travel": 583.95,
+   "bytes": 59544
+  },
+  {
+   "name": "jog",
+   "gender": "f",
+   "file": "f_run_neutral.glb",
+   "seconds": 0.83,
+   "travel": 315.72,
+   "bytes": 57644
+  },
+  {
+   "name": "jog",
+   "gender": "m",
+   "file": "m_run_neutral.glb",
+   "seconds": 0.77,
+   "travel": 307.47,
+   "bytes": 56920
+  },
+  {
+   "name": "crouchIdle",
+   "gender": "f",
+   "file": "f_crouch_idle.glb",
+   "seconds": 9.93,
+   "travel": 0,
+   "bytes": 95472
+  },
+  {
+   "name": "crouchIdle",
+   "gender": "m",
+   "file": "m_crouch_idle.glb",
+   "seconds": 6.87,
+   "travel": 0,
+   "bytes": 72152
+  },
+  {
+   "name": "crouchIn",
+   "gender": "f",
+   "file": "f_crouch_in.glb",
+   "seconds": 2.5,
+   "travel": 1.31,
+   "bytes": 86172
+  },
+  {
+   "name": "crouchOut",
+   "gender": "f",
+   "file": "f_crouch_out.glb",
+   "seconds": 2.67,
+   "travel": 1.23,
+   "bytes": 89892
+  },
+  {
+   "name": "nervous",
+   "gender": "f",
+   "file": "f_idle_nervous_01.glb",
+   "seconds": 46.17,
+   "travel": 0,
+   "bytes": 523900
+  },
+  {
+   "name": "nervous",
+   "gender": "m",
+   "file": "m_idle_nervous_01.glb",
+   "seconds": 30.9,
+   "travel": 0,
+   "bytes": 357560
+  },
+  {
+   "name": "lurch",
+   "gender": "f",
+   "file": "f_walk_injured.glb",
+   "seconds": 1.13,
+   "travel": 114.66,
+   "bytes": 59388
+  },
+  {
+   "name": "lurch2",
+   "gender": "f",
+   "file": "f_walk_bruised.glb",
+   "seconds": 1.03,
+   "travel": 130.47,
+   "bytes": 66036
+  },
+  {
+   "name": "lurch2",
+   "gender": "m",
+   "file": "m_walk_bruised.glb",
+   "seconds": 2.53,
+   "travel": 71.3,
+   "bytes": 68084
+  },
+  {
+   "name": "stagger",
+   "gender": "f",
+   "file": "f_walk_drunk.glb",
+   "seconds": 1.3,
+   "travel": 90.44,
+   "bytes": 60084
+  },
+  {
+   "name": "stagger",
+   "gender": "m",
+   "file": "m_walk_drunk.glb",
+   "seconds": 2.5,
+   "travel": 81.62,
+   "bytes": 81428
+  },
+  {
+   "name": "rush",
+   "gender": "f",
+   "file": "f_run_injured.glb",
+   "seconds": 0.77,
+   "travel": 266.06,
+   "bytes": 56616
+  },
+  {
+   "name": "rush",
+   "gender": "m",
+   "file": "m_run_injured.glb",
+   "seconds": 0.67,
+   "travel": 345.19,
+   "bytes": 56244
+  },
+  {
+   "name": "sway",
+   "gender": "f",
+   "file": "f_idle_drunk_01.glb",
+   "seconds": 30.37,
+   "travel": 0,
+   "bytes": 362848
+  },
+  {
+   "name": "sway",
+   "gender": "m",
+   "file": "m_idle_drunk_01.glb",
+   "seconds": 43.63,
+   "travel": 0,
+   "bytes": 477248
+  },
+  {
+   "name": "seethe",
+   "gender": "f",
+   "file": "f_idle_angry_01.glb",
+   "seconds": 23.83,
+   "travel": 0,
+   "bytes": 295572
+  },
+  {
+   "name": "seethe",
+   "gender": "m",
+   "file": "m_idle_angry_01.glb",
+   "seconds": 28.33,
+   "travel": 0,
+   "bytes": 342372
+  },
+  {
+   "name": "bang",
+   "gender": "f",
+   "file": "f_try_door_outwards.glb",
+   "seconds": 7.53,
+   "travel": 0,
+   "bytes": 148512
+  },
+  {
+   "name": "bang",
+   "gender": "m",
+   "file": "m_try_door_outwards.glb",
+   "seconds": 6.2,
+   "travel": 0,
+   "bytes": 133904
+  },
+  {
+   "name": "knock",
+   "gender": "f",
+   "file": "f_knock_door.glb",
+   "seconds": 3.17,
+   "travel": 0,
+   "bytes": 77928
+  },
+  {
+   "name": "knock",
+   "gender": "m",
+   "file": "m_knock_door.glb",
+   "seconds": 8,
+   "travel": 0,
+   "bytes": 145164
+  },
+  {
+   "name": "listenDoor",
+   "gender": "f",
+   "file": "f_listen_door.glb",
+   "seconds": 7.33,
+   "travel": 0,
+   "bytes": 120220
+  },
+  {
+   "name": "listenDoor",
+   "gender": "m",
+   "file": "m_listen_door.glb",
+   "seconds": 8.33,
+   "travel": 0,
+   "bytes": 131888
+  },
+  {
+   "name": "cough",
+   "gender": "f",
+   "file": "f_idle_cough_01.glb",
+   "seconds": 3.67,
+   "travel": 0,
+   "bytes": 94512
+  },
+  {
+   "name": "cough",
+   "gender": "m",
+   "file": "m_idle_cough_01.glb",
+   "seconds": 3.67,
+   "travel": 0,
+   "bytes": 91756
+  },
+  {
+   "name": "rollHead",
+   "gender": "f",
+   "file": "f_idle_roll_head_01.glb",
+   "seconds": 8.7,
+   "travel": 0,
+   "bytes": 138584
+  },
+  {
+   "name": "rollHead",
+   "gender": "m",
+   "file": "m_idle_roll_head_01.glb",
+   "seconds": 7.67,
+   "travel": 0,
+   "bytes": 126828
+  },
+  {
+   "name": "shakeArms",
+   "gender": "f",
+   "file": "f_idle_shake_arms_01.glb",
+   "seconds": 4.67,
+   "travel": 0.01,
+   "bytes": 73024
+  },
+  {
+   "name": "shakeArms",
+   "gender": "m",
+   "file": "m_idle_shake_arms_01.glb",
+   "seconds": 3.67,
+   "travel": 0,
+   "bytes": 87160
+  },
+  {
+   "name": "drunk2",
+   "gender": "m",
+   "file": "m_idle_drunk_02.glb",
+   "seconds": 47.77,
+   "travel": 0,
+   "bytes": 518124
+  },
+  {
+   "name": "runFast2",
+   "gender": "m",
+   "file": "m_run_fast_02.glb",
+   "seconds": 0.53,
+   "travel": 591.08,
+   "bytes": 55248
+  }
+ ]
+}

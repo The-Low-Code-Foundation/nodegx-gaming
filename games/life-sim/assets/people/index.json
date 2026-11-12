@@ -1,0 +1,184 @@
+{
+ "people": [
+  {
+   "name": "Female_Adult_01",
+   "file": "Female_Adult_01.glb",
+   "bytes": 1179568,
+   "triangles": 8732,
+   "expressions": [
+    "content",
+    "happy",
+    "sad",
+    "angry",
+    "surprised",
+    "blink",
+    "talk"
+   ]
+  },
+  {
+   "name": "Female_Adult_03",
+   "file": "Female_Adult_03.glb",
+   "bytes": 1427932,
+   "triangles": 9208,
+   "expressions": [
+    "content",
+    "happy",
+    "sad",
+    "angry",
+    "surprised",
+    "blink",
+    "talk"
+   ]
+  },
+  {
+   "name": "Female_Adult_05",
+   "file": "Female_Adult_05.glb",
+   "bytes": 1268628,
+   "triangles": 8288,
+   "expressions": [
+    "content",
+    "happy",
+    "sad",
+    "angry",
+    "surprised",
+    "blink",
+    "talk"
+   ]
+  },
+  {
+   "name": "Female_Adult_08",
+   "file": "Female_Adult_08.glb",
+   "bytes": 1184144,
+   "triangles": 8276,
+   "expressions": [
+    "content",
+    "happy",
+    "sad",
+    "angry",
+    "surprised",
+    "blink",
+    "talk"
+   ]
+  },
+  {
+   "name": "Female_Adult_12",
+   "file": "Female_Adult_12.glb",
+   "bytes": 1205844,
+   "triangles": 8774,
+   "expressions": [
+    "content",
+    "happy",
+    "sad",
+    "angry",
+    "surprised",
+    "blink",
+    "talk"
+   ]
+  },
+  {
+   "name": "Female_Adult_14",
+   "file": "Female_Adult_14.glb",
+   "bytes": 1312576,
+   "triangles": 8724,
+   "expressions": [
+    "content",
+    "happy",
+    "sad",
+    "angry",
+    "surprised",
+    "blink",
+    "talk"
+   ]
+  },
+  {
+   "name": "Male_Adult_01",
+   "file": "Male_Adult_01.glb",
+   "bytes": 1121172,
+   "triangles": 7440,
+   "expressions": [
+    "content",
+    "happy",
+    "sad",
+    "angry",
+    "surprised",
+    "blink",
+    "talk"
+   ]
+  },
+  {
+   "name": "Male_Adult_04",
+   "file": "Male_Adult_04.glb",
+   "bytes": 1173576,
+   "triangles": 8684,
+   "expressions": [
+    "content",
+    "happy",
+    "sad",
+    "angry",
+    "surprised",
+    "blink",
+    "talk"
+   ]
+  },
+  {
+   "name": "Male_Adult_06",
+   "file": "Male_Adult_06.glb",
+   "bytes": 1227388,
+   "triangles": 7456,
+   "expressions": [
+    "content",
+    "happy",
+    "sad",
+    "angry",
+    "surprised",
+    "blink",
+    "talk"
+   ]
+  },
+  {
+   "name": "Male_Adult_08",
+   "file": "Male_Adult_08.glb",
+   "bytes": 1101576,
+   "triangles": 7364,
+   "expressions": [
+    "content",
+    "happy",
+    "sad",
+    "angry",
+    "surprised",
+    "blink",
+    "talk"
+   ]
+  },
+  {
+   "name": "Male_Adult_10",
+   "file": "Male_Adult_10.glb",
+   "bytes": 1040100,
+   "triangles": 6732,
+   "expressions": [
+    "content",
+    "happy",
+    "sad",
+    "angry",
+    "surprised",
+    "blink",
+    "talk"
+   ]
+  },
+  {
+   "name": "Male_Adult_16",
+   "file": "Male_Adult_16.glb",
+   "bytes": 782336,
+   "triangles": 7064,
+   "expressions": [
+    "content",
+    "happy",
+    "sad",
+    "angry",
+    "surprised",
+    "blink",
+    "talk"
+   ]
+  }
+ ]
+}

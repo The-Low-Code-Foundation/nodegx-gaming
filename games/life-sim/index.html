@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Life Sim</title>
+    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="life.css" />
+    <script type="importmap">
+      { "imports": { "three": "./vendor/three/three.module.js", "three/addons/": "./vendor/three-addons/", "@pixiv/three-vrm": "./vendor/three-vrm/three-vrm.module.js" } }
+    </script>
+  </head>
+  <body>
+    <div id="view"></div>
+    <aside id="hud">
+      <section class="panel" id="time">
+        <div id="clock"></div>
+        <div class="row" id="speeds"></div>
+        <div id="money" title=""></div>
+        <button id="buy" hidden></button>
+      </section>
+      <section class="panel">
+        <h2 data-t="ui.mood"></h2>
+        <div id="mood"></div>
+        <div id="moodlets"></div>
+      </section>
+      <section class="panel">
+        <h2 data-t="ui.needs"></h2>
+        <div id="needs"></div>
+      </section>
+      <section class="panel">
+        <h2 data-t="ui.skills"></h2>
+        <div id="skills"></div>
+      </section>
+      <section class="panel">
+        <h2 data-t="ui.job"></h2>
+        <div id="job"></div>
+      </section>
+      <section class="panel">
+        <h2 data-t="ui.self"></h2>
+        <div class="row" id="self"></div>
+        <label class="row" id="fw-row"><input type="checkbox" id="freewill" checked /> <span data-t="ui.freeWill"></span></label>
+      </section>
+    </aside>
+    <div id="right">
+      <aside class="panel" id="people"></aside>
+      <aside class="panel" id="settings"></aside>
+    </div>
+    <div id="create" hidden></div>
+    <div id="place-bar" hidden></div>
+    <div id="card-back" hidden></div>
+    <div id="card" hidden></div>
+    <nav id="places"></nav>
+    <div id="todo"></div>
+    <div id="menu" hidden></div>
+    <div id="bubbles"></div>
+    <div id="toasts"></div>
+    <div id="hint"></div>
+    <div id="loading"></div>
+    <script type="module" src="src/game/page.mjs"></script>
+  </body>
+</html>

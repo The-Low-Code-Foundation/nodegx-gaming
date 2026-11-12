@@ -1,0 +1,54 @@
+{
+ "about": "The settlement styles a district can be built in (engine fields only). A district names one in its style field.",
+ "styles": [
+  {
+   "id": "st-01",
+   "setting": "rock-cut",
+   "depth": [
+    16,
+    70
+   ],
+   "palette": {
+    "wall": "carved",
+    "floor": "worked-floor",
+    "trim": "pillar",
+    "accent": "stone-door",
+    "light": "lamp-niche"
+   },
+   "proportions": {
+    "roomHeight": [
+     3,
+     5
+    ],
+    "roomWidth": [
+     4,
+     9
+    ],
+    "passageWidth": [
+     1,
+     2
+    ],
+    "ceiling": "flat",
+    "doorway": "stone-door",
+    "pillarEvery": 0
+   },
+   "spaces": {
+    "home": 8,
+    "store": 6,
+    "vent": 5,
+    "stair": 6,
+    "hall": 3,
+    "cistern": 3,
+    "shrine": 2,
+    "workshop": 3,
+    "refuge": 2,
+    "library": 1
+   },
+   "decor": [
+    "lamp-niche",
+    "frieze",
+    "tablet-shelf"
+   ]
+  }
+ ]
+}

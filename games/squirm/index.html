@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+</head><body>
+<title>Squirm</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gluten:wght@500;700;900&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: a microscope bench. The eyepiece (canvas) fills the left; a slide label rail on the right holds the specimen,
+   its brain and the stage's own instruments. One dark world by choice: dark-field light, paper labels. */
+:root {
+  color-scheme: dark;
+  --ink: #070a14; --field: #0c1124; --glass: rgba(14, 20, 40, .86); --line: rgba(150, 170, 230, .18);
+  --fg: #e4e9f6; --muted: #8d97b8; --label: #f1ead8; --label-ink: #23201a; --label-rule: #c9bfa6;
+  --dna: #ffc94d; --hurt: #ff5d73; --good: #62e3b5; --scent: #ffae4a; --danger: #c77dff;
+  --display: "Gluten", "Comic Sans MS", "Chalkboard SE", cursive; --body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", "SF Mono", Menlo, monospace;
+}
+* { box-sizing: border-box }
+[hidden] { display: none !important }
+html, body { height: 100% }
+body { background: var(--ink); color: var(--fg); font-family: var(--body); font-size: 15px; line-height: 1.4; overflow: hidden;
+  padding-left: max(0px, env(safe-area-inset-left, 0px)); padding-right: max(0px, env(safe-area-inset-right, 0px)); }
+button { font: inherit; color: inherit; cursor: pointer }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--dna); outline-offset: 2px }
+#app { display: grid; grid-template-columns: minmax(0, 1fr) 312px; height: 100%; }
+#eye { position: relative; min-width: 0; min-height: 0; overflow: hidden; background: var(--field) }
+#eye canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: crosshair }
+
+/* ── the rail: slide labels ── */
+#rail { background: #0a0e1c; border-left: 1px solid var(--line); overflow-y: auto; padding: 14px 14px 24px; display: flex; flex-direction: column; gap: 12px; min-width: 0 }
+.label { background: var(--label); color: var(--label-ink); border-radius: 3px; padding: 10px 12px; box-shadow: 0 1px 0 rgba(0,0,0,.4); position: relative }
+.label .eyebrow { font-family: var(--mono); font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; color: #6b6150; display: flex; justify-content: space-between; gap: 8px }
+#sizeUm { text-transform: none; letter-spacing: .04em }
+.label h2 { font-family: var(--body); font-style: italic; font-weight: 700; font-size: 19px; margin: 2px 0 4px; line-height: 1.15; text-wrap: balance }
+.label .meta { font-family: var(--mono); font-size: 11.5px; color: #4d4537; display: flex; flex-wrap: wrap; gap: 2px 12px; font-variant-numeric: tabular-nums }
+.bars { display: grid; gap: 5px; margin-top: 8px }
+.bar { display: grid; grid-template-columns: 54px minmax(0, 1fr) 54px; align-items: center; gap: 6px; font-family: var(--mono); font-size: 11px; font-variant-numeric: tabular-nums }
+.bar > div { height: 8px; background: #d9d0b9; border-radius: 4px; overflow: hidden }
+.bar > div > i { display: block; height: 100%; width: 0; background: #2d8f6f; border-radius: 4px; transition: width .2s }
+.bar.hp > div > i { background: #c8394d }
+.bar.dna > div > i { background: #d49a12 }
+.bar b { text-align: right; font-weight: 600 }
+.panel { border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; background: rgba(255,255,255,.02) }
+.panel h3 { margin: 0 0 6px; font-family: var(--mono); font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); font-weight: 600; display: flex; justify-content: space-between; gap: 6px }
+.panel h3 span { color: var(--fg); letter-spacing: .04em }
+#brainCv { width: 100%; height: 150px; display: block }
+.firing { font-family: var(--mono); font-size: 11px; color: var(--muted); min-height: 30px; margin-top: 4px; line-height: 1.35 }
+.firing b { color: var(--fg); font-weight: 600 }
+.row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px }
+.btn { border: 1px solid var(--line); background: rgba(255,255,255,.04); border-radius: 999px; padding: 5px 11px; font-size: 13px }
+.btn:hover { background: rgba(255,255,255,.09) }
+.btn.on { background: var(--dna); color: #241a00; border-color: var(--dna) }
+.btn.big { font-family: var(--display); font-weight: 700; font-size: 18px; padding: 8px 18px; background: var(--dna); color: #241a00; border: 0 }
+.btn.big:disabled { opacity: .35; cursor: default }
+kbd { font-family: var(--mono); font-size: 11px; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; color: var(--fg); background: rgba(255,255,255,.05) }
+.keys { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 10px; font-size: 12.5px; color: var(--muted); align-items: baseline }
+.species { display: grid; gap: 6px }
+.sp { display: grid; grid-template-columns: 26px minmax(0, 1fr) auto; gap: 8px; align-items: center; font-size: 13px; cursor: pointer; border-radius: 6px; padding: 3px 4px }
+.sp:hover { background: rgba(255,255,255,.05) }
+.sp canvas { width: 26px; height: 26px }
+.sp em { font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.sp .st { font-family: var(--mono); font-size: 11px; color: var(--muted); text-align: right; white-space: nowrap }
+.sp .st.ally { color: var(--good) } .sp .st.gone { color: var(--hurt) }
+.sp.sel { background: rgba(255,201,77,.12); outline: 1px solid rgba(255,201,77,.4) }
+#chartCv { width: 100%; height: 90px; display: block }
+.note { font-size: 12.5px; color: var(--muted) }
+.note b { color: var(--fg) }
+
+/* ── on-eye HUD ── */
+.hud { position: absolute; pointer-events: none; font-family: var(--mono); font-size: 12px; color: var(--fg); text-shadow: 0 1px 2px #000 }
+#dial { top: max(12px, env(safe-area-inset-top, 0px)); left: 14px; display: flex; gap: 10px; align-items: center }
+#dial .obj { font-family: var(--display); font-weight: 900; font-size: 30px; line-height: 1; color: var(--label) }
+#dial .stg { display: grid; line-height: 1.2 }
+#dial .stg b { font-family: var(--display); font-size: 17px; font-weight: 700; letter-spacing: .02em }
+#dnaHud { top: max(12px, env(safe-area-inset-top, 0px)); left: 50%; transform: translateX(-50%); font-family: var(--display); font-weight: 900; font-size: 26px; color: var(--dna); display: flex; align-items: baseline; gap: 6px }
+#dnaHud small { font-family: var(--mono); font-size: 11px; color: var(--muted); font-weight: 400 }
+#prompt { bottom: 22px; left: 50%; transform: translateX(-50%); font-family: var(--body); font-size: 15px; background: var(--glass); border: 1px solid var(--line); border-radius: 999px; padding: 7px 16px; white-space: nowrap; transition: opacity .25s; text-shadow: none }
+#prompt:empty { opacity: 0 }
+#toast { top: 64px; left: 50%; transform: translateX(-50%); font-family: var(--display); font-weight: 700; font-size: 22px; color: var(--label); transition: opacity .4s; text-align: center }
+#mute { position: absolute; right: 12px; top: max(10px, env(safe-area-inset-top, 0px)); pointer-events: auto; border: 1px solid var(--line); background: var(--glass); border-radius: 999px; padding: 4px 10px; font-family: var(--mono); font-size: 11px }
+
+/* ── overlays: title, cards, the editor ── */
+.over { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(4, 6, 14, .72); backdrop-filter: blur(3px); padding: 20px; z-index: 5 }
+.card { background: var(--label); color: var(--label-ink); border-radius: 4px; max-width: 520px; width: 100%; padding: 22px 24px 20px; box-shadow: 0 30px 80px rgba(0,0,0,.6); position: relative }
+.card .eyebrow { font-family: var(--mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: #7a6e58 }
+.card h1 { font-family: var(--display); font-weight: 900; font-size: 46px; line-height: .95; margin: 6px 0 10px; letter-spacing: -.01em; text-wrap: balance }
+.card h2 { font-family: var(--display); font-weight: 700; font-size: 30px; line-height: 1; margin: 6px 0 10px; text-wrap: balance }
+.card p { margin: 0 0 10px; max-width: 60ch }
+.card .rule { border-top: 1px dashed var(--label-rule); margin: 12px 0 }
+.card .go { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 14px }
+.card .btn { border-color: #bdb39a; background: transparent; color: var(--label-ink) }
+.card .btn.big { background: #23201a; color: var(--label) }
+.card .fine { font-family: var(--mono); font-size: 11.5px; color: #6b6150 }
+.card kbd { color: var(--label-ink); border-color: #bdb39a; background: rgba(0,0,0,.04) }
+.stamp { position: absolute; right: 18px; top: 16px; font-family: var(--display); font-weight: 900; font-size: 15px; color: #b3342f; border: 3px solid #b3342f; border-radius: 6px; padding: 2px 8px; transform: rotate(8deg); letter-spacing: .06em; opacity: .85 }
+.stamp.green { color: #23795a; border-color: #23795a }
+.title-card { max-width: 620px }
+.title-card h1 { font-size: 92px; margin-bottom: 4px }
+.ladder { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin: 14px 0 6px }
+.ladder div { border: 1px solid var(--label-rule); border-radius: 3px; padding: 6px 7px; font-size: 12px; line-height: 1.25 }
+.ladder b { display: block; font-family: var(--display); font-size: 20px; font-weight: 900 }
+.ladder .soon { opacity: .5; border-style: dashed }
+
+/* the creature editor */
+.editor { background: #0d1226; color: var(--fg); border: 1px solid var(--line); border-radius: 8px; width: min(1040px, 100%); max-height: 100%; overflow: auto; display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); box-shadow: 0 30px 80px rgba(0,0,0,.6) }
+.ed-stage { position: relative; min-height: 420px; background: radial-gradient(circle at 50% 45%, #18224a, #070a14 70%); border-right: 1px solid var(--line) }
+.ed-stage canvas { position: absolute; inset: 0; width: 100%; height: 100% }
+.ed-name { position: absolute; left: 16px; top: 14px; right: 16px }
+.ed-name input { font-family: var(--body); font-style: italic; font-weight: 700; font-size: 22px; background: transparent; border: 0; border-bottom: 1px dashed var(--line); color: var(--fg); width: 100%; padding: 2px 0 }
+.ed-name .meta { font-family: var(--mono); font-size: 11.5px; color: var(--muted); margin-top: 4px; font-variant-numeric: tabular-nums }
+.ed-stats { position: absolute; left: 16px; bottom: 14px; right: 16px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px 14px; font-family: var(--mono); font-size: 11.5px; font-variant-numeric: tabular-nums }
+.ed-stats div { display: flex; justify-content: space-between; border-bottom: 1px solid var(--line); padding-bottom: 2px }
+.ed-stats span { color: var(--muted) }
+.ed-side { padding: 16px 18px 18px; display: flex; flex-direction: column; gap: 12px; min-width: 0 }
+.ed-side h3 { margin: 0; font-family: var(--mono); font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); font-weight: 600 }
+.ed-dna { font-family: var(--display); font-weight: 900; font-size: 30px; color: var(--dna); line-height: 1 }
+.ed-dna small { font-family: var(--mono); font-size: 11px; color: var(--muted); font-weight: 400 }
+.parts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px }
+.part { text-align: left; border: 1px solid var(--line); background: rgba(255,255,255,.03); border-radius: 6px; padding: 7px 9px; display: grid; gap: 1px }
+.part:hover:not(:disabled) { background: rgba(255,255,255,.08); border-color: rgba(255,201,77,.5) }
+.part:disabled { opacity: .38; cursor: default }
+.part b { font-size: 13.5px; display: flex; justify-content: space-between; gap: 6px }
+.part b i { font-style: normal; font-family: var(--mono); font-size: 12px; color: var(--dna) }
+.part span { font-size: 11.5px; color: var(--muted); line-height: 1.25 }
+.part .n { font-family: var(--mono); font-size: 10.5px; color: var(--good) }
+.sliders { display: grid; gap: 8px }
+.sliders label { display: grid; grid-template-columns: 70px minmax(0, 1fr) 34px; gap: 8px; align-items: center; font-size: 12.5px; color: var(--muted) }
+.sliders input[type=range] { width: 100%; accent-color: var(--dna) }
+.sliders output { font-family: var(--mono); font-size: 12px; color: var(--fg); text-align: right }
+.swatches { display: flex; flex-wrap: wrap; gap: 5px }
+.swatches button { width: 22px; height: 22px; border-radius: 50%; border: 2px solid transparent; padding: 0 }
+.swatches button.on { border-color: var(--fg) }
+.pat { display: flex; flex-wrap: wrap; gap: 5px }
+.have { display: flex; flex-wrap: wrap; gap: 5px }
+.have button { border: 1px solid var(--line); background: rgba(255,255,255,.04); border-radius: 999px; padding: 2px 9px; font-size: 12px }
+.have button:hover { border-color: var(--hurt); color: var(--hurt) }
+.ed-go { display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-top: auto; padding-top: 6px }
+.roll { font-family: var(--display); font-weight: 700; font-size: 20px; min-height: 26px; color: var(--label) }
+
+/* the charm minigame: notes */
+#notes { position: absolute; left: 50%; bottom: 64px; transform: translateX(-50%); display: flex; gap: 8px; pointer-events: auto; z-index: 3 }
+#notes button { width: 58px; height: 58px; border-radius: 50%; border: 2px solid var(--line); background: var(--glass); font-family: var(--display); font-weight: 900; font-size: 22px; display: grid; place-items: center; line-height: 1 }
+#notes button small { font-family: var(--mono); font-size: 9.5px; font-weight: 400; color: var(--muted) }
+#notes button.lit { transform: scale(1.12); box-shadow: 0 0 24px currentColor }
+
+@media (max-width: 860px) {
+  body { overflow: auto }
+  #app { grid-template-columns: 1fr; grid-template-rows: 62vh auto; height: auto; min-height: 100% }
+  #rail { border-left: 0; border-top: 1px solid var(--line); padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)) }
+  .editor { grid-template-columns: 1fr }
+  .ed-stage { min-height: 300px; border-right: 0; border-bottom: 1px solid var(--line) }
+  .title-card h1 { font-size: 64px }
+  .ladder { grid-template-columns: repeat(2, minmax(0, 1fr)) }
+  #prompt { white-space: normal; width: max-content; max-width: 90% }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important } }
+</style>
+
+<div id="app">
+  <div id="eye">
+    <canvas id="cv" aria-label="The eyepiece: your creature and its world"></canvas>
+    <div class="hud" id="dial"><span class="obj" id="hudMag">×400</span><span class="stg"><b id="hudStage">The Drop</b><span id="hudSub">stage 1 of 3</span></span></div>
+    <div class="hud" id="dnaHud"><span id="hudDna">0</span><small>DNA</small></div>
+    <div class="hud" id="toast"></div>
+    <div class="hud" id="prompt"></div>
+    <div id="notes" hidden></div>
+    <button id="mute" type="button">sound on</button>
+  </div>
+  <aside id="rail" aria-label="Specimen label">
+    <div class="label" id="specimen">
+      <div class="eyebrow"><span id="slideNo">slide 1 · gen 1</span><span id="sizeUm">— µm</span></div>
+      <h2 id="spName">Squirmus primus</h2>
+      <div class="meta" id="spMeta"></div>
+      <div class="bars">
+        <div class="bar hp"><span>health</span><div><i id="hpBar"></i></div><b id="hpTxt">—</b></div>
+        <div class="bar dna"><span id="growLbl">growth</span><div><i id="growBar"></i></div><b id="growTxt">—</b></div>
+      </div>
+    </div>
+    <div class="panel">
+      <h3>Its brain <span id="cellCount">302 cells</span></h3>
+      <canvas id="brainCv" aria-label="The creature's nerve cells, lit as they fire"></canvas>
+      <div class="firing" id="firing">—</div>
+      <div class="row"><button class="btn" id="autoBtn" type="button" aria-pressed="false">Let the brain drive <kbd>B</kbd></button></div>
+      <div class="note" id="autoNote" hidden style="margin-top:6px">With nothing to sense, this table falls silent. Busbice kept his robot going by pulsing the food-smell cells every few seconds; so does this.</div>
+    </div>
+    <div class="panel" id="stagePanel"></div>
+    <div class="panel"><h3>Hands</h3><div class="keys" id="keys"></div></div>
+  </aside>
+</div>
+
+<!-- The game, as plain scripts loaded in this order (no modules, no build): edit a file in src/ and refresh. -->
+<script src="src/engine.js"></script>
+<script src="src/gloss.js"></script>
+<script src="src/connectome.js"></script>
+<script src="src/core.js"></script>
+<script src="src/creature.js"></script>
+<script src="src/hud.js"></script>
+<script src="src/play.js"></script>
+<script src="src/editor.js"></script>
+<script src="src/stage1.js"></script>
+<script src="src/stage2.js"></script>
+<script src="src/stage3.js"></script>
+<script src="src/main.js"></script>
+</body></html>

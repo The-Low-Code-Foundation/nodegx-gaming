@@ -1,0 +1,35 @@
+Which licence covers what in this folder
+
+This folder is an app built with NodeGX. Its pages, data and assets are the app's own and belong to whoever
+built it. NodeGX puts no licence on them.
+
+The NodeGX runtime runs the app: noodl-app.png, load_terminator.js, noodl.deploy.js, serve.js. It is under the MIT licence printed below.
+index-31074a85bf18f6fa.js and index.html start the runtime, with the app filled in.
+react.production.min.js and react-dom.production.min.js are React, under React's own MIT licence, stated at the top of each file.
+noodl.deploy.js.LICENSE.txt lists the other open-source code inside noodl.deploy.js, each under its own licence.
+
+The NodeGX editor and tools are under the GPL-3.0. What an app runs on is under the MIT licence.
+
+--------------------------------------------------------------------------------
+
+MIT License
+
+Copyright (c) 2024 Future Platforms AB
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE
+OR OTHER DEALINGS IN THE SOFTWARE.

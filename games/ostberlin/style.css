@@ -1,0 +1,213 @@
+/* 1rem = 1% of the stage's width (set in engine.js), so everything scales with the TV. */
+html, body { margin: 0; height: 100%; background: #1d1612; overflow: hidden; }
+body { font-family: Verdana, "DejaVu Sans", Arial, sans-serif; color: #33241b; -webkit-user-select: none; user-select: none; }
+[hidden] { display: none !important; }
+#stage { position: absolute; left: 50%; top: 50%; width: 100rem; height: 56.25rem; margin: -28.125rem 0 0 -50rem; overflow: hidden; background: #e8c98a; }
+#view { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
+svg.scene { position: absolute; left: 0; top: 0; width: 100%; height: 100%; display: block; }
+svg text { font-family: Verdana, "DejaVu Sans", Arial, sans-serif; }
+
+.hot { cursor: pointer; }
+.hot .halo { opacity: 0; fill: #fff3a8; stroke: #ff9d1c; stroke-width: 5; }
+.hot:hover .halo { opacity: .85; }
+.hinting .hot.new .halo { opacity: .85; animation: pulse .7s ease-in-out infinite alternate; }
+@keyframes pulse { from { opacity: .15; } to { opacity: .9; } }
+
+.hud { position: absolute; left: 0; top: 0; width: 100%; height: 5rem; background: #7a3b1d; color: #fff6dd; display: table; table-layout: fixed; box-shadow: 0 .3rem 0 #4f2512; }
+.hud > * { display: table-cell; vertical-align: middle; text-align: center; }
+.hud .ttl { overflow: hidden; text-align: left; padding-left: 1.5rem; font-size: 2.3rem; font-weight: bold; white-space: nowrap; }
+.hud .ttl small { font-size: 1.3rem; font-weight: normal; opacity: .8; margin-left: 1rem; }
+.hud .cnt { width: 17rem; white-space: nowrap; font-size: 1.7rem; font-weight: bold; color: #ffd45e; }
+.hud .b { width: 11.5rem; }
+button { font-family: inherit; cursor: pointer; border: .25rem solid #33241b; border-radius: 1rem; background: #ffd45e; color: #33241b; font-weight: bold; font-size: 1.6rem; padding: .5rem 1.2rem; box-shadow: 0 .35rem 0 #33241b; }
+button:hover { background: #fff3a8; }
+button:active { box-shadow: none; position: relative; top: .35rem; }
+.hud button { width: 10.5rem; padding: .5rem 0; }
+button.big { font-size: 2rem; padding: .8rem 2.4rem; background: #f28a2e; color: #fff; }
+button.big:hover { background: #ffa64d; }
+button.quiet { background: #f3e3bf; }
+
+.lbl { position: absolute; left: 0; bottom: 1.2rem; width: 100%; text-align: center; pointer-events: none; }
+.lbl span { display: inline-block; background: #33241b; color: #fff6dd; font-size: 2rem; font-weight: bold; padding: .5rem 1.8rem; border-radius: 2rem; }
+.lbl span small { font-weight: normal; font-size: 1.4rem; opacity: .8; margin-left: 1rem; }
+
+.zettel { position: absolute; right: 1.2rem; top: 6.4rem; width: 17rem; background: #fffbe9; border: .2rem solid #33241b; padding: 1rem 1.2rem; font-size: 1.35rem; line-height: 1.5; transform: rotate(2deg); box-shadow: .4rem .4rem 0 rgba(0,0,0,.25); }
+.zettel b { display: block; font-size: 1.5rem; margin-bottom: .3rem; }
+.zettel .ok { text-decoration: line-through; color: #2f8a3c; }
+
+.dlg { position: absolute; left: 0; top: 0; width: 100%; height: 100%; background: rgba(29,22,18,.72); }
+.card { position: absolute; left: 7rem; top: 5.5rem; width: 86rem; height: 45rem; background: #fff6dd; border: .4rem solid #33241b; border-radius: 2rem; box-shadow: .8rem .8rem 0 rgba(0,0,0,.35); overflow: hidden; }
+.card .pic { position: absolute; left: 0; top: 0; width: 32rem; height: 100%; background: #f1cf7e; border-right: .4rem solid #33241b; }
+.card .pic svg { position: absolute; left: 2rem; top: 5rem; width: 28rem; height: 35rem; }
+.card .txt { position: absolute; left: 35rem; top: 2.2rem; right: 3rem; bottom: 2rem; }
+.card h2 { margin: 0; font-size: 3.2rem; line-height: 1.1; color: #7a3b1d; }
+.card h3 { margin: .4rem 0 1.2rem; font-size: 1.7rem; font-weight: normal; font-style: italic; color: #8a6a4e; }
+.card p { margin: 0 0 1rem; font-size: 1.85rem; line-height: 1.42; }
+.card .ask { background: #ffe08a; border: .25rem dashed #7a3b1d; border-radius: 1rem; padding: .8rem 1.2rem; font-size: 1.7rem; line-height: 1.35; }
+.card .ask b { color: #b3401a; }
+.card .foot { position: absolute; left: 35rem; right: 3rem; bottom: 2rem; text-align: right; white-space: nowrap; }
+.card .foot .n { float: left; font-size: 1.6rem; line-height: 4rem; color: #8a6a4e; }
+.card .foot button { margin-left: 1rem; }
+.cover { position: absolute; left: 3rem; top: 8rem; width: 26rem; height: 29rem; border: .4rem solid #33241b; border-radius: 1rem; text-align: center; color: #fff; font-weight: bold; font-size: 2.6rem; line-height: 1.25; box-shadow: .5rem .5rem 0 rgba(0,0,0,.3); }
+.cover span { position: absolute; left: 1.5rem; right: 1.5rem; top: 50%; transform: translateY(-50%); }
+.cover small { display: block; font-size: 1.4rem; font-weight: normal; margin-top: 1rem; }
+
+.keys { text-align: center; margin: 1rem 0; }
+.keys button { width: 4.9rem; height: 9rem; margin: 0 .2rem; padding: 0; font-size: 2rem; color: #fff; text-shadow: 0 .15rem 0 rgba(0,0,0,.4); }
+.song { text-align: center; height: 3.4rem; margin: .5rem 0; white-space: nowrap; }
+.song i { display: inline-block; width: 1.2rem; height: 1.2rem; border-radius: 50%; margin: 0 .08rem; border: .15rem solid #33241b; opacity: .35; vertical-align: middle; }
+.song i.done { opacity: 1; }
+.song i.next { opacity: 1; width: 2.4rem; height: 2.4rem; }
+.toks { margin: .6rem 0; }
+.toks button { width: 15.2rem; height: 6.2rem; margin: 0 .7rem .9rem 0; padding: 0; font-size: 1.6rem; background: #fff; vertical-align: top; }
+.toks button small { display: block; font-weight: normal; font-size: 1.2rem; }
+.toks button.in { background: #9ad27a; }
+.toks button.out { background: #e9d9c0; color: #a08c76; box-shadow: none; }
+
+.album { position: absolute; left: 3rem; top: 2.5rem; width: 94rem; height: 51rem; background: #fff6dd; border: .4rem solid #33241b; border-radius: 2rem; overflow: hidden; }
+.album h2 { margin: 1rem 2rem .4rem; font-size: 2.4rem; color: #7a3b1d; }
+.album h2 small { font-size: 1.4rem; font-weight: normal; margin-left: 1rem; color: #8a6a4e; }
+.album .row { height: 5rem; margin: 0 2rem; white-space: nowrap; border-top: .15rem solid #e2cf9d; }
+.album .row b { display: inline-block; width: 14.5rem; font-size: 1.35rem; line-height: 5rem; vertical-align: top; overflow: hidden; }
+.album .st { display: inline-block; width: 6rem; height: 4.6rem; margin: .2rem .25rem 0; background: #f1cf7e; border-radius: .6rem; vertical-align: top; cursor: pointer; }
+.album .st.no { background: #eadfc4; cursor: default; text-align: center; font-size: 2.4rem; line-height: 4.6rem; color: #cdbd98; }
+.album .st svg { width: 100%; height: 100%; display: block; }
+.album .st:hover { background: #ffe08a; }
+.album .x { position: absolute; right: 2rem; top: 1rem; }
+
+.toast { position: absolute; left: 50%; top: .5rem; width: 60rem; margin-left: -30rem; white-space: nowrap; text-align: center; pointer-events: none; }
+.toast span { display: inline-block; background: #2f8a3c; color: #fff; font-size: 2rem; font-weight: bold; padding: .7rem 2rem; border-radius: 2rem; border: .25rem solid #33241b; }
+
+.title { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
+.title .box { position: absolute; left: 6rem; top: 7rem; width: 46rem; }
+.title h1 { margin: 0; font-size: 4.6rem; line-height: 1.08; color: #fff6dd; text-shadow: .3rem .3rem 0 #33241b; }
+.title h1 em { font-style: normal; color: #ffd45e; }
+.title p.who { font-size: 2rem; background: none; padding: 0; margin: 0 0 1rem; text-shadow: .2rem .2rem 0 #33241b; }
+.title p.who small { display: block; font-size: 1.4rem; opacity: .85; }
+.title button.big + button.big { margin-left: 1rem; }
+.title p { font-size: 1.8rem; line-height: 1.45; color: #fff6dd; background: rgba(51,36,27,.82); padding: 1.2rem 1.5rem; border-radius: 1rem; margin: 1.6rem 0 2rem; }
+
+/* ---- real photos: a polaroid, with the drawn sticker stuck on its corner ---------------------- */
+.polaroid { position: absolute; left: 2.4rem; top: 2.4rem; width: 27rem; -webkit-box-sizing: border-box; box-sizing: border-box; padding: 1rem 1rem 0; background: #fffdf5; border: .12rem solid #d8cfb8; box-shadow: .5rem .6rem 0 rgba(0,0,0,.28); transform: rotate(-2.5deg); }
+.polaroid .ph { max-height: 22rem; overflow: hidden; background: #33241b; display: flex; align-items: center; }
+.polaroid .ph img { display: block; width: 100%; animation: kb 16s ease-in-out infinite alternate; }
+.polaroid .cr { display: block; padding: .5rem 0 .6rem; font-size: 1rem; line-height: 1.3rem; color: #8a7a66; text-align: center; }
+.pic.photo .polaroid { animation: develop .7s ease-out; }
+.card .pic .mini { position: absolute; left: 14rem; top: 29rem; width: 16rem; height: 14.5rem; transform: rotate(5deg); animation: stick .45s .4s cubic-bezier(.2,1.6,.4,1) backwards; }
+.card .pic .mini svg { position: static; width: 100%; height: 100%; }
+@keyframes kb { from { transform: scale(1); } to { transform: scale(1.14) translate(-2%, 1.5%); } }
+@keyframes develop { from { opacity: 0; transform: rotate(7deg) translateY(-5rem); } }
+@keyframes stick { from { opacity: 0; transform: scale(1.8) rotate(-12deg); } }
+
+/* ---- a film's own still: on a television screen, or as a sleeve with the record turning ------- */
+.tv, .lp { position: absolute; cursor: pointer; }
+.still { position: absolute; overflow: hidden; border: .35rem solid #33241b; -webkit-box-sizing: border-box; box-sizing: border-box; }
+.still b { position: absolute; left: 0; top: 0; width: 100%; height: 100%; background-size: cover; background-position: center; }
+.still em { position: absolute; left: 0; top: -1rem; width: 100%; height: 130%; background: repeating-linear-gradient(0deg, rgba(0,0,0,.2) 0, rgba(0,0,0,.2) .12rem, rgba(0,0,0,0) .12rem, rgba(0,0,0,0) .4rem); animation: roll 1.2s linear infinite; }
+.still .play { position: absolute; left: 50%; top: 50%; width: 6rem; height: 6rem; margin: -3rem 0 0 -3rem; -webkit-box-sizing: border-box; box-sizing: border-box; border: .3rem solid #fff; border-radius: 50%; background: #d6312b; color: #fff; font-size: 2.8rem; line-height: 5.4rem; text-align: center; text-indent: .4rem; box-shadow: 0 .3rem 0 rgba(0,0,0,.4); animation: beat 1.3s ease-in-out infinite; }
+.tv { left: 1.8rem; top: 7rem; width: 28rem; height: 23.5rem; background: #8a5a35; border: .4rem solid #33241b; border-radius: 1.6rem; box-shadow: inset 0 0 0 .5rem #a8703f, .5rem .6rem 0 rgba(0,0,0,.35); }
+.tv .still { left: 1.5rem; top: 1.5rem; width: 20rem; height: 15rem; border-radius: 2.2rem / 1.8rem; background: #222; }
+.tv > i { position: absolute; right: 1.6rem; top: 2rem; width: 3rem; height: 3rem; border-radius: 50%; background: #33241b; border: .3rem solid #d8c9a8; }
+.tv > i + i { top: 6.6rem; }
+.tv > u { position: absolute; right: 1.5rem; top: 12rem; width: 3.8rem; height: .4rem; background: #33241b; border-radius: .2rem; }
+.tv > u + u { top: 13.2rem; } .tv > u + u + u { top: 14.4rem; }
+.tv button.film, .lp button.film { position: absolute; margin: 0; padding: .5rem 0; }
+.tv button.film { left: 1.5rem; bottom: 1.3rem; width: 20rem; }
+.card.turn .tv .still:after { content: ''; position: absolute; left: 0; top: 0; width: 100%; height: 100%; background: repeating-linear-gradient(0deg, #fff 0, #999 .3rem, #eee .5rem, #666 .9rem); opacity: 0; animation: snow .45s steps(5); }
+.lp { left: 1.6rem; top: 7rem; width: 29rem; height: 26rem; }
+.lp .still { left: 0; top: 0; width: 21rem; height: 21rem; z-index: 2; box-shadow: .5rem .6rem 0 rgba(0,0,0,.35); }
+.lp .still b { background-size: auto 134%; }
+.lp .still em { display: none; }
+.lp .disc { position: absolute; left: 9rem; top: .5rem; width: 20rem; height: 20rem; border-radius: 50%; background: #1b1614; background: repeating-radial-gradient(circle, #1b1614 0, #1b1614 .22rem, #3a322d .3rem, #1b1614 .45rem); animation: spin 3s linear infinite; }
+.lp .disc i { position: absolute; left: 50%; top: 50%; width: 7rem; height: 7rem; margin: -3.5rem 0 0 -3.5rem; border-radius: 50%; background: #d6312b; border: .25rem solid #ffd45e; -webkit-box-sizing: border-box; box-sizing: border-box; }
+.lp .disc i:after { content: ''; position: absolute; left: .8rem; top: 2.9rem; width: 2rem; height: .5rem; background: #ffd45e; }
+.lp.cd .disc { background: #cfd6dc; background: radial-gradient(circle, #fff6dd 0, #fff6dd 9%, #8fa3b0 10%, #eef3f6 30%, #b9c4cc 55%, #f3e9ff 72%, #c5d8e6 88%, #aab6bf 100%); }
+.lp.cd .disc i { width: 3.4rem; height: 3.4rem; margin: -1.7rem 0 0 -1.7rem; background: #55628a; border-color: #fff; }
+.lp.cd .disc i:after { left: 4rem; top: 1rem; width: 4rem; height: .5rem; background: #fff; opacity: .8; }
+.card.turn .lp .disc { animation: slideout .5s ease-out, spin 3s linear infinite; }
+.lp button.film { left: 0; top: 22.8rem; width: 21rem; }
+button.film { background: #d6312b; color: #fff; margin-left: 1rem; }
+button.film:hover { background: #f04a3f; }
+
+/* ---- the cinema: a film plays inside a television ------------------------------------------- */
+.kino { position: absolute; left: 0; top: 0; width: 100%; height: 100%; background: rgba(15,10,8,.92); animation: fade .25s; }
+.tvset { position: absolute; left: 6.5rem; top: 4.6rem; width: 86rem; height: 45rem; background: #8a5a35; border: .5rem solid #33241b; border-radius: 2.4rem; box-shadow: inset 0 0 0 .6rem #a8703f, .8rem .8rem 0 rgba(0,0,0,.4); animation: pop .4s cubic-bezier(.2,1.4,.4,1); }
+.tube { position: absolute; left: 2.6rem; top: 2.5rem; width: 69.4rem; height: 39.04rem; background: #000; border: .5rem solid #33241b; border-radius: 2rem; overflow: hidden; }
+.tube iframe { display: block; width: 100%; height: 100%; border: 0; }
+.tvset .side { position: absolute; right: 1.5rem; top: 2.6rem; bottom: 2.6rem; width: 10rem; text-align: center; }
+.side i { display: block; width: 5rem; height: 5rem; margin: 1rem auto 1.6rem; border-radius: 50%; background: #33241b; border: .4rem solid #d8c9a8; -webkit-box-sizing: border-box; box-sizing: border-box; }
+.side u { display: block; height: .45rem; margin: .9rem 1.6rem; background: #33241b; border-radius: .3rem; }
+.side button { position: absolute; left: 0; bottom: 0; width: 10rem; padding: .8rem 0; font-size: 1.6rem; }
+.tvset s { position: absolute; bottom: -3.4rem; left: 12rem; width: 2.2rem; height: 3rem; background: #33241b; border-radius: 0 0 .6rem .6rem; }
+.tvset s + s { left: auto; right: 12rem; }
+
+/* ---- movement. Every keyframe starts from "not there yet" and ends on the plain style, so a
+   browser that does not animate still shows everything in its place. ------------------------- */
+#view.enter .scene { animation: scenein .5s ease-out; }
+#view.enter .hud { animation: huddown .4s ease-out; }
+.scene.zoomto { animation: zoomto .4s ease-in forwards; }
+.hot .lift { transition: transform .18s ease-out; }
+.hot:hover .lift { transform: translateY(-5px) scale(1.08); }
+.hot .bob { animation: drop .55s cubic-bezier(.2,1.5,.4,1) backwards; }
+.hot.new .bob { animation: drop .55s cubic-bezier(.2,1.5,.4,1) backwards, nudge 7s ease-in-out infinite; }
+.rays { animation: spin 50s linear infinite; }
+.cloud { animation: drift 100s linear infinite; }
+.flap { animation: flap .5s ease-in-out infinite alternate; }
+.blink { animation: blink 1.8s steps(1) infinite; }
+.putter { animation: putter .26s ease-in-out infinite alternate; }
+.drivein { animation: drivein 1.9s cubic-bezier(.15,.75,.3,1) backwards; }
+.puff { opacity: 0; animation: puff 1.65s ease-out infinite; }
+.glow { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; background: radial-gradient(ellipse at 50% 46%, rgba(255,236,170,.16) 0, rgba(255,236,170,0) 46%, rgba(45,22,6,.4) 100%); }
+.motes { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; overflow: hidden; }
+.motes i { position: absolute; width: .45rem; height: .45rem; border-radius: 50%; background: #fff6c8; opacity: 0; animation: mote 18s linear infinite; }
+.dlg { animation: fade .25s; }
+.card.pop, .album.pop { animation: pop .4s cubic-bezier(.2,1.4,.4,1); }
+.card.turn .pic > *, .card.turn .txt { animation: turn .3s ease-out; }
+.card .ask { animation: askin .5s .35s backwards; }
+.album .st { transition: transform .15s; }
+.album .st:hover { transform: scale(1.3) rotate(-4deg); }
+.toast span { animation: toastin .45s cubic-bezier(.2,1.5,.4,1); }
+.cnt.bump { animation: bump .6s; }
+button { transition: transform .12s, background-color .12s; }
+button:hover { transform: translateY(-.15rem); }
+button:active { transform: none; }
+.keys button.want { animation: beat .9s ease-in-out infinite; }
+.fx { position: absolute; left: 0; top: 0; width: 100%; height: 0; pointer-events: none; }
+.fx i { position: absolute; top: 0; width: 1.1rem; height: 1.7rem; opacity: 0; animation: fall 2s ease-in forwards; }
+.title h1 { animation: titlein .8s cubic-bezier(.2,1.3,.4,1); }
+.title p { animation: askin .6s .35s backwards; }
+.title button.big { animation: beat 1.5s 1.2s ease-in-out infinite; }
+.pile { position: absolute; right: 7rem; top: 9.5rem; width: 34rem; height: 36rem; animation: develop .9s .3s ease-out backwards; }
+.snap { position: absolute; left: 0; top: 0; width: 34rem; }
+.snap .polaroid { position: relative; left: 0; top: 0; width: 34rem; transform: none; }
+.snap .polaroid .ph { max-height: 24rem; }
+.snap .polaroid .cr { font-size: 1.15rem; }
+.snap.s0 { transform: rotate(3deg); } .snap.s1 { transform: rotate(-4deg); } .snap.s2 { transform: rotate(1.5deg); } .snap.s3 { transform: rotate(-2deg); }
+.snap.away { animation: away .65s ease-in forwards; }
+
+@keyframes fade { from { opacity: 0; } }
+@keyframes scenein { from { opacity: 0; transform: scale(1.12); } }
+@keyframes huddown { from { transform: translateY(-100%); } }
+@keyframes zoomto { to { opacity: 0; transform: scale(2.8); } }
+@keyframes drop { from { opacity: 0; transform: translateY(-70px) scale(.6); } }
+@keyframes nudge { 0%, 87%, 100% { transform: none; } 90% { transform: rotate(-5deg) scale(1.05); } 93% { transform: rotate(4deg) scale(1.07); } 96% { transform: rotate(-2deg); } }
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes drift { from { transform: translateX(-300px); } to { transform: translateX(3800px); } }
+@keyframes flap { to { transform: scaleY(.3); } }
+@keyframes blink { 0% { opacity: 1; } 50% { opacity: .15; } }
+@keyframes putter { to { transform: translateY(-3px); } }
+@keyframes drivein { from { transform: translateX(-1150px); } }
+@keyframes puff { from { opacity: .75; transform: scale(.4); } to { opacity: 0; transform: translate(-95px, -45px) scale(1.7); } }
+@keyframes mote { 0% { opacity: 0; transform: translate(0, 0); } 15% { opacity: .6; } 85% { opacity: .35; } 100% { opacity: 0; transform: translate(7rem, -15rem); } }
+@keyframes pop { from { opacity: 0; transform: scale(.72) rotate(-2deg); } }
+@keyframes turn { from { opacity: 0; transform: translateX(3rem); } }
+@keyframes askin { from { opacity: 0; transform: translateY(1.2rem) rotate(-1.5deg); } }
+@keyframes toastin { from { transform: translateY(-6rem); } }
+@keyframes bump { 35% { transform: scale(1.4); color: #fff; } }
+@keyframes beat { 50% { transform: scale(1.1); } }
+@keyframes roll { to { transform: translateY(.4rem); } }
+@keyframes snow { 0% { opacity: .9; background-position: 0 0; } 100% { opacity: 0; background-position: 0 2.3rem; } }
+@keyframes slideout { from { transform: translateX(-8rem); } }
+@keyframes fall { 0% { opacity: 1; transform: translateY(-3rem) rotate(0deg); } 80% { opacity: 1; } 100% { opacity: 0; transform: translateY(58rem) rotate(900deg); } }
+@keyframes titlein { from { opacity: 0; transform: translateY(-3rem) scale(.9); } }
+@keyframes away { to { opacity: 0; transform: translate(-30rem, -4rem) rotate(-24deg); } }
