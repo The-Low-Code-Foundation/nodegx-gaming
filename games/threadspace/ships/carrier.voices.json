@@ -1,0 +1,94 @@
+{
+  "about": "Who speaks aboard the carrier, and in which recorded voice. Each speaker is a voice designed with Gemini TTS from `design` (1-2 sentences: age, gender, timbre, accent; permanent traits only) and saved in the Google project; `voiceId` is that saved voice (`node tools/voices.mjs --design` makes any that are missing, in your own project if you cloned this). `style` is the short acting note sent with every line. tools/voices.mjs works out every fixed line the game can say (the career's orders, the watch pipes, the `ship` calls below) and records the ones not yet in assets/voice/. The game plays a clip when it has one for the exact line and falls back to the browser's own speech when it has not. Officers are keyed by their id in carrier.career.json, watch leaders by their id in carrier.watches.json; `ship` is the main broadcast (the bridge, flight control, the damage control speakers); `tannoy` puts it through a speaker. `sample` is the line --sample renders to audition the voice. A crew drawn from all over Earth: cast to the 3D body each one is given (crew.mjs deals the people in turn).",
+  "model": "gemini-3.8-flash-tts",
+  "speakers": {
+    "cox": {
+      "voiceId": "voice_p5jimz0zc72a",
+      "design": "A gravelly, weathered man in his late fifties with a warm Cork Irish accent, low and dry, a smoker's rasp.",
+      "gender": "male",
+      "language": "en-IE",
+      "style": "Dry and unimpressed, but not unkind to a new recruit.",
+      "sample": "So you're the new apprentice. Welcome aboard. You're in Blue watch, berthed in quarters C. Read the watch bill on the board outside this office: it tells you when you're on, and where you muster."
+    },
+    "dc": {
+      "voiceId": "voice_nm8fatgcnafz",
+      "design": "A big, deep-voiced Nigerian man in his mid-forties from Lagos, resonant and commanding, with a Lagos Nigerian English accent.",
+      "gender": "male",
+      "language": "en-NG",
+      "style": "Brisk orders, coaching a new hand; a short burst of approval when it is earned.",
+      "sample": "So you're Blue watch's new hand in my party. Everyone aboard fights fires before they do anything else. I'm lighting a drill fire in the gym. The red cabinets in the passages hold extinguishers. Take one, find the fire, put it out. Go."
+    },
+    "guns": {
+      "voiceId": "voice_3uge17k0jmq0",
+      "design": "A sharp, clear-voiced woman in her early thirties with a Johannesburg South African accent, crisp and quick.",
+      "gender": "female",
+      "language": "en-ZA",
+      "style": "Precise and quietly keen on good shooting.",
+      "sample": "Hits under fire. You're a gunner. From now on, when the klaxon goes, you have a turret. And the flight officer has asked for you: Lieutenant Moss, in the pilots' ready room."
+    },
+    "flight": {
+      "voiceId": "voice_y99kim4gm369",
+      "design": "A relaxed, bright-voiced woman in her late twenties with a Brisbane Australian accent, easy and confident.",
+      "gender": "female",
+      "language": "en-AU",
+      "style": "Breezy, a grin in the voice; would rather be flying than talking.",
+      "sample": "Every gunner gets a go in a fighter. Take any of them on the pads. Launch, fly about, then fly yourself home down the lane of rings. Don't call flight control to bring you in: fly it."
+    },
+    "ootw": {
+      "voiceId": "voice_dr6r455uf36c",
+      "design": "A composed woman in her early fifties with a warm, low General American voice and a light San Antonio Texan lilt.",
+      "gender": "female",
+      "language": "en-US",
+      "style": "Calm authority on a working bridge; warm when she gives praise.",
+      "sample": "Take the helm. Bring her round ninety degrees, either way, and stop her turning. Gently: that is four hundred metres of ship."
+    },
+    "pike": {
+      "voiceId": null,
+      "design": "A strong-voiced woman in her forties with a Kingston Jamaican accent, warm and no-nonsense.",
+      "gender": "female",
+      "language": "en-JM",
+      "style": "Runs a mess deck; firm, a dry humour."
+    },
+    "shaw": {
+      "voiceId": null,
+      "design": "A gruff man in his late thirties with a Mumbai Indian English accent, quick and practical.",
+      "gender": "male",
+      "language": "en-IN",
+      "style": "Runs a mess deck; firm, practical."
+    },
+    "lund": {
+      "voiceId": "voice_9qx9ovq63lde",
+      "design": "A loud, gruff man in his forties with a broad Glasgow Scottish accent, a voice that carries down a passage.",
+      "gender": "male",
+      "language": "en-GB",
+      "style": "Firm, dry humour; sharp when someone is adrift.",
+      "sample": "Adrift on your first watch. That's in my book, and the coxswain will hear of it. Now report to Chief Okoro in damage control."
+    },
+    "ship": {
+      "voiceId": "voice_av0j47o3r5ps",
+      "design": "A clear, even-voiced woman in her thirties with a neutral Canadian accent, the trained cadence of a broadcast announcer.",
+      "gender": "female",
+      "language": "en-CA",
+      "style": "Urgent without panic; every word carries down a steel passage.",
+      "tannoy": true,
+      "sample": "Action stations, action stations. Raider closing to starboard. Gun crews close up. Close all pressure doors."
+    }
+  },
+  "ship": [
+    "Action stations, action stations. Raider closing to port. Gun crews close up. Close all pressure doors.",
+    "Action stations, action stations. Raider closing to starboard. Gun crews close up. Close all pressure doors.",
+    "Action stations, action stations. Raider closing from above. Gun crews close up. Close all pressure doors.",
+    "Action stations, action stations. Raider closing from below. Gun crews close up. Close all pressure doors.",
+    "Action stations, action stations. Incoming fire to port. Close all pressure doors. Brace, brace, brace.",
+    "Action stations, action stations. Incoming fire to starboard. Close all pressure doors. Brace, brace, brace.",
+    "Action stations, action stations. Incoming fire from above. Close all pressure doors. Brace, brace, brace.",
+    "Action stations, action stations. Incoming fire from below. Close all pressure doors. Brace, brace, brace.",
+    "Stand down from action stations.",
+    "Shields are down.",
+    "Shields are back up.",
+    "The raider's shields are down.",
+    "The raider is breaking off.",
+    "Splash one. The raider is destroyed. Well done, gunners.",
+    "Flight control. You are hit and dead in space. Hands off: we are bringing you in."
+  ]
+}

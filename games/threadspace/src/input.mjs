@@ -1,8 +1,8 @@
 // Keys and the mouse, in one place. Held keys are a set; taps are kept until a frame reads them (a quick
 // tap counts on a slow frame). The mouse is a stick while the pointer is locked: clicking the view takes it.
 
-const HELD = new Set(['KeyE', 'KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyR', 'KeyF', 'KeyQ', 'ShiftLeft', 'ShiftRight', 'Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']);
-const ACTIONS = new Set(['KeyE', 'KeyJ', 'Tab', 'KeyT', 'KeyV', 'KeyM', 'Digit1', 'Digit2', 'Digit3', 'Digit4']);
+const HELD = new Set(['KeyE', 'KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyR', 'KeyF', 'KeyQ', 'KeyZ', 'KeyX', 'KeyC', 'ShiftLeft', 'ShiftRight', 'Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']);
+const ACTIONS = new Set(['KeyE', 'KeyB', 'KeyJ', 'Tab', 'KeyT', 'KeyV', 'KeyM', 'Digit1', 'Digit2', 'Digit3', 'Digit4']);
 
 export class Input {
   constructor(canvas) {
