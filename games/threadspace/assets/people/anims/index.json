@@ -1,0 +1,100 @@
+{
+ "clips": [
+  {
+   "name": "idle",
+   "gender": "f",
+   "file": "f_idle_neutral_01.glb",
+   "seconds": 15.53,
+   "travel": 0,
+   "bytes": 162140
+  },
+  {
+   "name": "idle",
+   "gender": "m",
+   "file": "m_idle_neutral_01.glb",
+   "seconds": 11.67,
+   "travel": 0,
+   "bytes": 130200
+  },
+  {
+   "name": "lookAround",
+   "gender": "f",
+   "file": "f_idle_look_around_01.glb",
+   "seconds": 4.47,
+   "travel": 0,
+   "bytes": 94504
+  },
+  {
+   "name": "lookAround",
+   "gender": "m",
+   "file": "m_idle_look_around_01.glb",
+   "seconds": 4.63,
+   "travel": 0,
+   "bytes": 95716
+  },
+  {
+   "name": "walk",
+   "gender": "f",
+   "file": "f_walk_neutral_01.glb",
+   "seconds": 1.2,
+   "travel": 121.38,
+   "bytes": 58620
+  },
+  {
+   "name": "walk",
+   "gender": "m",
+   "file": "m_walk_neutral_01.glb",
+   "seconds": 1.2,
+   "travel": 101.17,
+   "bytes": 59252
+  },
+  {
+   "name": "talk",
+   "gender": "f",
+   "file": "f_gestic_talk_relaxed_01.glb",
+   "seconds": 27.5,
+   "travel": 0,
+   "bytes": 378400
+  },
+  {
+   "name": "talk",
+   "gender": "m",
+   "file": "m_gestic_talk_relaxed_01.glb",
+   "seconds": 32.33,
+   "travel": 0,
+   "bytes": 436276
+  },
+  {
+   "name": "sitChair",
+   "gender": "f",
+   "file": "f_sit_chair_idle_relaxed_01.glb",
+   "seconds": 37.43,
+   "travel": 0,
+   "bytes": 326580
+  },
+  {
+   "name": "sitChair",
+   "gender": "m",
+   "file": "m_sit_chair_idle_relaxed_01.glb",
+   "seconds": 36.4,
+   "travel": 0,
+   "bytes": 317608
+  },
+  {
+   "name": "workTable",
+   "gender": "f",
+   "file": "f_work_table.glb",
+   "seconds": 28.3,
+   "travel": 0,
+   "bytes": 377164
+  },
+  {
+   "name": "workTable",
+   "gender": "m",
+   "file": "m_work_table.glb",
+   "seconds": 11.3,
+   "travel": 0,
+   "bytes": 177336
+  }
+ ]
+}

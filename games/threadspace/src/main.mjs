@@ -8,6 +8,7 @@ btnContinue.hidden = !game.hasSave();
 btnContinue.addEventListener('click', () => game.load());
 document.getElementById('btn-new').addEventListener('click', () => game.newGame());
 document.getElementById('btn-yard').addEventListener('click', () => (location.href = 'shipyard.html'));
+document.getElementById('btn-carrier')?.addEventListener('click', () => (location.href = 'carrier.html'));
 // Drop-in missions: ?mission=<seed> deals that one and starts it (the debrief's buttons reload with the next seed).
 // The other captains speak from a script by default. ?llm=on (with tools/llm-server.mjs and Ollama running) gives them a
 // local model's voice; ?model=<ollama tag> picks which.

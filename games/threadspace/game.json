@@ -11,6 +11,6 @@
   "controls": "Keyboard and mouse",
   "devices": ["desktop"],
   "languages": ["en"],
-  "tags": ["3d", "space", "three.js", "shipyard", "boarding"],
-  "licence": "GPL-3.0 for the code (as in the NodeGX repository it came from); three.js MIT (vendor/three/LICENSE)"
+  "tags": ["3d", "space", "three.js", "shipyard", "boarding", "carrier"],
+  "licence": "GPL-3.0 for the code (as in the NodeGX repository it came from); three.js MIT (vendor/three/LICENSE); Rocketbox people and motion capture MIT (assets/people/LICENSE.md)"
 }

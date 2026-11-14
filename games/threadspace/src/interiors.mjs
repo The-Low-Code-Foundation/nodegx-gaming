@@ -194,11 +194,12 @@ export class Interior {
     return m;
   }
 
-  seat(x, z, ry = 0, color = '#4a5260', { arms = false, tall = false } = {}) {
+  seat(x, z, ry = 0, color = '#4a5260', { arms = false, tall = false, low = false } = {}) {
     const s = new THREE.Group();
     s.add(at(cyl(0.12, 0.2, 0.3, mat('#2a2f36'), 8), 0, 0.15, 0));
     s.add(at(box(0.9, 0.18, 0.85, color), 0, 0.4, 0));
-    s.add(at(box(0.9, tall ? 1.3 : 0.95, 0.18, color), 0, tall ? 1.05 : 0.85, 0.42));
+    // `low`: a back that stops below the shoulders, so whoever sits in it shows from behind.
+    s.add(at(box(0.9, tall ? 1.3 : low ? 0.5 : 0.95, 0.18, color), 0, tall ? 1.05 : low ? 0.65 : 0.85, 0.42));
     if (tall) s.add(at(box(0.6, 0.3, 0.2, mat('#2a2f36')), 0, 1.75, 0.44));
     if (arms) for (const sx of [-1, 1]) {
       s.add(at(box(0.14, 0.12, 0.7, mat('#2a2f36')), sx * 0.52, 0.66, 0.05));
@@ -312,7 +313,7 @@ export class Interior {
   }
 
   /** A room's alarm: 'red' (venting, pulsing), 'amber' (doors moving, pulsing), 'vacuum' (a steady dim red), 'green'
-   *  (pressure back), or null (its own lamps again). */
+   *  (pressure back), 'dim' (emergency lighting), or null (its own lamps again). */
   alarm(room, mode) {
     if (mode) this.alarms[room] = mode;
     else delete this.alarms[room];
@@ -326,16 +327,23 @@ export class Interior {
       s.base ??= { color: s.color.clone(), intensity: s.intensity };
       const mode = this.alarms[s.room];
       if (!mode) {
-        s.color.copy(s.base.color);
-        s.intensity = s.base.intensity;
-        s.panel?.color.copy(s.base.color);
+        // Put the lamp back once, when its alarm ends; otherwise leave it to whoever else is dimming it (the
+        // carrier's electrical faults flicker their room's lamps).
+        if (s.alarmed) {
+          s.color.copy(s.base.color);
+          s.intensity = s.base.intensity;
+          s.panel?.color.copy(s.base.color);
+          s.alarmed = false;
+        }
         continue;
       }
+      s.alarmed = true;
       const pulse = 0.5 + 0.5 * Math.sin(t * (mode === 'red' ? 7 : 5));
       if (mode === 'red') s.color.copy(RED), (s.intensity = s.base.intensity * (0.25 + 1.1 * pulse));
       else if (mode === 'amber') s.color.copy(AMBER), (s.intensity = s.base.intensity * (0.4 + 0.8 * pulse));
       else if (mode === 'vacuum') s.color.copy(RED), (s.intensity = s.base.intensity * 0.3);
       else if (mode === 'green') s.color.copy(GREEN), (s.intensity = s.base.intensity * 0.9);
+      else if (mode === 'dim') s.color.copy(s.base.color).lerp(RED, 0.35), (s.intensity = s.base.intensity * 0.22); // emergency lighting
       s.panel?.color.copy(s.color).multiplyScalar(Math.min(1, 0.35 + 0.65 * s.intensity / s.base.intensity));
     }
     for (const b of this.beacons) {

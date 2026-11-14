@@ -29,13 +29,14 @@ export class LightPool {
       for (const s of I.lights) {
         s.anchor.updateWorldMatrix(true, false);
         s.world = s.anchor.getWorldPosition(s.world ?? new THREE.Vector3());
-        s.d = s.world.distanceToSquared(eye);
+        s.d = s.world.distanceToSquared(eye) * (s.weight ?? 1); // a weight under 1 wins a place over nearer lamps
         specs.push(s);
       }
     }
     specs.sort((a, b) => a.d - b.d);
     this.lights.forEach((l, i) => {
       const s = specs[i];
+      l.userData.spec = s ?? null; // which lamp it stands for, for anyone tinting the pool after this
       if (!s) {
         l.intensity = 0;
         return;

@@ -1,0 +1,444 @@
+{
+ "about": "Made by tools/voices.mjs (Gemini TTS). Keyed \"<speaker>|<the exact line>\"; src/carrier/voice.mjs plays the file for a line it finds here.",
+ "model": "gemini-3.8-flash-tts",
+ "lines": {
+  "cox|So you're the new apprentice. Welcome aboard. You're in Blue watch, berthed in quarters C. Read the watch bill on the board outside this office: it tells you when you're on, and where you muster.": {
+   "file": "cox-so-you-re-the-new-apprentice-welcome-988c2e.mp3",
+   "hash": "988c2ec24e",
+   "voice": "voice_p5jimz0zc72a",
+   "secs": 13.87
+  },
+  "dc|So you're Blue watch's new hand in my party. Everyone aboard fights fires before they do anything else. I'm lighting a drill fire in the gym. The red cabinets in the passages hold extinguishers. Take one, find the fire, put it out. Go.": {
+   "file": "dc-so-you-re-blue-watch-s-new-hand-in-m-31394d.mp3",
+   "hash": "31394dce73",
+   "voice": "voice_nm8fatgcnafz",
+   "secs": 13.72
+  },
+  "dc|Not bad. Now an electrical fault, in the electrical shop. Isolate the supply at the switchboard aft first, or it will bite you. Repair kits are in the yellow lockers.": {
+   "file": "dc-not-bad-now-an-electrical-fault-in-t-e57219.mp3",
+   "hash": "e57219e1c6",
+   "voice": "voice_nm8fatgcnafz",
+   "secs": 10.31
+  },
+  "dc|Mended, and you didn't get bitten. One more thing every hand on watch does: rounds. Look into the three repair lockers, forward, amidships and aft, and come back to me.": {
+   "file": "dc-mended-and-you-didn-t-get-bitten-one-9d9d7c.mp3",
+   "hash": "9d9d7c1af8",
+   "voice": "voice_nm8fatgcnafz",
+   "secs": 10.85
+  },
+  "dc|That's your damage control ticket. You're a crewman now, not an apprentice. The gunnery officer wants every hand who can see straight: Lieutenant Varga, at the dorsal turret trunk, starboard side, forward of the mess.": {
+   "file": "dc-that-s-your-damage-control-ticket-yo-4f88b1.mp3",
+   "hash": "4f88b114ea",
+   "voice": "voice_nm8fatgcnafz",
+   "secs": 11.55
+  },
+  "guns|Before you shoot at anything that shoots back, you shoot at a sled. A tug is streaming a target down our starboard side. Climb up into the dorsal turret. Lay your sight on the amber diamond, not on the sled: that is where the sled will be when your shell gets there. Three hits.": {
+   "file": "guns-before-you-shoot-at-anything-that-sh-19011d.mp3",
+   "hash": "19011d1a69",
+   "voice": "voice_3uge17k0jmq0",
+   "secs": 18.3
+  },
+  "guns|Hits under fire. You're a gunner. From now on, when the klaxon goes, you have a turret. And the flight officer has asked for you: Lieutenant Moss, in the pilots' ready room.": {
+   "file": "guns-hits-under-fire-you-re-a-gunner-from-e0aca7.mp3",
+   "hash": "e0aca75c1f",
+   "voice": "voice_3uge17k0jmq0",
+   "secs": 10.59
+  },
+  "flight|Every gunner gets a go in a fighter. Take any of them on the pads. Launch, fly about, then fly yourself home down the lane of rings. Don't call flight control to bring you in: fly it.": {
+   "file": "flight-every-gunner-gets-a-go-in-a-fighter-7d7ca9.mp3",
+   "hash": "7d7ca96046",
+   "voice": "voice_y99kim4gm369",
+   "secs": 11.83
+  },
+  "flight|You'll make a pilot. Not this week. Commander Reyes wants you on the bridge: she says anyone who can land a fighter can learn to steer a ship.": {
+   "file": "flight-you-ll-make-a-pilot-not-this-week-co-372e07.mp3",
+   "hash": "372e07557d",
+   "voice": "voice_y99kim4gm369",
+   "secs": 8.19
+  },
+  "ootw|Take the helm. Bring her round ninety degrees, either way, and stop her turning. Gently: that is four hundred metres of ship.": {
+   "file": "ootw-take-the-helm-bring-her-round-ninety-190ee4.mp3",
+   "hash": "190ee4e50d",
+   "voice": "voice_dr6r455uf36c",
+   "secs": 8.74
+  },
+  "ootw|Fires, guns, a fighter and the helm, in your first week. You're a helmsman. The ship is yours to serve.": {
+   "file": "ootw-fires-guns-a-fighter-and-the-helm-in-7d41e7.mp3",
+   "hash": "7d41e766dc",
+   "voice": "voice_dr6r455uf36c",
+   "secs": 10.84
+  },
+  "cox|You have your orders.": {
+   "file": "cox-you-have-your-orders-b95eda.mp3",
+   "hash": "b95eda6992",
+   "voice": "voice_p5jimz0zc72a",
+   "secs": 1.38
+  },
+  "cox|Carry on.": {
+   "file": "cox-carry-on-9eb7fe.mp3",
+   "hash": "9eb7fe0767",
+   "voice": "voice_p5jimz0zc72a",
+   "secs": 0.78
+  },
+  "dc|You have your orders.": {
+   "file": "dc-you-have-your-orders-17e047.mp3",
+   "hash": "17e047b607",
+   "voice": "voice_nm8fatgcnafz",
+   "secs": 1.06
+  },
+  "dc|Carry on.": {
+   "file": "dc-carry-on-b657d1.mp3",
+   "hash": "b657d1b53f",
+   "voice": "voice_nm8fatgcnafz",
+   "secs": 0.68
+  },
+  "guns|You have your orders.": {
+   "file": "guns-you-have-your-orders-3c86a8.mp3",
+   "hash": "3c86a854d1",
+   "voice": "voice_3uge17k0jmq0",
+   "secs": 1.29
+  },
+  "guns|Carry on.": {
+   "file": "guns-carry-on-6a7577.mp3",
+   "hash": "6a75779133",
+   "voice": "voice_3uge17k0jmq0",
+   "secs": 0.71
+  },
+  "flight|You have your orders.": {
+   "file": "flight-you-have-your-orders-8e2d4c.mp3",
+   "hash": "8e2d4cb829",
+   "voice": "voice_y99kim4gm369",
+   "secs": 1.59
+  },
+  "flight|Carry on.": {
+   "file": "flight-carry-on-885294.mp3",
+   "hash": "885294b8e4",
+   "voice": "voice_y99kim4gm369",
+   "secs": 1.38
+  },
+  "ootw|You have your orders.": {
+   "file": "ootw-you-have-your-orders-e73d29.mp3",
+   "hash": "e73d294660",
+   "voice": "voice_dr6r455uf36c",
+   "secs": 1.55
+  },
+  "ootw|Carry on.": {
+   "file": "ootw-carry-on-ccdf95.mp3",
+   "hash": "ccdf9579e7",
+   "voice": "voice_dr6r455uf36c",
+   "secs": 0.76
+  },
+  "lund|Blue watch, wakey wakey. You have the middle watch. Muster at the repair locker (amidships) at 0000.": {
+   "file": "lund-blue-watch-wakey-wakey-you-have-the-730052.mp3",
+   "hash": "730052319f",
+   "voice": "voice_9qx9ovq63lde",
+   "secs": 6.49
+  },
+  "lund|Blue watch, wakey wakey. You have the morning watch. Muster at the repair locker (amidships) at 0400.": {
+   "file": "lund-blue-watch-wakey-wakey-you-have-the-1728e6.mp3",
+   "hash": "1728e63f66",
+   "voice": "voice_9qx9ovq63lde",
+   "secs": 6.58
+  },
+  "lund|Blue watch, wakey wakey. You have the forenoon watch. Muster at the repair locker (amidships) at 0800.": {
+   "file": "lund-blue-watch-wakey-wakey-you-have-the-ab540c.mp3",
+   "hash": "ab540c75a4",
+   "voice": "voice_9qx9ovq63lde",
+   "secs": 6.95
+  },
+  "lund|Blue watch, wakey wakey. You have the afternoon watch. Muster at the repair locker (amidships) at 1200.": {
+   "file": "lund-blue-watch-wakey-wakey-you-have-the-b72f92.mp3",
+   "hash": "b72f92ca75",
+   "voice": "voice_9qx9ovq63lde",
+   "secs": 7.6
+  },
+  "lund|Blue watch, wakey wakey. You have the first dog watch. Muster at the repair locker (amidships) at 1600.": {
+   "file": "lund-blue-watch-wakey-wakey-you-have-the-e95de9.mp3",
+   "hash": "e95de95654",
+   "voice": "voice_9qx9ovq63lde",
+   "secs": 7.3
+  },
+  "lund|Blue watch, wakey wakey. You have the last dog watch. Muster at the repair locker (amidships) at 1800.": {
+   "file": "lund-blue-watch-wakey-wakey-you-have-the-8572db.mp3",
+   "hash": "8572db597c",
+   "voice": "voice_9qx9ovq63lde",
+   "secs": 7.38
+  },
+  "lund|Blue watch, wakey wakey. You have the first watch. Muster at the repair locker (amidships) at 2000.": {
+   "file": "lund-blue-watch-wakey-wakey-you-have-the-0a8473.mp3",
+   "hash": "0a84736a2c",
+   "voice": "voice_9qx9ovq63lde",
+   "secs": 7.12
+  },
+  "lund|Blue watch, all present and correct. Fall out to your stations.": {
+   "file": "lund-blue-watch-all-present-and-correct-f-e4171b.mp3",
+   "hash": "e4171b2d69",
+   "voice": "voice_9qx9ovq63lde",
+   "secs": 4.4
+  },
+  "lund|Blue watch: one hand adrift from muster. The new apprentice. Name in the book.": {
+   "file": "lund-blue-watch-one-hand-adrift-from-must-09e3d6.mp3",
+   "hash": "09e3d64105",
+   "voice": "voice_9qx9ovq63lde",
+   "secs": 5.97
+  },
+  "lund|Apprentice: report to Chief Okoro in damage control.": {
+   "file": "lund-apprentice-report-to-chief-okoro-in-4284ae.mp3",
+   "hash": "4284aed62d",
+   "voice": "voice_9qx9ovq63lde",
+   "secs": 3.58
+  },
+  "lund|Apprentice! Get yourself here, now.": {
+   "file": "lund-apprentice-get-yourself-here-now-ce7870.mp3",
+   "hash": "ce787058c1",
+   "voice": "voice_9qx9ovq63lde",
+   "secs": 2.65
+  },
+  "lund|Adrift on your first watch. That's in my book, and the coxswain will hear of it. Now report to Chief Okoro in damage control.": {
+   "file": "lund-adrift-on-your-first-watch-that-s-in-da41bf.mp3",
+   "hash": "da41bf3a86",
+   "voice": "voice_9qx9ovq63lde",
+   "secs": 7.51
+  },
+  "ship|Turret, bridge. Target tug running in to starboard. The range is clear. Commence.": {
+   "file": "ship-turret-bridge-target-tug-running-in-1de46a.mp3",
+   "hash": "1de46a441a",
+   "voice": "voice_av0j47o3r5ps",
+   "secs": 5.81
+  },
+  "ship|Turret, bridge. Raider closing starboard. Weapons free.": {
+   "file": "ship-turret-bridge-raider-closing-starboa-af1057.mp3",
+   "hash": "af10570eaf",
+   "voice": "voice_av0j47o3r5ps",
+   "secs": 3.73
+  },
+  "ship|Action stations, action stations. Raider closing to port. Gun crews close up. Close all pressure doors.": {
+   "file": "ship-action-stations-action-stations-raid-2b5942.mp3",
+   "hash": "2b5942e7af",
+   "voice": "voice_av0j47o3r5ps",
+   "secs": 6.56
+  },
+  "ship|Action stations, action stations. Raider closing to starboard. Gun crews close up. Close all pressure doors.": {
+   "file": "ship-action-stations-action-stations-raid-ebbb68.mp3",
+   "hash": "ebbb68ae56",
+   "voice": "voice_av0j47o3r5ps",
+   "secs": 7.18
+  },
+  "ship|Action stations, action stations. Raider closing from above. Gun crews close up. Close all pressure doors.": {
+   "file": "ship-action-stations-action-stations-raid-24869a.mp3",
+   "hash": "24869ac4a0",
+   "voice": "voice_av0j47o3r5ps",
+   "secs": 6.64
+  },
+  "ship|Action stations, action stations. Raider closing from below. Gun crews close up. Close all pressure doors.": {
+   "file": "ship-action-stations-action-stations-raid-8b6079.mp3",
+   "hash": "8b6079155c",
+   "voice": "voice_av0j47o3r5ps",
+   "secs": 6.91
+  },
+  "ship|Action stations, action stations. Incoming fire to port. Close all pressure doors. Brace, brace, brace.": {
+   "file": "ship-action-stations-action-stations-inco-27afca.mp3",
+   "hash": "27afca39d2",
+   "voice": "voice_av0j47o3r5ps",
+   "secs": 7.64
+  },
+  "ship|Action stations, action stations. Incoming fire to starboard. Close all pressure doors. Brace, brace, brace.": {
+   "file": "ship-action-stations-action-stations-inco-887527.mp3",
+   "hash": "8875278cb0",
+   "voice": "voice_av0j47o3r5ps",
+   "secs": 7.42
+  },
+  "ship|Action stations, action stations. Incoming fire from above. Close all pressure doors. Brace, brace, brace.": {
+   "file": "ship-action-stations-action-stations-inco-37d3ab.mp3",
+   "hash": "37d3abeea0",
+   "voice": "voice_av0j47o3r5ps",
+   "secs": 6.94
+  },
+  "ship|Action stations, action stations. Incoming fire from below. Close all pressure doors. Brace, brace, brace.": {
+   "file": "ship-action-stations-action-stations-inco-80df76.mp3",
+   "hash": "80df767881",
+   "voice": "voice_av0j47o3r5ps",
+   "secs": 7.85
+  },
+  "ship|Stand down from action stations.": {
+   "file": "ship-stand-down-from-action-stations-2d75fd.mp3",
+   "hash": "2d75fd58f3",
+   "voice": "voice_av0j47o3r5ps",
+   "secs": 2.1
+  },
+  "ship|Shields are down.": {
+   "file": "ship-shields-are-down-228c64.mp3",
+   "hash": "228c643c96",
+   "voice": "voice_av0j47o3r5ps",
+   "secs": 1.49
+  },
+  "ship|Shields are back up.": {
+   "file": "ship-shields-are-back-up-a7cf3e.mp3",
+   "hash": "a7cf3edb44",
+   "voice": "voice_av0j47o3r5ps",
+   "secs": 1.29
+  },
+  "ship|The raider's shields are down.": {
+   "file": "ship-the-raider-s-shields-are-down-0bf7b9.mp3",
+   "hash": "0bf7b9df21",
+   "voice": "voice_av0j47o3r5ps",
+   "secs": 1.83
+  },
+  "ship|The raider is breaking off.": {
+   "file": "ship-the-raider-is-breaking-off-e8692b.mp3",
+   "hash": "e8692bdd39",
+   "voice": "voice_av0j47o3r5ps",
+   "secs": 1.7
+  },
+  "ship|Splash one. The raider is destroyed. Well done, gunners.": {
+   "file": "ship-splash-one-the-raider-is-destroyed-w-65f214.mp3",
+   "hash": "65f214bba0",
+   "voice": "voice_av0j47o3r5ps",
+   "secs": 3.75
+  },
+  "ship|Flight control. You are hit and dead in space. Hands off: we are bringing you in.": {
+   "file": "ship-flight-control-you-are-hit-and-dead-84d4ba.mp3",
+   "hash": "84d4ba55ee",
+   "voice": "voice_av0j47o3r5ps",
+   "secs": 4.85
+  },
+  "ship|Pipe down. Darken ship: the passages go to red lighting.": {
+   "file": "ship-pipe-down-darken-ship-the-passages-g-7e46eb.mp3",
+   "hash": "7e46eb57d7",
+   "voice": "voice_av0j47o3r5ps",
+   "secs": 4.14
+  },
+  "ship|Call the hands. Out of your racks.": {
+   "file": "ship-call-the-hands-out-of-your-racks-7fd883.mp3",
+   "hash": "7fd883e5b0",
+   "voice": "voice_av0j47o3r5ps",
+   "secs": 2.05
+  },
+  "ship|Change of watch. Red watch has the middle watch.": {
+   "file": "ship-change-of-watch-red-watch-has-the-mi-ce5784.mp3",
+   "hash": "ce57842c70",
+   "voice": "voice_av0j47o3r5ps",
+   "secs": 2.87
+  },
+  "ship|Change of watch. Red watch has the morning watch.": {
+   "file": "ship-change-of-watch-red-watch-has-the-mo-2414a7.mp3",
+   "hash": "2414a74cff",
+   "voice": "voice_av0j47o3r5ps",
+   "secs": 2.75
+  },
+  "ship|Change of watch. Red watch has the forenoon watch.": {
+   "file": "ship-change-of-watch-red-watch-has-the-fo-454256.mp3",
+   "hash": "454256f51d",
+   "voice": "voice_av0j47o3r5ps",
+   "secs": 3.27
+  },
+  "ship|Change of watch. Red watch has the afternoon watch.": {
+   "file": "ship-change-of-watch-red-watch-has-the-af-99edb9.mp3",
+   "hash": "99edb9f5f5",
+   "voice": "voice_av0j47o3r5ps",
+   "secs": 3.23
+  },
+  "ship|Change of watch. Red watch has the first dog watch.": {
+   "file": "ship-change-of-watch-red-watch-has-the-fi-38ff5e.mp3",
+   "hash": "38ff5e9ae4",
+   "voice": "voice_av0j47o3r5ps",
+   "secs": 3.07
+  },
+  "ship|Change of watch. Red watch has the last dog watch.": {
+   "file": "ship-change-of-watch-red-watch-has-the-la-f64a06.mp3",
+   "hash": "f64a06d827",
+   "voice": "voice_av0j47o3r5ps",
+   "secs": 3.32
+  },
+  "ship|Change of watch. Red watch has the first watch.": {
+   "file": "ship-change-of-watch-red-watch-has-the-fi-8dc550.mp3",
+   "hash": "8dc550b120",
+   "voice": "voice_av0j47o3r5ps",
+   "secs": 2.8
+  },
+  "ship|Change of watch. White watch has the middle watch.": {
+   "file": "ship-change-of-watch-white-watch-has-the-71760f.mp3",
+   "hash": "71760fb566",
+   "voice": "voice_av0j47o3r5ps",
+   "secs": 3.21
+  },
+  "ship|Change of watch. White watch has the morning watch.": {
+   "file": "ship-change-of-watch-white-watch-has-the-f6ca8e.mp3",
+   "hash": "f6ca8e871e",
+   "voice": "voice_av0j47o3r5ps",
+   "secs": 3.34
+  },
+  "ship|Change of watch. White watch has the forenoon watch.": {
+   "file": "ship-change-of-watch-white-watch-has-the-518f73.mp3",
+   "hash": "518f731651",
+   "voice": "voice_av0j47o3r5ps",
+   "secs": 3.05
+  },
+  "ship|Change of watch. White watch has the afternoon watch.": {
+   "file": "ship-change-of-watch-white-watch-has-the-f9daea.mp3",
+   "hash": "f9daeaf41e",
+   "voice": "voice_av0j47o3r5ps",
+   "secs": 3.35
+  },
+  "ship|Change of watch. White watch has the first dog watch.": {
+   "file": "ship-change-of-watch-white-watch-has-the-13bb09.mp3",
+   "hash": "13bb09a49e",
+   "voice": "voice_av0j47o3r5ps",
+   "secs": 3.2
+  },
+  "ship|Change of watch. White watch has the last dog watch.": {
+   "file": "ship-change-of-watch-white-watch-has-the-b96602.mp3",
+   "hash": "b96602dab9",
+   "voice": "voice_av0j47o3r5ps",
+   "secs": 3.31
+  },
+  "ship|Change of watch. White watch has the first watch.": {
+   "file": "ship-change-of-watch-white-watch-has-the-019739.mp3",
+   "hash": "019739198c",
+   "voice": "voice_av0j47o3r5ps",
+   "secs": 2.94
+  },
+  "ship|Change of watch. Blue watch has the middle watch.": {
+   "file": "ship-change-of-watch-blue-watch-has-the-m-b7af72.mp3",
+   "hash": "b7af72b615",
+   "voice": "voice_av0j47o3r5ps",
+   "secs": 2.79
+  },
+  "ship|Change of watch. Blue watch has the morning watch.": {
+   "file": "ship-change-of-watch-blue-watch-has-the-m-f82f90.mp3",
+   "hash": "f82f90ee67",
+   "voice": "voice_av0j47o3r5ps",
+   "secs": 2.83
+  },
+  "ship|Change of watch. Blue watch has the forenoon watch.": {
+   "file": "ship-change-of-watch-blue-watch-has-the-f-7f88fb.mp3",
+   "hash": "7f88fbdd28",
+   "voice": "voice_av0j47o3r5ps",
+   "secs": 3.09
+  },
+  "ship|Change of watch. Blue watch has the afternoon watch.": {
+   "file": "ship-change-of-watch-blue-watch-has-the-a-d781ee.mp3",
+   "hash": "d781ee8220",
+   "voice": "voice_av0j47o3r5ps",
+   "secs": 3.17
+  },
+  "ship|Change of watch. Blue watch has the first dog watch.": {
+   "file": "ship-change-of-watch-blue-watch-has-the-f-df00b3.mp3",
+   "hash": "df00b3220d",
+   "voice": "voice_av0j47o3r5ps",
+   "secs": 2.96
+  },
+  "ship|Change of watch. Blue watch has the last dog watch.": {
+   "file": "ship-change-of-watch-blue-watch-has-the-l-eb3dde.mp3",
+   "hash": "eb3dde96ae",
+   "voice": "voice_av0j47o3r5ps",
+   "secs": 3.51
+  },
+  "ship|Change of watch. Blue watch has the first watch.": {
+   "file": "ship-change-of-watch-blue-watch-has-the-f-4feb1a.mp3",
+   "hash": "4feb1a26cd",
+   "voice": "voice_av0j47o3r5ps",
+   "secs": 3
+  }
+ }
+}

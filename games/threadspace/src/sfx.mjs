@@ -131,6 +131,48 @@ export class Sfx {
         o.start(t0);
         o.stop(t0 + 0.45);
       });
+    } else if (kind === 'bell') {
+      // The ship's bell: `n` strokes, struck in pairs (ding-ding, ding-ding, ding), each a few inharmonic partials
+      // ringing down.
+      for (let i = 0; i < n; i++) {
+        const t0 = t + Math.floor(i / 2) * 0.95 + (i % 2) * 0.3;
+        [[1, 0.05], [2.76, 0.022], [5.4, 0.01], [0.5, 0.012]].forEach(([k, a]) => {
+          const o = this.ctx.createOscillator();
+          o.type = 'sine';
+          o.frequency.value = 820 * k;
+          const g = this.ctx.createGain();
+          g.gain.setValueAtTime(0, t0);
+          g.gain.linearRampToValueAtTime(a * vol, t0 + 0.004);
+          g.gain.exponentialRampToValueAtTime(0.0001, t0 + 2.2 / Math.sqrt(k));
+          o.connect(g).connect(this.out);
+          o.start(t0);
+          o.stop(t0 + 2.4);
+        });
+      }
+    } else if (kind === 'pipe') {
+      // A bosun's call: a high whistle that rises, holds with a warble, and falls away.
+      const o = this.ctx.createOscillator();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(1500, t);
+      o.frequency.exponentialRampToValueAtTime(2300, t + 0.35);
+      o.frequency.setValueAtTime(2300, t + 1.2);
+      o.frequency.exponentialRampToValueAtTime(1300, t + 1.6);
+      const lfo = this.ctx.createOscillator();
+      lfo.frequency.value = 11;
+      const depth = this.ctx.createGain();
+      depth.gain.setValueAtTime(0, t);
+      depth.gain.setValueAtTime(60, t + 0.45);
+      lfo.connect(depth).connect(o.frequency);
+      const g = this.ctx.createGain();
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(0.03 * vol, t + 0.08);
+      g.gain.setValueAtTime(0.03 * vol, t + 1.3);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 1.65);
+      o.connect(g).connect(this.out);
+      o.start(t);
+      lfo.start(t);
+      o.stop(t + 1.7);
+      lfo.stop(t + 1.7);
     } else if (kind === 'roar') {
       const s = this.ctx.createBufferSource();
       s.buffer = this.noise;

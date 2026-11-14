@@ -141,19 +141,73 @@ export function hazardMat() {
 /** A lit sign: words on a dark plate with a coloured edge, glowing so it reads in a dim corridor. */
 export function sign(text, color = '#9fd4ff', { w = 1.6, h = 0.34 } = {}) {
   const key = `sign|${text}|${color}`;
-  const tex = canvasTex(key, 512, Math.round((512 * h) / w), (g, cw, ch) => {
-    g.fillStyle = '#0b1018';
-    g.fillRect(0, 0, cw, ch);
-    g.strokeStyle = color;
-    g.lineWidth = 6;
-    g.strokeRect(5, 5, cw - 10, ch - 10);
-    g.fillStyle = color;
-    g.font = `600 ${Math.round(ch * 0.52)}px ui-monospace, Menlo, monospace`;
-    g.textAlign = 'center';
-    g.textBaseline = 'middle';
-    g.fillText(text, cw / 2, ch / 2 + 2);
-  }, { repeat: false });
-  return new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: tex, toneMapped: false }));
+  const tex = canvasTex(key, 512, Math.round((512 * h) / w), (g, cw, ch) => drawSign(g, cw, ch, text, color), { repeat: false });
+  if (!cache.has(`${key}|mat`)) cache.set(`${key}|mat`, new THREE.MeshBasicMaterial({ map: tex, toneMapped: false }));
+  return new THREE.Mesh(new THREE.PlaneGeometry(w, h), cache.get(`${key}|mat`));
+}
+
+/** The sign's face, drawn into a `cw` × `ch` canvas cell. Long words shrink to fit. */
+export function drawSign(g, cw, ch, text, color) {
+  g.fillStyle = '#0b1018';
+  g.fillRect(0, 0, cw, ch);
+  g.strokeStyle = color;
+  g.lineWidth = Math.max(2, ch * 0.06);
+  g.strokeRect(g.lineWidth, g.lineWidth, cw - g.lineWidth * 2, ch - g.lineWidth * 2);
+  g.fillStyle = color;
+  g.textAlign = 'center';
+  g.textBaseline = 'middle';
+  let size = Math.round(ch * 0.52);
+  g.font = `600 ${size}px ui-monospace, Menlo, monospace`;
+  const room = cw - ch * 0.6;
+  const wide = g.measureText(text).width;
+  if (wide > room) g.font = `600 ${Math.floor((size * room) / wide)}px ui-monospace, Menlo, monospace`;
+  g.fillText(text, cw / 2, ch / 2 + 2);
+}
+
+/** Many signs on a few shared textures. A sign from `sign()` is a material of its own, so a deck of fifty signs costs
+ *  fifty draw calls even after `bake`; planes from one atlas page share its material and bake into one mesh. Pages are
+ *  added as they fill. `plane(w, h, draw, ppm)` is a w × h metre plane whose picture `draw(g, pw, ph)` paints into its
+ *  own cell, `ppm` pixels a metre. */
+export class SignAtlas {
+  constructor(size = 2048) {
+    this.size = size;
+    this.pages = [];
+    this.newPage();
+  }
+
+  newPage() {
+    const c = document.createElement('canvas');
+    c.width = c.height = this.size;
+    const tex = new THREE.CanvasTexture(c);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.anisotropy = 8;
+    this.page = { c, g: c.getContext('2d'), tex, material: new THREE.MeshBasicMaterial({ map: tex, toneMapped: false }), x: 0, y: 0, row: 0 };
+    this.pages.push(this.page);
+  }
+
+  plane(w, h, draw, ppm = 160) {
+    const S = this.size, gap = 4;
+    let pw = Math.ceil(w * ppm), ph = Math.ceil(h * ppm);
+    if (pw > S - gap) (ph = Math.floor((ph * (S - gap)) / pw)), (pw = S - gap);
+    let p = this.page;
+    if (p.x + pw + gap > S) (p.x = 0), (p.y += p.row + gap), (p.row = 0);
+    if (p.y + ph + gap > S) this.newPage(), (p = this.page);
+    const x = p.x, y = p.y;
+    p.x += pw + gap;
+    p.row = Math.max(p.row, ph);
+    p.g.save();
+    p.g.translate(x, y);
+    p.g.beginPath();
+    p.g.rect(0, 0, pw, ph);
+    p.g.clip();
+    draw(p.g, pw, ph);
+    p.g.restore();
+    p.tex.needsUpdate = true;
+    const geo = new THREE.PlaneGeometry(w, h);
+    const uv = geo.attributes.uv;
+    for (let i = 0; i < uv.count; i++) uv.setXY(i, (x + 0.5 + uv.getX(i) * (pw - 1)) / S, 1 - (y + 0.5 + (1 - uv.getY(i)) * (ph - 1)) / S);
+    return new THREE.Mesh(geo, p.material);
+  }
 }
 
 /** A console screen: `kind` is radar, nav, status, target, reactor, manifest or text, drawn once in `color`. */
@@ -217,7 +271,9 @@ export function screen(kind, color = '#58b0ff', w = 0.9, h = 0.5) {
     g.globalAlpha = 0.25;
     g.strokeRect(3, 3, cw - 6, ch - 6);
   }, { repeat: false });
-  return new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: tex, toneMapped: false }));
+  // One material per kind and colour, so a room's screens bake into one mesh rather than a draw call each.
+  if (!cache.has(`${key}|mat`)) cache.set(`${key}|mat`, new THREE.MeshBasicMaterial({ map: tex, toneMapped: false }));
+  return new THREE.Mesh(new THREE.PlaneGeometry(w, h), cache.get(`${key}|mat`));
 }
 
 /** A pipe from a to b (host-frame points), `r` thick. */
