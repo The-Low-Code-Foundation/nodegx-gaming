@@ -298,7 +298,7 @@ export function segment(C, hid, did, seg) {
   }
   for (const side of ['w', 'e']) open.get(corr.id)[side].push({ a: corr.z[0], b: corr.z[1], kind: 'open' }); // round the ring
   I.s = roomSurfaces(corr);
-  room(I, corr, open.get(corr.id));
+  room(I, corr, open.get(corr.id), D.spokes.segments.includes(seg) ? [ladderHole(C, hid, did)] : []);
   const n0 = I.lights.length;
   roomLights(I, corr);
   // The ring corridor's lamps win places in the light pool (lights.mjs) over nearer room lamps behind walls, so the
@@ -377,6 +377,15 @@ export function freeSpots(I, r) {
   return out;
 }
 
+/** The opening the ladder between a drum's decks goes through, in the ring corridor at a spoke: in the outer deck's
+ *  deckhead, in the inner deck's deck. The climb's trunk (main.mjs `ladderTrunk`) is turned half round there, so its
+ *  inside runs from the ladder 1.04 m aft to 0.49 m fore. */
+function ladderHole(C, hid, did) {
+  const { D } = drumDeck(C, hid, did), { ladder } = drumSpots(C, hid);
+  const outer = D.decks.find((q) => q.id === did).floorR > D.decks.find((q) => q.id !== did).floorR;
+  return { kind: outer ? 'ceil' : 'floor', x: [ladder.x - 0.74, ladder.x + 0.74], z: [ladder.z - 1.04, ladder.z + 0.49] };
+}
+
 /** A spoke's foot in the corridor: the lift's car and doors against the fore wall, the ladder between the decks against
  *  the aft wall. */
 function spokeFoot(C, I, hid, did, seg) {
@@ -399,16 +408,28 @@ function spokeFoot(C, I, hid, did, seg) {
   const top = up ? 3.0 : 1.1;
   for (const s of [-0.35, 0.35]) lg.add(at(box(0.06, top + 0.2, 0.06, rail), s, top / 2, 0));
   if (up) for (let yy = 0.3; yy < top; yy += 0.3) lg.add(at(box(0.7, 0.04, 0.06, rail), 0, yy, 0));
-  lg.add(at(box(1.3, 0.03, 1.3, hazardMat()), 0, 0.02, 0), at(box(1.2, 0.08, 1.2, mat('#1a1d22')), 0, up ? 2.95 : 0.03, 0));
+  if (up) lg.add(at(box(1.3, 0.03, 1.3, hazardMat()), 0, 0.02, 0));
   lg.position.set(ladder.x, y, ladder.z);
   I.group.add(lg);
+  // The hatch: a real opening in the deckhead or the deck (`ladderHole`), under a lid that slides open for a climb
+  // (main.mjs `startDrumClimb` opens `C.drumLids` for this half and segment; main.mjs moves every lid in `C.lids`).
+  const hole = ladderHole(C, hid, did), w = hole.x[1] - hole.x[0] + 0.16, d = hole.z[1] - hole.z[0] + 0.16;
+  const lid = at(box(w, 0.06, d, hazardMat()), (hole.x[0] + hole.x[1]) / 2, y + (up ? D.decks.find((q) => q.id === did).h - 0.03 : 0.03), (hole.z[0] + hole.z[1]) / 2);
+  lid.userData.live = true;
+  I.group.add(lid);
+  const entry = { mesh: lid, home: lid.position.clone(), travel: new THREE.Vector3((ladder.x > 0 ? -1 : 1) * (w + 0.05), 0, 0), k: 0, want: 0 };
+  (C.lids ??= []).push(entry);
+  const key = `${hid}|${seg}`;
+  (C.drumLids ??= new Map()).set(key, [...(C.drumLids.get(key) ?? []), entry]);
   I.use(`dladder-${hid}${did}${seg}`, `${up ? 'Climb up' : 'Climb down'} to the ${other.name.toLowerCase()}`, ladder.x, ladder.z,
     () => C.hooks.drum?.('ladder', { half: hid, deck: other.id, seg }), { r: 2 });
 }
 
 /** Shows the segments within `n` of `seg` on that half's deck (building any not built yet) and hides the rest.
- *  Returns the one you are in. */
-export function drumWindow(C, hid, did, seg, n = 2) {
+ *  Returns the one you are in. Four each way: from a 1.7 m eye under a 3 m deckhead you see about 32 m along the
+ *  outer deck's floor before it rises out of sight, three segments, and from a segment's edge that is three and a half
+ *  ahead. With two, space showed through the end of the ring corridor. */
+export function drumWindow(C, hid, did, seg, n = 4) {
   const { S } = drumDeck(C, hid, did);
   for (let k = -n; k <= n; k++) segment(C, hid, did, seg + k);
   C.drums.shown = [];

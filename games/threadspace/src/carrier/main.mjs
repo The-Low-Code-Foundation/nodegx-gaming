@@ -59,8 +59,10 @@ const L = await (await fetch('ships/carrier.layout.json')).json();
 const K = await (await fetch('ships/carrier.career.json')).json(); // your first week aboard (career.mjs)
 const W = await (await fetch('ships/carrier.watches.json')).json(); // the ship's routine: clock, watches, muster (watch.mjs)
 const q = new URLSearchParams(location.search);
-if (L.weapons.railgun) {
+if (L.weapons.railgun && !L.weapons.railgun.port) {
   // A ship with a railgun along her keel (the archived first carrier) aims it by turning the whole ship.
+  document.getElementById('c-railkey')?.remove();
+  KEYS.helm = KEYS.helm.replace(' · <b>railgun</b> Q', '');
   document.getElementById('c-arm').textContent = 'a railgun you aim by turning the whole ship';
   document.getElementById('c-armkey').textContent = 'railgun';
   KEYS.helm = KEYS.helm.replace('<b>broadside</b> click', '<b>railgun</b> click');
@@ -234,9 +236,12 @@ ship.status = () => {
   return [
     ['Point defence', ship.sys('pdc'), `${pdcUp}/${guns.pdcs.length} guns · ${Math.round((pdcRounds / Math.max(1, pdcMax)) * 100)}% rounds`],
     ['Torpedo tubes', (ship.node(L.weapons.tubes?.magazine)?.health ?? 100) / 100, `${guns.tubeStock} torpedoes`],
-    L.weapons.railgun
+    L.weapons.railgun && !guns.railSides
       ? ['Railgun', ship.power && !plant.hot ? 1 : 0.3, `${guns.rail.stock} slugs · ${guns.rail.charge >= 1 ? 'charged' : `${Math.round(guns.rail.charge * 100)}%`}`]
       : ['Broadside', Math.min(...['port', 'starboard'].map((k) => (guns.broadsideSide(k).fed ? 1 : 0.2))), ['port', 'starboard'].map((k) => `${k} ${guns.broad[k].stock}${guns.broad[k].t > 0 ? ' (reloading)' : ''}`).join(' · ')],
+    ...(guns.railSides
+      ? [['Railguns', Math.min(...guns.railSides.map((k) => { const r = guns.railSide(k, null); return r.ok ? (ship.power && !plant.hot ? 1 : 0.3) : 0.2; })), guns.railSides.map((k) => `${k} ${guns.rail[k].stock}${guns.rail[k].charge < 1 ? ` (${Math.round(guns.rail[k].charge * 100)}%)` : ''}`).join(' · ')]]
+      : []),
     ...plant.rows()
   ];
 };
@@ -354,6 +359,11 @@ input.onAction = (code) => {
   } else if (mode === 'helm' && code === 'KeyV') helmView = helmView === 'bridge' ? 'chase' : 'bridge';
   else if (mode === 'helm' && code === 'KeyG') helmSight.say(plant.toggleRadiators());
   else if (mode === 'helm' && code === 'KeyN') helmSight.toggleNav();
+  else if (mode === 'helm' && code === 'KeyQ' && guns.railSides && !fading) {
+    // The broadside railgun on the side facing the raider (weapons.mjs `railFire`).
+    const why = guns.railFire();
+    helmSight.say(why ? `Railgun: ${why}.` : 'RAILGUN: FIRE', why ? 2.5 : 1);
+  }
 };
 
 /** Whether you can see out of the ship from where you are: from any seat but walking; walking, only from a room with
@@ -570,7 +580,8 @@ function startClimb(l, end) {
   const lamp = { anchor, color: new THREE.Color('#fff1d6'), intensity: 4, distance: 6, decay: 1.6 };
   const speed = SPIN ? 2.4 : 1.1; // m/s: hand over hand weightless, or a real climb
   climb = { kind: 'fixed', to, t: 0, dur: 0.5 + Math.min(3.5, rise / speed), // a long trunk goes quicker than life: no more than 4 s
-     y0, y1, x0: walker.pos.x, z0: walker.pos.z, x: x + Math.sin(yaw) * 0.7, z: z + Math.cos(yaw) * 0.7, yaw, trunk, anchor, lit: { lights: [lamp] }, I1 };
+     y0, y1, x0: walker.pos.x, z0: walker.pos.z, x: x + Math.sin(yaw) * 0.7, z: z + Math.cos(yaw) * 0.7, yaw, trunk, anchor, lit: { lights: [lamp] }, I1, lids: C.hatchLids?.get(l.id) ?? [] };
+  for (const lid of climb.lids) lid.want = 1; // the hatches open (layout.mjs `hatches`), and shut behind you
   sfx.cue('clunk', { vol: 0.3 });
 }
 
@@ -615,7 +626,9 @@ function startDrumClimb(a) {
   trunk.position.set(s.x, 0, s.z);
   trunk.rotation.y = Math.PI;
   from.g.add(trunk);
-  climb = { kind: 'drum', a, from, target, trunk, t: 0, dur: 3.2, y0: walker.pos.y, y1: -other.dk.floorR, x0: walker.pos.x, z0: walker.pos.z, x: s.x, z: s.z - 0.7, yaw: Math.PI }; // the ladder is against the aft wall: face it
+  climb = { kind: 'drum', a, from, target, trunk, t: 0, dur: 3.2, y0: walker.pos.y, y1: -other.dk.floorR, x0: walker.pos.x, z0: walker.pos.z, x: s.x, z: s.z - 0.7, yaw: Math.PI, // the ladder is against the aft wall: face it
+    lids: C.drumLids?.get(`${a.half}|${a.seg}`) ?? [] };
+  for (const lid of climb.lids) lid.want = 1; // both decks' hatches open (drum.mjs `spokeFoot`), and shut behind you
   sfx.cue('clunk', { vol: 0.3 });
 }
 
@@ -648,10 +661,12 @@ function climbFrame(dt) {
   } else if (c.kind === 'fixed') {
     c.trunk.removeFromParent();
     c.anchor.removeFromParent();
+    for (const lid of c.lids) lid.want = 0;
     const off = c.to.at;
     goDeck(c.to.deck, off[0] + Math.sin(c.yaw) * 0.9, off[1] + Math.cos(c.yaw) * 0.9, walker.yaw);
   } else {
     c.trunk.removeFromParent();
+    for (const lid of c.lids) lid.want = 0;
     const s = drumSpots(C, c.a.half).ladder;
     enterDrum(c.a.half, c.a.deck, c.a.seg, s.x, s.z - 1.1, walker.yaw);
   }
@@ -750,8 +765,24 @@ function tick(dt) {
   // no spinal gun). With you at the helm, the CIC leaves the broadside to you.
   guns.helmFires = mode === 'helm';
   if (mode === 'helm' && f.clicked && !fading) {
-    const why = L.weapons.railgun ? guns.railFire() : guns.broadsideFire();
-    if (why) helmSight.say(`${L.weapons.railgun ? 'Railgun' : 'Broadside'}: ${why}.`, 2.5);
+    const spinal = L.weapons.railgun && !guns.railSides;
+    const why = spinal ? guns.railFire() : guns.broadsideFire();
+    if (why) helmSight.say(`${spinal ? 'Railgun' : 'Broadside'}: ${why}.`, 2.5);
+  }
+  // The ladders' hatch lids (layout.mjs `hatches`): open in a third of a second, shut in half.
+  for (const lid of C.lids ?? []) {
+    if (lid.k === lid.want) continue;
+    lid.k = lid.want > lid.k ? Math.min(1, lid.k + dt / 0.35) : Math.max(0, lid.k - dt / 0.5);
+    lid.mesh.position.copy(lid.home).addScaledVector(lid.travel, lid.k);
+  }
+  // The boarding tubes (layout.mjs `boardingTubes`): yours telescopes up to the roof once her drive is up, and comes
+  // down again when she is back on her pad and you are out of her.
+  for (const [i, b] of (C.boardTubes ?? []).entries()) {
+    if (!b) continue;
+    const want = i === fighter.index && (fighter.phase !== 'seated' || fighter.flight.online) ? 1 : 0;
+    if (b.k === want) continue;
+    b.k = want > b.k ? Math.min(1, b.k + dt / 2) : Math.max(0, b.k - dt / 2);
+    b.t.scale.y = 1 - 0.88 * b.k;
   }
   if (bayK !== bayWant) {
     bayK = bayWant > bayK ? Math.min(1, bayK + dt / 6) : Math.max(0, bayK - dt / 6);

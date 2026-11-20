@@ -23,8 +23,12 @@
 //   rate, from a ready rack the hoist fills from its magazine. A wrecked barbette slows and then jams the turret; a
 //   wrecked magazine stops the hoist; on emergency power it turns at a crawl. The firing cutout stops a shot whose line
 //   of fire crosses the ship's own hull.
-// - The railgun along her keel, fired from the helm (`railFire`): it points where she points, so the helmsman aims it by
-//   turning the whole ship. `railAim()` is what the helm's sight shows.
+// - Her railguns. The spin-drum carrier has two, one firing out of each hangar wall on the beam (`railgun.port` and
+//   `.starboard`): fixed, so the helmsman aims one by turning her side onto the raider and fires it (Q), and with
+//   nobody at the helm the CIC fires a side as the raider crosses its line (`railSide`, `railFrame`). The first carrier
+//   had one along her keel, fired with a click, aimed by pointing the whole ship (`railAim()` is that sight).
+// - Every gun kicks (`recoil`): a shot's momentum, the other way, goes into the ship's body at the gun, so a broadside
+//   railgun shoves her sideways and flight assist fires her thrusters to take it out; aboard you feel it.
 //
 // You can man either turret from its hatch (`turrets[].from`). Your sight moves as fast as the mouse; the guns follow
 // at the turret's rate, and the circle on the sight is where they actually point. The diamond is where to aim to hit
@@ -49,6 +53,8 @@ const DEG = Math.PI / 180;
 const _a = new THREE.Vector3(), _b = new THREE.Vector3(), _c = new THREE.Vector3(), _d = new THREE.Vector3();
 const _e = new THREE.Vector3(), _f = new THREE.Vector3(), _g = new THREE.Vector3(), _q = new THREE.Quaternion(), _m = new THREE.Matrix4();
 const Z = new THREE.Vector3(0, 0, 1), Y = new THREE.Vector3(0, 1, 0);
+// The railguns' and the recoil's own scratch vectors (nothing they call borrows them).
+const _r1 = new THREE.Vector3(), _r2 = new THREE.Vector3(), _r3 = new THREE.Vector3(), _k1 = new THREE.Vector3(), _k2 = new THREE.Vector3(), _kq = new THREE.Quaternion();
 
 const SHELL_GEO = new THREE.BoxGeometry(1, 1, 1);
 const SHELL_OURS = new THREE.MeshBasicMaterial({ color: '#ffe2a0', transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false });
@@ -211,8 +217,12 @@ export class Weapons {
     this.torps = [];
     this.tubeStock = this.W.tubes?.stock ?? 0;
     this.tubeT = 6;
-    // The railgun: its capacitors (0 to 1) and its slugs.
-    this.rail = { charge: 1, stock: this.W.railgun?.stock ?? 0, flash: 0 };
+    // The railgun: its capacitors (0 to 1) and its slugs; one of each per gun where there is one a side.
+    const RG = this.W.railgun;
+    this.railSides = RG?.port ? ['port', 'starboard'] : null;
+    this.rail = this.railSides
+      ? Object.fromEntries(this.railSides.map((k) => [k, { k, charge: 1, stock: RG[k].stock ?? RG.stock, flash: 0 }]))
+      : { charge: 1, stock: RG?.stock ?? 0, flash: 0 };
     // The broadside (the spin-drum carrier): the hangar walls' tubes, each side its own stock and reload (`broadside`).
     const B = this.W.broadside;
     this.broad = B ? Object.fromEntries(['port', 'starboard'].map((k) => [k, { side: k, stock: B[k].stock ?? B.stock, t: 0, next: 0 }])) : null;
@@ -776,6 +786,8 @@ export class Weapons {
     out.target = null;
     out.dir = null;
     out.bears = out.sides.find((s) => s.bears)?.k ?? null;
+    out.rails = this.railSides?.map((k) => this.railSide(k)) ?? null;
+    out.railBears = out.rails?.find((s) => s.bears)?.k ?? null;
     if (!R || R.gone || R.dead || R.target) return out;
     out.target = R.obj.position;
     out.label = R.label;
@@ -1084,40 +1096,108 @@ export class Weapons {
 
   // --- the railgun -----------------------------------------------------------------------------------------------------
 
-  /** A click at the helm: a slug down the keel, where the ship points, if the capacitors are full. Returns why not, or null. */
-  railFire() {
-    const G = this.W.railgun, S = this.rail;
+  /** One broadside railgun as it stands: its capacitors and slugs, whether it can fire, and where its slug would pass
+   *  the raider (null when it is behind the gun or out of range): `miss` metres off where the raider will be when the
+   *  slug gets there, that as angles off the beam (`ahead` and `high`, degrees, in the ship's frame), and `bears` when
+   *  the slug would go through its hull (inside `window` of the ellipsoid shells hit). */
+  railSide(k, R = this.raider) {
+    const G = this.W.railgun, g = G[k], S = this.rail[k];
+    const ok = (this.ship.node(g.room)?.health ?? 100) >= 20;
+    const out = { k, charge: S.charge, stock: S.stock, ok, ready: ok && S.charge >= 1 && S.stock > 0 && this.ship.power && !this.plant?.hot, miss: null, range: null, bears: false };
+    if (!R || R.gone || R.dead || R.target) return out;
+    const p = this.C.frame.localToWorld(_r1.set(...g.muzzle));
+    const lead = _r2.subVectors(R.obj.position, p);
+    const tt = intercept(lead, R.v, G.speed); // the slug keeps her velocity: only the raider's past her counts
+    if (tt == null) return out;
+    lead.addScaledVector(R.v, tt);
+    const d = _r3.set(...g.dir).transformDirection(this.C.frame.matrixWorld);
+    const along = lead.dot(d);
+    if (along <= 0 || along > G.range) return out;
+    out.range = lead.length();
+    // The angles, in the ship's frame, before `lead` becomes the miss.
+    const l = _r1.copy(lead).applyQuaternion(this.C.frame.getWorldQuaternion(_kq).invert());
+    out.ahead = Math.atan2(-l.z, Math.abs(l.x)) / DEG;
+    out.high = Math.atan2(l.y, Math.abs(l.x)) / DEG;
+    // The miss: from the raider to the slug's line, then in the raider's own frame against the ellipsoid shells hit.
+    const m = lead.addScaledVector(d, -along).negate();
+    out.miss = m.length();
+    const size = R.K.size;
+    m.applyQuaternion(R.obj.getWorldQuaternion(_kq).invert());
+    out.bears = Math.hypot(m.x / size[0], m.y / size[1], m.z / size[2]) < G.window;
+    return out;
+  }
+
+  /** Fires a railgun: on the spin-drum carrier side `k`'s (or, from the helm, the side facing the raider), on the first
+   *  carrier the one along her keel. Returns why not, or null. From the helm or the CIC (`by`). */
+  railFire(k = null, by = 'helm') {
+    const G = this.W.railgun;
     if (!G) return 'no railgun';
-    if (S.stock <= 0) return 'no slugs';
+    if (!this.railSides) {
+      const S = this.rail;
+      const why = S.stock <= 0 ? 'no slugs' : !this.ship.power ? 'no power' : this.plant?.hot ? 'heat sinks full' : S.charge < 1 ? 'charging' : null;
+      if (why) return why;
+      this.railShot(G.muzzle, [0, 0, -1], S, true);
+      return null;
+    }
+    let s;
+    if (k) s = this.railSide(k);
+    else {
+      // The helm's: the side that bears, else the side the raider is on (the helmsman's call to fire it).
+      const sides = this.railSides.map((x) => this.railSide(x));
+      s = sides.find((x) => x.bears) ?? sides.find((x) => x.miss != null);
+      if (!s) return this.raider && !this.raider.gone && !this.raider.dead && !this.raider.target ? 'nothing on either beam: turn her side onto the raider' : 'no target';
+    }
+    const S = this.rail[s.k];
+    if (!s.ok) return `${s.k} railgun wrecked`;
+    if (S.stock <= 0) return `${s.k} railgun: no slugs`;
     if (!this.ship.power) return 'no power';
     if (this.plant?.hot) return 'heat sinks full';
-    if (S.charge < 1) return 'charging';
+    if (S.charge < 1) return `${s.k} railgun charging`;
+    this.railShot(G[s.k].muzzle, G[s.k].dir, S, by === 'helm');
+    const side = s.k === 'port' ? 'Port' : 'Starboard';
+    this.dc?.say(`${side} railgun, fire.`, `${by === 'helm' ? 'You fired' : 'The CIC fired'} the ${s.k} railgun.`, 0, 3);
+    return null;
+  }
+
+  /** One slug out of muzzle `at` along `dir` (both ship frame), from capacitors and stock `S`; its kick goes into her. */
+  railShot(at, dir, S, you) {
+    const G = this.W.railgun, r = this.rand;
     S.charge = 0;
     S.stock--;
     S.flash = 1;
-    const p = this.C.frame.localToWorld(new THREE.Vector3(...G.muzzle));
-    const d = _a.set((this.rand() - 0.5) * 2 * G.spread, (this.rand() - 0.5) * 2 * G.spread, -1).normalize().applyQuaternion(this.C.obj.quaternion);
-    const r = this.rand;
-    const s = this.fire(p, d.multiplyScalar(G.speed).add(this.body.vel), true, G.range / G.speed, G.damage[0] + r() * (G.damage[1] - G.damage[0]));
-    s.rail = s.you = true;
+    const p = this.C.frame.localToWorld(new THREE.Vector3(...at));
+    const d = _r1.set(dir[0] + (r() - 0.5) * 2 * G.spread, dir[1] + (r() - 0.5) * 2 * G.spread, dir[2] + (r() - 0.5) * 2 * G.spread).normalize().transformDirection(this.C.frame.matrixWorld);
+    const J = _r3.copy(d).multiplyScalar(-G.speed * (G.slug ?? 0));
+    const s = this.fire(p, _r2.copy(d).multiplyScalar(G.speed).add(this.body.vel), true, G.range / G.speed, G.damage[0] + r() * (G.damage[1] - G.damage[0]));
+    s.rail = true;
+    s.you = you;
     s.w = 1.4;
     this.flash(p, 14, '#cfe4ff', 0.35);
     this.flash(p, 6, '#ffffff', 0.1);
     this.plant?.addHeat(G.heat);
     this.sfx?.play('boom', 60, 50);
-    this.ship.shake = Math.max(this.ship.shake, 0.6);
-    return null;
+    if (G.slug) this.recoil(p, J);
+    else this.ship.shake = Math.max(this.ship.shake, 0.6);
   }
 
+  /** The capacitors charging, and the CIC firing a broadside railgun as the raider crosses its line when nobody is at
+   *  the helm to do it. */
   railFrame(dt) {
-    const G = this.W.railgun, S = this.rail;
+    const G = this.W.railgun;
     if (!G) return;
-    if (this.ship.power && !this.plant?.hot) S.charge = Math.min(1, S.charge + dt / G.charge);
-    S.flash = Math.max(0, S.flash - dt * 2);
+    for (const S of this.railSides ? this.railSides.map((k) => this.rail[k]) : [this.rail]) {
+      if (this.ship.power && !this.plant?.hot) S.charge = Math.min(1, S.charge + dt / G.charge);
+      S.flash = Math.max(0, S.flash - dt * 2);
+    }
+    if (!this.railSides || this.helmFires) return;
+    for (const k of this.railSides) {
+      const s = this.railSide(k);
+      if (s.bears && s.ready) return this.railFire(k, 'cic');
+    }
   }
 
-  /** What the helm's railgun sight shows: the charge, the slugs, and the raider with where to point her nose so a slug
-   *  meets it (the lead, a world point), or null with nothing out there. */
+  /** What the first carrier's railgun sight shows: the charge, the slugs, and the raider with where to point her nose
+   *  so a slug meets it (the lead, a world point), or null with nothing out there. */
   railAim(out = {}) {
     const G = this.W.railgun, S = this.rail, R = this.raider;
     out.charge = S.charge;
@@ -1134,6 +1214,25 @@ export class Weapons {
     out.lead = tt != null ? (out.leadV ??= new THREE.Vector3()).copy(p).add(r.addScaledVector(R.v, tt)) : null;
     out.hull = R.target ? null : Math.max(0, R.hull) / R.K.hull;
     return out;
+  }
+
+  // --- recoil --------------------------------------------------------------------------------------------------------
+
+  /** A gun's kick: impulse `J` (world, N·s: the push on the ship, the other way from the shot) at world point `p`. It
+   *  changes her velocity and, off her centre of mass, her turn; flight assist then fires her thrusters to take it out.
+   *  Aboard you feel it, the harder the heavier the shot and the nearer the gun. */
+  recoil(p, J) {
+    const B = this.body, j = J.length();
+    if (!B?.mass || !(j > 0)) return;
+    B.vel.addScaledVector(J, 1 / B.mass);
+    const local = this.C.frame.worldToLocal(_k1.copy(p));
+    const d = this.ship.you ? local.distanceTo(this.ship.you) : 200;
+    const tau = local.sub(this.com).cross(_k2.copy(J).applyQuaternion(this.C.frame.getWorldQuaternion(_kq).invert()));
+    B.ang.x += tau.x / B.I.x;
+    B.ang.y += tau.y / B.I.y;
+    B.ang.z += tau.z / B.I.z;
+    this.kicked = (this.kicked ?? 0) + j; // the console's tally (tests)
+    this.ship.shake = Math.max(this.ship.shake, Math.min(1, j / 2.8e6) / (1 + d / 25) + j / 1.2e8);
   }
 
   // --- the turrets ---------------------------------------------------------------------------------------------------
@@ -1229,7 +1328,9 @@ export class Weapons {
     d.z += (r() - 0.5) * 2 * G.spread;
     d.normalize();
     const dmg = G.damage[0] + r() * (G.damage[1] - G.damage[0]);
+    const J = _r3.copy(d).multiplyScalar(-G.shell * (G.shellMass ?? 0)); // before `d` becomes the shell's velocity
     this.fire(p, d.multiplyScalar(G.shell).add(this.body.vel), true, G.range / G.shell, dmg).you = you;
+    if (G.shellMass) this.recoil(p, J);
     this.flash(p, 3.5, '#ffd090', 0.12);
     t.cool[i] = you ? G.reload : G.crewReload;
     t.barrel = 1 - i;

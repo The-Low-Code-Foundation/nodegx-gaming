@@ -178,6 +178,7 @@ Only the segments near you need to be built and drawn; the rest can be baked and
 2. **Moving in the weightless hull.** Recommended: grip shoes in the fixed-hull rooms (bow, stern, bridge: today's
    walking, no gravity drawn), and real floating along handhold lines only in the spine, the crew tunnel and the hub.
    The alternative, floating everywhere, is a bigger change to every room.
+   **Changed 20 November 2026:** the whole fixed hull floats; see [`ROADMAP.md`](ROADMAP.md), decision 2.
 3. **Coriolis.** Recommended: feel it, cheaply: the lift car sways sideways near the hub, and walking spinward or
    antispinward nudges the view's bob. Not real physics.
 4. **How many drum rooms are walkable.** The plan has 320. Recommended: all of them generated from data, with the

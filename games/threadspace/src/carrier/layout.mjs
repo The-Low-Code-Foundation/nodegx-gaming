@@ -76,6 +76,8 @@ export function buildCarrier(L, hooks = {}) {
   frame.add(C.machinery, C.overlay, C.outside);
   C.overlay.visible = false;
   for (const c of L.compartments) C.rooms.set(c.id, c);
+  C.holes = ladderHoles(C); // the openings the ladders climb through, cut in the rooms' decks and deckheads
+  C.hatchLids = new Map();
   C.ways = plan(C); // the routes between rooms, for the floor lines and signs (wayfinding.mjs)
   C.atlas = new SignAtlas(); // every sign aboard on a few shared textures
 
@@ -179,7 +181,8 @@ function buildDeck(C, deck, hooks) {
   }
   for (const c of rooms) {
     I.s = roomSurfaces(c); // the room's finish and lamps by what it is for (sets.mjs)
-    room(I, c, open.get(c.id));
+    room(I, c, open.get(c.id), C.holes.get(c.id));
+    hatches(C, I, c);
     roomLights(I, c);
     furnish(C, I, c, hooks, open.get(c.id));
     dressRoom(C, I, c, open.get(c.id));
@@ -210,17 +213,29 @@ export function facing(A, B) {
   return null;
 }
 
-/** A room like `Interior.room`, but each wall can have any number of doors, windows and a bay door along it. */
-export function room(I, c, open) {
+/** A room like `Interior.room`, but each wall can have any number of doors, windows and a bay door along it, and its
+ *  deck and deckhead can have a ladder's opening in them (`holes`, from `ladderHoles`). */
+export function room(I, c, open, holes = []) {
   const y = I.floorY, h = c.h ?? H, g = I.group, S = I.s;
   const [x1, x2] = c.x, [z1, z2] = c.z;
   const cx = (x1 + x2) / 2, cz = (z1 + z2) / 2, w = x2 - x1, d = z2 - z1;
   I.roomNow = c.id;
   I.rooms.push({ id: c.id, x1, x2, z1, z2, y0: y, y1: y + h });
-  g.add(at(box(w, 0.1, d, S.floor), cx, y - 0.05, cz));
-  g.add(at(box(w, 0.1, d, S.ceil), cx, y + h + 0.05, cz));
+  // A slab, or with an opening the four slabs round it.
+  const slab = (yy, m, hole) => {
+    if (!hole) return g.add(at(box(w, 0.1, d, m), cx, yy, cz));
+    const [a, b] = hole.x, [p, q] = hole.z;
+    for (const [u0, u1, v0, v1] of [[x1, a, z1, z2], [b, x2, z1, z2], [a, b, z1, p], [a, b, q, z2]]) {
+      if (u1 - u0 > 0.01 && v1 - v0 > 0.01) g.add(at(box(u1 - u0, 0.1, v1 - v0, m), (u0 + u1) / 2, yy, (v0 + v1) / 2));
+    }
+  };
+  const floorHole = holes.find((o) => o.kind === 'floor'), ceilHole = holes.find((o) => o.kind === 'ceil');
+  slab(y - 0.05, S.floor, floorHole);
+  slab(y + h + 0.05, S.ceil, ceilHole);
   const across = w < d, span = across ? d : w, step = h > 6 ? 6 : 3;
   for (let t = -span / 2 + step / 2; t < span / 2 - 0.5; t += step) {
+    // No deckhead beam across a ladder's opening.
+    if (ceilHole && (across ? cz + t + 0.16 > ceilHole.z[0] && cz + t - 0.16 < ceilHole.z[1] : cx + t + 0.16 > ceilHole.x[0] && cx + t - 0.16 < ceilHole.x[1])) continue;
     g.add(across ? at(box(w, 0.16, 0.32, S.trim), cx, y + h - 0.08, cz + t) : at(box(0.32, 0.16, d, S.trim), cx + t, y + h - 0.08, cz));
   }
   const sides = { n: [z1, x1, x2, true], s: [z2, x1, x2, true], w: [x1, z1, z2, false], e: [x2, z1, z2, false] };
@@ -553,13 +568,21 @@ function hangar(C, I, c, hooks) {
   for (let z = z1 + 3; z < z2 - 3; z += 9) if (crateX !== null || clear(z)) I.prop(box(2.2, 1.6, 2.2, CRATE), crateX ?? x2 - 2.2, z, { y: 0.8 });
   for (let z = z1 + 10; z < z2; z += 20) I.prop(box(x2 - x1 - 1, 0.5, 0.6, TRIM), (x1 + x2) / 2, z, { y: 10.5, collide: false });
   I.sign('HANGAR', x2 - 0.15, 8, crateX === null ? (z1 + doors[0].from) / 2 : -16, -Math.PI / 2, '#4fd0e0', 6);
-  // The bay doors: each one slab that lifts into the deck above. C.bayDoor moves them all.
-  const slabs = doors.map((d, k) => {
-    const x = d.side === 'w' ? x1 - 0.1 : x2 + 0.1;
-    const door = at(box(0.4, d.height, d.to - d.from, metal('#6a727c', { metalness: 0.5 })), x, I.floorY + d.height / 2, (d.from + d.to) / 2);
-    return I.door(k ? `bay-${k}` : 'bay', door, new THREE.Vector3(0, d.height - 0.4, 0));
+  // The bay doors. Where the hangar has headroom over the opening (the spin-drum carrier: 5 m over an 18 m door), each
+  // door is a stack of leaves that telescope up into it, all clear of the opening when open; the leaves stand a little
+  // further outboard each, so they nest behind the wall's header. Without the headroom, one slab lifts into the deck
+  // above. C.bayDoor moves them all.
+  const head = (c.h ?? 0) - 0.4;
+  const leaves = doors.flatMap((d, k) => {
+    const x = d.side === 'w' ? x1 - 0.1 : x2 + 0.1, out = d.side === 'w' ? -1 : 1;
+    const room = head - d.height, n = room >= 1 ? Math.ceil(d.height / room) : 1, lh = d.height / n;
+    return Array.from({ length: n }, (_, i) => {
+      const leaf = at(box(0.3, lh - 0.04, d.to - d.from, metal('#6a727c', { metalness: 0.5 })), x + out * 0.12 * i, I.floorY + lh * (i + 0.5), (d.from + d.to) / 2);
+      const rise = n > 1 ? d.height + 0.2 - lh * i : d.height - 0.4;
+      return I.door(`bay${k ? `-${k}` : ''}${i ? `-leaf${i}` : ''}`, leaf, new THREE.Vector3(0, rise, 0));
+    });
   });
-  C.bayDoor = slabs.length === 1 ? slabs[0] : { set: (k) => slabs.forEach((d) => d.set(k)) };
+  C.bayDoor = leaves.length === 1 ? leaves[0] : { set: (k) => leaves.forEach((d) => d.set(k)) };
 }
 
 /** A fighter's boarding frame in a weightless hangar: two uprights with grab bars between them up to the cockpit's sill,
@@ -574,6 +597,52 @@ function grabFrame(x, y, z) {
   return g;
 }
 
+/** The opening a ladder's trunk passes through, in the trunk's own frame (main.mjs `ladderTrunk`: the ladder at the
+ *  origin, climbed from +z, walls at x ±0.8 and z -0.55 and 1.1): just inside its walls. */
+const HATCH = { x: [-0.74, 0.74], z: [-0.49, 1.04] };
+
+/** Where the ladders go through the decks: per walkable room, the opening in its deck (`floor`) or deckhead (`ceil`)
+ *  over or under each trunk, with the ladders that use it. A climb is drawn up the trunk at the end you start from, so
+ *  each end makes an opening in its own room and in the room straight above or below it. */
+function ladderHoles(C) {
+  const holes = new Map();
+  const floorOf = (id) => C.L.decks.find((d) => d.id === id).floor;
+  const roomAt = (deck, x, z) => C.L.compartments.find((c) => c.access === 'walk' && c.deck === deck && x > c.x[0] && x < c.x[1] && z > c.z[0] && z < c.z[1]);
+  for (const l of C.L.ladders) for (const end of ['a', 'b']) {
+    const p = l[end], o = l[end === 'a' ? 'b' : 'a'], up = floorOf(o.deck) > floorOf(p.deck);
+    const yaw = p.yaw ?? 0, cs = Math.cos(yaw), sn = Math.sin(yaw), xs = [], zs = [];
+    for (const hx of HATCH.x) for (const hz of HATCH.z) xs.push(p.at[0] + hx * cs + hz * sn), zs.push(p.at[1] - hx * sn + hz * cs);
+    for (const [deck, kind] of [[p.deck, up ? 'ceil' : 'floor'], [o.deck, up ? 'floor' : 'ceil']]) {
+      const r = roomAt(deck, p.at[0], p.at[1]);
+      if (!r) continue;
+      const list = holes.get(r.id) ?? holes.set(r.id, []).get(r.id);
+      const h = list.find((h) => h.kind === kind) ?? (list.push({ kind, x: [Infinity, -Infinity], z: [Infinity, -Infinity], ladders: new Set() }), list.at(-1));
+      h.x = [Math.max(r.x[0] + 0.05, Math.min(h.x[0], ...xs)), Math.min(r.x[1] - 0.05, Math.max(h.x[1], ...xs))];
+      h.z = [Math.max(r.z[0] + 0.05, Math.min(h.z[0], ...zs)), Math.min(r.z[1] - 0.05, Math.max(h.z[1], ...zs))];
+      h.ladders.add(l.id);
+    }
+  }
+  return holes;
+}
+
+/** A lid over each of a deck's ladder openings, sliding clear along the room's long way, away from the nearer wall.
+ *  `C.hatchLids` (ladder id → lids) is what a climb opens; main.mjs moves them. */
+function hatches(C, I, c) {
+  const h0 = c.h ?? H;
+  for (const h of C.holes.get(c.id) ?? []) {
+    const w = h.x[1] - h.x[0] + 0.16, d = h.z[1] - h.z[0] + 0.16, cx = (h.x[0] + h.x[1]) / 2, cz = (h.z[0] + h.z[1]) / 2;
+    const lid = at(box(w, 0.06, d, hazardMat()), cx, I.floorY + (h.kind === 'floor' ? 0.03 : h0 - 0.03), cz);
+    lid.userData.live = true;
+    I.group.add(lid);
+    const alongX = c.x[1] - c.x[0] > c.z[1] - c.z[0];
+    const sign = alongX ? (cx - c.x[0] > c.x[1] - cx ? -1 : 1) : (cz - c.z[0] > c.z[1] - cz ? -1 : 1);
+    const travel = alongX ? new THREE.Vector3(sign * (w + 0.05), 0, 0) : new THREE.Vector3(0, 0, sign * (d + 0.05));
+    const entry = { mesh: lid, home: lid.position.clone(), travel, k: 0, want: 0 };
+    (C.lids ??= []).push(entry);
+    for (const id of h.ladders) (C.hatchLids.get(id) ?? C.hatchLids.set(id, []).get(id)).push(entry);
+  }
+}
+
 function ladder(C, I, l, end, hooks) {
   const p = l[end], other = l[end === 'a' ? 'b' : 'a'];
   const up = C.L.decks.find((d) => d.id === other.deck).floor > I.floorY;
@@ -584,8 +653,9 @@ function ladder(C, I, l, end, hooks) {
   const top = up ? 3.2 : 1.1;
   for (const s of [-0.35, 0.35]) g.add(at(box(0.06, top + 0.2, 0.06, rail), s, top / 2, 0));
   if (up) for (let y = 0.3; y < top; y += 0.3) g.add(at(box(0.7, 0.04, 0.06, rail), 0, y, 0));
-  g.add(at(box(1.3, 0.03, 1.3, hazardMat()), 0, up ? 0.02 : 0.02, 0));
-  g.add(at(box(1.2, 0.08, 1.2, mat('#1a1d22')), 0, up ? 3.0 : 0.03, 0));
+  // At the foot, a hazard plate; the hatch overhead (or underfoot, going down) is a real opening with a lid
+  // (`hatches()`), so a climb goes through the deck instead of through a solid slab.
+  if (up) g.add(at(box(1.3, 0.03, 1.3, hazardMat()), 0, 0.02, 0));
   g.position.set(x, I.floorY, z);
   g.rotation.y = p.yaw ?? 0;
   I.group.add(g);
@@ -614,12 +684,16 @@ function boardingTubes(C, hooks) {
     if (!HI) return;
     const out = f.yaw >= 0 ? -1 : 1; // her nose points out of her side's door
     const top = HI.floorY + (hc.h ?? 3), bottom = HI.floorY + 3.3, tx = f.at[0] + out * 1.5;
+    // The tube telescopes up to the roof when she is crewed and her drive is up, so she lifts and runs out clear of it
+    // (`C.boardTubes`, run by main.mjs): a group pivoted at the roof, squashed toward it.
     const t = new THREE.Group();
-    t.add(at(cyl(0.75, 0.75, top - bottom, steel, 14), 0, (top + bottom) / 2, 0));
-    for (let y = bottom + 0.3; y < top; y += 2.5) t.add(at(cyl(0.82, 0.82, 0.18, ring, 14), 0, y, 0));
-    t.add(at(cyl(1.0, 0.85, 0.4, ring, 14), 0, bottom + 0.2, 0));
-    t.position.set(tx, 0, f.at[1]);
+    t.add(at(cyl(0.75, 0.75, top - bottom, steel, 14), 0, (top + bottom) / 2 - top, 0));
+    for (let y = bottom + 0.3; y < top; y += 2.5) t.add(at(cyl(0.82, 0.82, 0.18, ring, 14), 0, y - top, 0));
+    t.add(at(cyl(1.0, 0.85, 0.4, ring, 14), 0, bottom + 0.2 - top, 0));
+    t.position.set(tx, top, f.at[1]);
+    t.userData.live = true;
     HI.group.add(t);
+    (C.boardTubes ??= [])[i] = { t, k: 0 };
   });
 }
 
@@ -905,12 +979,13 @@ function buildOutside(C) {
       O.add(at(box(Math.abs(b - a) * 0.1, 3, z2 - z1, TRIM), inboard + Math.sign(inboard) * 0.8, m.y, (z1 + z2) / 2));
     } else if (m.kind === 'bay-door') {
       const [y0, y1] = m.y, [z1, z2] = m.z;
-      // The outer door: lifts with the inner one (main.mjs drives all of them), so the bay opens onto space.
+      // The outer door: rides up the outside of the hull with the inner one (main.mjs drives all of them), all the way
+      // clear of the opening, so the bay opens onto space.
       const out = Math.sign(m.x) || -1;
       const panel = at(box(0.6, y1 - y0, z2 - z1, mat('#4a525c')), m.x + out * 0.2, (y0 + y1) / 2, (z1 + z2) / 2);
       panel.userData.live = true;
       panel.userData.home = panel.position.y;
-      panel.userData.travel = y1 - y0 - 0.4;
+      panel.userData.travel = y1 - y0 + 0.3;
       O.add(panel);
       (C.bayPanels ??= []).push(panel);
       C.bayPanel ??= panel;

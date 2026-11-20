@@ -346,9 +346,17 @@ for side in ('port', 'starboard'):
         s = bs['dir'][0]
         parts.append(K.cyl('tube-door', (x - s * 0.3, y, z), (x + s * 0.5, y, z), 1.0, 1.0, M['dark'], 14))
 
-# --- the railgun's muzzle --------------------------------------------------------------------------------------------
+# --- the railguns' muzzles: one out of each hangar wall (the broadside railguns), or one at the bow (a spinal gun) -----
 rg = L['weapons'].get('railgun')
-if rg:
+if rg and 'port' in rg:
+    for side in ('port', 'starboard'):
+        mx, my, mz = rg[side]['muzzle']
+        s = rg[side]['dir'][0]
+        wall = mx - s * 0.6  # the hangar wall the gun fires through
+        parts.append(K.cyl('railgun-collar', (wall - s * 0.4, my, mz), (mx + s * 0.6, my, mz), 2.4, 2.0, M['armour'], 16))
+        parts.append(K.cyl('railgun-muzzle', (mx + s * 0.6, my, mz), (mx + s * 1.3, my, mz), 1.5, 1.3, M['dark'], 16))
+        parts.append(K.cyl('railgun-bore', (mx + s * 1.28, my, mz), (mx + s * 1.36, my, mz), 0.65, 0.65, M['throat'], 12))
+elif rg:
     mx, my, mz = rg['muzzle']
     parts.append(K.cyl('railgun-muzzle', (mx, my, mz + 1.5), (mx, my, mz - 0.4), 1.6, 1.4, M['dark'], 16))
     parts.append(K.cyl('railgun-bore', (mx, my, mz - 0.38), (mx, my, mz - 0.45), 0.7, 0.7, M['throat'], 12))

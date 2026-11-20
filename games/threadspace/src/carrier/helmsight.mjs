@@ -4,8 +4,9 @@
 // - The railgun (the first carrier). It lies along the keel and fires where the ship points, so the sight is a ring dead
 //   ahead (the boresight) and a diamond where the raider will be when a slug gets there (weapons.mjs `railAim`). Turn
 //   the whole ship until the ring sits on the diamond, and click. The bar under it is the capacitors charging.
-// - The broadside (the spin-drum carrier, which has no railgun): a plot of her from above with each side's arc off the
-//   beam and the raider's bearing (`broadsidePlot`, weapons.mjs `broadsideAim`). Turn her side onto it, and click.
+// - The broadside (the spin-drum carrier): a plot of her from above with each side's arc off the beam and the raider's
+//   bearing (`broadsidePlot`, weapons.mjs `broadsideAim`). Turn her side onto it, and click. Her two railguns fire
+//   straight out along the beams: the line on each side, green when a slug would hit (`railSide`); Q fires it.
 // - The nav plot (N). A waypoint 15 km off, off the bow, at rest. Getting there is the oldest problem in space
 //   travel: burn toward it, then turn her round and burn the other way to stop. The plot shows the range, how fast you
 //   are closing, and how far it would take to stop: the turn first (a 400 m ship takes the best part of a minute to
@@ -95,8 +96,9 @@ export class HelmSight {
       return { x: (v.x * 0.5 + 0.5) * w, y: (-v.y * 0.5 + 0.5) * h };
     };
     const q = this.C.obj.quaternion, pos = this.C.obj.position;
-    // The railgun's boresight: a point 20 km down the keel's line. (No railgun: the broadside plot instead.)
-    const rail = !!this.guns.W.railgun;
+    // The first carrier's railgun boresight: a point 20 km down the keel's line. (The spin-drum carrier: the broadside
+    // plot instead, her railguns with it.)
+    const rail = !!this.guns.W.railgun && !this.guns.railSides;
     const bore = rail ? project(_a.set(0, 0, -20000).applyQuaternion(q).add(pos)) : null;
     const R = rail ? this.guns.railAim(this.aim) : this.guns.broadsideAim(this.aim);
     if (!rail) this.broadsidePlot(g, w, h, R);
@@ -286,6 +288,30 @@ export class HelmSight {
       const word = !s.fed ? 'MAG HIT' : s.stock <= 0 ? 'EMPTY' : s.ready ? `READY ${s.stock}` : `RELOAD ${Math.round(s.reload * 100)}%`;
       g.fillText(word, cx + (s.k === 'port' ? -r - 18 : r + 18), cy + 4);
     }
+    // The broadside railguns: each a line straight out along its beam, and its charge under the side's torpedoes.
+    for (const s of R.rails ?? []) {
+      const sx = s.k === 'port' ? -1 : 1;
+      g.strokeStyle = g.fillStyle = !s.ok ? RED : s.bears && s.ready ? GREEN : s.ready ? TEXT : AMBER;
+      g.lineWidth = s.bears ? 3.5 : 2;
+      g.beginPath();
+      g.moveTo(cx + sx * 6, cy), g.lineTo(cx + sx * (r + 12), cy);
+      g.moveTo(cx + sx * (r + 12), cy - 5), g.lineTo(cx + sx * (r + 12), cy + 5); // the muzzle
+      g.stroke();
+      g.lineWidth = 1;
+      g.textAlign = s.k === 'port' ? 'right' : 'left';
+      const word = !s.ok ? 'RAIL WRECKED' : s.stock <= 0 ? 'RAIL EMPTY' : s.ready ? `RAIL ${s.stock}` : `RAIL ${Math.round(s.charge * 100)}%`;
+      g.fillText(word, cx + sx * (r + 18), cy + 20);
+      // Off the line, under the plot: how far ahead or astern of the beam the raider will be, above or below it, and
+      // the roll that fixes the height (the raider sweeps along its pass by itself; the roll is the helmsman's).
+      if (s.miss != null && !s.bears) {
+        const parts = [];
+        if (Math.abs(s.ahead) >= 1) parts.push(`${Math.round(Math.abs(s.ahead))}° ${s.ahead > 0 ? 'ahead' : 'astern'}`);
+        if (Math.abs(s.high) >= 1) parts.push(`${Math.round(Math.abs(s.high))}° ${s.high > 0 ? 'high' : 'low'}: roll ${s.k} ${s.high > 0 ? 'up' : 'down'}`);
+        const line = `${s.k.toUpperCase()} RAIL ${parts.join(' · ') || `off ${Math.round(s.miss)} m`}`;
+        g.textAlign = 'left';
+        g.fillText(line, Math.max(8, cx - g.measureText(line).width / 2), cy + r + 46);
+      }
+    }
     // The ship: a long box, bow up.
     g.strokeStyle = TEXT;
     g.strokeRect(cx - 4, cy - 26, 8, 52);
@@ -305,8 +331,9 @@ export class HelmSight {
       else g.stroke();
     }
     g.textAlign = 'center';
-    g.fillStyle = R.bears ? GREEN : TEXT;
-    g.fillText(R.bears ? `${R.bears.toUpperCase()} BEARS: click to fire` : R.target ? 'Turn her side onto the raider' : 'BROADSIDE', cx, cy + r + 30);
+    g.fillStyle = R.bears || R.railBears ? GREEN : TEXT;
+    const calls = [R.bears && `${R.bears.toUpperCase()} BEARS: click`, R.railBears && `RAIL ON: Q`].filter(Boolean);
+    g.fillText(calls.length ? calls.join(' · ') : R.target ? 'Turn her side onto the raider' : 'BROADSIDE', cx, cy + r + 30);
     g.textAlign = 'left';
   }
 

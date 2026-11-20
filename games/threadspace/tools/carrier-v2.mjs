@@ -406,19 +406,18 @@ hTurrets.forEach((z, i) => { turret(`turret-h${i + 1}d`, [-10, hgr.s.h / 2, z], 
 turret('turret-stern-d', [0, stn.s.h / 2, sz1 - 7], [0, 1, 0]);
 turret('turret-stern-v', [0, -stn.s.h / 2, sz0 + 9], [0, -1, 0]);
 const pdc = (id, at, up, magazine) => mounts.push({ id, kind: 'pdc', at, up, magazine });
+// Eight point defence guns, where the first cut had eighteen (design/ROADMAP.md, phase 1): three down each side (bow,
+// hangar, stern) and one on top and one underneath amidships, so a raid from either beam meets five of them. Fewer,
+// better guns: `weapons.pdc` below gives each a faster rate and a wider burst, which the headless raids put back to
+// what eighteen did (about three torpedoes in four shot down, a raid about a minute long) for less heat.
 {
   const zb = bow.z[0];
   pdc('pdc-bow-pf', [-19.5, 0, zb + 22], [-1, 0, 0], 'pdc-mag-p'); pdc('pdc-bow-sf', [19.5, 0, zb + 22], [1, 0, 0], 'pdc-mag-s');
-  pdc('pdc-bow-pa', [-24, 0, zb + 64], [-1, 0, 0], 'pdc-mag-p'); pdc('pdc-bow-sa', [24, 0, zb + 64], [1, 0, 0], 'pdc-mag-s');
-  pdc('pdc-bow-d', [0, 11.5, zb + 30], [0, 1, 0], 'pdc-mag-p'); pdc('pdc-bow-v', [0, -11.5, zb + 30], [0, -1, 0], 'pdc-mag-s');
   const hp = (id, at, up) => pdc(id, at, up, 'pdc-mag-h');
-  hp('pdc-h-pf', [-23.5, 13, hz0 + 10], [-1, 0, 0]); hp('pdc-h-sf', [23.5, 13, hz0 + 10], [1, 0, 0]);
   hp('pdc-h-pa', [-23.5, -13, hz1 - 10], [-1, 0, 0]); hp('pdc-h-sa', [23.5, -13, hz1 - 10], [1, 0, 0]);
   hp('pdc-h-d', [10, 18, hz0 + 40], [0, 1, 0]); hp('pdc-h-v', [-10, -18, hz0 + 76], [0, -1, 0]);
   const sp2 = (id, at, up) => pdc(id, at, up, 'magazine-sv');
   sp2('pdc-s-pf', [-25, 8, sz0 + 10], [-1, 0, 0]); sp2('pdc-s-sf', [25, 8, sz0 + 10], [1, 0, 0]);
-  sp2('pdc-s-pa', [-25, -8, sz1 - 6], [-1, 0, 0]); sp2('pdc-s-sa', [25, -8, sz1 - 6], [1, 0, 0]);
-  sp2('pdc-s-d', [-12, 18, sz0 + 47], [0, 1, 0]); sp2('pdc-s-v', [12, -18, sz0 + 40], [0, -1, 0]);
 }
 mounts.push({ id: 'radiator-port', kind: 'radiator', x: [-(stn.s.w / 2 + stn.s.radSpan), -stn.s.w / 2], y: 0, z: [sz0 + 2, sz0 + 2 + stn.s.radLen] });
 mounts.push({ id: 'radiator-stbd', kind: 'radiator', x: [stn.s.w / 2, stn.s.w / 2 + stn.s.radSpan], y: 0, z: [sz0 + 2, sz0 + 2 + stn.s.radLen] });
@@ -442,11 +441,24 @@ weapons.turrets = [
 // pass. A tougher raider makes a raid last about as long as it did (about a minute, two passes): 800, then 940 once
 // the broadside fired too (it took about a sixth off a raid from either beam).
 weapons.raider.hull = 940;
+// Eight point defence guns instead of eighteen (the mounts above): each fires 26 tracers a second where it fired 22, and a
+// tracer's burst kills a torpedo within 4 m where it was 3.
+weapons.pdc = { ...weapons.pdc, rate: 26, radius: 4 };
 weapons.gun = { ...weapons.gun, shellMass: design.ship.shell, barrels: design.ship.barrels, calibreNote: `${design.ship.barrel} m barrels; muzzle speed ${design.ship.vel} m/s in the design (the game's gun.shell is still tuned for play).` };
 weapons.tubes = { ...weapons.tubes, magazine: 'missile-mag', at: [-1, 1].flatMap((s) => [[s * 6, 2.5, bow.z[0] + 2], [s * 6, -2.5, bow.z[0] + 2], [s * 2, 0, bow.z[0] + 2]]).slice(0, bs.tubes), dir: [0, 0, -1] };
-// No railgun: the design has no spinal gun (`spinal: false`), and the first carrier's keel line runs through the drums'
-// spoke space. At the helm in a fight you fire the broadside instead (design/CARRIER-POLISH.md, decision 1).
-delete weapons.railgun;
+// No spinal railgun: the design has none (`spinal: false`), and the first carrier's keel line runs through the drums'
+// spoke space. Two broadside railguns instead (design/ROADMAP.md, decision 4): one in each ordnance room, firing
+// straight out of the hangar wall on the beam, at the height and station of her centre of mass so the kick of a shot
+// pushes her sideways without turning her. Their muzzles go in once the centre of mass is known (`railMuzzles` below).
+weapons.railgun = {
+  ...v1.weapons.railgun,
+  about: 'Two fixed railguns, one a side, firing out of the hangar walls along the beam: `port` and `starboard` each have a `muzzle` (ship frame), the `dir` it fires and the `room` it stands in (below 20% health it cannot fire). Each has its own capacitors (`charge` seconds to fill, on main power only) and `stock` slugs. A slug of `slug` kg leaves at `speed` m/s on top of her velocity, off by `spread`; it does `damage` to the raider and is gone after `range` m; each shot puts `heat` into the sinks, and its kick pushes the ship (weapons.mjs `recoil`). The guns cannot train: the helm turns her (and rolls her) until the line of one side runs through where the raider will be, and fires (Q). A side bears when its slug would pass inside `window` of the raider\'s hit ellipsoid (1 is its skin); with nobody at the helm the CIC fires a side that bears, which a raider passing above or below her beam never does.',
+  slug: 2000, window: 0.85, stock: 20,
+  port: { room: 'ordnance-p', dir: [-1, 0, 0] },
+  starboard: { room: 'ordnance-s', dir: [1, 0, 0] },
+};
+delete weapons.railgun.muzzle;
+weapons.about = weapons.about.replace(/`railgun`: the spinal gun.*$/, '`railgun`: the broadside railguns (their own `about`). `broadside`: the torpedo broadside (its own `about`).');
 weapons.broadside = {
   about: 'The hangar walls\' torpedo tubes, launched cold sideways: `per` a side, each side fed from its two ordnance rooms (a side whose magazines are both below 20% health cannot fire). `stock` torpedoes a side; `salvo` per firing; `reload` seconds between a side\'s salvos; `first` seconds into a raid before the first (the CIC\'s solution); `arc` degrees off the beam the raider must be within, and `range` [min, max] m; `push` m/s out of the tube and `cold` seconds before the motor lights. The CIC fires the side that bears; with you at the helm, a click does.',
   per: hgr.s.tubesSide, stock: 16, salvo: 4, reload: 30, first: 20, arc: 50, range: [300, 9000], push: 14, cold: 2,
@@ -459,9 +471,12 @@ weapons.broadside = {
 }
 
 // ---- fighters: 12 pads on the hangar floor, two rows facing their side's door ----
+// Every pad stands in front of its door, so each fighter runs straight out through it and comes straight back in: a pad
+// beside the door would launch her through the hangar wall. Six a side across the 38 m door is a pad every 6.3 m, a
+// gap of 2.7 m between fighters with their radiators folded.
 const fighters = [];
 {
-  const per = Math.ceil(hgr.s.fighters / 2), z0 = doorZ[0] - 22, dz = 12;
+  const per = Math.ceil(hgr.s.fighters / 2), dz = (doorZ[1] - doorZ[0]) / per, z0 = doorZ[0] + dz / 2;
   for (let i = 0; i < hgr.s.fighters; i++) {
     const port = i < per, k = port ? i : i - per;
     fighters.push({ at: [port ? -9 : 9, z0 + k * dz], yaw: port ? 1.5708 : -1.5708, side: port ? 'port' : 'starboard', boarding: { from: 'tunnel', at: [0, z0 + k * dz] } });
@@ -476,11 +491,11 @@ const stations = [
   st('bridge', [-1, sz0 + 24.5], 0, 'idle', 'command', 'Quartermaster of the watch', 'on'),
   st('cic', [-8, sz0 + 12], 1.5708, 'workTable', 'command', 'Plotter, CIC', 'on'),
   // The airless hangar's deck crews, suited (crew.mjs puts anyone in a vacuum room in a vac suit): the sentry down the
-  // centre walkway, two at work beside fighters, one on a launch lane by the port bay door.
+  // centre walkway, two at work in the gaps between fighters, one by the port bay door, clear of its lanes.
   st('hangar', [-1.2, hz0 + 50], 0, 'walk', 'flight', 'Hangar sentry', 'on', { route: [[-1.2, hz0 + 8], [-1.2, hz0 + 94]] }),
-  st('hangar', [-5.6, hz0 + 27.5], 3.14159, 'workTable', 'flight', 'Deck crew', 'on'),
-  st('hangar', [7.5, hz0 + 48.5], 0, 'workTable', 'flight', 'Deck crew', 'on'),
-  st('hangar', [-15, hz0 + 68], -1.5708, 'lookAround', 'flight', 'Deck crew, launch lanes', 'on'),
+  st('hangar', [-5.6, doorZ[0] + 6.33], 3.14159, 'workTable', 'flight', 'Deck crew', 'on'),
+  st('hangar', [5.6, doorZ[0] + 19], 0, 'workTable', 'flight', 'Deck crew', 'on'),
+  st('hangar', [-15, doorZ[0] - 3], 0, 'lookAround', 'flight', 'Deck crew, launch lanes', 'on'),
   st('flight-control', [7, hz0 + 46], -1.5708, 'workTable', 'flight', 'Flight control', 'on'),
   st('eng-control', [3.95, sz0 + 33.5], 3.14159, 'workTable', 'engineering', 'Engineer of the watch', 'on'),
   st('eng-control', [11.95, sz0 + 33.5], 3.14159, 'workTable', 'engineering', 'Reactor operator', 'on'),
@@ -515,6 +530,8 @@ plant.propellant.tanks = ['tanks-aft', 'tanks-aft-s', 'hangar-bottom', 'hangar-b
 // Mass and centre of mass from the design's sections.
 const M = A.M * 1000;
 const comZ = A.secs.reduce((a, x, i) => a + sec[Object.keys(sec)[i]].mass * ((sec[Object.keys(sec)[i]].z[0] + sec[Object.keys(sec)[i]].z[1]) / 2), 0) / A.M;
+// The broadside railguns' muzzles: just outside the hangar wall, on her centre of mass.
+for (const k of ['port', 'starboard']) { const G = weapons.railgun[k]; G.muzzle = [G.dir[0] * (hgr.s.w / 2 + 0.6), 0, r1(comZ)]; }
 const thrust = design.ship.thrust * 1e6;
 const engines = stn.s.engines;
 const thrusters = {
@@ -593,6 +610,7 @@ const refs = [
   ...weapons.turrets.flatMap((t) => [['barbette', t.barbette], ['magazine', t.magazine]]),
   ...mounts.filter((m) => m.magazine).map((m) => ['pdc magazine', m.magazine]),
   ['tube magazine', weapons.tubes.magazine], ...weapons.broadside.port.magazines.concat(weapons.broadside.starboard.magazines).map((m) => ['broadside magazine', m]),
+  ['railgun room', weapons.railgun.port.room], ['railgun room', weapons.railgun.starboard.room],
   ...plant.propellant.tanks.map((t) => ['tank', t]), ['drone bay', integrity.drones.from],
 ];
 for (const [what, id] of refs) if (!ids.has(id)) problems.push(`${what} names ${id}, which is not a room`);

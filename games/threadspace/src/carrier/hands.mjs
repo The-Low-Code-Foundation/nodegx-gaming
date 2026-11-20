@@ -3,7 +3,7 @@
 // wardrooms, a few awake in the berths, and some walking the ring corridor. At the change of watch they wait at the
 // spoke lifts and ride with you; at action stations they go up the spokes and the drum empties.
 //
-// Only the segments round you are populated (drum.mjs `drumWindow` shows two either side), and a room changes only out
+// Only the segments round you are populated (drum.mjs `drumWindow` shows four either side; `max` caps how many are drawn), and a room changes only out
 // of your sight: never while you stand in it, nor while you can see into it through its doorway. Each room's people
 // are dealt from its id and the half hour, so a room looks the same when you come back. The cast is the six people in
 // assets/people (crew.mjs), in their department's uniform; their skinned meshes are drawn whether you look at them or
