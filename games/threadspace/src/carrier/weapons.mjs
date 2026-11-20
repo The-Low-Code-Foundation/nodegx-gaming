@@ -1,22 +1,30 @@
-// The carrier's weapons, her shields, and the raider that attacks her.
+// The carrier's weapons, her point defence, and the raider that attacks her.
 //
-// A raid (integrity.mjs `attack`, through `hooks.raid`) is now a ship you can see and fight: a Rook corvette comes in
-// from one side and makes firing passes down it, bow to stern and back, then breaks off. Everything it does is real in
-// the same sense the damage is:
+// There are no shields, here or on the raider. What keeps a ship alive is what keeps a real warship alive: armour
+// (integrity.mjs `armour`: a belt that stops some shells outright), point defence, and hitting the other ship first.
+//
+// A raid (integrity.mjs `attack`, through `hooks.raid`) is a ship you can see and fight: a Rook corvette comes in from
+// one side and makes firing passes down it, bow to stern and back, then breaks off. Everything it does is real in the
+// same sense the damage is:
 //
 // - Its shells are projectiles. Each one flies from its turret on a lead worked out for the carrier's motion, and
 //   wherever its path meets the hull (the layout's loft sections, `integrity.inHull`) it goes through the ship as any
-//   other hit does (`integrity.arrive`: holes, air, health, the jobs it starts, the call).
-// - The carrier's shields are a bubble round her (`shields.radius`). While they hold, a shell bursts on the bubble and
-//   takes `absorb` from them. They are as strong as her shield generators are healthy, and they come back by
-//   themselves `delay` seconds after the last hit. The raider's disruptor beam drains them from `beam.range`.
-// - Her own disruptor emitters (the layout's `emitter` mounts) do the same to the raider's shields when it is within
-//   their reach and arc: crew-run, on main power only.
-// - Her two heavy turrets fire shells that hit the raider's hull once its shields are down, or take `shieldHit` off
-//   them while they are up. Each turret is the gunhouse in hull.glb named for its mount, and its guns (`<id>-guns`):
-//   it trains and elevates at its own slow rate, from a ready rack the hoist fills from its magazine. A wrecked
-//   barbette slows and then jams the turret; a wrecked magazine stops the hoist; on emergency power it turns at a crawl.
-//   The firing cutout stops a shot whose line of fire crosses the ship's own hull.
+//   other hit does (`integrity.arrive`: armour, holes, air, health, the jobs it starts, the call). A shell through a
+//   spread radiator wrecks some of it instead (plant.mjs).
+// - Its torpedoes are rockets: they burn at `torpedo.accel` toward a point in the carrier, steering by proportional
+//   navigation, and weave in their last stretch. One that reaches the hull goes off deep inside her.
+// - The carrier's point defence cannons (the layout's `pdc` mounts) are the answer to torpedoes: rotary guns the
+//   fire-control computer slews onto the nearest torpedo, leading it for its acceleration, and hoses with tracers. A
+//   tracer that passes close enough kills it. With nothing inbound they take the raider when it comes close. They run
+//   on main power, from their magazines, and hold fire when the heat sinks are full.
+// - Her own torpedo tubes, fired by the CIC at a raider in range, and the raider's own point defence against them.
+// - Her two heavy turrets fire shells at the raider's hull (and at a torpedo, if you are quick). Each turret is the
+//   gunhouse in hull.glb named for its mount, and its guns (`<id>-guns`): it trains and elevates at its own slow
+//   rate, from a ready rack the hoist fills from its magazine. A wrecked barbette slows and then jams the turret; a
+//   wrecked magazine stops the hoist; on emergency power it turns at a crawl. The firing cutout stops a shot whose line
+//   of fire crosses the ship's own hull.
+// - The railgun along her keel, fired from the helm (`railFire`): it points where she points, so the helmsman aims it by
+//   turning the whole ship. `railAim()` is what the helm's sight shows.
 //
 // You can man either turret from its hatch (`turrets[].from`). Your sight moves as fast as the mouse; the guns follow
 // at the turret's rate, and the circle on the sight is where they actually point. The diamond is where to aim to hit
@@ -29,8 +37,8 @@
 // her head-up display shows of the contact (cockpit.mjs draws it). The raider's turrets fire back at her (`flakShot`):
 // her hull is `fhull`, and at nothing she is dead in space and flight control brings her in.
 //
-// The layout's `weapons` entry has every number. In the console: `__carrier.guns.raid('port')`, `.raider`,
-// `.shield`, `.turrets`.
+// The layout's `weapons` entry has every number. In the console: `__carrier.guns.raid('port')`, `.raider`, `.torps`,
+// `.pdcs`, `.turrets`.
 
 import * as THREE from 'three';
 import { corvette, fighter as wren, setThrust, metal } from '../ships.mjs';
@@ -39,7 +47,7 @@ import { hazardMat } from '../decor.mjs';
 
 const DEG = Math.PI / 180;
 const _a = new THREE.Vector3(), _b = new THREE.Vector3(), _c = new THREE.Vector3(), _d = new THREE.Vector3();
-const _beam = new THREE.Vector3(), _q = new THREE.Quaternion(), _m = new THREE.Matrix4();
+const _e = new THREE.Vector3(), _f = new THREE.Vector3(), _g = new THREE.Vector3(), _q = new THREE.Quaternion(), _m = new THREE.Matrix4();
 const Z = new THREE.Vector3(0, 0, 1), Y = new THREE.Vector3(0, 1, 0);
 
 const SHELL_GEO = new THREE.BoxGeometry(1, 1, 1);
@@ -71,55 +79,83 @@ function intercept(r, v, speed) {
   return t > 0 ? t : null;
 }
 
-/** A shield bubble: the rim glows a little while it is being drained, and a hit sends a ring out from where it struck.
- *  Drawn on a unit sphere scaled to the bubble's half-axes, so `hit()` takes the point in the sphere's own frame. */
-function bubble(color) {
-  const m = new THREE.ShaderMaterial({
-    uniforms: { color: { value: new THREE.Color(color) }, glow: { value: 0 }, hitDir: { value: new THREE.Vector3(0, 1, 0) }, hitAge: { value: 9 }, hitAmp: { value: 0 } },
-    vertexShader: `
-      #include <common>
-      #include <logdepthbuf_pars_vertex>
-      varying vec3 vN; varying vec3 vV; varying vec3 vP;
-      void main() {
-        vP = normalize(position);
-        vec4 mv = modelViewMatrix * vec4(position, 1.0);
-        vN = normalize(normalMatrix * normal);
-        vV = normalize(-mv.xyz);
-        gl_Position = projectionMatrix * mv;
-        #include <logdepthbuf_vertex>
-      }`,
-    fragmentShader: `
-      #include <common>
-      #include <logdepthbuf_pars_fragment>
-      uniform vec3 color; uniform float glow; uniform vec3 hitDir; uniform float hitAge; uniform float hitAmp;
-      varying vec3 vN; varying vec3 vV; varying vec3 vP;
-      void main() {
-        #include <logdepthbuf_fragment>
-        // No pow() of a negative base (undefined in GLSL: a NaN pixel the bloom would smear over the frame).
-        float rim = pow(clamp(1.0 - abs(dot(normalize(vN), normalize(vV))), 0.0, 1.0), 3.0);
-        float d = acos(clamp(dot(normalize(vP), hitDir), -1.0, 1.0));
-        float fade = 1.0 - smoothstep(0.0, 1.4, hitAge);
-        float rx = (d - hitAge * 0.9) / 0.05, sx = d / 0.06;
-        float ring = exp(-rx * rx) * hitAmp * fade;
-        float spot = exp(-sx * sx) * hitAmp * max(0.0, 1.0 - hitAge * 2.5) * 2.0;
-        float a = rim * glow + ring + spot;
-        gl_FragColor = vec4(color, clamp(a, 0.0, 1.0));
-      }`,
-    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide
-  });
-  m.userData.uncut = true; // the cutaway's planes leave it alone
-  const mesh = new THREE.Mesh(new THREE.SphereGeometry(1, 48, 24), m);
-  mesh.frustumCulled = false;
-  mesh.renderOrder = 3;
-  mesh.userData.uncut = true;
-  return mesh;
+/** Where to point a gun at `speed` so its round meets a target `r` away (relative to the gun) moving at `v` and
+ *  accelerating at `a` (both relative): a few rounds of guessing the flight time. Writes the aim direction into `out`
+ *  and returns the flight time, or null when the round would never get there. */
+function leadAccel(r, v, a, speed, out) {
+  let t = r.length() / speed;
+  for (let i = 0; i < 5; i++) {
+    out.copy(r).addScaledVector(v, t).addScaledVector(a, 0.5 * t * t);
+    t = out.length() / speed;
+    if (t > 8) return null;
+  }
+  out.normalize();
+  return t;
 }
 
-function hitBubble(mesh, localDir, amp = 1) {
-  const u = mesh.material.uniforms;
-  u.hitDir.value.copy(localDir).normalize();
-  u.hitAge.value = 0;
-  u.hitAmp.value = amp;
+// The point defence's tracers: hundreds of them in the air at once, so one instanced mesh, not a mesh each.
+const ROUND_MAX = 900;
+const ROUND_OURS = new THREE.MeshBasicMaterial({ color: '#fff0b0', transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false });
+const TORP_BODY = new THREE.MeshLambertMaterial({ color: '#5a6068' });
+const TORP_NOSE = new THREE.MeshLambertMaterial({ color: '#c8c0a8' });
+let FLARE = null;
+/** A soft round glow, drawn once: a torpedo's drive seen from kilometres off. */
+function flareTex() {
+  if (FLARE) return FLARE;
+  const c = document.createElement('canvas');
+  c.width = c.height = 64;
+  const g = c.getContext('2d');
+  const grad = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+  grad.addColorStop(0, 'rgba(255,255,255,1)');
+  grad.addColorStop(0.2, 'rgba(200,220,255,0.8)');
+  grad.addColorStop(0.5, 'rgba(120,150,255,0.25)');
+  grad.addColorStop(1, 'rgba(0,0,0,0)');
+  g.fillStyle = grad;
+  g.fillRect(0, 0, 64, 64);
+  FLARE = new THREE.CanvasTexture(c);
+  return FLARE;
+}
+
+/** A torpedo: a slim body with a blunt warhead, and its drive, a hot blue-white star you can see from far off. -z is
+ *  its nose. `ours` paints a pale band on it. */
+function torpedoMesh(ours) {
+  const g = new THREE.Group();
+  g.add(at(cyl(0.45, 0.45, 5, TORP_BODY, 8), 0, 0, 0, Math.PI / 2));
+  g.add(at(cyl(0.05, 0.45, 1.2, TORP_NOSE, 8), 0, 0, -3.1, -Math.PI / 2));
+  if (ours) g.add(at(cyl(0.47, 0.47, 0.4, TORP_NOSE, 8), 0, 0, 0.6, Math.PI / 2));
+  const flare = new THREE.Sprite(new THREE.SpriteMaterial({ map: flareTex(), color: ours ? '#cfe0ff' : '#ffd0c0', transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }));
+  flare.position.z = 3.2;
+  flare.scale.setScalar(9);
+  g.add(flare);
+  g.userData.flare = flare;
+  return g;
+}
+
+/** A point defence cannon: a turntable on the sponson, a cradle that elevates, and six barrels round an axis that
+ *  spin while it fires. Built in code for either hull. `yaw` turns about the mount's up, `gun` elevates; the gun's -z
+ *  is the way it fires. */
+function pdcMesh(m) {
+  const dark = metal('#2c3138'), grey = metal('#6e7782', { metalness: 0.5 });
+  const g = new THREE.Group();
+  const yaw = new THREE.Group();
+  yaw.position.y = 2.0;
+  yaw.add(at(cyl(1.7, 1.9, 0.9, grey, 14), 0, 0.2, 0));
+  yaw.add(at(box(2.4, 1.6, 0.5, grey), 0, 1.3, 1.0), at(box(2.4, 1.6, 0.5, grey), 0, 1.3, -1.0));
+  const gun = new THREE.Group();
+  gun.position.y = 1.5;
+  gun.add(at(box(1.3, 1.2, 2.2, dark), 0, 0, 0.4));
+  const spin = new THREE.Group();
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * Math.PI * 2;
+    spin.add(at(cyl(0.09, 0.09, 3.6, dark, 6), Math.cos(a) * 0.32, Math.sin(a) * 0.32, -2.1, Math.PI / 2));
+  }
+  spin.add(at(cyl(0.45, 0.45, 0.2, grey, 10), 0, 0, -3.6, Math.PI / 2));
+  gun.add(spin);
+  yaw.add(gun);
+  g.add(yaw);
+  g.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), new THREE.Vector3(...m.up));
+  g.position.set(...m.at);
+  return { g, yaw, gun, spin };
 }
 
 /** The gunnery target: a sled of three crossed day-glo panels (a corner reflector, so the directors see it too),
@@ -156,25 +192,27 @@ export class Weapons {
     this.shells = [];
     this.fx = [];
     this.raider = null;
+    this.log = []; // torpedoes shot down: { t, kill (whose), by }
     this.manned = null;
     this.zoom = 0;
     this.inv = new THREE.Matrix4();
-    // The shields: the bubble round her centre of mass, as strong as her generators.
-    const S = this.W.shields;
-    this.shield = S.max;
-    this.shieldMax = S.max;
-    this.sinceHit = 99;
     this.com = new THREE.Vector3(...this.L.com);
-    this.radius = new THREE.Vector3(...S.radius);
-    this.bubble = bubble('#6aa8ff');
-    this.bubble.scale.copy(this.radius);
-    C.obj.add(this.bubble); // C.obj's origin is the centre of mass
-    this.wasUp = true;
-    // The emitters and their beams.
-    this.emitters = this.L.mounts.filter((m) => m.kind === 'emitter').map((m) => ({
-      m, at: new THREE.Vector3(...m.at).addScaledVector(new THREE.Vector3(...m.up), 4.3), up: new THREE.Vector3(...m.up),
-      beam: this.beam('#8fa4ff'), on: false
-    }));
+    this.plant = null; // plant.mjs: the heat the guns make goes into its sinks; full sinks hold the PDCs and the railgun
+    // The point defence: a gun on each `pdc` mount, fixed to the compartment nearest it (its health is the gun's).
+    this.pdcs = this.L.mounts.filter((m) => m.kind === 'pdc').map((m) => this.makePdc(m));
+    // Their tracers, and the raider's: one pool, drawn as one instanced mesh.
+    this.pdRounds = []; // point defence rounds in flight (`this.rounds` is the fighter's ammunition)
+    this.roundMesh = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), ROUND_OURS, ROUND_MAX);
+    this.roundMesh.frustumCulled = false;
+    this.roundMesh.count = 0;
+    this.roundMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    scene.add(this.roundMesh);
+    // Torpedoes in flight, either side's; the carrier's own tubes.
+    this.torps = [];
+    this.tubeStock = this.W.tubes?.stock ?? 0;
+    this.tubeT = 6;
+    // The railgun: its capacitors (0 to 1) and its slugs.
+    this.rail = { charge: 1, stock: this.W.railgun?.stock ?? 0, flash: 0 };
     this.turrets = this.W.turrets.map((spec) => this.makeTurret(spec)).filter(Boolean);
     this.hatches();
     this.canvas = document.getElementById('c-ghud');
@@ -238,23 +276,26 @@ export class Weapons {
     }
   }
 
-  beam(color) {
-    const m = new THREE.Mesh(BEAM_GEO, new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }));
-    m.visible = false;
-    m.frustumCulled = false;
-    this.scene.add(m);
-    return m;
-  }
-
-  setBeam(mesh, a, b, width, t) {
-    const v = _beam.subVectors(b, a);
-    const len = v.length();
-    mesh.position.copy(a).addScaledVector(v, 0.5);
-    mesh.quaternion.setFromUnitVectors(Y, v.normalize());
-    const w = width * (0.75 + 0.25 * Math.sin(t * 43) * Math.sin(t * 17));
-    mesh.scale.set(w, len, w);
-    mesh.material.opacity = 0.55 + 0.3 * Math.sin(t * 29);
-    mesh.visible = true;
+  /** A point defence cannon on mount `m`: its gun (built in code, so it turns in either hull), the compartment it is
+   *  fixed to, and its magazine. */
+  makePdc(m) {
+    const mesh = pdcMesh(m);
+    this.C.frame.add(mesh.g);
+    const at0 = new THREE.Vector3(...m.at);
+    let node = null, bd = Infinity;
+    for (const n of this.ship.nodes.values()) {
+      if (!n.b) continue; // a drum room (integrity.mjs `buildDrum`): nothing is fixed to a spinning drum
+      const q = new THREE.Vector3(clamp(at0.x, n.b.x[0], n.b.x[1]), clamp(at0.y, n.b.y[0], n.b.y[1]), clamp(at0.z, n.b.z[0], n.b.z[1]));
+      const d = q.distanceTo(at0);
+      if (d < bd) (bd = d), (node = n);
+    }
+    const up = new THREE.Vector3(...m.up);
+    return {
+      m, ...mesh, node, up, id: m.id, name: m.id.replace(/^pdc-/, '').replace(/-/g, ' '),
+      pivot: at0.clone().addScaledVector(up, 3.5), // ship frame: where its rounds come from
+      inv: new THREE.Quaternion().setFromUnitVectors(up, new THREE.Vector3(0, 1, 0)), // ship frame to the mount's own
+      yawA: 0, elev: 0.3, stock: this.W.pdc.stock, coolT: 0, firing: false, target: null, spinV: 0
+    };
   }
 
   // --- the raid ------------------------------------------------------------------------------------------------------
@@ -301,13 +342,11 @@ export class Weapons {
     const R = this.W.raider;
     const d = R.standoff[0] + this.rand() * (R.standoff[1] - R.standoff[0]);
     const obj = corvette();
-    const shieldMesh = bubble('#ff7a5a');
-    shieldMesh.scale.set(...R.size).multiplyScalar(1.35);
-    shieldMesh.position.set(0, 1, -6);
-    obj.add(shieldMesh);
     setThrust(obj, 1);
+    this.tubeT = this.W.tubes?.first ?? 6; // the CIC needs a firing solution before its first salvo
     return this.contact(obj, R, from, this.passes(from, d, passes), {
-      label: 'RAIDER', centre: new THREE.Vector3(0, 1, -6), hull: R.hull, shield: R.shields, shieldMesh, beam: this.beam('#ff5a3a')
+      label: 'RAIDER', centre: new THREE.Vector3(0, 1, -6), hull: R.hull,
+      torpLeft: R.torpedo?.stock ?? 0, torpT: 3 + this.rand() * 3, pdcT: 0, pdcAim: null
     });
   }
 
@@ -361,9 +400,7 @@ export class Weapons {
     _q.setFromRotationMatrix(_m);
     R.obj.quaternion.slerp(_q, Math.min(1, dt * 2.5));
     R.obj.updateMatrixWorld(true);
-    // Its shields come back when nothing has touched them for a while.
     R.sinceHit += dt;
-    if (K.shields && R.sinceHit > 4) R.shield = Math.min(K.shields, R.shield + K.regen * dt);
     // Its turrets track the carrier.
     const centre = this.C.obj.position;
     for (const t of R.obj.userData.turrets ?? []) {
@@ -372,14 +409,19 @@ export class Weapons {
       t.pitch.rotation.x = clamp(Math.atan2(_a.y, Math.hypot(_a.x, _a.z)), -0.2, 0.8);
     }
     const dist = R.obj.position.distanceTo(centre);
-    // Its disruptor on her shields.
-    if (K.beam && dist < K.beam.range && this.shield > 0 && !wp.leave) {
-      this.shield = Math.max(0, this.shield - K.beam.drain * dt);
-      this.sinceHit = 0;
-      this.bubble.material.uniforms.glow.value = Math.max(this.bubble.material.uniforms.glow.value, 0.45);
-      const p = this.bubblePoint(R.obj.position, _c);
-      this.setBeam(R.beam, _d.set(0, 0.5, -50).applyMatrix4(R.obj.matrixWorld), p, 0.8, this.time);
-    } else if (R.beam) R.beam.visible = false;
+    // Its torpedoes: a salvo every so often while the carrier is in their reach, until it has none left.
+    const T = K.torpedo;
+    if (T && !R.target && !wp.leave && R.torpLeft > 0 && (R.torpT -= dt) <= 0 && dist > T.range[0] && dist < T.range[1]) {
+      R.torpT = T.every * (0.8 + 0.4 * this.rand());
+      for (let i = 0; i < Math.min(T.salvo, R.torpLeft); i++) this.launchAtCarrier(R, i);
+      R.torpLeft -= Math.min(T.salvo, R.torpLeft);
+      if (!this.torpCalled || this.time - this.torpCalled > 12) {
+        this.torpCalled = this.time;
+        this.dc?.say('Torpedo launch. Torpedoes inbound. Point defence is tracking.', 'Torpedoes inbound: point defence tracking.', 0, 5);
+      }
+    }
+    // Its own point defence against the carrier's torpedoes.
+    if (K.pdc) this.raiderPdc(R, dt);
     // Its guns, on a pass.
     R.gunT -= dt;
     if (K.gun && wp.fire && dist < K.gun.range && R.gunT <= 0) {
@@ -468,26 +510,17 @@ export class Weapons {
     this.hooks.crippled?.();
   }
 
-  /** Where a line from the bubble's centre toward `p` (world) leaves the bubble, in world. */
-  bubblePoint(p, out) {
-    const local = _a.copy(p).applyMatrix4(this.inv).sub(this.com);
-    const k = 1 / Math.sqrt((local.x / this.radius.x) ** 2 + (local.y / this.radius.y) ** 2 + (local.z / this.radius.z) ** 2);
-    local.multiplyScalar(k).add(this.com);
-    return this.C.frame.localToWorld(out.copy(local));
-  }
-
   endRaid(call, text) {
     const R = this.raider;
     if (!R || R.gone) return;
     R.gone = true;
-    if (R.beam) R.beam.visible = false;
     if (!R.dead) R.obj.removeFromParent();
     this.ship.raidOver();
     if (call || text) this.dc?.say(call, text, 0, 6);
   }
 
-  /** The raider is hit at `p` (world). Shields first; then the hull, and at nothing it blows up. */
-  raiderHit(p, dmg, shieldHit, you = false) {
+  /** The raider is hit at `p` (world): its hull takes it, and at nothing it blows up. */
+  raiderHit(p, dmg, you = false, small = false) {
     const R = this.raider, K = R.K;
     R.sinceHit = 0;
     if (R.target) {
@@ -498,17 +531,12 @@ export class Weapons {
       this.sfx?.play('boom', this.ear ? Math.min(900, this.ear.distanceTo(p) * 0.5) : 600, 10);
       return;
     }
-    if (R.shield > 0) {
-      R.shield = Math.max(0, R.shield - shieldHit);
-      const local = R.shieldMesh.worldToLocal(_a.copy(p));
-      hitBubble(R.shieldMesh, local, 1.2);
-      this.flash(p, 4, '#ffb08a', 0.25);
-      if (R.shield <= 0) this.dc?.say("The raider's shields are down.", "The raider's shields are down.", 0, 4);
-      return;
-    }
     R.hull -= dmg;
-    this.flash(p, 9, '#ffc070', 0.45);
-    this.flash(p, 5, '#ffffff', 0.12);
+    if (small) this.flash(p, 1.6, '#ffd090', 0.08); // a point defence round: a spark on its armour
+    else {
+      this.flash(p, 9, '#ffc070', 0.45);
+      this.flash(p, 5, '#ffffff', 0.12);
+    }
     if (R.hull > 0) return;
     // Destroyed: a fireball, and the wreck in pieces.
     R.dead = true;
@@ -555,17 +583,21 @@ export class Weapons {
       const sp = _a.length();
       s.mesh.position.copy(s.pos);
       s.mesh.quaternion.setFromUnitVectors(Z, _a.normalize());
-      const len = Math.min(sp * 0.03, 40), w = s.w ?? (s.ours ? 0.7 : 1.1);
+      const len = Math.min(sp * (s.rail ? 0.012 : 0.03), s.rail ? 110 : 40), w = s.w ?? (s.ours ? 0.7 : 1.1);
       s.mesh.scale.set(w, w, len);
       if (s.ours) {
         if (R && !R.gone && !R.dead && this.hitsRaider(prev, s.pos, _b)) {
-          if (s.you) R.byYou = (R.byYou ?? 0) + 1; // your own hits, shields or hull (the career counts them)
-          this.raiderHit(_b, s.dmg, s.shieldHit ?? this.W.gun.shieldHit, s.you);
+          if (s.you) R.byYou = (R.byYou ?? 0) + 1; // your own hits (the career counts them)
+          this.raiderHit(_b, s.dmg, s.you);
           s.life = 0;
         } else if (s.cannon && s.pos.distanceTo(centre) < 240 && this.ship.inHull(_b.copy(s.pos).applyMatrix4(this.inv))) {
           // A fighter's round that finds the carrier: stopped by her plating, with a spark to show for it.
           this.flash(s.pos, 1.5, '#ffd090', 0.12);
           s.life = 0;
+        } else {
+          // A shell or a cannon round that passes close to one of the raider's torpedoes kills it.
+          const t = this.torpHit(prev, s.pos, 'theirs', s.cannon ? this.W.fighter.radius ?? 3 : 4);
+          if (t) (s.life = 0), this.killTorp(t, s.you ? 'you' : 'gun');
         }
       } else if (s.flak) {
         // A shot at the fighter: a hit if its path this frame passes within her hull's reach.
@@ -603,34 +635,36 @@ export class Weapons {
     return true;
   }
 
-  inBubble(q) {
-    return ((q.x - this.com.x) / this.radius.x) ** 2 + ((q.y - this.com.y) / this.radius.y) ** 2 + ((q.z - this.com.z) / this.radius.z) ** 2 <= 1;
-  }
-
-  /** A raider's shell between a and b (world): on the bubble if the shields are up, into the hull if not. */
+  /** A raider's shell between a and b (world): through a spread radiator (it wrecks some of it and goes on), and into
+   *  the hull (integrity.mjs: the armour first). */
   hitsCarrier(s, a, b) {
     const A = _c.copy(a).applyMatrix4(this.inv), B = _d.copy(b).applyMatrix4(this.inv);
     const n = Math.max(1, Math.ceil(A.distanceTo(B) / 1.2));
     const q = new THREE.Vector3();
     for (let i = 1; i <= n; i++) {
       q.lerpVectors(A, B, i / n);
-      if (!s.inside && this.inBubble(q)) {
-        s.inside = true;
-        if (this.shield > 0) {
-          this.shield = Math.max(0, this.shield - this.W.shields.absorb);
-          this.sinceHit = 0;
-          hitBubble(this.bubble, _a.copy(q).sub(this.com).divide(this.radius), 1);
-          this.flash(this.C.frame.localToWorld(q.clone()), 6, '#9ac4ff', 0.3);
-          this.sfx?.play('hit', 20);
-          return true;
+      if (!s.radiator && this.plant) {
+        const r = this.plant.radiatorAt(q);
+        if (r) {
+          s.radiator = true;
+          this.plant.hitRadiator(r, s.torpedo ? 0.6 : 0.2);
+          this.flash(this.C.frame.localToWorld(q.clone()), 4, '#ffb070', 0.3);
         }
       }
       if (this.ship.inHull(q)) {
-        this.ship.arrive(q, _a.subVectors(B, A));
+        if (s.torpedo) this.ship.arrive(q, _a.subVectors(B, A), this.torpHarm());
+        else this.ship.arrive(q, _a.subVectors(B, A), { shell: true });
         return true;
       }
     }
     return false;
+  }
+
+  /** What a torpedo does when it reaches the hull: integrity.mjs's numbers from the layout's `torpedo`. */
+  torpHarm() {
+    const T = this.W.torpedo, r = this.rand;
+    const pick = (x) => x[0] + r() * (x[1] - x[0]);
+    return { pen: pick(T.pen), damage: pick(T.damage), hole: pick(T.hole), torpedo: true };
   }
 
   flash(p, size, color, life) {
@@ -662,58 +696,357 @@ export class Weapons {
     this.fx = this.fx.filter((e) => e.t < e.life);
   }
 
-  // --- the carrier's side ----------------------------------------------------------------------------------------------
+  // --- torpedoes -------------------------------------------------------------------------------------------------------
 
-  shieldsFrame(dt) {
-    const S = this.W.shields;
-    // As strong as the generators are healthy; on emergency power, a third of that.
-    this.shieldMax = S.max * this.ship.sys('shield') * (this.ship.power ? 1 : 0.35);
-    this.sinceHit += dt;
-    if (this.sinceHit > S.delay) this.shield += S.regen * (this.shieldMax / S.max) * dt;
-    this.shield = Math.min(this.shield, this.shieldMax);
-    this.ship.shieldCharge = this.shieldMax > 0 ? this.shield / S.max : 0;
-    if (this.wasUp && this.shield <= 0.5) {
-      this.wasUp = false;
-      this.dc?.say('Shields are down.', 'Shields are down: shells will reach the hull.', 0, 5);
-    } else if (!this.wasUp && this.shield > S.max * 0.3) {
-      this.wasUp = true;
-      this.dc?.say('Shields are back up.', 'Shields are back up.', 0, 4);
-    }
-    const u = this.bubble.material.uniforms;
-    u.hitAge.value += dt;
-    u.glow.value = Math.max(0, u.glow.value - dt * 1.5);
-    this.bubble.visible = this.mode !== 'cutaway' && (u.glow.value > 0.01 || u.hitAge.value < 1.6);
-    const Ru = this.raider?.shieldMesh?.material.uniforms;
-    if (Ru) Ru.hitAge.value += dt;
+  /** A torpedo into the world at `p` with velocity `v`: `side` 'ours' (the carrier's, after the raider) or 'theirs'
+   *  (the raider's, after a point in the carrier, `aim` in the ship's frame). */
+  torpedo(p, v, side, aim = null) {
+    const obj = torpedoMesh(side === 'ours');
+    obj.traverse((o) => (o.frustumCulled = false));
+    obj.position.copy(p);
+    this.scene.add(obj);
+    const t = { obj, pos: p.clone(), prev: p.clone(), vel: v.clone(), side, aim, t: 0, jink: new THREE.Vector3(), jinkT: 0, dead: false, acc: new THREE.Vector3() };
+    this.torps.push(t);
+    return t;
   }
 
-  /** The emitters: each one's crew beams the raider when it is within reach and in front of it. */
-  emittersFrame(dt) {
+  /** One of the raider's torpedoes, out of its tube with a push off to the side, after a compartment of the carrier's
+   *  chosen by size (a big one is easier to hit). */
+  launchAtCarrier(R, i) {
+    const T = this.W.torpedo, r = this.rand;
+    const n = this.ship.pick(), b = n.b;
+    const aim = new THREE.Vector3(b.x[0] + (b.x[1] - b.x[0]) * (0.3 + 0.4 * r()), b.y[0] + (b.y[1] - b.y[0]) * (0.3 + 0.4 * r()), b.z[0] + (b.z[1] - b.z[0]) * (0.3 + 0.4 * r()));
+    const side = _a.set(i % 2 ? 1 : -1, 0.3, 0).transformDirection(R.obj.matrixWorld);
+    const p = R.obj.localToWorld(new THREE.Vector3(i % 2 ? 3 : -3, 0, 0));
+    const v = _b.copy(R.v).add(this.body.vel).addScaledVector(side, T.push);
+    this.torpedo(p, v, 'theirs', aim);
+    this.sfx?.play('turbolaser', this.ear ? this.ear.distanceTo(p) * 0.5 : 900);
+  }
+
+  /** The carrier's tubes: the CIC fires a salvo at a raider in range, every so often, while the magazine holds. */
+  tubesFrame(dt) {
+    const U = this.W.tubes, R = this.raider;
+    if (!U) return;
+    this.tubeT -= dt;
+    if (!R || R.gone || R.dead || R.target || !this.ship.power || this.tubeStock <= 0 || this.tubeT > 0) return;
+    if ((this.ship.node(U.magazine)?.health ?? 100) < 20) return;
+    const d = R.obj.position.distanceTo(this.C.obj.position);
+    if (d < U.range[0] || d > U.range[1]) return;
+    this.tubeT = U.every;
+    const dir = _a.set(...U.dir).transformDirection(this.C.frame.matrixWorld);
+    for (let i = 0; i < Math.min(U.salvo, this.tubeStock); i++) {
+      const p = this.C.frame.localToWorld(new THREE.Vector3(...U.at[i % U.at.length]));
+      this.torpedo(p, _b.copy(this.body.vel).addScaledVector(dir, this.W.torpedo.push), 'ours');
+      this.flash(p, 4, '#d8e8ff', 0.3);
+    }
+    this.tubeStock -= Math.min(U.salvo, this.tubeStock);
+    this.dc?.say('Tubes one and two, fire. Birds away.', 'The CIC fired a torpedo salvo at the raider.', 0, 4);
+  }
+
+  /** Each torpedo: its guidance (proportional navigation on the line to its target, the rest of its thrust down that
+   *  line), the weave in its last stretch, its drive, and what it meets. */
+  torpsFrame(dt) {
+    const T = this.W.torpedo, R = this.raider;
+    const raiderLive = R && !R.gone && !R.dead && !R.target;
+    for (const t of this.torps) {
+      if (t.dead) continue;
+      t.t += dt;
+      t.prev.copy(t.pos);
+      // The target: a point in the carrier, or the raider.
+      let tp, tv;
+      if (t.side === 'theirs') (tp = this.C.frame.localToWorld(_a.copy(t.aim))), (tv = this.body.vel);
+      else if (raiderLive) (tp = _a.copy(R.obj.position)), (tv = _d.copy(R.v).add(this.body.vel));
+      else tp = null;
+      const burning = t.t < T.burn && tp;
+      t.acc.set(0, 0, 0);
+      if (burning) {
+        const r = _b.subVectors(tp, t.pos), vr = _c.subVectors(tv, t.vel); // the target's place and velocity, from the torpedo
+        const dist = r.length();
+        const closing = Math.max(30, -r.dot(vr) / Math.max(1, dist));
+        const tgo = dist / closing;
+        // The miss it would make if nothing changed, and the push that removes it (N = 3), then the rest of the
+        // thrust along the line of sight.
+        const zem = _e.copy(r).addScaledVector(vr, tgo);
+        const cmd = zem.multiplyScalar(3 / Math.max(0.3, tgo * tgo));
+        const along = _f.copy(r).normalize();
+        cmd.addScaledVector(along, -cmd.dot(along));
+        if (cmd.length() > T.accel) cmd.setLength(T.accel);
+        cmd.addScaledVector(along, Math.sqrt(Math.max(0, T.accel * T.accel - cmd.lengthSq())));
+        // The weave: in its last stretch it throws itself about across the line, so a gun's lead is always behind.
+        // It steadies again for the last few hundred metres (`settle`), long enough for the guidance to put it back
+        // on the aim point: a torpedo that weaves all the way in weaves past.
+        if (dist < T.terminal && dist > (T.settle ?? 500)) {
+          if ((t.jinkT -= dt) <= 0) {
+            t.jinkT = 0.25 + this.rand() * 0.35;
+            t.jink.set(this.rand() - 0.5, this.rand() - 0.5, this.rand() - 0.5);
+            t.jink.addScaledVector(along, -t.jink.dot(along)).setLength(T.jink);
+          }
+          cmd.add(_g.copy(t.jink).multiplyScalar(clamp((dist - (T.settle ?? 500)) / 400, 0, 1)));
+        }
+        t.acc.copy(cmd);
+        t.vel.addScaledVector(cmd, dt);
+        // Nose along the push, so its drive points away from where it is going.
+        _m.lookAt(t.pos, _b.copy(t.pos).add(cmd), Y);
+        t.obj.quaternion.setFromRotationMatrix(_m);
+      }
+      t.pos.addScaledVector(t.vel, dt);
+      t.obj.position.copy(t.pos);
+      const fl = t.obj.userData.flare;
+      fl.visible = !!burning;
+      fl.scale.setScalar(this.ear ? clamp(this.ear.distanceTo(t.pos) * 0.012, 6, 40) : 9);
+      fl.material.opacity = 0.75 + 0.25 * Math.sin(t.t * 40);
+      // What it meets.
+      if (t.side === 'theirs') {
+        if (t.pos.distanceTo(this.C.obj.position) < 300) {
+          const s = { torpedo: true };
+          if (this.hitsCarrier(s, t.prev, t.pos)) this.detonate(t, true);
+        }
+      } else if (raiderLive) {
+        const r = R.obj.position.distanceTo(t.pos);
+        if (r < T.fuse + R.K.size[2] * 0.5 && this.hitsRaider(t.prev, t.pos, _b)) this.detonate(t, false, _b);
+        else if (r < T.fuse + 6) this.detonate(t, false, t.pos);
+      }
+      if (t.t > T.life) this.killTorp(t, null);
+    }
+    this.torps = this.torps.filter((t) => !t.dead);
+  }
+
+  /** A torpedo goes off: on the carrier (integrity has already taken the hit) or on the raider. */
+  detonate(t, onCarrier, at = t.pos) {
+    t.dead = true;
+    t.obj.removeFromParent();
+    this.flash(at, 26, '#ffd8a0', 0.9);
+    this.flash(at, 12, '#ffffff', 0.25);
+    this.sfx?.play('boom', this.ear ? Math.min(900, this.ear.distanceTo(at) * 0.4) : 500, 60);
+    if (onCarrier) return; // integrity.mjs has already taken the hit (and shaken you)
+    const D = this.W.torpedo.raiderDamage;
+    this.raiderHit(at, D[0] + this.rand() * (D[1] - D[0]));
+    this.dc?.say('Torpedo hit on the raider.', 'One of our torpedoes hit the raider.', 0, 4);
+  }
+
+  /** A torpedo is shot down (`by` who, for the log and the call) or burns out. */
+  killTorp(t, by) {
+    if (t.dead) return;
+    t.dead = true;
+    t.obj.removeFromParent();
+    if (!by) return;
+    this.flash(t.pos, 9, '#ffc080', 0.5);
+    this.flash(t.pos, 4, '#ffffff', 0.12);
+    this.sfx?.play('boom', this.ear ? Math.min(900, this.ear.distanceTo(t.pos) * 0.5) : 600, 14);
+    this.log.push({ t: this.time, kill: t.side, by });
+    if (t.side === 'theirs' && by === 'you') this.dc?.say(null, 'You shot down a torpedo.', 0, 3);
+  }
+
+  /** The first torpedo of `side` whose path this frame passes within `r` of the segment a→b (world). Each torpedo is
+   *  tested where it was at the same moment of the frame. */
+  torpHit(a, b, side, r) {
+    for (const t of this.torps) {
+      if (t.dead || t.side !== side) continue;
+      // In the torpedo's own moving frame: shift the segment's start by how far it moved this frame.
+      const A = _e.copy(a).sub(t.prev).add(t.pos), ab = _f.subVectors(b, A);
+      const ap = _g.subVectors(t.pos, A);
+      const k = clamp(ap.dot(ab) / Math.max(1e-9, ab.lengthSq()), 0, 1);
+      if (ap.addScaledVector(ab, -k).length() < r) return t;
+    }
+    return null;
+  }
+
+  // --- point defence -------------------------------------------------------------------------------------------------
+
+  /** One tracer (a burst of rounds) from `p` at velocity `v`, world. `side` is whose it is. */
+  round(p, v, side, life, dmg = 0) {
+    if (this.pdRounds.length >= ROUND_MAX) return;
+    this.pdRounds.push({ pos: p.clone(), prev: p.clone(), vel: v.clone(), side, life, dmg });
+  }
+
+  /** The carrier's point defence: each gun picks the nearest torpedo inbound (or, with none, the raider when it is
+   *  close) inside its arc and reach, slews onto the lead, and fires while it is laid. */
+  pdcFrame(dt) {
+    const P = this.W.pdc;
+    if (!P) return;
     const R = this.raider;
-    const live = R && !R.gone && !R.dead && !R.target && this.ship.power;
-    const E = this.W.emitters;
-    for (const e of this.emitters) {
-      e.on = false;
-      if (live) {
-        const p = this.C.frame.localToWorld(_a.copy(e.at));
-        const to = _b.subVectors(R.obj.position, p);
-        const d = to.length();
-        const up = _c.copy(e.up).transformDirection(this.C.frame.matrixWorld);
-        if (d < E.range && up.dot(to.normalize()) > Math.cos(E.arc * DEG)) {
-          e.on = true;
-          R.shield = Math.max(0, R.shield - E.drain * dt);
-          R.sinceHit = 0;
-          this.setBeam(e.beam, p, R.obj.position, 0.55, this.time + e.at.z);
-          R.shieldMesh.material.uniforms.glow.value = 0.6;
+    const raiderLive = R && !R.gone && !R.dead && !R.target;
+    const hot = this.plant?.hot;
+    const cosArc = Math.cos(P.arc * DEG);
+    const toShip = _q.copy(this.C.obj.quaternion).invert(); // world to the ship's frame (C.frame only shifts it)
+    for (const g of this.pdcs) {
+      const mag = this.ship.node(g.m.magazine)?.health ?? 100;
+      const health = g.node ? g.node.health : 100;
+      g.ok = health >= 25 && mag >= 15 && this.ship.power;
+      g.why = !this.ship.power ? 'no power' : health < 25 ? 'wrecked' : mag < 15 ? 'magazine wrecked' : g.stock <= 0 ? 'empty' : hot ? 'heat' : '';
+      g.firing = false;
+      const pivot = this.C.frame.localToWorld(_a.copy(g.pivot));
+      const up = _b.copy(g.up).applyQuaternion(this.C.obj.quaternion);
+      // The nearest threat it can bear on.
+      let best = null, bd = Infinity;
+      if (g.ok) {
+        for (const t of this.torps) {
+          if (t.dead || t.side !== 'theirs') continue;
+          const d = t.pos.distanceTo(pivot);
+          if (d < P.range && d < bd && _c.subVectors(t.pos, pivot).normalize().dot(up) > cosArc) (best = t), (bd = d);
+        }
+        if (!best && raiderLive) {
+          const d = R.obj.position.distanceTo(pivot);
+          if (d < P.raiderRange && _c.subVectors(R.obj.position, pivot).normalize().dot(up) > cosArc) best = R;
         }
       }
-      e.beam.visible = e.on;
+      g.target = best;
+      let want = null;
+      if (best) {
+        const isT = best !== R;
+        const r = _c.subVectors(isT ? best.pos : R.obj.position, pivot);
+        const v = _d.copy(isT ? best.vel : _e.copy(R.v).add(this.body.vel)).sub(this.body.vel); // its rounds keep her velocity
+        const a = isT ? best.acc : _f.set(0, 0, 0);
+        if (leadAccel(r, v, a, P.speed, _g) != null) want = _g.clone();
+      }
+      // Slew the gun toward the lead (or home), at its rate, in the mount's own frame.
+      if (want) {
+        const local = want.clone().applyQuaternion(toShip).applyQuaternion(g.inv);
+        const yaw = Math.atan2(-local.x, -local.z), elev = Math.asin(clamp(local.y, -1, 1));
+        const m = P.slew * DEG * dt;
+        g.yawA += clamp(turn(g.yawA, yaw), -m, m);
+        g.elev += clamp(elev - g.elev, -m, m);
+        g.laid = Math.abs(turn(g.yawA, yaw)) < 0.03 && Math.abs(elev - g.elev) < 0.03;
+      } else {
+        const m = P.slew * DEG * dt * 0.3;
+        g.elev += clamp(0.3 - g.elev, -m, m);
+        g.laid = false;
+      }
+      g.yaw.rotation.y = g.yawA;
+      g.gun.rotation.x = g.elev;
+      g.spinV = Math.max(0, g.spinV - dt * 30);
+      g.coolT = Math.max(g.coolT - dt, -1 / P.rate); // idle, it is ready to fire, not owed a backlog of rounds
+      if (want && g.laid && g.ok && !hot && g.stock > 0) {
+        g.firing = true;
+        g.spinV = 60;
+        while (g.coolT <= 0) {
+          g.coolT += 1 / P.rate;
+          g.stock--;
+          const d = _c.copy(want);
+          d.x += (this.rand() - 0.5) * 2 * P.spread;
+          d.y += (this.rand() - 0.5) * 2 * P.spread;
+          d.z += (this.rand() - 0.5) * 2 * P.spread;
+          d.normalize();
+          const muzzle = _d.copy(pivot).addScaledVector(d, 3.6);
+          this.round(muzzle, _e.copy(d).multiplyScalar(P.speed).add(this.body.vel), 'ours', P.range / P.speed + 0.3, P.damage);
+          this.plant?.addHeat(P.heat);
+        }
+        if ((g.soundT = (g.soundT ?? 0) - dt) <= 0) (g.soundT = 0.18), this.sfx?.play('hit', this.ear ? Math.min(900, this.ear.distanceTo(pivot) * 0.7) : 600);
+      } else g.coolT = Math.max(g.coolT, 0);
+      g.spin.rotation.z += g.spinV * dt;
     }
-    if (R?.shieldMesh) {
-      const u = R.shieldMesh.material.uniforms;
-      if (!this.emitters.some((e) => e.on)) u.glow.value = Math.max(0, u.glow.value - dt);
-      R.shieldMesh.visible = R.shield > 0 && (u.glow.value > 0.01 || u.hitAge.value < 1.6);
+  }
+
+  /** The raider's point defence: its turrets hose the carrier's torpedoes when they come within reach. */
+  raiderPdc(R, dt) {
+    const P = R.K.pdc;
+    const guns = R.obj.userData.turrets ?? [];
+    let best = null, bd = Infinity;
+    for (const t of this.torps) {
+      if (t.dead || t.side !== 'ours') continue;
+      const d = t.pos.distanceTo(R.obj.position);
+      if (d < P.range && d < bd) (best = t), (bd = d);
     }
+    if (!best) return;
+    R.pdcT -= dt;
+    const own = _a.copy(R.v).add(this.body.vel);
+    while (R.pdcT <= 0) {
+      R.pdcT += 1 / P.rate;
+      const gun = guns[Math.floor(this.rand() * guns.length)];
+      const muzzle = gun ? gun.pitch.localToWorld(gun.tip.clone()) : R.obj.position.clone();
+      const r = _b.subVectors(best.pos, muzzle), v = _c.subVectors(best.vel, own);
+      if (leadAccel(r, v, best.acc, P.speed, _d) == null) continue;
+      _d.x += (this.rand() - 0.5) * 2 * P.spread;
+      _d.y += (this.rand() - 0.5) * 2 * P.spread;
+      _d.z += (this.rand() - 0.5) * 2 * P.spread;
+      this.round(muzzle, _e.copy(_d.normalize()).multiplyScalar(P.speed).add(own), 'theirs', P.range / P.speed + 0.3);
+    }
+  }
+
+  /** Every tracer in the air: what it meets (a torpedo of the other side, or the raider), and drawing them all. */
+  roundsFrame(dt) {
+    const R = this.raider;
+    const raiderLive = R && !R.gone && !R.dead && !R.target;
+    const radius = this.W.pdc?.radius ?? 3;
+    const M = this.roundMesh;
+    let n = 0;
+    for (const r of this.pdRounds) {
+      r.prev.copy(r.pos);
+      r.pos.addScaledVector(r.vel, dt);
+      r.life -= dt;
+      const t = this.torpHit(r.prev, r.pos, r.side === 'ours' ? 'theirs' : 'ours', radius);
+      if (t) {
+        this.killTorp(t, r.side === 'ours' ? 'pdc' : 'raider');
+        r.life = 0;
+      } else if (r.side === 'ours' && raiderLive && r.dmg && r.pos.distanceTo(R.obj.position) < 80 && this.hitsRaider(r.prev, r.pos, _b)) {
+        this.raiderHit(_b, r.dmg, false, true);
+        r.life = 0;
+      }
+      if (r.life <= 0) continue;
+      // A streak along its way past the carrier.
+      _a.subVectors(r.vel, this.body.vel);
+      const len = Math.min(_a.length() * 0.025, 26);
+      _q.setFromUnitVectors(Z, _a.normalize());
+      _m.compose(r.pos, _q, _c.set(0.35, 0.35, len));
+      M.setMatrixAt(n++, _m);
+    }
+    this.pdRounds = this.pdRounds.filter((r) => r.life > 0);
+    M.count = n;
+    M.instanceMatrix.needsUpdate = true;
+  }
+
+  // --- the railgun -----------------------------------------------------------------------------------------------------
+
+  /** A click at the helm: a slug down the keel, where the ship points, if the capacitors are full. Returns why not, or null. */
+  railFire() {
+    const G = this.W.railgun, S = this.rail;
+    if (!G) return 'no railgun';
+    if (S.stock <= 0) return 'no slugs';
+    if (!this.ship.power) return 'no power';
+    if (this.plant?.hot) return 'heat sinks full';
+    if (S.charge < 1) return 'charging';
+    S.charge = 0;
+    S.stock--;
+    S.flash = 1;
+    const p = this.C.frame.localToWorld(new THREE.Vector3(...G.muzzle));
+    const d = _a.set((this.rand() - 0.5) * 2 * G.spread, (this.rand() - 0.5) * 2 * G.spread, -1).normalize().applyQuaternion(this.C.obj.quaternion);
+    const r = this.rand;
+    const s = this.fire(p, d.multiplyScalar(G.speed).add(this.body.vel), true, G.range / G.speed, G.damage[0] + r() * (G.damage[1] - G.damage[0]));
+    s.rail = s.you = true;
+    s.w = 1.4;
+    this.flash(p, 14, '#cfe4ff', 0.35);
+    this.flash(p, 6, '#ffffff', 0.1);
+    this.plant?.addHeat(G.heat);
+    this.sfx?.play('boom', 60, 50);
+    this.ship.shake = Math.max(this.ship.shake, 0.6);
+    return null;
+  }
+
+  railFrame(dt) {
+    const G = this.W.railgun, S = this.rail;
+    if (!G) return;
+    if (this.ship.power && !this.plant?.hot) S.charge = Math.min(1, S.charge + dt / G.charge);
+    S.flash = Math.max(0, S.flash - dt * 2);
+  }
+
+  /** What the helm's railgun sight shows: the charge, the slugs, and the raider with where to point her nose so a slug
+   *  meets it (the lead, a world point), or null with nothing out there. */
+  railAim(out = {}) {
+    const G = this.W.railgun, S = this.rail, R = this.raider;
+    out.charge = S.charge;
+    out.stock = S.stock;
+    out.ready = S.charge >= 1 && S.stock > 0 && this.ship.power && !this.plant?.hot;
+    out.target = null;
+    if (!G || !R || R.gone || R.dead) return out;
+    const p = this.C.frame.localToWorld(_a.set(...G.muzzle));
+    const r = _b.subVectors(R.obj.position, p);
+    const tt = intercept(r, R.v, G.speed); // the slug keeps her velocity: only the raider's past her counts
+    out.target = R.obj.position;
+    out.label = R.label;
+    out.range = r.length();
+    out.lead = tt != null ? (out.leadV ??= new THREE.Vector3()).copy(p).add(r.addScaledVector(R.v, tt)) : null;
+    out.hull = R.target ? null : Math.max(0, R.hull) / R.K.hull;
+    return out;
   }
 
   // --- the turrets ---------------------------------------------------------------------------------------------------
@@ -829,7 +1162,7 @@ export class Weapons {
 
   /** Her twin chin cannon (the layout's `weapons.fighter`): fixed along her nose, one barrel then the other, from
    *  a drum of `rounds` that the hangar crew refill whenever she is on her pad. A round keeps her velocity and adds its
-   *  own. It does to a raider what `damage` and `shieldHit` say: a fraction of a turret's shell, many times a second. */
+   *  own. It does to a raider what `damage` says: a fraction of a turret's shell, many times a second. */
   cannonFrame(dt) {
     const F = this.W.fighter, fi = this.fighter;
     if (!F || !fi) return;
@@ -848,7 +1181,6 @@ export class Weapons {
     const d = _b.set((r() - 0.5) * 2 * F.spread, (r() - 0.5) * 2 * F.spread, -1).normalize().transformDirection(w.matrixWorld);
     const s = this.fire(p, d.multiplyScalar(F.shell).add(fi.body.vel), true, F.range / F.shell, F.damage[0] + r() * (F.damage[1] - F.damage[0]));
     s.you = s.cannon = true;
-    s.shieldHit = F.shieldHit;
     s.w = 0.22;
     this.flash(p, 0.7, '#ffd9a0', 0.05);
     this.sfx?.play('hit', 30); // felt through the airframe more than heard
@@ -869,10 +1201,17 @@ export class Weapons {
     out.label = R.label;
     out.range = range;
     out.closing = range > 1 ? -r.dot(v) / range : 0;
-    out.shield = R.K.shields ? R.shield / R.K.shields : null;
+    out.shield = null; // nobody has shields
     out.hull = R.target ? null : Math.max(0, R.hull) / R.K.hull;
     out.hits = R.target ? R.hits : null;
     return out;
+  }
+
+  /** The point defence in a line: guns up, torpedoes inbound. */
+  pdLine(red = '#ff5a4a') {
+    const up = this.pdcs.filter((g) => g.ok && g.stock > 0).length;
+    const inbound = this.torps.filter((t) => !t.dead && t.side === 'theirs').length;
+    return [`point defence ${up}/${this.pdcs.length}${inbound ? `  ·  ${inbound} torpedo${inbound > 1 ? 'es' : ''} inbound` : ''}`, inbound || up < this.pdcs.length ? red : '#cfe8ff'];
   }
 
   // --- you in the turret ---------------------------------------------------------------------------------------------
@@ -930,11 +1269,14 @@ export class Weapons {
     this.inv.copy(this.C.frame.matrixWorld).invert();
     if (mode === 'gun' && f.wheel) this.zoomStep(f.wheel > 0 ? -1 : 1);
     this.raiderFrame(dt);
-    this.emittersFrame(dt);
+    this.tubesFrame(dt);
+    this.torpsFrame(dt);
+    this.pdcFrame(dt);
     this.turretsFrame(dt, f, mode);
     this.cannonFrame(dt);
+    this.railFrame(dt);
     this.shellsFrame(dt);
-    this.shieldsFrame(dt);
+    this.roundsFrame(dt);
     this.fxFrame(dt);
     this.hud(mode, camera);
   }
@@ -995,10 +1337,7 @@ export class Weapons {
         g.fillStyle = red;
         g.fillText(`${R.label} ${range < 1000 ? Math.round(range) + ' m' : (range / 1000).toFixed(2) + ' km'}`, rp.x + b + 6, rp.y - 6);
         if (R.target) g.fillText(`HITS ${R.hits}`, rp.x + b + 6, rp.y + 10);
-        else {
-          bar(g, rp.x + b + 6, rp.y + 2, 70, R.shield / K.shields, '#8fb0ff', 'SHD');
-          bar(g, rp.x + b + 6, rp.y + 12, 70, Math.max(0, R.hull) / K.hull, red, 'HULL');
-        }
+        else bar(g, rp.x + b + 6, rp.y + 4, 70, Math.max(0, R.hull) / K.hull, red, 'HULL');
       } else {
         // Off the sight: an arrow at the edge toward it.
         const v = _d.copy(R.obj.position).applyMatrix4(camera.matrixWorldInverse);
@@ -1026,14 +1365,28 @@ export class Weapons {
         }
       }
     }
+    // Torpedoes inbound: a small red diamond on each, with its range. A shell that passes close kills one.
+    for (const tp of this.torps) {
+      if (tp.dead || tp.side !== 'theirs') continue;
+      const p = project(tp.pos);
+      if (!p) continue;
+      const d = tp.pos.distanceTo(camera.position);
+      g.strokeStyle = red;
+      g.beginPath();
+      g.moveTo(p.x, p.y - 6), g.lineTo(p.x + 6, p.y), g.lineTo(p.x, p.y + 6), g.lineTo(p.x - 6, p.y), g.closePath();
+      g.stroke();
+      g.fillStyle = red;
+      g.fillText(`TORP ${d < 1000 ? Math.round(d) + ' m' : (d / 1000).toFixed(1) + ' km'}`, p.x + 9, p.y + 4);
+    }
     // The gunner's panel.
     const deg = (a) => Math.round(((a / DEG) % 360 + 360) % 360);
     const lines = [
       [`${t.name.toUpperCase()}  ×${[1, 3, 7][this.zoom]}`, '#cfe8ff'],
       [`train ${String(deg(-t.train * t.s)).padStart(3, '0')}°  elev ${Math.round(t.elev / DEG)}°${t.rate < 1 ? (t.rate <= 0 ? '  JAMMED' : `  slow (${Math.round(t.rate * 100)}%)`) : ''}`, t.rate <= 0 ? red : t.rate < 1 ? amber : '#cfe8ff'],
       [`ready ${t.ready}/${G.rack}  magazine ${t.stock}  hoist ${t.hoist}`, t.hoist.startsWith('stopped') ? red : '#cfe8ff'],
-      [`ship's shields ${Math.round((this.shield / this.W.shields.max) * 100)}%`, this.shield > 1 ? '#8fb0ff' : red]
+      this.pdLine(red)
     ];
+    if (this.plant) lines.push([`heat sinks ${Math.round(this.plant.heat * 100)}%${this.plant.hot ? '  FULL: point defence holding' : ''}`, this.plant.hot ? red : this.plant.heat > 0.8 ? amber : '#cfe8ff']);
     if (t.fouled) lines.push(['CUTOUT: line of fire crosses the ship', red]);
     else if (t.ready <= 0) lines.push(['NO ROUNDS READY', red]);
     g.font = '13px ui-monospace, Menlo, monospace';

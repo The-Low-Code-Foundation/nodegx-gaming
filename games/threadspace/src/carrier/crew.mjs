@@ -130,7 +130,7 @@ export function boardCrew(C) {
  *  the crew member, standing in their deck's group; rejects if they could not be loaded. */
 export function placeCrew(C, s, k) {
   const room = C.rooms.get(s.room);
-  const I = C.decks.get(room.deck);
+  const I = C.interiorOf(room, s.seg); // a drum room's is its segment's (drum.mjs)
   return crewMember(k, s.dept).then((m) => {
     m.root.position.set(s.at[0], I.floorY, s.at[1]);
     m.root.rotation.y = s.yaw ?? 0;

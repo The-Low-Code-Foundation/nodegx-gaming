@@ -26,6 +26,8 @@
 #   strobe           the anti-collision light, blinked by the game
 #   eye, nozzle, decal_l, decal_r, muzzle_l, muzzle_r   empties: the pilot's eye, the drive's mouth, where the side
 #                    number goes, the cannon muzzles
+# Not looked up, but there: `cockpit` (the tub, panel, consoles, stick, throttle and the pilot's legs) and
+# `cockpit-labels` (its placards and lit legends, on one texture this script draws: see label_atlas()).
 import sys, os, json, math, random
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -61,13 +63,19 @@ M = {
     'white': K.material('NavWhite', '#ffffff', 0.0, 0.5, emit='#ffffff', strength=8),
     'strobe': K.material('Strobe', '#ffffff', 0.0, 0.5, emit='#ffffff', strength=12),
     'gun': K.material('Gun', '#262a30', 0.6, 0.4),
-    # The cockpit.
-    'tub': K.material('Tub', '#454b54', 0.2, 0.7),
-    'tubDark': K.material('TubDark', '#2c3037', 0.2, 0.75),
+    # The cockpit: grey-green panels, black padding and knobs, bright metal levers, red guards. Labels and the lit
+    # legends share one texture, drawn by `label_atlas()` (Placard, LampLegend).
+    'tub': K.material('Tub', '#3a423d', 0.2, 0.7),
+    'tubDark': K.material('TubDark', '#242927', 0.2, 0.75),
     'seat': K.material('Seat', '#2b2f35', 0.2, 0.7),
     'cushion': K.material('Cushion', '#46503f', 0.0, 0.9),
     'harness': K.material('Harness', '#b8963a', 0.0, 0.8),
-    'panel': K.material('Panel', '#2a2e33', 0.2, 0.7),
+    'panel': K.material('Panel', '#2b322e', 0.2, 0.7),
+    'panelLt': K.material('PanelLight', '#3a433d', 0.2, 0.7),
+    'pad': K.material('Pad', '#1d201f', 0.0, 0.95),
+    'switch': K.material('Switch', '#b9bdc0', 0.5, 0.35),
+    'knob': K.material('Knob', '#121314', 0.1, 0.5),
+    'guard': K.material('Guard', '#b3261c', 0.1, 0.5),
     'glare': K.material('Glare', '#121417', 0.0, 0.95),
     'bezel': K.material('Bezel', '#1c1f23', 0.3, 0.6),
     'button': K.material('Button', '#5a6068', 0.2, 0.6),
@@ -104,18 +112,214 @@ def empty(name, p):
     return e
 
 
-def quad(name, c, u, v, mat):
+def quad(name, c, u, v, mat, uv=(0, 0, 1, 1)):
     """A one-sided UV-mapped rectangle: centre `c`, half-extents along `u` (across, left to right as seen) and `v` (up),
-    all game-frame vectors. It faces u × v."""
+    all game-frame vectors. It faces u × v. `uv` is the texture's rectangle (u0, v0, u1, v1) on it, or None for none."""
     c, u, v = Vector(c), Vector(u), Vector(v)
     bm = bmesh.new()
-    uv = bm.loops.layers.uv.new('UVMap')
+    layer = bm.loops.layers.uv.new('UVMap') if uv else None
     pts = [c - u - v, c + u - v, c + u + v, c - u + v]
     vs = [bm.verts.new(K.B(*p)) for p in pts]
     f = bm.faces.new(vs)
-    for loop, t in zip(f.loops, [(0, 0), (1, 0), (1, 1), (0, 1)]):
-        loop[uv].uv = t
+    if uv:
+        u0, v0, u1, v1 = uv
+        for loop, t in zip(f.loops, [(u0, v0), (u1, v0), (u1, v1), (u0, v1)]):
+            loop[layer].uv = t
     return K._object(bm, name, [mat])
+
+
+def smooth(ob):
+    """Smooth-shaded (the legs: round things, not machined ones)."""
+    for p in ob.data.polygons:
+        p.use_smooth = True
+    return ob
+
+
+G2B = Matrix(((1, 0, 0), (0, 0, -1), (0, 1, 0)))  # the game frame to Blender's, as K.B
+
+
+def obox(name, c, ax, ay, size, mat, bevel=0.0):
+    """A box at game point `c`, turned so its own x lies along `ax` and its y along `ay` (game vectors; `ay` is squared
+    up to `ax`). `size` is (along ax, along ay, along ax × ay)."""
+    ob = K.box(name, (0, 0, 0), size, mat, bevel)
+    ax = Vector(ax).normalized()
+    ay = Vector(ay)
+    ay = (ay - ay.dot(ax) * ax).normalized()
+    az = ax.cross(ay)
+    R = G2B @ Matrix((ax, ay, az)).transposed() @ G2B.inverted()
+    ob.data.transform(Matrix.Translation(K.B(*c)) @ R.to_4x4())
+    return ob
+
+
+class Surf:
+    """A flat surface to fit things to: origin `o`, `ax` across it (left to right as the pilot reads it), `ay` up it (the
+    top of a label); `an` = ax × ay comes out of it, toward the pilot."""
+    def __init__(self, o, ax, ay):
+        self.o = Vector(o)
+        self.ax = Vector(ax).normalized()
+        ay = Vector(ay)
+        self.ay = (ay - ay.dot(self.ax) * self.ax).normalized()
+        self.an = self.ax.cross(self.ay)
+
+    def p(self, x, y, out=0.0):
+        return tuple(self.o + self.ax * x + self.ay * y + self.an * out)
+
+    def box(self, name, x, y, w, d, h, mat, out=0.0, bevel=0.0):
+        """A box standing on the surface: `w` across, `d` up it, `h` out of it, its base `out` off the surface."""
+        return obox(name, self.p(x, y, out + h / 2), self.ax, self.ay, (w, d, h), mat, bevel)
+
+    def mark(self, name, x, y, w, d, mat, out=0.0):
+        """A flat rectangle on the surface (a fastener's head, a painted mark): two triangles."""
+        return quad(name, self.p(x, y, out), self.ax * (w / 2), self.ay * (d / 2), mat, None)
+
+
+# --- labels: every placard and lit legend in the cockpit is a quad on one texture, drawn here -----------------------------
+
+LABEL_STYLE = {  # text colour, background (the surface it sits on, so only the letters show), material
+    'panel': ('#dde2da', '#2b322e', 'placard'),   # on Panel
+    'plate': ('#dde2da', '#3a433d', 'placard'),   # on PanelLight
+    'wall': ('#c9cec6', '#3a423d', 'placard'),    # on Tub
+    'tile': ('#5e6460', '#0d0e0f', 'placard'),    # an annunciator that is out
+    'green': ('#5dff9a', '#000000', 'legend'),    # lit
+    'amber': ('#ffb43a', '#000000', 'legend'),
+    'warn': ('#151515', '#d8b030', 'placard'),    # on Hazard
+    'paper': ('#2a2c30', '#e4e0d4', 'placard'),
+    'pad': ('#8d938d', '#1d201f', 'placard'),     # on Pad
+}
+LABELS = []  # (text, style, centre, ax, ay, line height, widest)
+
+
+def placard(text, style, c, ax, ay, h=0.013, maxw=None):
+    """A label at game point `c`, reading along `ax`, its top toward `ay`; `h` the height of one line of it (the capitals
+    are about half that). Drawn once every label is known (`labels()`)."""
+    LABELS.append((text, style, c, Vector(ax), Vector(ay), h, maxw))
+
+
+def label_atlas():
+    """Draws every label's text into one image (white-on-panel placards and lit legends alike), with Workbench from text
+    objects, and returns {(text, style): (u0, v0, u1, v1, width px, height px)} and the image."""
+    import tempfile
+    sc = bpy.context.scene
+    was = [o for o in sc.objects if not o.hide_render]
+    for o in was:
+        o.hide_render = True
+    PX, RH, PAD, FS = 100, 48, 8, 0.36  # pixels per Blender unit, a line's cell height, padding, font size (caps ~25 px)
+    W = 1024
+    keys = list(dict.fromkeys((t, s) for t, s, *_ in LABELS))
+    temp, cells = [], {}
+    dg = None
+    texts = {}
+    for k in keys:
+        cu = bpy.data.curves.new('label', 'FONT')
+        cu.body = k[0]
+        cu.size = FS
+        cu.space_line = 1.05
+        ob = bpy.data.objects.new('label', cu)
+        ob.scale.x = 0.84  # condensed, as cockpit lettering is
+        sc.collection.objects.link(ob)
+        temp.append(ob)
+        texts[k] = ob
+    dg = bpy.context.evaluated_depsgraph_get()
+    cap = None
+    x = y = rowh = 0
+    for k, ob in texts.items():
+        bb = [ob.matrix_world @ Vector(v) for v in ob.evaluated_get(dg).bound_box]
+        x0, x1 = min(v.x for v in bb), max(v.x for v in bb)
+        y0, y1 = min(v.y for v in bb), max(v.y for v in bb)
+        w = int((x1 - x0) * PX) + 2 * PAD
+        h = RH if '\n' not in k[0] else int((y1 - y0) * PX) + RH - 25
+        if '\n' not in k[0]:
+            y0 = y1 - 0.249 * ob.scale.y * FS / 0.36  # the capitals' height: centred on them, so Q and J sit level
+        if x + w > W:
+            x, y, rowh = 0, y + rowh + 2, 0
+        cells[k] = (x, y, w, h, (x0 + x1) / 2, (y0 + y1) / 2)
+        x += w + 2
+        rowh = max(rowh, h)
+    H = (y + rowh + 31) // 32 * 32
+    lin = lambda hx: tuple(K._lin(int(hx[i:i + 2], 16)) for i in (1, 3, 5)) + (1,)
+    for k, (cx, cy, w, h, mx, my) in cells.items():
+        fg, bg, _ = LABEL_STYLE[k[1]]
+        ob = texts[k]
+        # Centre the text in its cell (Blender y up, the image's top row at y = H).
+        ob.location.x += (cx + w / 2) / PX - mx
+        ob.location.y += (H - cy - h / 2) / PX - my
+        ob.location.z = 0.01
+        ob.color = lin(fg)
+        bm = bmesh.new()
+        vs = [bm.verts.new(((cx + a) / PX, (H - cy - b) / PX, 0)) for a, b in ((0, h), (w, h), (w, 0), (0, 0))]
+        bm.faces.new(vs)
+        me = bpy.data.meshes.new('cell')
+        bm.to_mesh(me)
+        bm.free()
+        cell = bpy.data.objects.new('cell', me)
+        cell.color = lin(bg)
+        sc.collection.objects.link(cell)
+        temp.append(cell)
+    cam = bpy.data.objects.new('atlas-cam', bpy.data.cameras.new('atlas-cam'))
+    cam.data.type = 'ORTHO'
+    cam.data.ortho_scale = max(W, H) / PX
+    cam.location = (W / 2 / PX, H / 2 / PX, 5)
+    sc.collection.objects.link(cam)
+    temp.append(cam)
+    sc.camera = cam
+    sc.render.engine = 'BLENDER_WORKBENCH'
+    sc.display.shading.light = 'FLAT'
+    sc.display.shading.color_type = 'OBJECT'
+    sc.display.render_aa = '16'
+    sc.view_settings.view_transform = 'Standard'
+    sc.render.dither_intensity = 0
+    sc.render.resolution_x, sc.render.resolution_y, sc.render.resolution_percentage = W, H, 100
+    sc.render.image_settings.file_format = 'PNG'
+    sc.render.image_settings.color_mode = 'RGB'
+    sc.render.image_settings.compression = 100
+    path = os.path.join(tempfile.mkdtemp(), 'cockpit_labels.png')
+    sc.render.filepath = path
+    bpy.ops.render.render(write_still=True)
+    img = bpy.data.images.load(path)
+    img.name = 'cockpit_labels'
+    img.pack()
+    os.remove(path)
+    for o in temp:
+        bpy.data.objects.remove(o)
+    for o in was:
+        o.hide_render = False
+    sc.camera = None
+    uv = {k: (cx / W, 1 - (cy + h) / H, (cx + w) / W, 1 - cy / H, w, h) for k, (cx, cy, w, h, _, _) in cells.items()}
+    return uv, img, RH
+
+
+def label_material(name, img, emit=0.0):
+    m = bpy.data.materials.new(name)
+    m.use_nodes = True
+    m.use_backface_culling = True
+    nt = m.node_tree
+    b = nt.nodes['Principled BSDF']
+    t = nt.nodes.new('ShaderNodeTexImage')
+    t.image = img
+    uvn = nt.nodes.new('ShaderNodeUVMap')  # named, so the exporter ties the texture to the quads' UVs
+    uvn.uv_map = 'UVMap'
+    nt.links.new(uvn.outputs['UV'], t.inputs['Vector'])
+    nt.links.new(t.outputs['Color'], b.inputs['Base Color'])
+    b.inputs['Metallic'].default_value = 0.2
+    b.inputs['Roughness'].default_value = 0.7
+    if emit:
+        nt.links.new(t.outputs['Color'], b.inputs['Emission Color'])
+        b.inputs['Emission Strength'].default_value = emit
+    return m
+
+
+def labels():
+    """Every placard() as a quad on the label texture."""
+    uv, img, RH = label_atlas()
+    mats = {'placard': label_material('Placard', img), 'legend': label_material('LampLegend', img, emit=1.6)}
+    out = []
+    for i, (text, style, c, ax, ay, h, maxw) in enumerate(LABELS):
+        u0, v0, u1, v1, w, hp = uv[(text, style)]
+        k = h / RH  # metres a pixel
+        if maxw and w * k > maxw:
+            k = maxw / w
+        out.append(quad(f'label-{i}', c, ax.normalized() * (w * k / 2), ay.normalized() * (hp * k / 2), mats[LABEL_STYLE[style][2]], (u0, v0, u1, v1)))
+    return out
 
 
 def slab(name, rings, mat, caps=True):
@@ -333,14 +537,32 @@ def can_ring(z, hw, sill, crown, n=7):
 # The glass is a thin closed sheet (solidified), so from outside and from the seat you see its near side only, as glass.
 glass = solid(slab('canopy-glass', [can_ring(*c) for c in CAN], M['glass'], caps=False), 0.012)
 cframe = []
-for i, c in enumerate(CAN[1:5]):  # the windscreen bow, two hoops, the aft bow
+def frame_strip(name, a, b, width, depth, mat=M['frame']):
+    """A flat frame member under the glass from a to b: `depth` deep into the canopy, `width` across."""
+    a, b = Vector(a), Vector(b)
+    m = (a + b) / 2
+    inward = Vector((0, SILL, m.z)) - m
+    ax = b - a
+    ay = (inward - inward.dot(ax.normalized()) * ax.normalized()).normalized()
+    return obox(name, m + ay * (depth / 2 - 0.006), ax, ay, (ax.length + depth * 0.8, depth, width), mat)
+for i, c in enumerate(CAN[1:5]):  # the windscreen bow (broad, as it carries the most), two hoops, the aft bow
     ring = can_ring(*c)
-    for a, b in zip(ring, ring[1:]):
-        cframe.append(K.cyl(f'bow-{i}-{a}', a, b, 0.03 if i == 0 else 0.022, 0.03 if i == 0 else 0.022, M['frame'], segs=6))
+    for j, (a, b) in enumerate(zip(ring, ring[1:])):
+        cframe.append(frame_strip(f'bow-{i}-{j}', a, b, 0.07 if i == 0 else 0.045, 0.04 if i == 0 else 0.03))
 for k in (2, 4):  # two longerons along the top facets, where the panes meet
     pts = [can_ring(*c)[k] for c in CAN[1:5]]
-    for a, b in zip(pts, pts[1:]):
-        cframe.append(K.cyl(f'longeron-{k}-{a}', a, b, 0.02, 0.02, M['frame'], segs=6))
+    for j, (a, b) in enumerate(zip(pts, pts[1:])):
+        cframe.append(frame_strip(f'longeron-{k}-{j}', a, b, 0.035, 0.025))
+# A grab handle inside each windscreen post, for getting in and for holding on under g.
+ws = can_ring(*CAN[1])
+for s, (a, b) in ((1, (ws[0], ws[1])), (-1, (ws[6], ws[5]))):
+    a, b = Vector(a), Vector(b)
+    p0, p1 = a + (b - a) * 0.25, a + (b - a) * 0.85
+    inn = (Vector((0, SILL + 0.1, a.z)) - (p0 + p1) / 2).normalized()
+    h0, h1 = p0 + inn * 0.075 + Vector((0, 0, 0.03)), p1 + inn * 0.075 + Vector((0, 0, 0.03))
+    cframe.append(K.cyl(f'grab-{s}', tuple(h0), tuple(h1), 0.011, 0.011, M['frame'], segs=8))
+    for e, h in ((p0, h0), (p1, h1)):
+        cframe.append(K.cyl(f'grab-leg-{s}-{e.y:.2f}', tuple(e), tuple(h), 0.009, 0.009, M['frame'], segs=6))
 for s in (-1, 1):  # the sill rails
     pts = [(s * c[1], c[2] + 0.01, c[0]) for c in CAN]
     for a, b in zip(pts, pts[1:]):
@@ -349,40 +571,140 @@ canopy = K.join([glass] + cframe, 'canopy')
 origin_at(canopy, (0, SILL, 1.16))
 
 # --- the cockpit ---------------------------------------------------------------------------------------------------------
+#
+# From the seat (the eye at EYE, looking 7° down): the main panel and its three screens under a padded glare shield, the
+# caution strip along the panel's top, the head-up display's glass on two thin posts, side consoles of switches, knobs and
+# guarded switches with their placards, the throttle on the left, the stick between your knees, your own legs, and the
+# canopy's frame round it all. The view ahead over the glare shield stays clear.
 
 EYE = (0, 1.02, -0.32)
 ck = []
 FLOOR, FRONT, BACK, HALF = -0.3, -1.8, 0.72, 0.58
+WALL = HALF - 0.015  # the tub's inner face
 ck.append(K.box('tub-floor', (0, FLOOR, (FRONT + BACK) / 2), (2 * HALF, 0.04, BACK - FRONT), M['tubDark']))
 for s in (-1, 1):
     ck.append(K.box(f'tub-side-{s}', (s * HALF, (FLOOR + SILL) / 2, (FRONT + BACK) / 2), (0.03, SILL - FLOOR, BACK - FRONT), M['tub']))
     ck.append(K.box(f'tub-sill-{s}', (s * (HALF - 0.02), SILL - 0.03, (FRONT + BACK) / 2), (0.1, 0.04, BACK - FRONT), M['tubDark']))
+    # A padded roll along the sill (your elbow), and the canopy's latch hooks.
+    ck.append(K.cyl(f'sill-pad-{s}', (s * 0.52, SILL - 0.04, -1.0), (s * 0.52, SILL - 0.04, 0.6), 0.016, 0.016, M['pad'], segs=8))
+    for z in (-0.95, -0.35, 0.25):
+        ck.append(K.box(f'latch-{s}-{z}', (s * 0.585, SILL - 0.004, z), (0.03, 0.02, 0.05), M['trim']))
 ck.append(K.box('tub-back', (0, (FLOOR + SILL) / 2, BACK), (2 * HALF, SILL - FLOOR, 0.03), M['tub']))
 ck.append(K.box('tub-front', (0, 0.1, FRONT), (2 * HALF, 0.8, 0.03), M['tub']))
 
-# The instrument panel: a slab tilted back toward the pilot, under a glare shield.
+
+def plate(S, name, x, y, w, d, title=None, mat=M['panelLt']):
+    """A raised sub-panel on surface S, held by four fasteners, its title along its top edge. Returns its own surface,
+    centred on it."""
+    ck.append(S.box(name, x, y, w, d, 0.008, mat))
+    for i, (a, b) in enumerate(((-1, -1), (1, -1), (1, 1), (-1, 1))):
+        ck.append(S.mark(f'{name}-dzus-{i}', x + a * (w / 2 - 0.009), y + b * (d / 2 - 0.009), 0.006, 0.006, M['bezel'], out=0.0085))
+    if title:
+        placard(title, 'plate' if mat == M['panelLt'] else 'panel', S.p(x, y + d / 2 - 0.017, 0.0085), S.ax, S.ay, 0.013, maxw=w - 0.04)
+    return Surf(S.p(x, y, 0.008), S.ax, S.ay)
+
+
+def toggle(P, name, x, y, label=None, style='plate'):
+    ck.append(P.box(f'{name}-nut', x, y, 0.011, 0.011, 0.004, M['switch']))
+    ck.append(K.cyl(f'{name}-lever', P.p(x, y, 0.003), P.p(x, y + 0.008, 0.026), 0.0032, 0.0024, M['switch'], segs=5))
+    if label:
+        placard(label, style, P.p(x, y - 0.019, 0.0005), P.ax, P.ay, 0.011, maxw=0.05)
+
+
+def knob(P, name, x, y, r=0.011, label=None, style='plate'):
+    ck.append(K.cyl(f'{name}-skirt', P.p(x, y, 0), P.p(x, y, 0.004), r + 0.005, r + 0.005, M['bezel'], segs=8))
+    ck.append(K.cyl(f'{name}-body', P.p(x, y, 0.004), P.p(x, y, 0.018), r, r * 0.88, M['knob'], segs=8))
+    ck.append(P.mark(f'{name}-mark', x, y + r * 0.45, 0.0025, r * 0.85, M['switch'], out=0.0182))
+    if label:
+        placard(label, style, P.p(x, y - r - 0.015, 0.0005), P.ax, P.ay, 0.011, maxw=0.05)
+
+
+def guarded(P, name, x, y, label=None, up=False, mat=M['guard'], style='plate'):
+    """A switch under a hinged cover: shut (a coloured block over it) or flipped up behind it."""
+    toggle(P, name, x, y, label, style)
+    if up:
+        ck.append(obox(f'{name}-guard', P.p(x, y + 0.017, 0.017), P.ax, P.an, (0.028, 0.034, 0.004), mat))
+        for a in (-1, 1):
+            ck.append(P.box(f'{name}-hinge-{a}', x + a * 0.012, y + 0.016, 0.004, 0.008, 0.006, M['bezel']))
+    else:
+        ck.append(P.box(f'{name}-guard', x, y + 0.003, 0.028, 0.036, 0.03, mat))
+
+
+def lamp(P, name, x, y, mat, label=None, style='plate'):
+    ck.append(P.box(f'{name}-rim', x, y, 0.016, 0.016, 0.003, M['bezel']))
+    ck.append(P.box(name, x, y, 0.011, 0.011, 0.005, mat))
+    if label:
+        placard(label, style, P.p(x, y - 0.017, 0.0005), P.ax, P.ay, 0.011, maxw=0.05)
+
+
+def dial(P, name, x, y, r, horizon=False):
+    """A round standby instrument: a bezel ring, a black face, its marks, and a needle or a horizon bar."""
+    ck.append(K.cyl(f'{name}-rim', P.p(x, y, 0), P.p(x, y, 0.012), r + 0.007, r + 0.007, M['bezel'], segs=16))
+    ck.append(K.cyl(f'{name}-face', P.p(x, y, 0.012), P.p(x, y, 0.0135), r, r, M['knob'], segs=16))
+    for i in range(8):
+        a = i * math.pi / 4
+        rad = P.ax * math.cos(a) + P.ay * math.sin(a)
+        tan = P.an.cross(rad)
+        ck.append(quad(f'{name}-tick-{i}', P.p(x + math.cos(a) * r * 0.82, y + math.sin(a) * r * 0.82, 0.0138), rad * (r * 0.14), tan * 0.0014, M['switch'], None))
+    if horizon:
+        ck.append(P.mark(f'{name}-bar', x, y - r * 0.08, r * 1.5, 0.003, M['switch'], out=0.0138))
+        ck.append(P.mark(f'{name}-ac', x, y, r * 0.5, 0.004, M['lampA'], out=0.0141))
+    else:
+        rad = P.ax * math.cos(1.1) + P.ay * math.sin(1.1)
+        ck.append(quad(f'{name}-needle', P.p(x + math.cos(1.1) * r * 0.4, y + math.sin(1.1) * r * 0.4, 0.0138), rad * (r * 0.4), P.an.cross(rad) * 0.0018, M['switch'], None))
+    ck.append(K.cyl(f'{name}-set', P.p(x - r * 0.95, y - r * 0.95, 0), P.p(x - r * 0.95, y - r * 0.95, 0.014), 0.007, 0.007, M['knob'], segs=8))
+
+
+# The instrument panel: a slab tilted back toward the pilot, the width of the tub.
 PZ, PY = -1.0, 0.6  # the panel face's centre, about 0.7 m from the pilot's eyes
 tilt = math.radians(22)
-u = (1, 0, 0)
 v = (0, math.cos(tilt), -math.sin(tilt))  # up the face, leaning away from the pilot
 n = (0, math.sin(tilt), math.cos(tilt))   # out of the face, toward the pilot
+FACE = Surf((0, PY, PZ), (1, 0, 0), v)
 def on_face(x, y, out=0.0):
-    return (x, PY + v[1] * y + n[1] * out, PZ + v[2] * y + n[2] * out)
-face = slab('panel-face', [[on_face(-0.5, -0.24, 0), on_face(0.5, -0.24, 0), on_face(0.5, 0.26, 0), on_face(-0.5, 0.26, 0)],
-                            [on_face(-0.5, -0.24, -0.25), on_face(0.5, -0.24, -0.25), on_face(0.5, 0.26, -0.25), on_face(-0.5, 0.26, -0.25)]], M['panel'])
-ck.append(face)
-# The glare shield over the panel, and the head-up display's frame on it.
+    return FACE.p(x, y, out)
+ck.append(slab('panel-face', [[on_face(-WALL, -0.24, 0), on_face(WALL, -0.24, 0), on_face(WALL, 0.26, 0), on_face(-WALL, 0.26, 0)],
+                               [on_face(-WALL, -0.24, -0.25), on_face(WALL, -0.24, -0.25), on_face(WALL, 0.26, -0.25), on_face(-WALL, 0.26, -0.25)]], M['panel']))
+
+# The glare shield: from a padded roll over the top of the panel forward to the foot of the windscreen, matt black, so
+# nothing shines in the glass.
 gtop = on_face(0, 0.26, 0.02)
-ck.append(slab('glare', [[(-0.52, gtop[1] - 0.04, gtop[2] + 0.02), (0.52, gtop[1] - 0.04, gtop[2] + 0.02), (0.52, gtop[1] + 0.04, gtop[2] + 0.02), (-0.52, gtop[1] + 0.04, gtop[2] + 0.02)],
-                         [(-0.52, gtop[1] - 0.06, gtop[2] - 0.38), (0.52, gtop[1] - 0.06, gtop[2] - 0.38), (0.52, gtop[1] + 0.02, gtop[2] - 0.38), (-0.52, gtop[1] + 0.02, gtop[2] - 0.38)]], M['glare']))
+GR = -1.06
+ck.append(slab('glare', [[(-WALL, 0.815, GR), (WALL, 0.815, GR), (WALL, 0.865, GR), (-WALL, 0.865, GR)],
+                         [(-0.6, 0.86, -1.83), (0.6, 0.86, -1.83), (0.6, 0.9, -1.83), (-0.6, 0.9, -1.83)]], M['glare']))
+ck.append(K.cyl('glare-pad', (-WALL + 0.005, 0.84, GR + 0.004), (WALL - 0.005, 0.84, GR + 0.004), 0.028, 0.028, M['pad'], segs=10))
+# The windscreen's demist vent along the far edge of the glare shield.
+gs = Surf((0, 0.9, -1.77), (1, 0, 0), (0, 0.05, -1))
+ck.append(gs.box('demist', 0, 0, 0.9, 0.05, 0.006, M['bezel']))
+ck.append(gs.box('demist-slot', 0, 0, 0.86, 0.026, 0.007, M['knob']))
+
+# The head-up display: its projector sunk in the glare shield, the combiner glass on two thin posts and nothing else, so
+# it does not box in the view.
 HUDY, HUDZ = gtop[1] + 0.15, gtop[2] - 0.1
-ck.append(K.box('hud-base', (0, gtop[1] + 0.03, HUDZ - 0.04), (0.38, 0.06, 0.16), M['bezel']))
+ck.append(obox('hud-projector', (0, 0.852, HUDZ + 0.01), (1, 0, 0), (0, 1, 0), (0.26, 0.04, 0.15), M['glare']))
+ck.append(obox('hud-lens', (0, 0.8735, HUDZ + 0.01), (1, 0, 0), (0, 1, 0), (0.2, 0.004, 0.1), M['sensor']))
 for s in (-1, 1):
-    ck.append(K.box(f'hud-post-{s}', (s * 0.19, HUDY, HUDZ), (0.02, 0.26, 0.02), M['bezel']))
+    ck.append(K.cyl(f'hud-post-{s}', (s * 0.188, 0.866, HUDZ + 0.03), (s * 0.188, HUDY + 0.118, HUDZ - 0.024), 0.0055, 0.0045, M['bezel'], segs=6))
 hud = quad('hud', (0, HUDY, HUDZ), (0.18, 0, 0), (0, 0.12, -0.025), M['hudGlass'])
 empty('hud-centre', (0, HUDY, HUDZ))
 
-# Three screens with their bezels and buttons, the left and right ones turned a little toward the pilot.
+# The caution strip along the top of the panel, under the glare shield: master caution and master warning at its ends,
+# annunciators (most out, the ones that say all is well lit green), and the up-front display in the middle.
+CY = 0.168
+for x, w, text, style in ((-0.505, 0.07, 'MASTER\nCAUTION', 'tile'), (-0.43, 0.054, 'FUEL LO', 'tile'), (-0.37, 0.054, 'RCS LO', 'tile'),
+                          (-0.31, 0.054, 'HOT', 'tile'), (-0.25, 0.054, 'CABIN P', 'tile'), (-0.19, 0.054, 'O2 LO', 'tile'),
+                          (0.19, 0.054, 'DATA LINK', 'green'), (0.25, 0.054, 'IFF', 'green'), (0.31, 0.054, 'DRIVE', 'green'),
+                          (0.37, 0.054, 'G LIM', 'tile'), (0.43, 0.054, 'FIRE', 'tile'), (0.505, 0.07, 'MASTER\nWARNING', 'tile')):
+    big = w > 0.06
+    ck.append(FACE.box(f'tile-{x}', x, CY, w, 0.034 if big else 0.03, 0.008 if big else 0.006, M['knob']))
+    if big:  # the master lights' rims: amber for caution, red for warning
+        ck.append(FACE.box(f'tile-rim-{x}', x, CY, w + 0.008, 0.042, 0.004, M['hazard'] if x < 0 else M['guard']))
+    placard(text, style, FACE.p(x, CY, 0.0085 if big else 0.0065), FACE.ax, FACE.ay, 0.0105, maxw=w - 0.01)
+ck.append(FACE.box('ufc', 0, CY, 0.25, 0.038, 0.008, M['knob']))
+placard('CVS-1   NAV   CH 02', 'green', FACE.p(0, CY, 0.0085), FACE.ax, FACE.ay, 0.017, maxw=0.23)
+
+# Three screens with their bezels, the left and right ones turned a little toward the pilot. Each bezel stands proud of
+# its glass, with a row of push buttons along every side and the brightness and contrast rockers at its top corners.
 screens = []
 for name, x, yaw, mat in (('mfd_l', -0.31, 0.25, M['screenL']), ('mfd_c', 0.0, 0.0, M['screenC']), ('mfd_r', 0.31, -0.25, M['screenR'])):
     out = 0.012 + 0.11 * abs(math.sin(yaw))  # a turned screen stands off the face, so its back edge stays clear of it
@@ -390,62 +712,242 @@ for name, x, yaw, mat in (('mfd_l', -0.31, 0.25, M['screenL']), ('mfd_c', 0.0, 0
     uu = (math.cos(yaw) * 0.1, 0, math.sin(yaw) * 0.1)
     vv = (0, v[1] * 0.1, v[2] * 0.1)
     screens.append(quad(name, c, uu, vv, mat))
-    b = on_face(x, -0.02, out - 0.006)
-    ck.append(quad(f'{name}-bezel', b, (uu[0] * 1.32, 0, uu[2] * 1.32), (0, vv[1] * 1.32, vv[2] * 1.32), M['bezel']))
-    for k in range(5):  # buttons down each side of the bezel
+    S = Surf(c, uu, vv)
+    ck.append(S.box(f'{name}-body', 0, 0, 0.29, 0.29, out + 0.045, M['bezel'], out=-(out + 0.047)))
+    E, Wd = 0.1245, 0.041  # the lip round the glass: its centre line, its width (inner edge 4 mm clear of the screen)
+    for i, (bx, by, bw, bd) in enumerate(((0, E, 0.29, Wd), (0, -E, 0.29, Wd), (E, 0, Wd, 0.208), (-E, 0, Wd, 0.208))):
+        ck.append(S.box(f'{name}-lip-{i}', bx, by, bw, bd, 0.005, M['bezel'], out=-0.002))
+    for k in range(5):
         for sd in (-1, 1):
-            p = on_face(x + sd * 0.122 * math.cos(yaw), -0.1 + k * 0.04, 0.012)
-            ck.append(K.box(f'{name}-btn-{k}-{sd}', (p[0], p[1], p[2] + sd * 0.122 * math.sin(yaw) * 0), (0.018, 0.018, 0.012), M['button']))
-# A row of lamps along the bottom of the panel, and two standby dials.
-for k in range(9):
-    p = on_face(-0.32 + k * 0.08, -0.19, 0.008)
-    ck.append(K.box(f'lamp-{k}', p, (0.022, 0.012, 0.008), [M['lampG'], M['lampA'], M['button'], M['lampG'], M['button'], M['lampR'], M['button'], M['lampG'], M['lampA']][k]))
-for x in (-0.44, 0.44):
-    ck.append(K.cyl(f'dial-{x}', on_face(x, 0.1, 0.0), on_face(x, 0.1, 0.02), 0.045, 0.045, M['bezel'], segs=16))
+            ck.append(S.box(f'{name}-osb-{k}-{sd}', sd * E, -0.08 + k * 0.04, 0.016, 0.018, 0.006, M['button'], out=0.003))
+    for k in range(4):
+        for sd in (-1, 1):
+            ck.append(S.box(f'{name}-osbh-{k}-{sd}', -0.06 + k * 0.04, sd * E, 0.018, 0.016, 0.006, M['button'], out=0.003))
+    for sd in (-1, 1):
+        ck.append(S.box(f'{name}-rocker-{sd}', sd * E, E, 0.024, 0.012, 0.007, M['knob'], out=0.003))
 
-# The side consoles: switches, a few lamps, the throttle on the left and the stick between the knees.
-r = random.Random(7)
+# A row of lamps along the bottom of the panel.
+for k, (mat, text) in enumerate(((M['lampG'], 'GEN'), (M['lampA'], 'PUMP'), (M['button'], 'BUS'), (M['lampG'], 'COOL'), (M['button'], 'RAD'),
+                                 (M['lampR'], 'HOT'), (M['button'], 'ECS'), (M['lampG'], 'LINK'), (M['lampA'], 'MAG'))):
+    x = -0.32 + k * 0.08
+    ck.append(FACE.box(f'lamp-{k}', x, -0.188, 0.022, 0.012, 0.006, mat))
+    placard(text, 'panel', FACE.p(x, -0.207, 0.0008), FACE.ax, FACE.ay, 0.0095)
+
+# The panel's outer columns: the g meter and the gear handle on the left, the standby horizon, the clock and the screens'
+# switches on the right.
+P = plate(FACE, 'col-l', -0.512, -0.04, 0.096, 0.36)
+dial(P, 'g-meter', 0, 0.115, 0.03)
+placard('G', 'plate', P.p(0, 0.067, 0.0005), P.ax, P.ay, 0.011)
+ck.append(P.box('gear-slot', 0, -0.02, 0.016, 0.09, 0.004, M['knob']))
+gb, gt = Vector(P.p(0, -0.04, 0.004)), Vector(P.p(0, -0.025, 0.06))
+ck.append(K.cyl('gear-lever', tuple(gb), tuple(gt), 0.005, 0.005, M['switch'], segs=6))
+ck.append(K.cyl('gear-wheel', tuple(gt - P.ax * 0.009), tuple(gt + P.ax * 0.009), 0.018, 0.018, M['switch'], segs=12))
+placard('GEAR', 'plate', P.p(0, -0.085, 0.0005), P.ax, P.ay, 0.012)
+toggle(P, 'magclamp', 0, -0.135, 'MAG LOCK')
+P = plate(FACE, 'col-r', 0.512, -0.04, 0.096, 0.36)
+dial(P, 'stby-adi', 0, 0.115, 0.032, horizon=True)
+placard('STBY', 'plate', P.p(0, 0.067, 0.0005), P.ax, P.ay, 0.011)
+ck.append(P.box('clock', 0, 0.03, 0.074, 0.026, 0.004, M['knob']))
+placard('T+ 00:42', 'green', P.p(0, 0.03, 0.0045), P.ax, P.ay, 0.014, maxw=0.066)
+toggle(P, 'hud-pwr', -0.022, -0.04, 'HUD')
+toggle(P, 'mfd-pwr', 0.022, -0.04, 'MFD')
+knob(P, 'brt', 0, -0.115, 0.012, 'BRT')
+
+# The pedestal under the panel, between your shins.
+ck.append(K.box('pedestal', (0, (FLOOR + 0.37) / 2, -1.02), (0.15, 0.37 - FLOOR, 0.17), M['panel']))
+PD = Surf((0, 0, -0.934), (1, 0, 0), (0, 1, 0))
+knob(PD, 'decoy', 0, 0.28, 0.013, 'DECOY', 'panel')
+toggle(PD, 'flare', 0, 0.19, 'FLARE', 'panel')
+
+# The side consoles: elbow height, a padded roll along the inboard edge, the top tiled with sub-panels.
+CT = 0.40
 for s in (-1, 1):
-    x = s * (HALF - 0.12)
-    ck.append(K.box(f'console-{s}', (x, 0.28, -0.3), (0.22, 0.12, 1.2), M['panel']))
-    for k in range(10):
-        z = -0.85 + k * 0.11
+    ck.append(K.box(f'console-{s}', (s * (0.33 + WALL) / 2, (FLOOR + CT) / 2, -0.24), (WALL - 0.33, CT - FLOOR, 1.24), M['panel']))
+    ck.append(K.cyl(f'console-pad-{s}', (s * 0.338, CT - 0.004, -0.86), (s * 0.338, CT - 0.004, 0.38), 0.017, 0.017, M['pad'], segs=8))
+def console(s, z0, z1, name, title):
+    S = Surf((s * 0.4475, CT, 0), (1, 0, 0), (0, 0, -1))
+    return plate(S, name, 0, -(z0 + z1) / 2, 0.21, z1 - z0 - 0.006, title)
+
+# Left: lights, the throttle, fuel and jets, the radio.
+P = console(-1, -0.86, -0.64, 'c-lights', 'LIGHTS')
+knob(P, 'flood', -0.06, 0.035, label='FLOOD')
+knob(P, 'inst', -0.01, 0.035, label='INST')
+toggle(P, 'nav', 0.04, 0.035, 'NAV')
+toggle(P, 'strobe-sw', 0.08, 0.035, 'STROBE')
+toggle(P, 'dome', -0.06, -0.045, 'DOME')
+toggle(P, 'form', -0.02, -0.045, 'FORM')
+knob(P, 'panel-lt', 0.05, -0.045, label='PANEL')
+P = console(-1, -0.64, -0.2, 'c-drive', 'DRIVE')
+guarded(P, 'drive-arm', -0.055, 0.13, 'ARM', up=True)
+toggle(P, 'main', -0.055, 0.06, 'MAIN')
+toggle(P, 'pump', -0.055, 0.0, 'PUMP')
+toggle(P, 'ign', -0.055, -0.06, 'IGN')
+knob(P, 'trim', -0.055, -0.13, 0.01, 'TRIM')
+# The throttle: a quadrant along the inboard edge, the lever in its slot, the grip with its thumb buttons.
+ck.append(P.box('throttle-box', 0.05, 0, 0.085, 0.36, 0.045, M['panel'], bevel=0.006))
+ck.append(P.box('throttle-slot', 0.05, 0, 0.014, 0.3, 0.002, M['knob'], out=0.045))
+for yy, text in ((-0.155, 'OFF'), (-0.06, 'IDLE'), (0.06, 'FULL'), (0.155, 'HARD')):
+    ck.append(P.box(f'detent-{text}', 0.05, yy, 0.03, 0.003, 0.001, M['switch'], out=0.045))
+    placard(text, 'plate', P.p(-0.012, yy, 0.0005), P.ax, P.ay, 0.009)
+ck.append(K.cyl('throttle-arm', P.p(0.05, -0.01, 0.045), P.p(0.066, -0.004, 0.11), 0.009, 0.008, M['switch'], segs=8))
+tg = Vector(P.p(0.07, 0.0, 0.14))
+ck.append(obox('throttle-grip', tuple(tg), P.ax, P.an, (0.055, 0.07, 0.105), M['knob'], bevel=0.014))
+ck.append(K.cyl('throttle-hat', tuple(tg + P.an * 0.034 + P.ay * 0.03), tuple(tg + P.an * 0.044 + P.ay * 0.03), 0.007, 0.006, M['switch'], segs=8))
+ck.append(K.cyl('throttle-btn', tuple(tg + P.ax * 0.026), tuple(tg + P.ax * 0.033), 0.007, 0.007, M['guard'], segs=8))
+ck.append(K.cyl('throttle-btn2', tuple(tg + P.ax * 0.026 + P.ay * 0.03 + P.an * 0.01), tuple(tg + P.ax * 0.032 + P.ay * 0.03 + P.an * 0.01), 0.005, 0.005, M['switch'], segs=6))
+P = console(-1, -0.2, 0.08, 'c-fuel', 'FUEL / RCS')
+for i, t in enumerate(('RCS A', 'RCS B', 'XFEED')):
+    toggle(P, f'fuel-a-{i}', -0.06 + i * 0.06, 0.055, t)
+for i, t in enumerate(('TANK L', 'TANK R', 'VENT')):
+    toggle(P, f'fuel-b-{i}', -0.06 + i * 0.06, -0.02, t)
+knob(P, 'bal', -0.04, -0.09, 0.011, 'BAL')
+lamp(P, 'fuel-low', 0.04, -0.09, M['lampA'], 'LOW')
+P = console(-1, 0.08, 0.38, 'c-comm', 'COMM')
+ck.append(P.box('comm-lcd', 0, 0.065, 0.13, 0.03, 0.004, M['knob']))
+placard('CH 02  CVS-1', 'green', P.p(0, 0.065, 0.0045), P.ax, P.ay, 0.015, maxw=0.12)
+for i, t in enumerate(('VOL', 'CHAN', 'SQL')):
+    knob(P, f'comm-{i}', -0.06 + i * 0.06, -0.01, 0.011, t)
+toggle(P, 'mic', -0.04, -0.09, 'MIC')
+toggle(P, 'xmit', 0.04, -0.09, 'XMIT')
+
+# Right: sensors, armament, air and oxygen, power.
+P = console(1, -0.86, -0.6, 'c-sens', 'SENSORS')
+knob(P, 'gain', -0.06, 0.04, label='GAIN')
+knob(P, 'range', 0.0, 0.04, label='RANGE')
+toggle(P, 'radar', 0.06, 0.04, 'RADAR')
+toggle(P, 'lidar', -0.06, -0.05, 'LIDAR')
+toggle(P, 'ir', 0.0, -0.05, 'IR')
+lamp(P, 'link-l', 0.06, -0.05, M['lampG'], 'LINK')
+P = console(1, -0.6, -0.3, 'c-arm', 'ARMAMENT')
+guarded(P, 'master-arm', -0.055, 0.035, 'MASTER ARM', up=True, mat=M['hazard'])
+toggle(P, 'gun-sw', 0.015, 0.035, 'GUN')
+toggle(P, 'msl-sw', 0.065, 0.035, 'MSL')
+knob(P, 'mode', -0.055, -0.06, 0.012, 'MODE')
+guarded(P, 'jett', 0.015, -0.06, 'JETT')
+lamp(P, 'arm-l', 0.07, -0.06, M['lampA'], 'ARM')
+P = console(1, -0.3, 0.02, 'c-ecs', 'ECS / O2')
+knob(P, 'temp', -0.06, 0.06, label='TEMP')
+knob(P, 'flow', 0.0, 0.06, label='FLOW')
+toggle(P, 'defog', 0.06, 0.06, 'DEFOG')
+toggle(P, 'o2', -0.06, -0.03, 'O2')
+toggle(P, 'suit-sw', -0.02, -0.03, 'SUIT')
+toggle(P, 'vent', 0.02, -0.03, 'VENT')
+lamp(P, 'o2-ok', 0.065, -0.03, M['lampG'], 'O2 OK')
+toggle(P, 'press', -0.04, -0.1, 'PRESS')
+toggle(P, 'dump', 0.04, -0.1, 'DUMP')
+P = console(1, 0.02, 0.38, 'c-pwr', 'POWER')
+for i, t in enumerate(('BATT', 'GEN 1', 'GEN 2', 'BUS TIE')):
+    toggle(P, f'pwr-{i}', -0.066 + i * 0.044, 0.08, t)
+for i, m in enumerate((M['lampG'], M['lampG'], M['lampG'], M['button'])):
+    lamp(P, f'pwr-lamp-{i}', -0.066 + i * 0.044, 0.025, m)
+guarded(P, 'emer-pwr', -0.04, -0.07, 'EMER PWR')
+knob(P, 'inv', 0.05, -0.07, 0.011, 'INV')
+
+# The walls above the consoles. Left: the canopy's lever and its jettison handle, a grab rail, quilted padding. Right: the
+# circuit breakers, the data case, a grab rail, padding.
+LW = Surf((-WALL, 0, 0), (0, 0, -1), (0, 1, 0))
+RW = Surf((WALL, 0, 0), (0, 0, 1), (0, 1, 0))
+P = plate(LW, 'canopy-panel', 0.71, 0.62, 0.25, 0.24, 'CANOPY')
+ck.append(P.box('jett-base', 0.05, 0.0, 0.06, 0.03, 0.01, M['knob']))
+ck.append(K.cyl('jett-stem', P.p(0.05, 0.0, 0.01), P.p(0.05, 0.0, 0.035), 0.006, 0.006, M['knob'], segs=6))
+for i in range(6):
+    ck.append(P.box(f'jett-bar-{i}', 0.02 + i * 0.012, 0.0, 0.012, 0.016, 0.013, M['hazard'] if i % 2 == 0 else M['knob'], out=0.033))
+placard('CANOPY JETT', 'warn', P.p(0.05, -0.04, 0.0005), P.ax, P.ay, 0.014)
+lb, lt = P.p(-0.065, -0.06, 0.0), P.p(-0.065, 0.04, 0.05)
+ck.append(P.box('canopy-lever-slot', -0.065, -0.01, 0.014, 0.13, 0.004, M['knob']))
+ck.append(K.cyl('canopy-lever', lb, lt, 0.006, 0.006, M['switch'], segs=6))
+ck.append(K.cyl('canopy-knob', lt, tuple(Vector(lt) + P.an * 0.02), 0.015, 0.013, M['knob'], segs=10))
+placard('OPEN', 'plate', P.p(-0.065, 0.085, 0.0005), P.ax, P.ay, 0.011)
+placard('CLOSE', 'plate', P.p(-0.065, -0.095, 0.0005), P.ax, P.ay, 0.011)
+P = plate(RW, 'cb-panel', -0.66, 0.63, 0.32, 0.24, 'CIRCUIT BREAKERS')
+for r_ in range(3):
+    for i in range(8):
+        x, y = -0.13 + i * 0.037, 0.04 - r_ * 0.05
+        popped = (r_, i) == (1, 5)
+        ck.append(K.cyl(f'cb-{r_}-{i}', P.p(x, y, 0), P.p(x, y, 0.018 if popped else 0.011), 0.0055, 0.0055, M['knob'], segs=6))
+        if popped:  # one out, its white collar showing
+            ck.append(K.cyl(f'cb-collar-{r_}-{i}', P.p(x, y, 0.0), P.p(x, y, 0.009), 0.006, 0.006, M['switch'], segs=6))
+ck.append(RW.box('data-case', -0.27, 0.57, 0.26, 0.19, 0.04, M['pad']))
+ck.append(RW.box('data-flap', -0.27, 0.66, 0.27, 0.06, 0.046, M['pad']))
+ck.append(RW.box('data-tab', -0.27, 0.64, 0.03, 0.035, 0.05, M['harness']))
+placard('CHECKLIST', 'pad', RW.p(-0.27, 0.54, 0.0405), RW.ax, RW.ay, 0.016)
+for S, z0, z1 in ((LW, 0.45, 0.06), (RW, -0.43, -0.07)):  # grab rails (wall x runs along -z on the left, +z on the right)
+    a, b = S.p(z0, 0.765, 0.04), S.p(z1, 0.765, 0.04)
+    ck.append(K.cyl(f'rail-{z0}', a, b, 0.011, 0.011, M['knob'], segs=8))
+    for e in (z0, z1):
+        ck.append(K.cyl(f'rail-leg-{z0}-{e}', S.p(e, 0.765, 0), S.p(e, 0.765, 0.04), 0.009, 0.009, M['knob'], segs=6))
+for S, xs in ((LW, [0.4 - i * 0.106 for i in range(7)]), (RW, [0.04 + i * 0.106 for i in range(3)])):
+    for i, x in enumerate(xs):
         for j in range(3):
-            if r.random() < 0.35:
-                continue
-            ck.append(K.box(f'sw-{s}-{k}-{j}', (x - 0.07 + j * 0.07, 0.35, z), (0.025, 0.03, 0.02), r.choice([M['button'], M['button'], M['lampG'], M['lampA']])))
-ck.append(K.cyl('throttle-arm', (-0.42, 0.34, -0.55), (-0.38, 0.5, -0.5), 0.022, 0.022, M['trim'], segs=8))
-ck.append(K.box('throttle-grip', (-0.38, 0.53, -0.5), (0.07, 0.09, 0.12), M['dark'], bevel=0.015))
-ck.append(K.cyl('stick', (0, FLOOR + 0.02, -0.82), (0, 0.32, -0.74), 0.025, 0.02, M['trim'], segs=8))
-ck.append(K.box('stick-grip', (0, 0.38, -0.73), (0.06, 0.13, 0.06), M['dark'], bevel=0.015))
-ck.append(K.box('stick-boot', (0, FLOOR + 0.05, -0.82), (0.14, 0.08, 0.14), M['tubDark'], bevel=0.02))
-# Rudder pedals under the panel.
-for s in (-1, 1):
-    ck.append(K.box(f'pedal-{s}', (s * 0.16, FLOOR + 0.15, -1.3), (0.1, 0.2, 0.03), M['trim']))
+            ck.append(S.box(f'quilt-{S.an.x}-{i}-{j}', x, 0.49 + j * 0.08, 0.1, 0.074, 0.016, M['cushion']))
 
-# The seat: pan, back, headrest, the yellow-and-black ejection handle, and the harness.
+# The seat: pan, back, headrest, the harness, and the yellow-and-black ejection handles (between the knees and at its
+# sides).
 SZ = 0.2
 ck.append(K.box('seat-pan', (0, 0.02, SZ - 0.25), (0.48, 0.12, 0.5), M['seat'], bevel=0.02))
 ck.append(K.box('seat-cushion', (0, 0.1, SZ - 0.25), (0.42, 0.05, 0.44), M['cushion']))
 ck.append(slab('seat-back', [[(-0.24, 0.05, SZ + 0.02), (0.24, 0.05, SZ + 0.02), (0.24, 0.05, SZ + 0.14), (-0.24, 0.05, SZ + 0.14)],
                               [(-0.24, 0.88, SZ + 0.18), (0.24, 0.88, SZ + 0.18), (0.24, 0.88, SZ + 0.3), (-0.24, 0.88, SZ + 0.3)]], M['seat']))
 ck.append(K.box('headrest', (0, 1.0, SZ + 0.24), (0.3, 0.26, 0.14), M['seat'], bevel=0.03))
-ck.append(K.box('eject-a', (0, 0.07, SZ - 0.52), (0.18, 0.03, 0.03), M['hazard']))
-ck.append(K.box('eject-b', (0, 0.07, SZ - 0.52), (0.06, 0.031, 0.031), M['dark']))
+for i in range(8):
+    ck.append(K.box(f'eject-{i}', (-0.07 + i * 0.02, 0.075, SZ - 0.52), (0.02, 0.024, 0.024), M['hazard'] if i % 2 == 0 else M['dark']))
 for s in (-1, 1):
     ck.append(K.box(f'seat-rail-{s}', (s * 0.27, 0.45, SZ + 0.2), (0.04, 0.9, 0.06), M['trim']))
     ck.append(K.box(f'strap-{s}', (s * 0.12, 0.7, SZ + 0.05), (0.05, 0.4, 0.02), M['harness']))
-cockpit = K.join(ck, 'cockpit')
+    for i in range(6):
+        ck.append(K.box(f'eject-side-{s}-{i}', (s * 0.262, 0.12, SZ - 0.46 + i * 0.026), (0.024, 0.024, 0.026), M['hazard'] if i % 2 == 0 else M['dark']))
 
-# --- the pilot, for the outside view (the cockpit camera does not draw them) -------------------------------------------
+# Your legs, in the flight suit, boots on the pedals; a kneeboard strapped to the left thigh. They are part of the
+# cockpit (seen from the seat); the `pilot` (the outside view only) has no legs, so they do not double up.
+for s in (-1, 1):
+    hip, knee, ankle = Vector((s * 0.11, 0.21, 0.06)), Vector((s * 0.15, 0.36, -0.56)), Vector((s * 0.2, -0.06, -1.1))
+    ck.append(smooth(K.cyl(f'thigh-{s}', tuple(hip), tuple(knee), 0.088, 0.066, M['suit'], segs=10, cap=False)))
+    ck.append(smooth(solid(K.lathe(f'knee-{s}', [(0, 0.03), (0.2, 0.058), (0.5, 0.07), (0.8, 0.058), (1, 0.03)], tuple(knee - Vector((0.07, 0, 0))), tuple(knee + Vector((0.07, 0, 0))), M['suit'], segs=10), 0.004)))
+    ck.append(smooth(K.cyl(f'shin-{s}', tuple(knee), tuple(ankle), 0.064, 0.05, M['suit'], segs=10, cap=False)))
+    up = Vector((0, 1, 0.3)).normalized()
+    bc = ankle + Vector((0, -0.05, -0.08))
+    ck.append(obox(f'boot-{s}', tuple(bc), (1, 0, 0), up, (0.1, 0.11, 0.28), M['pad'], bevel=0.018))
+    ck.append(K.cyl(f'cuff-{s}', tuple(ankle + Vector((0, -0.02, 0))), tuple(ankle + Vector((0, 0.06, -0.02))), 0.058, 0.056, M['pad'], segs=10))
+    ck.append(obox(f'pedal-{s}', tuple(bc - up * 0.064), (1, 0, 0), up, (0.12, 0.014, 0.3), M['trim']))
+    if s < 0:
+        d = (knee - hip).normalized()
+        ay = (d - d.dot(Vector((1, 0, 0))) * Vector((1, 0, 0))).normalized()
+        nrm = Vector((1, 0, 0)).cross(ay)
+        t = 0.6
+        c = hip + (knee - hip) * t + nrm * (0.088 + (0.066 - 0.088) * t + 0.004)
+        ck.append(obox('kneeboard', tuple(c), (1, 0, 0), ay, (0.13, 0.18, 0.006), M['knob']))
+        ck.append(obox('kneeboard-clip', tuple(c + ay * 0.082 + nrm * 0.005), (1, 0, 0), ay, (0.06, 0.016, 0.008), M['switch']))
+        placard('CVS-1 RECOVERY\nCASE I    CH 02\nLANE 4 M/S  4 KM\nJOKER 30  BINGO 15', 'paper', tuple(c + nrm * 0.0032 - ay * 0.012), (1, 0, 0), ay, 0.02, maxw=0.115)
+        for k_, tt in enumerate((0.42, 0.8)):
+            p = hip + (knee - hip) * tt
+            r_ = 0.088 + (0.066 - 0.088) * tt + 0.003
+            ck.append(K.cyl(f'kb-strap-{k_}', tuple(p - d * 0.012), tuple(p + d * 0.012), r_, r_, M['knob'], segs=10))
+
+# The stick between your knees: a rubber boot, the shaft, and a grip with its hat switch, trigger and red button.
+ck.append(K.cyl('stick-boot-0', (0, FLOOR + 0.02, -0.6), (0, FLOOR + 0.07, -0.6), 0.085, 0.065, M['pad'], segs=10))
+ck.append(K.cyl('stick-boot-1', (0, FLOOR + 0.07, -0.6), (0, FLOOR + 0.12, -0.596), 0.065, 0.045, M['pad'], segs=10))
+ck.append(K.cyl('stick-boot-2', (0, FLOOR + 0.12, -0.596), (0, FLOOR + 0.18, -0.59), 0.045, 0.026, M['pad'], segs=10))
+ck.append(K.cyl('stick', (0, FLOOR + 0.1, -0.596), (0, 0.345, -0.53), 0.015, 0.013, M['trim'], segs=8))
+sy = Vector((0, 1, 0.25)).normalized()
+sg = Vector((0, 0.405, -0.515))
+ck.append(obox('stick-grip', tuple(sg), (1, 0, 0), sy, (0.042, 0.13, 0.05), M['knob'], bevel=0.012))
+ck.append(K.cyl('stick-hat', tuple(sg + sy * 0.064 + Vector((0, 0, 0.008))), tuple(sg + sy * 0.074 + Vector((0, 0, 0.008))), 0.007, 0.006, M['switch'], segs=8))
+ck.append(K.cyl('stick-pickle', tuple(sg + sy * 0.058 + Vector((-0.012, 0, -0.016))), tuple(sg + sy * 0.068 + Vector((-0.012, 0, -0.016))), 0.006, 0.006, M['guard'], segs=8))
+ck.append(obox('stick-trigger', tuple(sg + sy * 0.03 + Vector((0, 0, -0.032))), (1, 0, 0), sy, (0.012, 0.03, 0.012), M['switch']))
+
+cockpit = K.join(ck, 'cockpit')
+cockpit_labels = K.join(labels(), 'cockpit-labels')
+
+# --- the pilot, for the outside view (the cockpit camera does not draw them; the legs are the cockpit's) ----------------
 
 pl = []
 pl.append(K.box('torso', (0, 0.5, SZ - 0.02), (0.4, 0.55, 0.26), M['suit'], bevel=0.06))
-pl.append(K.box('thighs', (0, 0.2, SZ - 0.38), (0.36, 0.16, 0.5), M['suit'], bevel=0.05))
-pl.append(K.box('shins', (0, 0.0, SZ - 0.72), (0.32, 0.4, 0.14), M['suit'], bevel=0.04))
 for s in (-1, 1):
-    pl.append(K.cyl(f'arm-{s}', (s * 0.22, 0.7, SZ), (s * 0.24, 0.42, SZ - 0.3), 0.06, 0.05, M['suit'], segs=8))
-    pl.append(K.cyl(f'fore-{s}', (s * 0.24, 0.42, SZ - 0.3), (s * 0.12 if s > 0 else -0.36, 0.42, SZ - 0.6), 0.05, 0.045, M['suit'], segs=8))
+    sh, el = (s * 0.2, 0.68, 0.12), ((0.22, 0.44, -0.12) if s > 0 else (-0.28, 0.46, -0.1))
+    hand = (0.02, 0.42, -0.5) if s > 0 else (-0.37, 0.55, -0.42)
+    pl.append(K.cyl(f'arm-{s}', sh, el, 0.06, 0.05, M['suit'], segs=8))
+    pl.append(K.cyl(f'fore-{s}', el, hand, 0.05, 0.042, M['suit'], segs=8))
+    pl.append(K.box(f'glove-{s}', hand, (0.06, 0.07, 0.08), M['suit']))
 pl.append(solid(K.lathe('helmet', [(0, 0.02), (0.12, 0.1), (0.4, 0.15), (0.75, 0.14), (0.92, 0.09), (1, 0.0)], (0, 0.86, -0.2), (0, 1.18, -0.2), M['helmet'], segs=16), 0.02))
 pl.append(K.box('visor', (0, 1.0, -0.33), (0.2, 0.09, 0.04), M['visor'], bevel=0.02))
 pilot = K.join(pl, 'pilot')

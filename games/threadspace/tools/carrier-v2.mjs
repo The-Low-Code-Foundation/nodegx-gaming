@@ -1,0 +1,590 @@
+// Builds the spin-drum carrier's layout, ships/carrier.layout.json, from its design.
+//
+//   node tools/carrier-v2.mjs            # from this folder; writes the layout and prints its checks
+//   node tools/carrier-v2.mjs --check    # checks only, writes nothing
+//
+// The design is design/carrier-v2.design.json (made in design/ship-designer.html). The drum's rooms come from the
+// designer's own room plan (its `// ==LOGIC==` block, run here), so changing the design and running this again moves
+// them. The weightless hull's rooms (bow, spine, hangar, stern, bridge tower) are written out below, sized from the
+// design's sections. The parts of today's layout that are not about where things are (the fighter, the weapons'
+// numbers, integrity, the plant, damage control) are carried over from the first carrier's, ships/carrier-v1.layout.json.
+//
+// Frame: metres, x starboard, y up, -z the bow, as every ship here. The ship's axis (the drums' axis and the spine) is
+// x = 0, y = 0, and the ship runs from z = -length/2 (bow) to +length/2.
+//
+// Drum rooms are not in `compartments`: they are in `drum.rooms`, each in its own segment's frame. Segment k of a
+// drum's 40 is turned 2πk/40 about the axis (from straight down, the way the drum spins); in that frame a room is an
+// ordinary box: x across the segment, z along the ship, and its deck's floor at y = -floorR (down is out, away from the
+// axis). So the game can build a segment's rooms the way it builds a deck today, and spin the lot.
+
+import { readFileSync, writeFileSync } from 'node:fs';
+
+const here = (p) => new URL('../' + p, import.meta.url);
+const CHECK_ONLY = process.argv.includes('--check');
+
+// ---- the design, and the designer's own sums ----
+const html = readFileSync(here('design/ship-designer.html'), 'utf8');
+const logic = html.slice(html.indexOf('// ==LOGIC=='), html.indexOf('// ==/LOGIC=='));
+const D = await import('data:text/javascript,' + encodeURIComponent(logic + '\nexport { analyze, drumLayout, USE, capOf };'));
+const design = JSON.parse(readFileSync(here('design/carrier-v2.design.json')));
+const A = D.analyze(design);
+const v1 = JSON.parse(readFileSync(here('ships/carrier-v1.layout.json')));
+
+const T = A.T;
+const sec = {}; // each section's z range, by type (drums as drum-a, drum-b)
+{
+  let z = -T / 2, drums = 0;
+  for (const x of A.secs) {
+    const id = x.s.type === 'drum' ? `drum-${'ab'[drums++]}` : x.s.type;
+    sec[id] = { s: x.s, size: x.size, z: [z, z + x.size.L], mass: Object.values(x.mass).reduce((a, b) => a + b, 0), spin: x.spin, i: x.i };
+    z += x.size.L;
+  }
+}
+const need = (cond, msg) => { if (!cond) throw new Error(msg); };
+need(sec.bow && sec['drum-a'] && sec['drum-b'] && sec.hangar && sec.stern, 'The generator expects bow, two drums, hangar, stern.');
+const r1 = (v) => Math.round(v * 10) / 10;
+const r3 = (v) => Math.round(v * 1000) / 1000;
+
+const bow = sec.bow, hgr = sec.hangar, stn = sec.stern, dA = sec['drum-a'], dB = sec['drum-b'];
+const SKIN = 1; // the hull's own frames and armour, in from the skin
+
+// ---- the hull ----
+// A loft of chamfered sections like today's (`c` is the chamfer as a share of the smaller half-size; 0.586 makes a
+// regular octagon, the nearest the loft gets to the drum's round sleeve). Two sections close together make a step.
+const sleeveR = dA.size.w / 2; // the fixed armoured sleeve's outer radius
+const step = 0.3;
+const bs = bow.s;
+const hull = {
+  main: [
+    { z: bow.z[0], w: r1(bs.w * bs.taper), h: r1(bs.h * bs.taper), y: 0 },
+    { z: r1(bow.z[0] + bs.L * 0.45), w: r1(bs.w * 0.92), h: r1(bs.h * 0.92), y: 0 },
+    { z: bow.z[1] - step, w: bs.w, h: bs.h, y: 0 },
+    { z: dA.z[0], w: 2 * sleeveR, h: 2 * sleeveR, y: 0, c: 0.586 },
+    { z: dB.z[1], w: 2 * sleeveR, h: 2 * sleeveR, y: 0, c: 0.586 },
+    { z: hgr.z[0] + step, w: hgr.s.w, h: hgr.s.h, y: 0 },
+    { z: hgr.z[1] - step, w: hgr.s.w, h: hgr.s.h, y: 0 },
+    { z: stn.z[0], w: stn.s.w, h: stn.s.h, y: 0 },
+    { z: stn.z[1], w: stn.s.w, h: stn.s.h, y: 0 },
+  ],
+  // The bridge tower on the stern's back, like a star destroyer's. Inside 18..32 m up.
+  island: [
+    { z: stn.z[0] + 5, w: 16, h: 6, y: 20, c: 0.2 },
+    { z: stn.z[0] + 13, w: 24, h: 16, y: 25, c: 0.2 },
+    { z: stn.z[0] + 35, w: 24, h: 16, y: 25, c: 0.2 },
+    { z: stn.z[0] + 43, w: 14, h: 8, y: 22, c: 0.2 },
+  ],
+};
+
+/** Inside the loft `S` at (x, y, z), `inset` metres in from the skin. */
+function inLoft(S, x, y, z, inset = SKIN) {
+  if (z < S[0].z || z > S[S.length - 1].z) return false;
+  let i = 0;
+  while (S[i + 1].z < z) i++;
+  const t = (z - S[i].z) / (S[i + 1].z - S[i].z || 1);
+  const lerp = (k, d = 0) => (S[i][k] ?? d) + ((S[i + 1][k] ?? d) - (S[i][k] ?? d)) * t;
+  const a = lerp('w') / 2 - inset, b = lerp('h') / 2 - inset, cy = lerp('y'), c = Math.min(a, b) * lerp('c', 0.32);
+  const px = Math.abs(x), py = Math.abs(y - cy);
+  return px <= a && py <= b && px + py <= a + b - c;
+}
+const inHull = (x, y, z, inset) => inLoft(hull.main, x, y, z, inset) || inLoft(hull.island, x, y, z, inset);
+
+// ---- the weightless hull's decks ----
+// Down is the ship's -y, as today; with no spin and no burn the crew wear grip shoes. Floors in metres.
+const decks = [
+  { id: 1, name: 'Bridge tower', floor: 26 },
+  { id: 2, name: 'Crew tunnel deck', floor: 13 },
+  { id: 3, name: 'Upper deck', floor: 3 },
+  { id: 4, name: 'Spine deck', floor: -1.5 },
+  { id: 5, name: 'Lower deck', floor: -6.5 },
+  { id: 6, name: 'Hangar floor', floor: -12 },
+  { id: 7, name: 'Keel passage deck', floor: -16.4 },
+];
+const floorOf = Object.fromEntries(decks.map((d) => [d.id, d.floor]));
+
+const comps = [];
+/** A walkable room. */
+const W = (id, name, deck, system, x, z, more = {}) => comps.push({ id, name, deck, access: 'walk', system, x, z, ...more });
+/** A sealed compartment (machinery, tanks, magazines). */
+const X = (id, name, system, x, y, z, more = {}) => comps.push({ id, name, access: 'sealed', system, x, y, z, ...more });
+
+// Bow: the forward torpedo battery, the bow turrets, point defence, sensors. Spine passage on deck 4.
+{
+  const z0 = bow.z[0], z1 = bow.z[1] - 0.2;
+  X('tube-nest', 'Forward torpedo tubes', 'magazine', [-9, 9], [-5, 5], [z0 + 3, z0 + 15.6]);
+  W('torpedo-room', 'Forward torpedo room', 4, 'magazine', [-10, 10], [z0 + 16, z0 + 29.6], { h: 3.6, fit: 'machines' });
+  X('missile-mag', 'Torpedo magazine', 'magazine', [-12, 12], [-8.8, -2], [z0 + 17, z0 + 29.6]);
+  W('bow-passage', 'Bow passage', 4, 'corridor', [-1.5, 1.5], [z0 + 30, z1]);
+  W('sensor-proc', 'Sensor processing', 4, 'sensors', [-12, -1.9], [z0 + 30, z0 + 41.6], { fit: 'office' });
+  W('repair-fwd', 'Forward repair locker', 4, 'damage', [1.9, 12], [z0 + 30, z0 + 41.6], { fit: 'lockers' });
+  W('security', 'Security office', 4, 'armoury', [-12, -1.9], [z0 + 42, z0 + 53.6], { fit: 'office' });
+  W('fan-fwd', 'Forward fan room', 4, 'life-support', [1.9, 12], [z0 + 42, z0 + 53.6], { fit: 'machines' });
+  X('aux-fwd', 'Forward auxiliary machinery', 'aux', [-12, -1.9], [-1.5, 2.3], [z0 + 54, z1]);
+  X('stores-fwd', 'Forward stores', 'stores', [1.9, 12], [-1.5, 2.3], [z0 + 54, z1]);
+  X('pdc-mag-p', 'Point defence magazine, port', 'pdc', [-20, -12.4], [-6, 2.3], [z0 + 42, z0 + 64]);
+  X('pdc-mag-s', 'Point defence magazine, starboard', 'pdc', [12.4, 20], [-6, 2.3], [z0 + 42, z0 + 64]);
+  // Deck 3, over the spine
+  W('bow-upper', 'Bow upper passage', 3, 'corridor', [-1.5, 1.5], [z0 + 32, z0 + 64]);
+  W('sensor-ops', 'Sensor operations', 3, 'sensors', [-10, -1.9], [z0 + 32, z0 + 43.6], { fit: 'office' });
+  W('armoury', 'Armoury', 3, 'armoury', [1.9, 10], [z0 + 32, z0 + 43.6], { fit: 'lockers' });
+  W('dorsal-access', 'Bow dorsal turret access', 3, 'turret', [1.9, 10], [z0 + 44, z0 + 55.6]);
+  W('brig', 'Brig', 3, 'armoury', [-10, -1.9], [z0 + 44, z0 + 55.6], { fit: 'cells' });
+  // Deck 5, under it
+  W('bow-lower', 'Bow lower passage', 5, 'corridor', [-1.5, 1.5], [z0 + 32, z0 + 64]);
+  W('ventral-access', 'Bow ventral turret access', 5, 'turret', [1.9, 10], [z0 + 44, z0 + 55.6]);
+  W('ordnance-shop', 'Torpedo workshop', 5, 'magazine', [-10, -1.9], [z0 + 32, z0 + 43.6], { fit: 'workshop' });
+  W('cold-stores', 'Cold stores', 5, 'stores', [1.9, 10], [z0 + 32, z0 + 43.6], { fit: 'shelves' });
+  // The bow turrets, top and bottom on the centreline (a pair fired together cancels the roll)
+  const tz = z0 + 52;
+  X('dorsal-barbette', 'Bow dorsal barbette', 'turret', [-4, 4], [7.2, 11.2], [tz - 4, tz + 4]);
+  X('magazine', 'Bow dorsal magazine', 'magazine', [-8, 8], [7.2, 11.2], [tz + 4.4, tz + 14]);
+  X('ventral-barbette', 'Bow ventral barbette', 'turret', [-4, 4], [-11.2, -7.2], [tz - 4, tz + 4]);
+  X('magazine-fwd', 'Bow ventral magazine', 'magazine', [-8, 8], [-11.2, -7.2], [tz + 4.4, tz + 14]);
+}
+
+// Through the drums: the fixed spine, on the axis. The hub rings turn round it (in `drum`).
+W('spine', 'Spine', 4, 'corridor', [-1.5, 1.5], [dA.z[0] + 0.2, dB.z[1] - 0.2], { float: true });
+
+// Hangar: airless and weightless. The crew tunnel along its roof, the keel passage under its floor, both pressurised.
+const hz0 = hgr.z[0], hz1 = hgr.z[1];
+const doorZ = [hz0 + 42, hz0 + 80]; // the launch doors, both sides
+const hTurrets = [hz0 + 20, hz0 + 58, hz0 + 96];
+{
+  W('fwd-trunk', 'Forward trunk', 4, 'corridor', [-1.5, 1.5], [hz0 + 0.4, hz0 + 3.6], { float: true });
+  // The way into the airless hangar from inside the ship: an airlock under the forward trunk.
+  W('hangar-lock', 'Hangar airlock', 6, 'corridor', [-3, 3], [hz0 + 0.4, hz0 + 3.6], { h: 3.2, airlock: true });
+  W('hangar', 'Hangar', 6, 'hangar', [-17.5, 17.5], [hz0 + 4, hz0 + 98], {
+    h: 23, vacuum: true,
+    bayDoors: [{ side: 'w', from: doorZ[0], to: doorZ[1], height: 18 }, { side: 'e', from: doorZ[0], to: doorZ[1], height: 18 }],
+  });
+  X('ordnance-p', 'Broadside tubes, port, forward', 'magazine', [-22, -17.9], [-12, 11], [hz0 + 4, doorZ[0] - 0.4]);
+  X('ordnance-s', 'Broadside tubes, starboard, forward', 'magazine', [17.9, 22], [-12, 11], [hz0 + 4, doorZ[0] - 0.4]);
+  X('ordnance-p-aft', 'Broadside tubes, port, aft', 'magazine', [-22, -17.9], [-12, 11], [doorZ[1] + 0.4, hz1 - 2.4]);
+  X('ordnance-s-aft', 'Broadside tubes, starboard, aft', 'magazine', [17.9, 22], [-12, 11], [doorZ[1] + 0.4, hz1 - 2.4]);
+  X('aircraft-spares', 'Aircraft spares', 'stores', [-17.5, -0.4], [-12, -2], [hz0 + 98.4, hz1 - 2.4]);
+  X('fighter-ordnance', 'Fighter ordnance', 'magazine', [0, 17.5], [-12, -2], [hz0 + 98.4, hz1 - 2.4]);
+  X('fighter-fuel', 'Fighter propellant', 'tanks', [-17.5, 17.5], [-1.6, 10], [hz0 + 98.4, hz1 - 2.4]);
+  // The crew tunnel and the rooms beside it (deck 2). Pilots get to the fighters down boarding tubes, never in suits.
+  W('tunnel', 'Crew tunnel', 2, 'corridor', [-1.5, 1.5], [hz0 + 0.4, hz1 - 0.2], { float: true });
+  W('pilots-ready', 'Pilots’ ready room', 2, 'flight', [1.9, 12], [hz0 + 4, hz0 + 15.6], { fit: 'briefing' });
+  W('flight-gear', 'Flight gear', 2, 'flight', [1.9, 12], [hz0 + 16, hz0 + 27.6], { fit: 'lockers' });
+  W('flight-ops', 'Flight operations', 2, 'flight', [1.9, 12], [hz0 + 28, hz0 + 39.6], { fit: 'office' });
+  W('flight-control', 'Flight control', 2, 'flight', [1.9, 12], [hz0 + 40, hz0 + 51.6], { fit: 'office' });
+  W('repair-mid', 'Midships repair locker', 2, 'damage', [1.9, 12], [hz0 + 52, hz0 + 63.6], { fit: 'lockers' });
+  W('avionics', 'Avionics workshop', 2, 'repair', [1.9, 12], [hz0 + 64, hz0 + 75.6], { fit: 'workshop' });
+  W('fan-mid', 'Midships fan room', 2, 'life-support', [1.9, 12], [hz0 + 76, hz0 + 87.6], { fit: 'machines' });
+  W('aircrew', 'Aircrew office', 2, 'flight', [-14, -1.9], [hz0 + 24.4, hz0 + 53.6], { fit: 'office' });
+  W('flight-equip', 'Flight equipment', 2, 'flight', [-14, -1.9], [hz0 + 62.4, hz0 + 91.6], { fit: 'shelves' });
+  // The keel passage under the hangar floor, between the tanks (deck 7)
+  W('keel', 'Keel passage', 7, 'corridor', [-1.5, 1.5], [hz0 + 0.4, hz1 - 0.2], { h: 3.2, float: true });
+  // Turrets: three on the roof (port of the tunnel) and three under the floor (starboard of the keel)
+  hTurrets.forEach((z, i) => {
+    X(`barbette-h${i + 1}d`, `Hangar dorsal barbette ${i + 1}`, 'turret', [-14, -6], [12.2, 16.8], [z - 4, z + 4]);
+    X(`barbette-h${i + 1}v`, `Hangar ventral barbette ${i + 1}`, 'turret', [6, 14], [-16.8, -12.4], [z - 4, z + 4]);
+  });
+  // Propellant under the floor: port all along, starboard between the ventral barbettes
+  X('hangar-bottom', 'Hangar bottom tanks, port', 'tanks', [-16, -1.9], [-16.8, -12.4], [hz0 + 0.4, hz1 - 0.4]);
+  [[hz0 + 0.4, hTurrets[0] - 4.4], [hTurrets[0] + 4.4, hTurrets[1] - 4.4], [hTurrets[1] + 4.4, hTurrets[2] - 4.4], [hTurrets[2] + 4.4, hz1 - 0.4]]
+    .forEach((z, i) => X(`hangar-bottom-${i + 2}`, `Hangar bottom tanks, starboard ${i + 1}`, 'tanks', [1.9, 16], [-16.8, -12.4], z));
+  X('pdc-mag-h', 'Point defence magazine, hangar', 'pdc', [-14, -1.9], [12.2, 16.8], [hz0 + 4, hTurrets[0] - 4.4]);
+}
+
+// Stern: engines, reactor, radiators, the CIC in the armoured hull, the bridge tower on top.
+const sz0 = stn.z[0], sz1 = stn.z[1];
+{
+  W('eng-passage', 'Engineering passage', 2, 'corridor', [-1.5, 1.5], [sz0 + 0.2, sz0 + 44.6]);
+  W('cic', 'Combat information centre', 2, 'bridge', [-14, -1.9], [sz0 + 4, sz0 + 20.6]);
+  W('damage-control', 'Damage control centre', 2, 'damage', [-14, -1.9], [sz0 + 21, sz0 + 32.6]);
+  W('switchboard', 'Main switchboard', 2, 'power', [-14, -1.9], [sz0 + 33, sz0 + 38.6], { fit: 'machines' });
+  W('dc-store', 'Damage control store', 2, 'damage', [-14, -1.9], [sz0 + 39, sz0 + 44.6], { fit: 'shelves' });
+  W('flag-plot', 'Flag plot', 2, 'bridge', [1.9, 14], [sz0 + 4, sz0 + 12.6], { fit: 'office' });
+  W('comms', 'Communications', 2, 'bridge', [1.9, 14], [sz0 + 13, sz0 + 20.6], { fit: 'office' });
+  W('eng-control', 'Engineering control', 2, 'engineering', [1.9, 14], [sz0 + 21, sz0 + 36.6]);
+  W('eng-office', 'Engineer’s office', 2, 'engineering', [1.9, 14], [sz0 + 37, sz0 + 44.6], { fit: 'office' });
+  // The bridge tower (deck 1)
+  W('bridge', 'Bridge', 1, 'bridge', [-10, 10], [sz0 + 13.5, sz0 + 25], {
+    h: 3.5,
+    windows: [{ side: 'w', from: sz0 + 14, to: sz0 + 24.5, sill: 0.45, head: 3.3 }, { side: 'e', from: sz0 + 14, to: sz0 + 24.5, sill: 0.45, head: 3.3 }],
+  });
+  W('tower-passage', 'Tower passage', 1, 'corridor', [-1.5, 1.5], [sz0 + 25.4, sz0 + 34.6]);
+  W('nav-office', 'Navigation office', 1, 'bridge', [-10, -1.9], [sz0 + 25.4, sz0 + 34.6], { fit: 'office' });
+  W('captains-cabin', 'Captain’s cabin', 1, 'quarters', [1.9, 10], [sz0 + 25.4, sz0 + 34.6], { fit: 'office' });
+  // Machinery, sealed
+  W('keel-aft', 'Aft keel lobby', 7, 'corridor', [-1.5, 1.5], [sz0 + 0.2, sz0 + 4.6], { h: 3.2, float: true });
+  X('barbette-sv', 'Stern ventral barbette', 'turret', [-5, 5], [-16.8, -6], [sz0 + 5, sz0 + 13]);
+  X('magazine-sv', 'Stern ventral magazine', 'magazine', [-5, 5], [-16.8, -6], [sz0 + 13.4, sz0 + 18.6]);
+  X('tanks-aft', 'Aft tanks, port', 'tanks', [-18, -5.4], [-16.4, -3], [sz0 + 5, sz0 + 18.6]);
+  X('tanks-aft-s', 'Aft tanks, starboard', 'tanks', [5.4, 18], [-16.4, -3], [sz0 + 5, sz0 + 18.6]);
+  X('drone-bay', 'Repair drone bay', 'repair', [-18, -6.4], [-2.6, 12.2], [sz0 + 5, sz0 + 18.6]);
+  X('heatsink-p', 'Heat sinks', 'heat', [-6, 6], [-2.6, 12.2], [sz0 + 5, sz0 + 18.6]);
+  X('heatsink-s', 'Heat sinks, starboard', 'heat', [6.4, 18], [-2.6, 12.2], [sz0 + 5, sz0 + 18.6]);
+  X('reactor', 'Fusion reactor', 'reactor', [-12, 12], [-14, 8], [sz0 + 19, sz0 + 35]);
+  X('power', 'Power plant', 'power', [-22, -12.4], [-10, 8], [sz0 + 19, sz0 + 35]);
+  X('life-support', 'Life support', 'life-support', [12.4, 22], [-10, 8], [sz0 + 19, sz0 + 35]);
+  X('coolant-header', 'Coolant header', 'cooling', [-18, 18], [8.4, 12.2], [sz0 + 19, sz0 + 44.6]);
+  X('drive', 'Main drive machinery', 'drive', [-20, 20], [-14, 8], [sz0 + 35.4, sz1 - 1.4]);
+  X('barbette-sd', 'Stern dorsal barbette', 'turret', [-5, 5], [8.4, 16.8], [sz0 + 45, sz1 - 1.4]);
+}
+
+// The rest of the fixed hull: a warship has no empty space to spare (`node tools/carrier-space.mjs
+// ships/carrier.layout.json` maps what is left). Tanks and stores against the skin, the machinery that serves the
+// rooms beside it, the structure the hangar hangs from.
+{
+  const z0 = bow.z[0], bz1 = bow.z[1] - 0.2, tz = z0 + 52;
+  const both = (id, name, system, x, y, z) => { X(`${id}-p`, `${name}, port`, system, [-x[1], -x[0]], y, z); X(`${id}-s`, `${name}, starboard`, system, x, y, z); };
+  // Bow
+  X('sensor-array', 'Forward sensor array', 'sensors', [-10, 10], [3.2, 8], [z0 + 16, z0 + 29.6]);
+  both('torpedo-wing', 'Torpedo room wing stores', 'stores', [10.4, 15], [-1.5, 3], [z0 + 17, z0 + 29.6]);
+  X('sensor-bay', 'Sensor equipment bay', 'sensors', [-10, 10], [7.2, 10], [z0 + 32, tz - 4.4]);
+  both('bow-upper-stores', 'Bow upper stores', 'stores', [10.4, 19], [3, 9], [z0 + 32, bz1]);
+  both('bow-upper-aft', 'Bow upper machinery', 'aux', [1.9, 10], [3, 6.8], [z0 + 56, bz1]);
+  X('bow-bilge', 'Bow lower tanks', 'tanks', [-12, 12], [-10.6, -7], [z0 + 32, tz - 4.4]);
+  both('bow-lower-wing', 'Bow lower stores', 'stores', [10.4, 17], [-6.5, -2], [z0 + 32, z0 + 41.6]);
+  both('bow-lower-aft', 'Bow lower machinery', 'aux', [1.9, 10], [-6.5, -2.7], [z0 + 56, bz1]);
+  X('ventral-wing-p', 'Bow ventral turret wing, port', 'tanks', [-10, -1.9], [-6.5, -2.7], [z0 + 44, z0 + 55.6]);
+  // Hangar: the roof girders the crew tunnel deck stands on, the bay door housings over the doors, bulkhead tanks at
+  // both ends, air trunking outboard of the tunnel deck's rooms, bilge tanks outboard of the bottom tanks.
+  X('hangar-roof', 'Hangar roof girders', 'aux', [-21, 21], [11.4, 12.1], [hz0 + 4, hz1 - 2.4]);
+  both('bay-housing', 'Bay door housing', 'aux', [17.9, 22], [6.4, 11], [doorZ[0], doorZ[1]]);
+  both('hangar-fwd-tanks', 'Forward hangar bulkhead tanks', 'tanks', [3.4, 20], [-12, 12.8], [hz0 + 0.4, hz0 + 3.6]);
+  both('hangar-aft-tanks', 'Aft hangar bulkhead tanks', 'tanks', [1.9, 20], [-12, 12.8], [hz1 - 2.2, hz1 - 0.4]);
+  X('tunnel-air-p', 'Tunnel deck air trunking, port', 'life-support', [-17, -14.4], [13, 16.8], [hz0 + 4, hz1 - 2.4]);
+  X('tunnel-air-s', 'Tunnel deck air trunking, starboard', 'life-support', [12.4, 17], [13, 16.8], [hz0 + 4, hz1 - 2.4]);
+  both('hangar-bilge', 'Hangar bilge tanks', 'tanks', [16.4, 19], [-15, -12.4], [hz0 + 0.4, hz1 - 0.4]);
+  hTurrets.forEach((z, i) => X(`hoist-h${i + 1}d`, `Hangar dorsal turret ${i + 1} hoist`, 'turret', [-5.6, -1.9], [12.2, 16.8], [z - 4, z + 4]));
+  W('mid-stores', 'Midships stores', 2, 'stores', [1.9, 12], [hz0 + 88, hz0 + 99.6], { fit: 'shelves' });
+  W('heads-mid', 'Midships washroom', 2, 'water', [1.9, 12], [hz0 + 100, hz1 - 2.6], { fit: 'washroom' });
+  W('aircrew-rest', 'Aircrew rest room', 2, 'welfare', [-14, -1.9], [hz0 + 100.4, hz1 - 2.6], { fit: 'tables' });
+  // Stern
+  both('stern-fwd-tanks', 'Forward stern tanks', 'tanks', [1.9, 18], [-15, 12.6], [sz0 + 0.4, sz0 + 4.6]);
+  both('eng-air', 'Engineering air trunking', 'life-support', [14.4, 18.6], [13, 16.6], [sz0 + 0.2, sz0 + 44.6]);
+  both('radiator-root', 'Radiator roots', 'heat', [5.4, 18.8], [8.4, 16.4], [sz0 + 45, sz1 - 1.4]);
+  X('reactor-shield', 'Reactor shield tanks', 'tanks', [-12, 12], [-16.6, -14.4], [sz0 + 19, sz0 + 35]);
+  both('plant-bilge', 'Plant bilge tanks', 'tanks', [12.4, 18.8], [-16.6, -10.4], [sz0 + 19, sz0 + 35]);
+  X('drive-bilge', 'Drive bilge tanks', 'tanks', [-18, 18], [-16.6, -14.4], [sz0 + 35.4, sz1 - 1.4]);
+  both('stern-wing', 'Stern wing stores', 'stores', [18.4, 22], [-2.6, 12.2], [sz0 + 5, sz0 + 18.6]);
+  both('coolant-wing', 'Coolant wing', 'cooling', [18.4, 22], [8.4, 12.2], [sz0 + 19, sz0 + 44.6]);
+}
+
+// Doors between each walkable room and the passage it opens onto (walls within 1.5 m, same deck), at the middle of
+// the wall they share. Passages that meet end to end get one too.
+const doors = [];
+{
+  const walk = comps.filter((c) => c.access === 'walk');
+  const corridors = walk.filter((c) => c.system === 'corridor');
+  const overlap = (a, b) => [Math.max(a[0], b[0]), Math.min(a[1], b[1])];
+  for (const r of walk) for (const p of corridors) {
+    if (r === p || r.deck !== p.deck) continue;
+    if (r.system === 'corridor' && doors.some((d) => d.between.includes(r.id) && d.between.includes(p.id))) continue;
+    const ox = overlap(r.x, p.x), oz = overlap(r.z, p.z);
+    const gx = Math.min(Math.abs(r.x[0] - p.x[1]), Math.abs(r.x[1] - p.x[0]));
+    const gz = Math.min(Math.abs(r.z[0] - p.z[1]), Math.abs(r.z[1] - p.z[0]));
+    let at = null;
+    if (gx <= 1.5 && oz[1] - oz[0] >= 2) at = (oz[0] + oz[1]) / 2;       // side by side: a door in the long wall
+    else if (gz <= 1.5 && ox[1] - ox[0] >= 1.6) at = (ox[0] + ox[1]) / 2; // end on
+    if (at === null) continue;
+    doors.push({ between: [p.id, r.id], at: r1(at), w: r.system === 'corridor' ? Math.min(1.6, (r.x[1] - r.x[0]) - 0.4) : (r.id === 'hangar' ? 2.4 : 1.4) });
+  }
+}
+
+// Ladders: trunks between decks (weightless, so a ladder is a line of handholds; the game keeps its fade between decks).
+const lad = (id, a, b) => ({ id, a: { deck: a[0], at: a[1], yaw: a[2] ?? 0 }, b: { deck: b[0], at: b[1], yaw: b[2] ?? 0 } });
+const ladders = [
+  lad('ladder-bow-up', [4, [0, bow.z[0] + 62]], [3, [0, bow.z[0] + 62]]),
+  lad('ladder-bow-down', [4, [0, bow.z[0] + 60]], [5, [0, bow.z[0] + 60]]),
+  lad('ladder-fwd-trunk', [4, [0, hz0 + 2]], [2, [0, hz0 + 2]]),
+  lad('ladder-hangar-lock', [4, [0, hz0 + 1]], [6, [0, hz0 + 1]]),
+  lad('ladder-keel-fwd', [4, [0, hz0 + 3]], [7, [0, hz0 + 2]]),
+  lad('ladder-aft', [7, [0, sz0 + 2.5]], [2, [0, sz0 + 2]]),
+  lad('ladder-tower', [2, [0, sz0 + 30]], [1, [0, sz0 + 30]]),
+];
+
+// ---- the drums ----
+const ds = dA.s, sp = dA.spin, lay = D.drumLayout(ds);
+const S = ds.sides, tan = Math.tan(Math.PI / S);
+const drumDecks = Array.from({ length: ds.decks }, (_, k) => {
+  const floorR = sp.rFloor - k * sp.living / ds.decks, h = sp.living / ds.decks;
+  return { id: k === 0 ? 'o' : 'i', name: k === 0 ? 'Outer deck' : 'Inner deck', floorR: r3(floorR), h: r3(h), g: r3(sp.gG * floorR / sp.rFloor) };
+});
+const spokeSegs = Array.from({ length: lay.spokes }, (_, j) => Math.round((j + 0.5) * S / lay.spokes - 0.5) % S);
+const halves = [dA, dB].map((d, i) => {
+  const zc = (d.z[0] + d.z[1]) / 2;
+  return {
+    id: 'ab'[i], name: i ? 'After drum' : 'Forward drum', section: d.i, z: d.z, dir: d.s.dir, rpm: d.s.rpm,
+    corridor: [r3(zc + lay.corrZ(0) - ds.corridor / 2), r3(zc + lay.corrZ(0) + ds.corridor / 2)],
+    rows: { fore: [r3(zc + lay.z(0) - lay.roomL / 2), r3(zc + lay.z(0) + lay.roomL / 2)], aft: [r3(zc + lay.z(1) - lay.roomL / 2), r3(zc + lay.z(1) + lay.roomL / 2)] },
+  };
+});
+
+// The rooms, from the designer's plan. A few take the ids today's career, watches and kits already use.
+const NAMED = {
+  medical: ['medbay'], mess: ['mess', 'senior-mess', 'galley'], wardroom: ['wardroom'], gym: ['gym', 'rec-room', 'training'],
+  workshop: ['machine-shop', 'elec-shop', 'pipe-shop', 'eng-workshop'], ops: ['ship-office', 'briefing', 'intelligence'],
+  flight: ['aircrew-q'], officers: ['officers'], berths: ['quarters-a', 'quarters-b', 'quarters-c'], marines: ['barracks'],
+  stores: ['stores', 'laundry', 'main-stores'], hydro: ['garden'],
+};
+// The names today's career and kits say ("quarters C", "the ship's office", "the electrical shop"), where the designer's
+// label for the use would be the same for all of a kind.
+const NAMES = {
+  'ship-office': "Ship's office", briefing: 'Briefing room', intelligence: 'Intelligence office', 'quarters-a': 'Quarters A', 'quarters-b': 'Quarters B',
+  'quarters-c': 'Quarters C', 'senior-mess': "Senior rates' mess", galley: 'Galley', 'rec-room': 'Rec room', training: 'Training room',
+  'machine-shop': 'Machine shop', 'elec-shop': 'Electrical shop', 'pipe-shop': 'Pipe shop', 'eng-workshop': "Engineers' workshop",
+  'aircrew-q': 'Aircrew quarters', stores: 'Drum stores', laundry: 'Laundry', 'main-stores': 'Main stores',
+};
+const SYSTEM = { medical: 'medical', flight: 'flight', ops: 'bridge', mess: 'mess', wardroom: 'mess', officers: 'quarters', berths: 'quarters',
+  marines: 'quarters', gym: 'welfare', stores: 'stores', workshop: 'repair', hydro: 'life-support', spare: 'stores' };
+const FIT = { flight: 'briefing', ops: 'office', mess: 'tables', wardroom: 'tables', officers: 'cabins', berths: 'cabins', marines: 'cabins',
+  gym: 'gym', stores: 'shelves', workshop: 'workshop', hydro: 'shelves', spare: null, medical: null };
+const LABEL = { berths: 'Berths', marines: 'Marines', officers: 'Officers', hydro: 'Garden', spare: 'Spare', stores: 'Stores', workshop: 'Workshop',
+  mess: 'Mess', gym: 'Gym', ops: 'Office', flight: 'Aircrew', medical: 'Sick bay', wardroom: 'Wardroom' };
+const count = {};
+const drumRooms = [];
+// Name the rooms in a stable order: the forward drum first, outer deck first, round from segment 0, fore row first.
+const slots = [...A.plan.slots].sort((a, b) => a.sec - b.sec || a.deck - b.deck || a.side - b.side || a.ring - b.ring);
+for (const s of slots) {
+  const half = halves.find((h) => h.section === s.sec), dk = drumDecks[s.deck];
+  const row = s.ring % 2 ? 'aft' : 'fore';
+  const n = (count[s.use] = (count[s.use] ?? 0) + 1);
+  const named = NAMED[s.use]?.[n - 1];
+  const seg = String(s.side).padStart(2, '0');
+  const id = named ?? `${half.id}${dk.id}-${seg}${row[0]}`;
+  const ceilR = dk.floorR - dk.h;
+  const w = 2 * ceilR * tan - 0.4; // the room's width at its ceiling, less the bulkheads either side
+  drumRooms.push({
+    id, name: named ? NAMES[named] ?? D.USE[s.use].label : `${LABEL[s.use]} ${n}`, half: half.id, deck: dk.id, seg: s.side, row, use: s.use,
+    system: SYSTEM[s.use], ...(FIT[s.use] ? { fit: FIT[s.use] } : {}),
+    x: [r3(-w / 2), r3(w / 2)], z: half.rows[row], h: dk.h,
+    ...(D.capOf(s.use, s.area) ? { bunks: D.capOf(s.use, s.area) } : {}), g: r3(s.gG),
+  });
+}
+const drum = {
+  about: 'The spin drums. Two halves in one fixed armoured sleeve, spinning opposite ways about the ship\'s axis (z). Each half is one ring of `sides` flat-floored segments; segment k is turned 2πk/sides about the axis from straight down. In a segment\'s frame a room is a box like any other: x across, z along the ship, its deck\'s floor at y = -floorR. Each deck has a ring corridor (`corridor`, z) with rooms fore and aft of it (`rows`). The spokes run from the corridors in their segments up to the hub ring, which turns round the fixed spine at `hub.r`. Outside the decks is the belt (water tanks and stores, spinning), then a gap, then the fixed sleeve.',
+  sides: S, rpm: ds.rpm, omega: r3(sp.w),
+  decks: drumDecks,
+  belt: { from: r3(sp.rFloor), to: r3(sp.rOuter), kind: ds.beltKind },
+  sleeve: { r: sleeveR, armour: ds.armour, gap: r3(sleeveR - sp.rOuter) },
+  innerR: ds.inner,
+  hub: { r: 6, spineR: 3, transfer: 'Catch the hub ring at walking pace; a spin-matched car takes stretchers and cargo.' },
+  spokes: { segments: spokeSegs, lifts: design.ship.lifts, liftSpeed: design.ship.liftSpeed, carSize: design.ship.carSize, ladder: true },
+  halves,
+  rooms: drumRooms,
+};
+
+// ---- mounts ----
+const mounts = [];
+const turret = (id, at, up) => mounts.push({ id, kind: 'turret', at, up });
+turret('turret-dorsal', [0, 12.6, bow.z[0] + 52], [0, 1, 0]);
+turret('turret-ventral', [0, -12.6, bow.z[0] + 52], [0, -1, 0]);
+hTurrets.forEach((z, i) => { turret(`turret-h${i + 1}d`, [-10, hgr.s.h / 2, z], [0, 1, 0]); turret(`turret-h${i + 1}v`, [10, -hgr.s.h / 2, z], [0, -1, 0]); });
+turret('turret-stern-d', [0, stn.s.h / 2, sz1 - 7], [0, 1, 0]);
+turret('turret-stern-v', [0, -stn.s.h / 2, sz0 + 9], [0, -1, 0]);
+const pdc = (id, at, up, magazine) => mounts.push({ id, kind: 'pdc', at, up, magazine });
+{
+  const zb = bow.z[0];
+  pdc('pdc-bow-pf', [-19.5, 0, zb + 22], [-1, 0, 0], 'pdc-mag-p'); pdc('pdc-bow-sf', [19.5, 0, zb + 22], [1, 0, 0], 'pdc-mag-s');
+  pdc('pdc-bow-pa', [-24, 0, zb + 64], [-1, 0, 0], 'pdc-mag-p'); pdc('pdc-bow-sa', [24, 0, zb + 64], [1, 0, 0], 'pdc-mag-s');
+  pdc('pdc-bow-d', [0, 11.5, zb + 30], [0, 1, 0], 'pdc-mag-p'); pdc('pdc-bow-v', [0, -11.5, zb + 30], [0, -1, 0], 'pdc-mag-s');
+  const hp = (id, at, up) => pdc(id, at, up, 'pdc-mag-h');
+  hp('pdc-h-pf', [-23.5, 13, hz0 + 10], [-1, 0, 0]); hp('pdc-h-sf', [23.5, 13, hz0 + 10], [1, 0, 0]);
+  hp('pdc-h-pa', [-23.5, -13, hz1 - 10], [-1, 0, 0]); hp('pdc-h-sa', [23.5, -13, hz1 - 10], [1, 0, 0]);
+  hp('pdc-h-d', [10, 18, hz0 + 40], [0, 1, 0]); hp('pdc-h-v', [-10, -18, hz0 + 76], [0, -1, 0]);
+  const sp2 = (id, at, up) => pdc(id, at, up, 'magazine-sv');
+  sp2('pdc-s-pf', [-25, 8, sz0 + 10], [-1, 0, 0]); sp2('pdc-s-sf', [25, 8, sz0 + 10], [1, 0, 0]);
+  sp2('pdc-s-pa', [-25, -8, sz1 - 6], [-1, 0, 0]); sp2('pdc-s-sa', [25, -8, sz1 - 6], [1, 0, 0]);
+  sp2('pdc-s-d', [-12, 18, sz0 + 47], [0, 1, 0]); sp2('pdc-s-v', [12, -18, sz0 + 40], [0, -1, 0]);
+}
+mounts.push({ id: 'radiator-port', kind: 'radiator', x: [-(stn.s.w / 2 + stn.s.radSpan), -stn.s.w / 2], y: 0, z: [sz0 + 2, sz0 + 2 + stn.s.radLen] });
+mounts.push({ id: 'radiator-stbd', kind: 'radiator', x: [stn.s.w / 2, stn.s.w / 2 + stn.s.radSpan], y: 0, z: [sz0 + 2, sz0 + 2 + stn.s.radLen] });
+mounts.push({ id: 'bay-door', kind: 'bay-door', x: -hgr.s.w / 2, y: [-12, 6], z: doorZ });
+mounts.push({ id: 'bay-door-s', kind: 'bay-door', x: hgr.s.w / 2, y: [-12, 6], z: doorZ });
+
+// ---- weapons: today's numbers, the new mounts ----
+const weapons = structuredClone(v1.weapons);
+const hatch = (deck, at, yaw, label) => ({ deck, at, yaw, label });
+weapons.turrets = [
+  { mount: 'turret-dorsal', name: 'Bow dorsal turret', barbette: 'dorsal-barbette', magazine: 'magazine', from: hatch(3, [3, bow.z[0] + 52], 1.5708, 'Up the hoist trunk to the bow dorsal turret') },
+  { mount: 'turret-ventral', name: 'Bow ventral turret', barbette: 'ventral-barbette', magazine: 'magazine-fwd', from: hatch(5, [3, bow.z[0] + 52], 1.5708, 'Down to the bow ventral turret') },
+  ...hTurrets.flatMap((z, i) => [
+    { mount: `turret-h${i + 1}d`, name: `Hangar dorsal turret ${i + 1}`, barbette: `barbette-h${i + 1}d`, magazine: `barbette-h${i + 1}d`, from: hatch(2, [-1.2, z], -1.5708, `Up to hangar dorsal turret ${i + 1}`) },
+    { mount: `turret-h${i + 1}v`, name: `Hangar ventral turret ${i + 1}`, barbette: `barbette-h${i + 1}v`, magazine: `barbette-h${i + 1}v`, from: hatch(7, [1.2, z], 1.5708, `Across to hangar ventral turret ${i + 1}`) },
+  ]),
+  { mount: 'turret-stern-d', name: 'Stern dorsal turret', barbette: 'barbette-sd', magazine: 'barbette-sd', from: hatch(2, [0, sz0 + 44], 3.14159, 'Up to the stern dorsal turret') },
+  { mount: 'turret-stern-v', name: 'Stern ventral turret', barbette: 'barbette-sv', magazine: 'magazine-sv', from: hatch(7, [0, sz0 + 4], 3.14159, 'Down to the stern ventral turret') },
+];
+// Ten turrets where the first carrier had two: her crews killed v1's raider (hull 320) in about 25 s, inside its first
+// pass. A tougher raider makes a raid last about as long as it did (about a minute, two passes).
+weapons.raider.hull = 800;
+weapons.gun = { ...weapons.gun, shellMass: design.ship.shell, barrels: design.ship.barrels, calibreNote: `${design.ship.barrel} m barrels; muzzle speed ${design.ship.vel} m/s in the design (the game's gun.shell is still tuned for play).` };
+weapons.tubes = { ...weapons.tubes, magazine: 'missile-mag', at: [-1, 1].flatMap((s) => [[s * 6, 2.5, bow.z[0] + 2], [s * 6, -2.5, bow.z[0] + 2], [s * 2, 0, bow.z[0] + 2]]).slice(0, bs.tubes), dir: [0, 0, -1] };
+// The railgun lies along the keel and leaves through the bow, under the torpedo tubes. (The design has no spinal gun,
+// `spinal: false`; the game keeps its railgun at the helm until that is settled.)
+weapons.railgun = { ...weapons.railgun, muzzle: [0, -6.4, bow.z[0] + 1] };
+weapons.broadside = {
+  about: 'The hangar walls\' torpedo tubes, launched cold sideways: `per` a side, each side fed from its two ordnance rooms.',
+  per: hgr.s.tubesSide,
+  port: { magazines: ['ordnance-p', 'ordnance-p-aft'], dir: [-1, 0, 0], at: [] },
+  starboard: { magazines: ['ordnance-s', 'ordnance-s-aft'], dir: [1, 0, 0], at: [] },
+};
+{
+  const zs = [hz0 + 10, hz0 + 20, hz0 + 30, hz0 + 38, doorZ[1] + 6, doorZ[1] + 14, doorZ[1] + 22, doorZ[1] + 30].slice(0, hgr.s.tubesSide);
+  for (const z of zs) { weapons.broadside.port.at.push([-hgr.s.w / 2, -2, z]); weapons.broadside.starboard.at.push([hgr.s.w / 2, -2, z]); }
+}
+
+// ---- fighters: 12 pads on the hangar floor, two rows facing their side's door ----
+const fighters = [];
+{
+  const per = Math.ceil(hgr.s.fighters / 2), z0 = doorZ[0] - 22, dz = 12;
+  for (let i = 0; i < hgr.s.fighters; i++) {
+    const port = i < per, k = port ? i : i - per;
+    fighters.push({ at: [port ? -9 : 9, z0 + k * dz], yaw: port ? 1.5708 : -1.5708, side: port ? 'port' : 'starboard', boarding: { from: 'tunnel', at: [0, z0 + k * dz] } });
+  }
+}
+
+// ---- crew posts (the drum's own come with the walking drum) ----
+const st = (room, at, yaw, pose, dept, post, watch, more = {}) => ({ room, at, yaw, pose, dept, ...(post ? { post } : {}), watch, ...more });
+const stations = [
+  st('bridge', [-4, sz0 + 18], 0, 'sitChair', 'command', 'Helmsman', 'on'),
+  st('bridge', [4, sz0 + 18], 0, 'sitChair', 'command', 'Sensor watch', 'on'),
+  st('bridge', [-1, sz0 + 24.5], 0, 'idle', 'command', 'Quartermaster of the watch', 'on'),
+  st('cic', [-8, sz0 + 12], 1.5708, 'workTable', 'command', 'Plotter, CIC', 'on'),
+  st('hangar', [-4, hz0 + 50], 0, 'walk', 'flight', 'Hangar sentry', 'on', { route: [[-4, hz0 + 10], [-4, hz0 + 90]] }),
+  st('flight-control', [7, hz0 + 46], -1.5708, 'workTable', 'flight', 'Flight control', 'on'),
+  st('eng-control', [3.95, sz0 + 33.5], 3.14159, 'workTable', 'engineering', 'Engineer of the watch', 'on'),
+  st('eng-control', [11.95, sz0 + 33.5], 3.14159, 'workTable', 'engineering', 'Reactor operator', 'on'),
+  st('damage-control', [-8, sz0 + 26], 1.5708, 'workTable', 'crew', 'Damage control centre', 'on'),
+  st('torpedo-room', [4, bow.z[0] + 22], 3.14159, 'workTable', 'crew', 'Torpedo watch', 'on'),
+  st('tunnel', [0, hz0 + 20], 0, 'walk', 'crew', 'Rounds', 'on', { route: [[0, hz0 + 6], [0, hz1 - 4]] }),
+];
+
+// ---- everything else: carried over, with ids moved where rooms moved ----
+const routes = { ...v1.routes, lines: [
+  { name: 'Bridge', to: 'bridge', color: '#58b0ff' }, { name: 'Hangar tunnel', to: 'tunnel', color: '#3fe0d0' },
+  { name: 'Engineering', to: 'eng-control', color: '#ff9a30' },
+  // The mess, the sick bay, the quarters and the offices are in the drums: one line to the spine, whose lifts go down to them.
+  { name: 'Drums', to: 'spine', color: '#c08cff' },
+] };
+const damage = structuredClone(v1.damage);
+damage.switchboards = ['switchboard'];
+damage.kits.patch.rooms = ['repair-fwd', 'repair-mid', 'dc-store', 'machine-shop'];
+damage.kits.toolkit.rooms = ['elec-shop', 'dc-store'];
+damage.kits.suit.rooms = ['damage-control', 'flight-gear', 'pilots-ready'];
+const integrity = structuredClone(v1.integrity);
+const plant = structuredClone(v1.plant);
+plant.propellant.tanks = ['tanks-aft', 'tanks-aft-s', 'hangar-bottom', 'hangar-bottom-2', 'hangar-bottom-3', 'hangar-bottom-4', 'hangar-bottom-5'];
+
+// Mass and centre of mass from the design's sections.
+const M = A.M * 1000;
+const comZ = A.secs.reduce((a, x, i) => a + sec[Object.keys(sec)[i]].mass * ((sec[Object.keys(sec)[i]].z[0] + sec[Object.keys(sec)[i]].z[1]) / 2), 0) / A.M;
+const thrust = design.ship.thrust * 1e6;
+const engines = stn.s.engines;
+const thrusters = {
+  main: Array.from({ length: engines }, (_, i) => {
+    const a = -Math.PI / 2 + (i * 2 * Math.PI) / engines;
+    return { at: [r1(Math.cos(a) * 11), r1(Math.sin(a) * 9 - 2), sz1], r: 6, force: thrust };
+  }),
+  rcsForce: Math.round((v1.thrusters.rcsForce * M) / v1.mass / 1e5) * 1e5,
+  rcs: [[-1, 1], [1, 1], [-1, -1], [1, -1]].flatMap(([sx, sy]) => [
+    { at: [sx * 19, sy * 8, bow.z[0] + 26] }, { at: [sx * 23, sy * 15, sz1 - 8] },
+  ]),
+};
+
+// The fighter is v1's, but she launches from and lands into this hangar: on the hangar's floor, out through doors in
+// a hull this wide. Distances out from the centre line (the game uses them on whichever side a pad faces): her wings
+// spread just outside the hull, she is handed over 12 m out, and the landing gate is 28 m out, 4 m over the floor.
+const fighter = structuredClone(v1.fighter);
+{
+  const hg = comps.find((c) => c.id === 'hangar');
+  // The hull's width along the hangar: the loft sections either side of each point of it (the sleeve ends just forward).
+  const wAt = (z) => { const i = hull.main.findIndex((s) => s.z >= z); return Math.max(hull.main[Math.max(0, i - 1)].w, hull.main[i].w); };
+  const hw = Math.max(...[hg.z[0] + 1, (hg.z[0] + hg.z[1]) / 2, hg.z[1] - 1].map(wAt)) / 2;
+  const floor = decks.find((d) => d.id === hg.deck).floor;
+  fighter.launch.clear = r1(hw + 12);
+  fighter.launch.wings = r1(hw + 2);
+  fighter.landing.gate = [r1(hw + 28), floor + 4];
+}
+
+const L = {
+  about: 'The spin-drum carrier as data, built by tools/carrier-v2.mjs from design/carrier-v2.design.json (see design/SHIP-DESIGN.md and design/CARRIER-REBUILD.md). Metres, the ship\'s frame (x starboard, y up, -z the bow), the ship\'s axis at x = 0, y = 0. `compartments` are the fixed, weightless hull (grip shoes; down is -y); `drum` holds the spinning rooms, each in its own segment\'s frame. Do not edit by hand: change the design or the generator and run it again. The first carrier is ships/carrier-v1.layout.json (carrier.html?ship=v1).',
+  name: design.name, version: 2, length: T, mass: Math.round(M), com: [0, 0, r1(comZ)],
+  sections: Object.entries(sec).map(([id, s]) => ({ id, type: s.s.type, z: s.z.map(r1), w: r1(s.size.w), h: r1(s.size.h), mass: Math.round(s.mass * 1000) })),
+  decks, hull, compartments: comps, doors, ladders, drum,
+  helm: { at: [0, sz0 + 16], eye: [0, floorOf[1] + 1.75, sz0 + 16.2] },
+  spawn: { deck: 2, at: [0, sz0 + 2], yaw: 0 },
+  thrusters, mounts, fighters, fighter,
+  stations, routes, damage, weapons, integrity, plant,
+};
+
+// ---- checks ----
+const problems = [];
+// weapons.mjs aims a turret standing on top (up +y) or underneath (up -y) only; one on her side would aim wrongly.
+for (const m of mounts) if (m.kind === 'turret' && !(m.up[0] === 0 && m.up[2] === 0 && Math.abs(m.up[1]) === 1)) problems.push(`${m.id}: a turret must stand on top or underneath (up [0, ±1, 0]); weapons.mjs aims no others`);
+const ids = new Set();
+for (const c of [...comps, ...drumRooms]) { if (ids.has(c.id)) problems.push(`duplicate id ${c.id}`); ids.add(c.id); }
+const walkIds = new Set(comps.filter((c) => c.access === 'walk').map((c) => c.id));
+const yOf = (c) => c.y ?? [floorOf[c.deck], floorOf[c.deck] + (c.h ?? 3) + 0.8];
+// overlaps in the fixed hull
+for (let i = 0; i < comps.length; i++) for (let k = i + 1; k < comps.length; k++) {
+  const a = comps[i], b = comps[k], ya = a.y ?? [floorOf[a.deck], floorOf[a.deck] + (a.h ?? 3)], yb = b.y ?? [floorOf[b.deck], floorOf[b.deck] + (b.h ?? 3)];
+  const o = (p, q) => Math.min(p[1], q[1]) - Math.max(p[0], q[0]);
+  if (o(a.x, b.x) > 0.01 && o(ya, yb) > 0.01 && o(a.z, b.z) > 0.01) problems.push(`${a.id} overlaps ${b.id}`);
+}
+// inside the hull (every corner, deckhead included), and out of the drums' spinning space
+const drumSpace = (x, y, z) => halves.some((h) => z > h.z[0] && z < h.z[1]) && Math.hypot(x, y) > drum.hub.spineR;
+for (const c of comps) {
+  const y = yOf(c);
+  for (const x of c.x) for (const yy of y) for (const z of c.z) {
+    if (!inHull(x, yy, z)) { problems.push(`${c.id} pokes through the hull at (${x}, ${yy}, ${z})`); break; }
+    if (drumSpace(x, yy, z)) { problems.push(`${c.id} is in a drum's spinning space`); break; }
+  }
+}
+// every door's rooms exist and are walkable; every walkable room has a way in
+for (const d of doors) for (const r of d.between) if (!walkIds.has(r)) problems.push(`door to unknown room ${r}`);
+// ladders land in walkable rooms
+const roomAt = (deck, [x, z]) => comps.find((c) => c.access === 'walk' && c.deck === deck && x >= c.x[0] && x <= c.x[1] && z >= c.z[0] && z <= c.z[1]);
+for (const c of comps.filter((c) => c.access === 'walk')) if (!doors.some((d) => d.between.includes(c.id)) && !ladders.some((l) => [l.a, l.b].some((e) => roomAt(e.deck, e.at) === c))) problems.push(`${c.id} has no door or ladder`);
+for (const l of ladders) for (const e of [l.a, l.b]) if (!roomAt(e.deck, e.at)) problems.push(`${l.id} lands outside a room on deck ${e.deck} at ${e.at}`);
+for (const t of weapons.turrets) if (!roomAt(t.from.deck, t.from.at)) problems.push(`${t.name}'s hatch is not in a room`);
+if (!roomAt(L.spawn.deck, L.spawn.at)) problems.push('spawn is not in a room');
+if (!roomAt(1, L.helm.at)) problems.push('helm is not on the bridge');
+// every id the rest of the layout names
+const refs = [
+  ...stations.map((s) => ['station', s.room]), ...routes.lines.map((r) => ['floor line', r.to]),
+  ...damage.switchboards.map((r) => ['switchboard', r]), ...Object.values(damage.kits).flatMap((k) => (k.rooms ?? []).map((r) => ['kit room', r])),
+  ...weapons.turrets.flatMap((t) => [['barbette', t.barbette], ['magazine', t.magazine]]),
+  ...mounts.filter((m) => m.magazine).map((m) => ['pdc magazine', m.magazine]),
+  ['tube magazine', weapons.tubes.magazine], ...weapons.broadside.port.magazines.concat(weapons.broadside.starboard.magazines).map((m) => ['broadside magazine', m]),
+  ...plant.propellant.tanks.map((t) => ['tank', t]), ['drone bay', integrity.drones.from],
+];
+for (const [what, id] of refs) if (!ids.has(id)) problems.push(`${what} names ${id}, which is not a room`);
+for (const t of weapons.turrets) if (!mounts.some((m) => m.id === t.mount)) problems.push(`turret ${t.mount} has no mount`);
+for (const m of mounts.filter((m) => m.at)) if (!inHull(m.at[0] * 0.98, m.at[1] * 0.98, m.at[2], -0.5)) problems.push(`mount ${m.id} is off the hull`);
+
+// What the career and the watch bill name that this layout does not have.
+const named = [];
+const walkJson = (o, path) => {
+  if (Array.isArray(o)) o.forEach((v, i) => walkJson(v, `${path}[${i}]`));
+  else if (o && typeof o === 'object') for (const [k, v] of Object.entries(o)) {
+    if (['room', 'muster', 'bunk', 'to', 'at'].includes(k) && typeof v === 'string') named.push([path + '.' + k, v]);
+    else if (k === 'rooms' && Array.isArray(v)) v.forEach((r) => typeof r === 'string' && named.push([path + '.rooms', r]));
+    else walkJson(v, `${path}.${k}`);
+  }
+};
+walkJson(JSON.parse(readFileSync(here('ships/carrier.career.json'))), 'career');
+walkJson(JSON.parse(readFileSync(here('ships/carrier.watches.json'))), 'watches');
+const missing = [...new Set(named.filter(([, id]) => /^[a-z][a-z0-9-]*$/.test(id) && !ids.has(id)).map(([, id]) => id))];
+
+// ---- report ----
+const fixedVol = comps.reduce((a, c) => { const y = c.y ?? [0, c.h ?? 3]; return a + (c.x[1] - c.x[0]) * (y[1] - y[0]) * (c.z[1] - c.z[0]); }, 0);
+const uses = drumRooms.reduce((a, r) => ((a[r.use] = (a[r.use] ?? 0) + 1), a), {});
+console.log(`${L.name}: ${T} m, ${Math.round(A.M).toLocaleString()} t, centre of mass z ${r1(comZ)}`);
+console.log(`Fixed hull: ${comps.filter((c) => c.access === 'walk').length} walkable rooms, ${comps.filter((c) => c.access === 'sealed').length} sealed, ${doors.length} doors, ${ladders.length} ladders, ${Math.round(fixedVol).toLocaleString()} m³`);
+console.log(`Drums: ${drumRooms.length} rooms (${Object.entries(uses).map(([u, n]) => `${n} ${u}`).join(', ')}), ${drumRooms.reduce((a, r) => a + (r.bunks ?? 0), 0)} bunks for ${A.plan.crew + A.plan.marines}`);
+console.log(`       decks ${drumDecks.map((d) => `${d.name.toLowerCase()} r ${d.floorR} m ${d.g} g`).join(', ')}; spokes at segments ${spokeSegs.join(', ')}`);
+console.log(`Mounts: ${mounts.filter((m) => m.kind === 'turret').length} turrets, ${mounts.filter((m) => m.kind === 'pdc').length} point defence, ${weapons.tubes.at.length} bow tubes, ${weapons.broadside.port.at.length * 2} broadside tubes, ${fighters.length} fighter pads`);
+if (missing.length) console.log(`\nThe career and the watch bill still name rooms this layout does not have ${missing.join(', ')}`);
+else console.log('\nEvery room the career and the watch bill name is here.');
+if (problems.length) { console.log(`\n${problems.length} problem${problems.length > 1 ? 's' : ''}:\n  ${problems.join('\n  ')}`); process.exitCode = 1; }
+else console.log('\nChecks: no overlaps, everything inside the hull and out of the drums, every room has a door, every name resolves.');
+if (!CHECK_ONLY && !problems.length) {
+  writeFileSync(here('ships/carrier.layout.json'), JSON.stringify(L, null, 1) + '\n');
+  console.log('Wrote ships/carrier.layout.json');
+}

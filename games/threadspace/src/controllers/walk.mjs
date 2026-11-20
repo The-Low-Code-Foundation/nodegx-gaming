@@ -18,12 +18,19 @@ export class Walker {
     this.pitch = 0;
     this.bob = 0;
     this.speed = SPEED;
+    // Weightless (`float`, set by the host each frame): no floor to push on, so you pull yourself along handholds,
+    // hand over hand, and coast; Shift kicks off at a push-off's speed. `vel` is your drift on the floor plane.
+    this.float = false;
+    this.vel = new THREE.Vector3();
+    this.drift = 0;
+    this.kicked = false;
   }
 
   moveTo(pos, yaw = this.yaw) {
     this.pos.copy(pos);
     this.yaw = yaw;
     this.pitch = 0;
+    this.vel?.set(0, 0, 0);
   }
 
   frame(f, dt, { canMove = true, mouseGain = 0.0022 } = {}) {
@@ -36,6 +43,8 @@ export class Walker {
     if (f.keys.has('ArrowUp')) this.pitch = clamp(this.pitch + dt * 1.2, -1.3, 1.3);
     if (f.keys.has('ArrowDown')) this.pitch = clamp(this.pitch - dt * 1.2, -1.3, 1.3);
     if (!canMove) return;
+    if (this.float) return this.floatFrame(f, dt);
+    this.vel.set(0, 0, 0);
     let fx = 0, fz = 0;
     if (f.keys.has('KeyW')) fz -= 1;
     if (f.keys.has('KeyS')) fz += 1;
@@ -58,6 +67,39 @@ export class Walker {
     this.slide(dx, 0);
     this.slide(0, dz);
     this.bob += s * 2.2;
+  }
+
+  /** Weightless: hand over hand toward `HAND` m/s along where you face, a kick off to `KICK` m/s on Shift, coasting
+   *  otherwise (the handholds you brush take a little off). A wall stops the drift into it. */
+  floatFrame(f, dt) {
+    const HAND = 1.5, KICK = 3.5, GRIP = 2.5;
+    this.drift += dt;
+    this.bob = 0;
+    let fx = 0, fz = 0;
+    if (f.keys.has('KeyW')) fz -= 1;
+    if (f.keys.has('KeyS')) fz += 1;
+    if (f.keys.has('KeyA')) fx -= 1;
+    if (f.keys.has('KeyD')) fx += 1;
+    const len = Math.hypot(fx, fz);
+    const sin = Math.sin(this.yaw), cos = Math.cos(this.yaw);
+    const dir = len ? _v.set((fx * cos + fz * sin) / len, 0, (-fx * sin + fz * cos) / len) : null;
+    const shift = f.keys.has('ShiftLeft') || f.keys.has('ShiftRight');
+    if (dir && shift && !this.kicked) this.vel.copy(dir).multiplyScalar(KICK);
+    else if (dir && !(this.vel.length() > HAND && this.vel.dot(dir) > 0.7 * this.vel.length())) {
+      // Hand over hand: each pull takes your drift toward a hand's pace where you want to go (and brakes a drift the
+      // other way). Already going that way faster, after a kick, you coast past the holds.
+      _w.copy(dir).multiplyScalar(HAND).sub(this.vel);
+      const k = Math.min(1, (GRIP * dt) / Math.max(1e-6, _w.length()));
+      this.vel.addScaledVector(_w, k);
+    } else this.vel.multiplyScalar(Math.max(0, 1 - 0.08 * dt)); // coasting
+    this.kicked = shift && !!dir;
+    const x = this.pos.x, z = this.pos.z;
+    this.slide(this.vel.x * dt, 0);
+    this.slide(0, this.vel.z * dt);
+    if (dt > 0) {
+      if (Math.abs(this.pos.x - x - this.vel.x * dt) > 1e-4) this.vel.x = 0;
+      if (Math.abs(this.pos.z - z - this.vel.z * dt) > 1e-4) this.vel.z = 0;
+    }
   }
 
   /** Moves by (dx, dz) and pushes out of any wall box; sliding comes from moving the axes one at a time. */
@@ -87,11 +129,12 @@ export class Walker {
 
   /** Eye position and look quaternion in the host's frame. */
   eye(target = new THREE.Vector3()) {
-    return target.set(this.pos.x, this.pos.y + EYE + Math.sin(this.bob) * 0.03, this.pos.z);
+    const drift = this.float ? Math.sin(this.drift * 0.7) * 0.05 : 0; // weightless: a slow rise and fall, no step
+    return target.set(this.pos.x, this.pos.y + EYE + Math.sin(this.bob) * 0.03 + drift, this.pos.z);
   }
 
   quat(q = new THREE.Quaternion()) {
-    return q.setFromEuler(new THREE.Euler(this.pitch, this.yaw, 0, 'YXZ'));
+    return q.setFromEuler(new THREE.Euler(this.pitch, this.yaw, this.float ? Math.sin(this.drift * 0.4) * 0.03 : 0, 'YXZ'));
   }
 
   forward(t = new THREE.Vector3()) {

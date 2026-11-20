@@ -9,37 +9,166 @@
     "night": "From `from` to `to` the passages are in red lighting (darken ship), and the hands not on watch are turned in.",
     "pipes": "What is piped and said at the change of watch, at pipe down and at call the hands. {watch} {section} {time} {muster} are filled in."
   },
-  "clock": { "rate": 30, "start": [1, "13:10"] },
+  "clock": {
+    "rate": 30,
+    "start": [
+      1,
+      "13:10"
+    ]
+  },
   "watches": [
-    { "name": "Middle", "from": "00:00", "to": "04:00" },
-    { "name": "Morning", "from": "04:00", "to": "08:00" },
-    { "name": "Forenoon", "from": "08:00", "to": "12:00" },
-    { "name": "Afternoon", "from": "12:00", "to": "16:00" },
-    { "name": "First dog", "from": "16:00", "to": "18:00" },
-    { "name": "Last dog", "from": "18:00", "to": "20:00" },
-    { "name": "First", "from": "20:00", "to": "24:00" }
+    {
+      "name": "Middle",
+      "from": "00:00",
+      "to": "04:00"
+    },
+    {
+      "name": "Morning",
+      "from": "04:00",
+      "to": "08:00"
+    },
+    {
+      "name": "Forenoon",
+      "from": "08:00",
+      "to": "12:00"
+    },
+    {
+      "name": "Afternoon",
+      "from": "12:00",
+      "to": "16:00"
+    },
+    {
+      "name": "First dog",
+      "from": "16:00",
+      "to": "18:00"
+    },
+    {
+      "name": "Last dog",
+      "from": "18:00",
+      "to": "20:00"
+    },
+    {
+      "name": "First",
+      "from": "20:00",
+      "to": "24:00"
+    }
   ],
   "first": "red",
   "sections": [
-    { "id": "red", "name": "Red watch", "color": "#e0574c", "leader": { "id": "pike", "name": "Leading Hand Pike", "dept": "crew", "voice": { "pitch": 0.8, "rate": 1.0 } } },
-    { "id": "white", "name": "White watch", "color": "#e8e2d0", "leader": { "id": "shaw", "name": "Leading Hand Shaw", "dept": "crew", "voice": { "pitch": 1.1, "rate": 1.02 } } },
-    { "id": "blue", "name": "Blue watch", "color": "#5f92ff", "leader": { "id": "lund", "name": "Leading Hand Lund", "dept": "crew", "voice": { "pitch": 0.95, "rate": 1.04 } } }
+    {
+      "id": "red",
+      "name": "Red watch",
+      "color": "#e0574c",
+      "leader": {
+        "id": "pike",
+        "name": "Leading Hand Pike",
+        "dept": "crew",
+        "voice": {
+          "pitch": 0.8,
+          "rate": 1
+        }
+      }
+    },
+    {
+      "id": "white",
+      "name": "White watch",
+      "color": "#e8e2d0",
+      "leader": {
+        "id": "shaw",
+        "name": "Leading Hand Shaw",
+        "dept": "crew",
+        "voice": {
+          "pitch": 1.1,
+          "rate": 1.02
+        }
+      }
+    },
+    {
+      "id": "blue",
+      "name": "Blue watch",
+      "color": "#5f92ff",
+      "leader": {
+        "id": "lund",
+        "name": "Leading Hand Lund",
+        "dept": "crew",
+        "voice": {
+          "pitch": 0.95,
+          "rate": 1.04
+        }
+      }
+    }
   ],
   "you": {
     "section": "blue",
     "part": "Damage control party",
-    "muster": "repair-mid", "at": [9.3, 35.2],
-    "bunk": { "room": "quarters-c", "at": [14.2, -67.8] },
+    "muster": "repair-mid",
+    "at": [
+      9.3,
+      35.2
+    ],
+    "bunk": {
+      "room": "quarters-c",
+      "at": [
+        2.2,
+        -70.2
+      ]
+    },
     "shake": 30
   },
   "muster": {
-    "early": 12, "late": 3, "hands": 5,
-    "line": [[9.3, 26.8], [9.3, 28.4], [9.3, 30.0], [9.3, 31.6], [9.3, 33.2]],
+    "early": 12,
+    "late": 3,
+    "hands": 5,
+    "line": [
+      [
+        9.3,
+        26.8
+      ],
+      [
+        9.3,
+        28.4
+      ],
+      [
+        9.3,
+        30
+      ],
+      [
+        9.3,
+        31.6
+      ],
+      [
+        9.3,
+        33.2
+      ]
+    ],
     "face": 1.5708,
-    "leader": { "at": [7.4, 31], "yaw": -1.5708 },
-    "out": [[6.6, 27], [4.8, 27], [4.8, 23]]
+    "leader": {
+      "at": [
+        7.4,
+        31
+      ],
+      "yaw": -1.5708
+    },
+    "out": [
+      [
+        5,
+        29.8
+      ],
+      [
+        1.2,
+        29.8
+      ],
+      [
+        0.4,
+        25
+      ]
+    ]
   },
-  "night": { "from": "22:00", "to": "06:00", "color": "#ff3a24" },
+  "night": {
+    "from": "22:00",
+    "to": "06:00",
+    "color": "#ff3a24"
+  },
   "pipes": {
     "change": "Change of watch. {section} has the {watch} watch.",
     "down": "Pipe down. Darken ship: the passages go to red lighting.",

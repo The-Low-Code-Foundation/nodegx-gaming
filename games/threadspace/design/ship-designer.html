@@ -1,0 +1,1467 @@
+<!doctype html>
+<html lang="en" data-static>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ThreadSpace ship designer</title>
+<!-- The ship designer: see SHIP-DESIGN.md beside this file. Also published as a claude.ai artifact, where it can save
+     designs to a shared store; served from this folder it keeps unsaved edits in this browser only. -->
+<style>
+/* Layout: a working bench. The 3D viewport and its readouts on the left, the section nodes (bow to stern) on the right, notes underneath. */
+:root {
+  --bg: #0c0f14; --panel: #141921; --panel-2: #1b222c; --line: #29323e; --fg: #dbe3ec; --muted: #8a97a6;
+  --accent: #f0a43a; --accent-fg: #1a1205; --good: #5fd0a0; --warn: #e8b84a; --bad: #e86a5a;
+  --t-ship: #b6a6e6; --t-bow: #d9735c; --t-drum: #5cc8b4; --t-hangar: #e2a14a; --t-arms: #5cc8b4; --t-spine: #8f9bab; --t-stern: #7f95dc;
+  --f-display: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif;
+  --f-body: "Barlow", system-ui, -apple-system, sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) {
+  --bg: #eef1f5; --panel: #ffffff; --panel-2: #f4f6f9; --line: #d4dbe3; --fg: #17202b; --muted: #5a6676;
+  --accent: #b8690c; --accent-fg: #ffffff; --good: #1d8a5c; --warn: #a37310; --bad: #c0412f;
+  --t-ship: #6f5bb8; --t-bow: #b5492f; --t-drum: #1f8f7c; --t-hangar: #b5731a; --t-arms: #1f8f7c; --t-spine: #5d6979; --t-stern: #4a5fb0;
+  color-scheme: light; } }
+:root[data-theme="light"] {
+  --bg: #eef1f5; --panel: #ffffff; --panel-2: #f4f6f9; --line: #d4dbe3; --fg: #17202b; --muted: #5a6676;
+  --accent: #b8690c; --accent-fg: #ffffff; --good: #1d8a5c; --warn: #a37310; --bad: #c0412f;
+  --t-ship: #6f5bb8; --t-bow: #b5492f; --t-drum: #1f8f7c; --t-hangar: #b5731a; --t-arms: #1f8f7c; --t-spine: #5d6979; --t-stern: #4a5fb0;
+  color-scheme: light; }
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--f-body); font-size: 14px; line-height: 1.45; }
+.wrap { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 16px 40px; max-width: 1500px; margin: 0 auto; display: grid; gap: 16px; }
+h1, h2, h3 { font-family: var(--f-display); font-weight: 600; letter-spacing: .02em; margin: 0; text-wrap: balance; }
+h1 { font-size: 28px; }
+h2 { font-size: 19px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+h3 { font-size: 17px; }
+button, select, input, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.mono { font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+.muted { color: var(--muted); }
+
+/* header */
+.top { display: flex; flex-wrap: wrap; align-items: end; gap: 12px 20px; justify-content: space-between; }
+.top p { margin: 4px 0 0; color: var(--muted); max-width: 70ch; }
+.tabs { display: flex; flex-wrap: wrap; gap: 6px; }
+.tab { border: 1px solid var(--line); background: var(--panel); border-radius: 6px; padding: 6px 12px; font-family: var(--f-display); font-size: 16px; font-weight: 600; letter-spacing: .03em; }
+.tab[aria-selected="true"] { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+.tab small { font-family: var(--f-body); font-weight: 500; font-size: 11px; opacity: .75; margin-left: 6px; }
+.actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.btn { border: 1px solid var(--line); background: var(--panel-2); border-radius: 6px; padding: 6px 11px; font-size: 13px; font-weight: 500; }
+.btn:hover { border-color: var(--accent); }
+.btn.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+#status { font-size: 12px; color: var(--muted); }
+
+/* main grid */
+.bench { display: grid; grid-template-columns: minmax(0, 1fr) 390px; gap: 16px; align-items: start; }
+@media (max-width: 980px) { .bench { grid-template-columns: minmax(0, 1fr); } }
+.left { display: grid; gap: 16px; min-width: 0; }
+
+/* viewport */
+.view { position: relative; height: min(62vh, 620px); min-height: 340px; border-radius: 10px; overflow: hidden; background: #070a10; border: 1px solid var(--line); }
+.view canvas { display: block; }
+.view .lbls { position: absolute; inset: 0; pointer-events: none; }
+.lbl { font-family: var(--f-display); font-size: 13px; letter-spacing: .04em; color: #dfe7f0; background: rgba(8, 11, 16, .72); border: 1px solid rgba(255,255,255,.14); border-left: 3px solid var(--c, #8f9bab); padding: 1px 7px; border-radius: 3px; white-space: nowrap; }
+.lbl.sel { border-color: #f0a43a; border-left-color: #f0a43a; }
+.lbl b { font-weight: 600; }
+.lbl span { font-family: var(--f-mono); font-size: 10.5px; color: #a9b6c4; margin-left: 6px; }
+.vbar { position: absolute; left: 10px; right: 10px; top: 10px; display: flex; flex-wrap: wrap; gap: 6px; justify-content: space-between; pointer-events: none; }
+.vbar > div { display: flex; flex-wrap: wrap; gap: 6px; pointer-events: auto; }
+.chipbtn { border: 1px solid rgba(255,255,255,.16); background: rgba(10, 14, 20, .78); color: #d6dee8; border-radius: 999px; padding: 4px 11px; font-size: 12px; font-weight: 500; }
+.chipbtn[aria-pressed="true"] { background: #f0a43a; color: #1a1205; border-color: #f0a43a; }
+.vfoot { position: absolute; left: 10px; bottom: 8px; right: 10px; font-size: 11.5px; color: #8e9bab; pointer-events: none; display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+#kicknote { color: #f0a43a; }
+
+/* readouts */
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; display: grid; gap: 12px; min-width: 0; }
+.card > header { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px 16px; }
+.stat b { display: block; font-family: var(--f-mono); font-size: 19px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.stat span { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+.stat em { font-style: normal; font-size: 11.5px; color: var(--muted); display: block; }
+.massbar { display: flex; height: 12px; border-radius: 3px; overflow: hidden; background: var(--panel-2); gap: 1px; }
+.massbar i { display: block; height: 100%; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--muted); }
+.legend i { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+.tblwrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+th { text-align: left; font-weight: 500; font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); padding: 4px 8px 6px 0; white-space: nowrap; }
+td { padding: 6px 8px 6px 0; border-top: 1px solid var(--line); font-family: var(--f-mono); font-size: 12.5px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+td:first-child { font-family: var(--f-body); font-weight: 600; font-size: 13px; }
+.pill { display: inline-block; font-family: var(--f-body); font-size: 11.5px; font-weight: 600; padding: 1px 8px; border-radius: 999px; border: 1px solid currentColor; }
+.pill.good { color: var(--good); } .pill.warn { color: var(--warn); } .pill.bad { color: var(--bad); }
+.balance { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 12px; align-items: center; font-size: 13px; }
+.balance .track { position: relative; height: 10px; background: var(--panel-2); border-radius: 5px; }
+.balance .track::after { content: ""; position: absolute; left: 50%; top: -3px; bottom: -3px; width: 1px; background: var(--muted); }
+.balance .fill { position: absolute; top: 0; bottom: 0; border-radius: 5px; }
+.say { margin: 0; font-size: 13.5px; max-width: 75ch; }
+.sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 7px; vertical-align: -1px; box-shadow: inset 0 0 0 1px rgba(0,0,0,.25); }
+#roomtbl td:last-child { white-space: normal; font-family: var(--f-body); font-size: 12.5px; color: var(--muted); min-width: 22ch; }
+.plans { display: grid; gap: 14px; }
+.layers { display: grid; gap: 10px; }
+.accgrid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; align-items: start; }
+.accfig { max-width: 640px; }
+.accsay { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px 18px; }
+.accfig { margin: 0; display: grid; gap: 4px; min-width: 0; }
+.accfig figcaption { font-size: 12px; }
+#accchart svg { width: 100%; height: auto; display: block; }
+#accchart text { fill: var(--muted); font-family: var(--f-mono); font-size: 10px; }
+#accchart .lbl-g { fill: var(--accent); } #accchart .lbl-s { fill: var(--t-bow); }
+.accsay { display: grid; gap: 8px; font-size: 13.5px; }
+.accsay p { margin: 0; }
+.journeys { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.journey { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; display: grid; gap: 6px; align-content: start; background: var(--panel-2); }
+.journey header { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+.journey header b { font-family: var(--f-display); font-size: 16px; font-weight: 600; }
+.journey header span { font-family: var(--f-mono); font-size: 13px; color: var(--accent); white-space: nowrap; }
+.journey ol { margin: 0; padding-left: 18px; display: grid; gap: 3px; font-size: 12.5px; }
+.journey ol span { font-family: var(--f-mono); color: var(--muted); font-size: 11.5px; }
+.journey p { margin: 0; font-size: 12px; color: var(--muted); }
+.layers h3 { font-size: 15px; margin-bottom: 4px; }
+.xs { display: flex; height: 46px; border-radius: 4px; overflow: hidden; font-size: 11px; line-height: 1.2; }
+.xs > div { padding: 4px 6px; min-width: 0; overflow: hidden; color: #0d1117; display: flex; flex-direction: column; justify-content: center; border-right: 1px solid rgba(0,0,0,.25); }
+.xs > div b { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.xs > div span { font-family: var(--f-mono); font-size: 10px; white-space: nowrap; }
+.xs .gap { background: repeating-linear-gradient(135deg, var(--panel-2) 0 6px, var(--panel) 6px 12px); color: var(--muted); }
+.xs .void { background: transparent; color: var(--muted); border: 0; }
+.plan h3 { font-size: 15px; margin-bottom: 4px; }
+.plan .tblwrap svg { display: block; }
+.plan text { fill: var(--muted); font-family: var(--f-mono); font-size: 10px; }
+.plan .lift { fill: var(--fg); }
+.plan rect.cell:hover { stroke: var(--fg); stroke-width: 1.5; }
+
+.recoil { display: grid; gap: 8px; padding: 10px; }
+.recoil table td, .recoil table th { padding-right: 6px; }
+.recoil td { font-size: 11.5px; } .recoil td:first-child { font-size: 12.5px; }
+.recoil .say { font-size: 12.5px; }
+.gunnery > header { cursor: default; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.seg button { border: 0; background: var(--panel-2); padding: 5px 10px; font-size: 12.5px; }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-fg); }
+.firerow { display: flex; flex-wrap: wrap; gap: 6px; }
+
+/* nodes panel */
+.panel { display: grid; gap: 8px; position: sticky; top: env(safe-area-inset-top, 0px); max-height: calc(100vh - 16px); overflow-y: auto; padding-bottom: 8px; }
+@media (max-width: 980px) { .panel { position: static; max-height: none; } }
+.panel > h2 { padding: 2px 2px 0; }
+.chain { display: grid; gap: 0; }
+.link { height: 12px; margin-left: 18px; border-left: 2px dashed var(--line); }
+.node { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.node.sel { border-color: var(--nc); box-shadow: 0 0 0 1px var(--nc); }
+.node > header { display: flex; align-items: center; gap: 8px; padding: 7px 8px 7px 10px; background: color-mix(in srgb, var(--nc) 16%, var(--panel)); border-bottom: 1px solid var(--line); cursor: pointer; }
+.node.closed > header { border-bottom-color: transparent; }
+.node .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--nc); flex: none; }
+.node .name { font-family: var(--f-display); font-weight: 600; font-size: 16px; letter-spacing: .02em; white-space: nowrap; }
+.node .tag { font-size: 10.5px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); white-space: nowrap; }
+.node .sum { margin-left: auto; font-family: var(--f-mono); font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.node .tools { display: flex; gap: 2px; flex: none; }
+.node .tools button { border: 0; background: transparent; color: var(--muted); width: 24px; height: 24px; border-radius: 4px; font-size: 13px; line-height: 1; }
+.node .tools button:hover { background: var(--panel-2); color: var(--fg); }
+.props { display: grid; gap: 1px; padding: 6px 0; }
+.node.closed .props { display: none; }
+.prop { display: grid; grid-template-columns: 9.5em minmax(0, 1fr) 5.4em; gap: 8px; align-items: center; padding: 3px 10px; font-size: 12.5px; }
+.prop label { color: var(--muted); }
+.prop input[type="range"] { width: 100%; accent-color: var(--nc); }
+.prop input[type="number"] { width: 100%; background: var(--panel-2); border: 1px solid var(--line); border-radius: 4px; padding: 2px 4px; font-family: var(--f-mono); font-size: 12px; text-align: right; }
+.prop select, .prop input[type="text"] { grid-column: 2 / 4; background: var(--panel-2); border: 1px solid var(--line); border-radius: 4px; padding: 3px 6px; font-size: 12.5px; min-width: 0; }
+.prop.bool input { justify-self: start; accent-color: var(--nc); width: 16px; height: 16px; }
+.addrow { display: flex; gap: 6px; margin-top: 8px; }
+.addrow select { flex: 1; min-width: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 6px; }
+
+/* notes */
+.notes { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+@media (max-width: 900px) { .notes { grid-template-columns: minmax(0, 1fr); } }
+textarea { width: 100%; min-height: 150px; resize: vertical; background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 10px; line-height: 1.5; font-size: 13.5px; }
+.lessons { display: grid; gap: 10px; }
+.lesson { display: grid; grid-template-columns: 5.2em minmax(0, 1fr); gap: 10px; font-size: 13.5px; }
+.lesson .yr { font-family: var(--f-mono); font-size: 12px; color: var(--accent); padding-top: 2px; }
+.lesson p { margin: 0; }
+.lesson b { font-weight: 600; }
+.lesson .twin { color: var(--muted); }
+.rules { margin: 0; padding-left: 18px; display: grid; gap: 6px; font-size: 13.5px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <div class="top">
+    <div>
+      <h1>ThreadSpace ship designer</h1>
+      <p>ThreadSpace carrier rethink: spin gravity in drums around a weightless spine, no shields, heavy armour. Today's carrier for scale: 400 m, 200,000 t, 4 × 100 MN drive, and gravity only while the drive is burning (0.2 g).</p>
+    </div>
+    <div class="actions">
+      <button class="btn primary" id="save" disabled>Save to scratchpad</button>
+      <button class="btn" id="saveas" disabled>Save as copy</button>
+      <button class="btn" id="reset">Reset to original</button>
+      <button class="btn" id="copy">Copy JSON</button>
+      <button class="btn" id="del" hidden>Delete saved copy</button>
+      <span id="status">Connecting…</span>
+    </div>
+  </div>
+  <div class="tabs" id="tabs" role="tablist"></div>
+
+  <div class="bench">
+    <div class="left">
+      <div class="view" id="view">
+        <div class="lbls" id="lbls"></div>
+        <div class="vbar">
+          <div>
+            <button class="chipbtn" id="v-3q" data-view="3q">3/4</button>
+            <button class="chipbtn" data-view="side">Side</button>
+            <button class="chipbtn" data-view="top">Top</button>
+            <button class="chipbtn" data-view="bow">From the bow</button>
+          </div>
+          <div>
+            <button class="chipbtn" id="t-spin" aria-pressed="true">Spin</button>
+            <button class="chipbtn" id="t-burn" aria-pressed="false">Main drive</button>
+            <button class="chipbtn" id="t-action" aria-pressed="false">Action stations</button>
+            <button class="chipbtn" id="t-xray" aria-pressed="true">See-through</button>
+            <button class="chipbtn" id="t-labels" aria-pressed="true">Labels</button>
+          </div>
+        </div>
+        <div class="vfoot"><span id="hint">Drag to orbit, scroll to zoom. Click a room to see what it is, or any section to edit it. Drums spin at their real rpm.</span><span id="kicknote"></span></div>
+      </div>
+
+      <section class="card" aria-labelledby="h-ship">
+        <header><h2 id="h-ship">The ship</h2><span class="muted" id="designname"></span></header>
+        <div class="stats" id="stats"></div>
+        <div class="massbar" id="massbar"></div>
+        <div class="legend" id="masslegend"></div>
+      </section>
+
+      <section class="card" aria-labelledby="h-grav">
+        <header><h2 id="h-grav">Spin gravity</h2><span class="muted">g = ω²r, measured at the floor</span></header>
+        <div class="tblwrap"><table id="gravtbl"></table></div>
+        <div class="balance" id="balance"></div>
+        <p class="say" id="gravsay"></p>
+      </section>
+
+      <section class="card" aria-labelledby="h-rooms">
+        <header><h2 id="h-rooms">Rooms</h2><span class="muted" id="roomsub"></span></header>
+        <p class="say" id="roomsay"></p>
+        <div class="tblwrap"><table id="roomtbl"></table></div>
+        <div id="layers" class="layers"></div>
+        <div id="roomplans" class="plans"></div>
+      </section>
+
+      <section class="card" aria-labelledby="h-access">
+        <header><h2 id="h-access">Getting about</h2><span class="muted">lift speed, car size and lifts a spoke are in the Ship node</span></header>
+        <div class="stats" id="accstats"></div>
+        <div class="accgrid">
+          <figure class="accfig"><div id="accchart"></div><figcaption class="muted">Riding a lift down a spoke: how heavy you feel, and the sideways push while the lift is moving.</figcaption></figure>
+          <div id="accsay" class="accsay"></div>
+        </div>
+        <h3>Journeys</h3>
+        <div id="journeys" class="journeys"></div>
+      </section>
+
+      <section class="notes">
+        <div class="card">
+          <header><h2>Design notes</h2><span class="muted" id="notesfor"></span></header>
+          <textarea id="notes" aria-label="Notes for this design"></textarea>
+          <h3>Rules of thumb for spin</h3>
+          <ul class="rules">
+            <li><b>Radius buys comfort.</b> 1 g at 2 rpm needs a 224 m radius. Inside a 68 m hull you get about half a g at 4 rpm.</li>
+            <li><b>Flat floors tilt.</b> In a ring of flat-floored rooms, the floor at a room's edge leans 180° ÷ rooms-per-ring. 8 rooms: 22°. 24 rooms: 7.5°. Curve or step the floors.</li>
+            <li><b>Spin in pairs.</b> A single drum is a gyroscope and fights every turn the ship makes. Two drums spinning opposite ways cancel out.</li>
+            <li><b>Thrust tips the floor aft</b> by atan(drive ÷ spin g). Rooms hung on pivots, like a centrifuge, can swing to stay level.</li>
+            <li><b>The bearing is the hard part.</b> A seal that holds air between spinning and fixed structure is the weak point. Crew can transfer at the axis, where the drum is barely moving.</li>
+          </ul>
+        </div>
+        <div class="card">
+          <header><h2>Naval lessons</h2><span class="muted">old ships, space twins</span></header>
+          <div class="lessons">
+            <div class="lesson"><span class="yr">1650–1850</span><p><b>Ship of the line.</b> Guns along both sides, so you aimed by turning the whole ship. <span class="twin">Twin: fixed broadside torpedo tubes in the hangar walls.</span></p></div>
+            <div class="lesson"><span class="yr">1906</span><p><b>Dreadnought.</b> All big guns in turrets on the centreline, so every gun could fire to either side; later ships stacked turrets to fire over each other. <span class="twin">Twin: turrets on the top and bottom centrelines. Space has no up, so both bear on any side.</span></p></div>
+            <div class="lesson"><span class="yr">1912</span><p><b>All or nothing armour.</b> Very thick armour over a citadel (engines, magazines, steering) and almost none elsewhere. The soft parts could be wrecked without losing the ship. <span class="twin">Twin: armour the fixed citadel and the sleeve; leave drums light and clear them at action stations.</span></p></div>
+            <div class="lesson"><span class="yr">1942</span><p><b>Carriers end the battleship era.</b> At Coral Sea and Midway the fleets never saw each other; aircraft outranged guns. <span class="twin">Twin: fighters and torpedoes are the long arm. Guns are for close range and for shooting down torpedoes.</span></p></div>
+            <div class="lesson"><span class="yr">1914–now</span><p><b>Submarine and torpedo.</b> A torpedo carries its own motor and steers itself. <span class="twin">Twin: launch cold with a coil or gas, coast dark, light the motor late so the target has little time to react.</span></p></div>
+            <div class="lesson"><span class="yr">1980–now</span><p><b>Missiles and point defence.</b> Fleets win by killing incoming missiles with automatic guns, not by soaking hits. <span class="twin">Twin: no shields means point defence guns, armour, and the vital parts spread out.</span></p></div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <aside class="panel" aria-label="Gunnery and sections">
+      <h2>Gunnery test</h2>
+      <article class="node gunnery" style="--nc: var(--t-bow)" aria-labelledby="h-recoil">
+        <header><span class="dot"></span><span class="name" id="h-recoil">Recoil</span><span class="tag">watch the 3D view</span></header>
+        <div class="recoil">
+          <div class="seg" role="group" aria-label="Firing direction">
+            <button id="dir-ahead" aria-pressed="false">Firing ahead</button>
+            <button id="dir-broad" aria-pressed="true">Firing broadside</button>
+          </div>
+          <div class="firerow">
+            <button class="btn" data-fire="top">Top</button>
+            <button class="btn" data-fire="bottom">Bottom</button>
+            <button class="btn primary" data-fire="both">Top + bottom</button>
+            <button class="btn" data-fire="rail">Spinal railgun</button>
+          </div>
+          <div class="tblwrap"><table id="recoiltbl"></table></div>
+          <p class="say muted" id="recoilsay"></p>
+        </div>
+      </article>
+      <h2>Sections, bow to stern</h2>
+      <div class="chain" id="chain"></div>
+      <div class="addrow">
+        <select id="addtype" aria-label="Section to add"></select>
+        <button class="btn" id="addbtn">Add after selected</button>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<script type="importmap">{"imports":{"three":"../vendor/three/three.module.js","three/addons/":"../vendor/three-addons/"}}</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+
+// ==LOGIC==
+const G0 = 9.81;
+const N = (k, label, min, max, step, unit = '') => ({ k, label, min, max, step, unit });
+const B = (k, label) => ({ k, label, type: 'bool' });
+const S = (k, label, options) => ({ k, label, type: 'select', options });
+const GUNS = [N('gunsTop', 'Turrets, top', 0, 6, 1), N('gunsBottom', 'Turrets, bottom', 0, 6, 1)];
+const ARMOUR = N('armour', 'Armour', 0, 0.8, 0.05, 'm');
+const SPIN_DIR = S('dir', 'Spin', [[1, 'Clockwise, seen from the bow'], [-1, 'Anticlockwise, seen from the bow']]);
+
+const TYPES = {
+  ship: { label: 'Ship', tag: 'whole ship', color: '--t-ship', params: [
+    { k: 'name', label: 'Design name', type: 'text' },
+    N('shell', 'Gun shell', 10, 2000, 10, 'kg'), N('vel', 'Muzzle speed', 300, 9000, 50, 'm/s'),
+    N('barrel', 'Barrel length', 4, 40, 1, 'm'), N('barrels', 'Barrels a turret', 1, 4, 1),
+    N('railSlug', 'Railgun slug', 5, 200, 1, 'kg'), N('railVel', 'Railgun speed', 2000, 20000, 100, 'm/s'),
+    N('thrust', 'Thrust an engine', 20, 250, 5, 'MN'), N('marines', 'Marines aboard', 0, 600, 10),
+    N('liftSpeed', 'Lift speed', 0.5, 6, 0.5, 'm/s'), N('carSize', 'People a lift car', 4, 40, 1), N('lifts', 'Lifts a spoke', 1, 4, 1) ] },
+  bow: { label: 'Bow', tag: 'zero-g · weapons', color: '--t-bow', params: [
+    N('L', 'Length', 20, 140, 1, 'm'), N('w', 'Width', 10, 100, 1, 'm'), N('h', 'Height', 8, 70, 1, 'm'),
+    N('taper', 'Nose taper', 0.15, 1, 0.05), N('tubes', 'Torpedo tubes, ahead', 0, 12, 1), B('spinal', 'Spinal railgun'),
+    ...GUNS, N('pdc', 'Point defence guns', 0, 8, 1), ARMOUR ],
+    def: { L: 50, w: 40, h: 30, taper: 0.45, tubes: 4, spinal: true, gunsTop: 0, gunsBottom: 0, pdc: 2, armour: 0.25 } },
+  drum: { label: 'Spin drum', tag: 'gravity', color: '--t-drum', spun: true, params: [
+    N('L', 'Length', 20, 200, 1, 'm'), N('inner', 'Inner radius', 4, 70, 0.5, 'm'), N('depth', 'Ring thickness', 3, 16, 0.5, 'm'),
+    N('decks', 'Decks', 1, 3, 1), N('belt', 'Outer belt', 0, 6, 0.5, 'm'), S('beltKind', 'Belt is', [['tanks', 'Water tanks and stores'], ['armour', 'Solid steel armour']]),
+    N('sides', 'Rooms around', 4, 64, 1), N('corridor', 'Ring corridor', 0, 6, 0.5, 'm'), N('spokes', 'Spokes with lifts', 2, 12, 1), N('rings', 'Rings along', 1, 10, 1), N('rpm', 'Spin', 0.5, 8, 0.1, 'rpm'), SPIN_DIR,
+    B('sleeve', 'Armoured fixed sleeve'), ARMOUR, ...GUNS.map(p => ({ ...p, when: s => s.sleeve })) ],
+    def: { L: 80, inner: 22, depth: 6, decks: 1, belt: 0, beltKind: 'tanks', sides: 12, corridor: 3, spokes: 4, rings: 3, rpm: 4, dir: 1, sleeve: false, armour: 0, gunsTop: 0, gunsBottom: 0 } },
+  hangar: { label: 'Hangar', tag: 'zero-g · vacuum', color: '--t-hangar', params: [
+    N('L', 'Length', 30, 200, 1, 'm'), N('w', 'Width', 20, 110, 1, 'm'), N('h', 'Height', 12, 70, 1, 'm'),
+    N('fighters', 'Fighters', 0, 30, 1), S('doors', 'Launch doors', [['both', 'Port and starboard'], ['port', 'Port'], ['stbd', 'Starboard'], ['none', 'None']]),
+    N('tubesSide', 'Broadside tubes a side', 0, 10, 1), B('tunnel', 'Pressurised crew tunnel'), ...GUNS, N('pdc', 'Point defence guns', 0, 8, 1), ARMOUR ],
+    def: { L: 90, w: 60, h: 34, fighters: 10, doors: 'both', tubesSide: 3, tunnel: true, gunsTop: 1, gunsBottom: 1, pdc: 2, armour: 0.2 } },
+  arms: { label: 'Spin arms', tag: 'gravity · reel in', color: '--t-arms', spun: true, params: [
+    N('L', 'Hub length', 10, 100, 1, 'm'), N('count', 'Arms', 2, 8, 1), N('reach', 'Reach to floor', 20, 250, 1, 'm'),
+    N('podL', 'Pod length', 8, 80, 1, 'm'), N('podW', 'Pod width', 6, 40, 1, 'm'), N('depth', 'Pod height', 3, 14, 0.5, 'm'),
+    N('rpm', 'Spin', 0.5, 8, 0.1, 'rpm'), SPIN_DIR, ARMOUR ],
+    def: { L: 44, count: 4, reach: 90, podL: 36, podW: 14, depth: 6, rpm: 2.5, dir: 1, armour: 0 } },
+  spine: { label: 'Spine', tag: 'zero-g · truss', color: '--t-spine', params: [
+    N('L', 'Length', 5, 150, 1, 'm'), N('r', 'Radius', 2, 30, 0.5, 'm'), ...GUNS, N('pdc', 'Point defence guns', 0, 8, 1), ARMOUR ],
+    def: { L: 30, r: 6, gunsTop: 0, gunsBottom: 0, pdc: 0, armour: 0.1 } },
+  stern: { label: 'Stern', tag: 'zero-g · drive', color: '--t-stern', params: [
+    N('L', 'Length', 30, 200, 1, 'm'), N('w', 'Width', 16, 110, 1, 'm'), N('h', 'Height', 12, 70, 1, 'm'),
+    N('engines', 'Engines', 1, 9, 1), N('radSpan', 'Radiator span', 0, 120, 1, 'm'), N('radLen', 'Radiator length', 10, 180, 1, 'm'),
+    S('bridge', 'Bridge', [['tower', 'Tower on top, aft'], ['buried', 'Buried in the citadel'], ['none', 'Not here']]),
+    ...GUNS, N('pdc', 'Point defence guns', 0, 8, 1), ARMOUR ],
+    def: { L: 90, w: 50, h: 30, engines: 4, radSpan: 46, radLen: 70, bridge: 'tower', gunsTop: 0, gunsBottom: 0, pdc: 2, armour: 0.25 } },
+};
+
+const SHIP_DEF = { name: 'Untitled', shell: 900, vel: 1400, barrel: 22, barrels: 3, railSlug: 20, railVel: 9000, thrust: 100, marines: 0, liftSpeed: 2, carSize: 12, lifts: 2 };
+
+const DREAM_DRUM = { type: 'drum', L: 22, inner: 57.5, depth: 8, decks: 2, belt: 2, beltKind: 'tanks', sides: 40, corridor: 3, spokes: 6, rings: 1, rpm: 3.7, dir: 1, sleeve: true, armour: 0.5, gunsTop: 0, gunsBottom: 0 };
+const PRESETS = [
+  { id: 'twin-drum', name: 'Twin-drum carrier', short: 'A',
+    ship: { ...SHIP_DEF, name: 'Twin-drum carrier', shell: 1000, vel: 5300, barrel: 14, barrels: 3, railSlug: 166, railVel: 20000, thrust: 140, marines: 120, liftSpeed: 2, carSize: 12, lifts: 2 },
+    sections: [
+      { type: 'bow', L: 72, w: 49, h: 26, taper: 0.6, tubes: 6, spinal: false, gunsTop: 1, gunsBottom: 1, pdc: 6, armour: 0.5 },
+      { ...DREAM_DRUM, dir: 1 },
+      { ...DREAM_DRUM, dir: -1 },
+      { type: 'hangar', L: 119, w: 47, h: 36, fighters: 12, doors: 'both', tubesSide: 8, tunnel: true, gunsTop: 3, gunsBottom: 3, pdc: 6, armour: 0.5 },
+      { type: 'stern', L: 53, w: 50, h: 36, engines: 3, radSpan: 35, radLen: 48, bridge: 'tower', gunsTop: 1, gunsBottom: 1, pdc: 6, armour: 0.5 } ],
+    notes: 'The chosen carrier. Bow with torpedoes and point defence, an armoured sleeve round the spin drum, a long vacuum hangar with six turrets and sixteen broadside tubes, and a short stern with the bridge tower.\n\nThe drum is now two halves inside the one sleeve, spinning opposite ways. One drum this big would act as a gyroscope the RCS could barely turn. The pair cancels out and looks the same from outside.\n\nRooms: 40 round each ring, about 10 m wide, so floors lean only 4.5° at the edges. Each half is one 22 m ring: 80 rooms of about 10 × 20 m on two decks, 160 in all. That holds the ~730 aboard with about a third spare for growth, passengers or evacuees. Shortening the drum from 112 m to 44 m took about 180,000 t off the ship.\n\nGetting about: each ring has a 3 m corridor right round it on both decks, with rooms fore and aft, so nobody walks through rooms. Six spokes per ring each carry two lifts and a ladder tube, from a hub ring that turns round the fixed spine corridor. You catch the hub ring at walking pace, ride about 45 s down 55 m, and get heavier the whole way. The spine runs bow to stern through a pressurised tunnel along the top of the airless hangar, with boarding tubes down to the fighters. Most action stations are in the weightless hull, so at general quarters the drum empties up the spokes in about 4 to 5 minutes.\n\nOutside in, the 8 m ring is: a 2 m belt of water tanks and stores, then two 3 m decks of rooms (0.97 g and 0.92 g). A shell has to get through the 0.5 m steel sleeve, a 2.5 m gap and the belt before it reaches anyone. Battleships protected their sides the same way, with alternating empty and liquid-filled layers in front of the main armour. The water also shields the crew from radiation, and pumping it between tanks keeps the drum balanced after damage. Solid steel instead would be stronger, but a 1 m steel belt weighs about 360,000 t. Each room is about the size of today\'s mess or gym. Lifts run up the spokes to the corridor at 6 points round each ring. Messes, the sick bay and ops sit beside the lifts, with berths in the quieter stretches between. The combat CIC stays in the fixed, armoured hull; the drum has planning and briefing rooms.' },
+  { id: 'armoured-drum', name: 'Armoured-drum battleship', short: 'B',
+    ship: { ...SHIP_DEF, name: 'Armoured-drum battleship', shell: 1200, barrel: 26 },
+    sections: [
+      { type: 'bow', L: 60, w: 50, h: 36, taper: 0.5, tubes: 4, spinal: true, gunsTop: 1, gunsBottom: 1, pdc: 2, armour: 0.4 },
+      { type: 'drum', L: 75, inner: 26, depth: 7, sides: 16, rings: 3, rpm: 3.5, dir: 1, sleeve: true, armour: 0.4, gunsTop: 2, gunsBottom: 2 },
+      { type: 'drum', L: 75, inner: 26, depth: 7, sides: 16, rings: 3, rpm: 3.5, dir: -1, sleeve: true, armour: 0.4, gunsTop: 2, gunsBottom: 2 },
+      { type: 'hangar', L: 60, w: 56, h: 30, fighters: 4, doors: 'port', tubesSide: 3, gunsTop: 0, gunsBottom: 0, pdc: 2, armour: 0.3 },
+      { type: 'stern', L: 100, w: 60, h: 36, engines: 6, radSpan: 40, radLen: 80, bridge: 'buried', gunsTop: 1, gunsBottom: 1, pdc: 2, armour: 0.4 } ],
+    notes: 'The armour carries the guns and the drums carry the crew. A fixed armoured sleeve wraps two drums that spin opposite ways, so the turrets mount on hull that does not move and the drums get the full hull width as radius. Dreadnought layout: turrets on the centreline top and bottom, so all of them bear on either side. Small hangar. The bridge is buried in the stern citadel, all-or-nothing style.\n\nCost: the heaviest of the three, so the slowest unless you add engines.' },
+  { id: 'folding-arm', name: 'Long-arm cruiser', short: 'C',
+    ship: { ...SHIP_DEF, name: 'Long-arm cruiser' },
+    sections: [
+      { type: 'bow', L: 50, w: 36, h: 28, taper: 0.4, tubes: 6, spinal: true, gunsTop: 0, gunsBottom: 0, pdc: 2, armour: 0.25 },
+      { type: 'hangar', L: 90, w: 56, h: 32, fighters: 10, doors: 'both', tubesSide: 3, gunsTop: 1, gunsBottom: 1, pdc: 2, armour: 0.2 },
+      { type: 'arms', L: 44, count: 4, reach: 90, podL: 36, podW: 14, depth: 6, rpm: 2.5, dir: 1, armour: 0 },
+      { type: 'spine', L: 30, r: 6, gunsTop: 1, gunsBottom: 1, pdc: 0, armour: 0.15 },
+      { type: 'arms', L: 44, count: 4, reach: 90, podL: 36, podW: 14, depth: 6, rpm: 2.5, dir: -1, armour: 0 },
+      { type: 'stern', L: 95, w: 48, h: 30, engines: 4, radSpan: 44, radLen: 70, bridge: 'tower', gunsTop: 0, gunsBottom: 0, pdc: 2, armour: 0.25 } ],
+    notes: 'Long arms and a slow spin. Four pods on 90 m arms give about 0.6 g at 2.5 rpm, slow enough that almost nobody feels it. Two sets of arms spin opposite ways. At action stations they spin down and reel in against the hub, so nothing big is sticking out when the shooting starts (press Action stations). They have to stop spinning first: reeling in while spinning speeds them up, like a skater pulling in their arms.\n\nCost: the pods have no armour at all, and in battle there is no gravity anywhere.' },
+];
+
+function spunInfo(s) {
+  let rFloor, rC, floorArea, roomVol, edgeTilt, extraMass = 0;
+  let gInner = null, rOuter, belt = 0, beltT = 0, living, rB = 0;
+  if (s.type === 'drum') {
+    rOuter = s.inner + s.depth; belt = Math.max(0, Math.min(s.belt || 0, s.depth - 2)); living = s.depth - belt;
+    rFloor = rOuter - belt; rC = s.inner + living / 2; rB = rOuter - belt / 2;
+    const roomL = Math.max(1, s.L / s.rings - 2), D = s.decks || 1, tan = Math.tan(Math.PI / s.sides);
+    floorArea = 0;
+    for (let k = 0; k < D; k++) floorArea += s.sides * s.rings * 2 * (rFloor - k * living / D) * tan * roomL;
+    if (D > 1) gInner = (rFloor - (D - 1) * living / D) / rFloor;
+    roomVol = s.sides * s.rings * 2 * rC * tan * living * roomL;
+    beltT = 2 * Math.PI * rB * belt * s.L * (s.beltKind === 'armour' ? 7.85 : 0.7);
+    edgeTilt = 180 / s.sides;
+    if (!s.sleeve) extraMass = floorArea * s.armour * 7.85; // armour on the spinning outer faces
+  } else {
+    rFloor = s.reach; rOuter = s.reach; living = s.depth; rC = s.reach - s.depth / 2;
+    floorArea = s.count * s.podL * s.podW;
+    roomVol = floorArea * s.depth;
+    edgeTilt = Math.atan(s.podW / 2 / s.reach) * 180 / Math.PI;
+    extraMass = s.count * (s.podL * s.podW * 2 + 2 * (s.podL + s.podW) * s.depth) * s.armour * 7.85 + s.count * s.reach * 0.6;
+  }
+  const w = s.rpm * 2 * Math.PI / 60;
+  const g = w * w * rFloor;
+  const massT = roomVol * 0.15 + extraMass;
+  const L = s.dir * 1000 * w * (massT * rC * rC + beltT * rB * rB);
+  return { rFloor, rC, floorArea, roomVol, edgeTilt, w, g, gG: g / G0, gInnerG: gInner === null ? null : gInner * g / G0, massT, L, rOuter, belt, beltT, living, beltKind: s.beltKind,
+    coriolis: 2 * w * 1.4 / g * 100, gradient: 1.8 / rFloor * 100 };
+}
+
+function turretMass(ship) { return 250 + 180 * ship.barrels * (ship.barrel / 20); }
+
+function sectionMass(s, ship) {
+  const m = { structure: 0, armour: 0, belt: 0, rooms: 0, guns: 0, engines: 0, radiators: 0 };
+  const guns = (s.gunsTop || 0) + (s.gunsBottom || 0);
+  m.guns = guns * turretMass(ship) + (s.pdc || 0) * 25 + (s.tubes || 0) * 60 + (s.tubesSide || 0) * 2 * 60 + (s.spinal ? 1800 : 0);
+  if (s.type === 'bow') {
+    const t = s.taper;
+    m.structure = s.w * s.h * s.L * (1 + t + t * t) / 3 * 0.12;
+    m.armour = (2 * (s.w + s.h) * s.L * (1 + t) / 2 + s.w * s.h * t * t) * s.armour * 7.85;
+  } else if (s.type === 'drum') {
+    const sp = spunInfo(s);
+    m.rooms = sp.massT; m.belt = sp.beltT;
+    m.structure = Math.PI * 9 * s.L * 0.3 + s.rings * 4 * s.inner * 2;
+    if (s.sleeve) { const R = sp.rOuter + 2.5; m.structure += 2 * Math.PI * R * s.L * 0.08; m.armour = 2 * Math.PI * R * s.L * s.armour * 7.85; }
+  } else if (s.type === 'hangar') {
+    m.structure = s.w * s.h * s.L * 0.05;
+    m.armour = 2 * (s.w + s.h) * s.L * s.armour * 7.85;
+    m.guns += s.fighters * 30;
+  } else if (s.type === 'arms') {
+    const sp = spunInfo(s);
+    m.rooms = sp.massT;
+    const hubL = Math.max(s.L, s.podL + 4);
+    m.structure = Math.PI * 36 * hubL * 0.3;
+  } else if (s.type === 'spine') {
+    m.structure = Math.PI * s.r * s.r * s.L * 0.2;
+    m.armour = 2 * Math.PI * s.r * s.L * s.armour * 7.85;
+  } else if (s.type === 'stern') {
+    m.structure = s.w * s.h * s.L * 0.14;
+    m.armour = (2 * (s.w + s.h) * s.L + s.w * s.h * 0.5) * s.armour * 7.85;
+    m.engines = s.engines * 1500;
+    m.radiators = 2 * s.radSpan * s.radLen * 0.06;
+  }
+  return m;
+}
+
+function sectionSize(s) {
+  if (s.type === 'drum') { const r = s.inner + s.depth + (s.sleeve ? 2.5 : 0); return { L: s.L, w: 2 * r, h: 2 * r }; }
+  if (s.type === 'arms') { const r = s.reach; return { L: Math.max(s.L, s.podL + 4), w: 2 * r, h: 2 * r }; }
+  if (s.type === 'spine') return { L: s.L, w: 2 * s.r, h: 2 * s.r };
+  return { L: s.L, w: s.w, h: s.h };
+}
+
+function analyze(d) {
+  const ship = d.ship;
+  const secs = d.sections.map((s, i) => ({ s, i, size: sectionSize(s), mass: sectionMass(s, ship), spin: TYPES[s.type].spun ? spunInfo(s) : null }));
+  const parts = { structure: 0, armour: 0, belt: 0, rooms: 0, guns: 0, engines: 0, radiators: 0 };
+  let T = 0, maxW = 0, maxH = 0, hullW = 0, hullH = 0, engines = 0, top = 0, bottom = 0, tubesFwd = 0, tubesSide = 0, fighters = 0, pdc = 0, rail = false, floor = 0;
+  for (const x of secs) {
+    for (const k in parts) parts[k] += x.mass[k];
+    T += x.size.L; maxW = Math.max(maxW, x.size.w); maxH = Math.max(maxH, x.size.h);
+    if (x.s.type !== 'arms') { hullW = Math.max(hullW, x.size.w); hullH = Math.max(hullH, x.size.h); }
+    if (x.s.type === 'stern') engines += x.s.engines;
+    top += x.s.gunsTop || 0; bottom += x.s.gunsBottom || 0;
+    if (x.s.type === 'drum' && !x.s.sleeve) { top -= x.s.gunsTop || 0; bottom -= x.s.gunsBottom || 0; }
+    tubesFwd += x.s.tubes || 0; tubesSide += x.s.tubesSide || 0; fighters += x.s.fighters || 0; pdc += x.s.pdc || 0;
+    if (x.s.spinal) rail = true;
+    if (x.spin) floor += x.spin.floorArea;
+  }
+  const M = Object.values(parts).reduce((a, b) => a + b, 0);
+  const thrust = engines * ship.thrust * 1e6;
+  const a = thrust / (M * 1000);
+  const spun = secs.filter(x => x.spin);
+  const netL = spun.reduce((acc, x) => acc + x.spin.L, 0);
+  const sumL = spun.reduce((acc, x) => acc + Math.abs(x.spin.L), 0);
+  // Moments of inertia of the whole ship, as a solid box (kg m²)
+  const Mkg = M * 1000;
+  const Ipitch = Mkg * (T * T + hullH * hullH) / 12;
+  const Iroll = Mkg * (hullW * hullW + hullH * hullH) / 12;
+  const A = { secs, parts, M, T, maxW, maxH, hullW, hullH, engines, thrust, a, spun, netL, sumL, Ipitch, Iroll,
+    top, bottom, tubesFwd, tubesSide, fighters, pdc, rail, floor };
+  A.plan = planRooms(A, ship);
+  return A;
+}
+
+// ---- crew and rooms ----
+function crewEstimate(A) {
+  const parts = { command: 80, guns: 10 * (A.top + A.bottom), torpedoes: 3 * (A.tubesFwd + 2 * A.tubesSide), pdc: 2 * A.pdc,
+    flight: 9 * A.fighters, engineering: 40 + 20 * A.engines, damage: 60, medical: 12, supply: 30, security: 20 };
+  return { parts, total: Object.values(parts).reduce((a, b) => a + b, 0) };
+}
+const USES = [
+  { id: 'medical', label: 'Sick bay', color: '#ff8f8f', desc: '12 beds, surgery, isolation. Surgery needs full gravity, so it goes on the outer deck.' },
+  { id: 'flight', label: 'Aircrew', color: '#ffb35c', desc: 'Ready rooms, flight briefing, the flight surgeon. At the end nearest the hangar.' },
+  { id: 'ops', label: 'Ops and planning', color: '#c79bff', desc: 'Flag plot, briefing, intelligence, ship’s office. The combat CIC stays in the fixed, armoured hull.' },
+  { id: 'mess', label: 'Galley and mess', color: '#ffd84d', desc: 'A galley and 60 seats, three sittings a meal. One beside each lift.' },
+  { id: 'wardroom', label: 'Wardroom', color: '#e9c98a', desc: 'Officers’ dining room and lounge.' },
+  { id: 'officers', label: 'Officers’ cabins', color: '#8dbbff', cap: 6, desc: '6 single cabins, a small lounge, heads and showers.' },
+  { id: 'berths', label: 'Crew berths', color: '#5b8de0', cap: 16, desc: '8 two-bunk cabins either side of a corridor, heads and showers.' },
+  { id: 'marines', label: 'Marines’ berths', color: '#4267a8', cap: 16, desc: 'Laid out like crew berths. The boarding and security company.' },
+  { id: 'gym', label: 'Gym and rec', color: '#6fe0a2', desc: 'Gym, rec room, part of a running track round the ring.' },
+  { id: 'stores', label: 'Stores and laundry', color: '#bfa98a', heavy: true, desc: 'Food stores and laundry. Heavy, so placed in opposite pairs to keep the drum balanced.' },
+  { id: 'workshop', label: 'Workshops', color: '#e28f5a', desc: 'Bench work that needs gravity: electronics, sewing, small repairs.' },
+  { id: 'hydro', label: 'Hydroponic garden', color: '#a5e35f', heavy: true, desc: 'Air, fresh food and somewhere green on a long patrol. Water is heavy, so these go in opposite pairs too.' },
+  { id: 'spare', label: 'Spare', color: '#5a6470', desc: 'Bare deck: room to grow, passengers or evacuees.' },
+];
+const USE = Object.fromEntries(USES.map(u => [u.id, u]));
+const PLACE = {
+  medical: s => 10 * (s.deck === 0) - 2 * s.dist + 2 * s.mid,
+  flight: s => 8 * s.nh - 2 * s.dist + 2 * (s.deck === 0),
+  ops: s => 6 * s.nh - 2 * s.dist + (s.deck > 0),
+  mess: s => 4 * (s.deck === 0) - 3 * s.dist + 2 * s.mid,
+  wardroom: s => 3 * s.nh - 2 * s.dist + 2 * (s.deck === 0),
+  officers: s => 3 * s.nh + 2 * (s.deck > 0) - 0.3 * s.dist,
+  berths: s => 0.4 * s.dist + (s.deck > 0),
+  marines: s => 3 * (1 - s.nh) + 0.3 * s.dist,
+  gym: s => 3 * (s.deck === 0) - s.dist + s.mid,
+  stores: s => 4 * (s.deck === 0) - 2 * s.dist + 2 * (1 - s.nh),
+  workshop: s => 3 * (s.deck === 0) - s.dist + (1 - s.nh),
+  hydro: s => 5 * (s.deck > 0) + 0.5 * s.dist + 2 * (1 - s.nh),
+};
+const SPREAD = new Set(['mess', 'gym', 'medical']);
+function podRooms(s) { return Math.max(1, Math.round(s.podL / 16)); }
+const PER_BUNK = { berths: 10.75, marines: 10.75, officers: 28 };
+function capOf(u, area) { return PER_BUNK[u] ? Math.max(1, Math.floor(area / PER_BUNK[u])) : 0; }
+function spokeCount(sides) { return Math.min(6, Math.max(3, Math.round(sides / 3))); }
+// A drum ring: rooms fore and aft of a ring corridor (or one row of rooms with no corridor)
+function drumLayout(s) {
+  const rows = (s.corridor || 0) > 0 ? 2 : 1, ringL = s.L / s.rings;
+  const roomL = Math.max(1, rows > 1 ? (ringL - s.corridor - 1) / 2 : ringL - 2);
+  const spokes = s.spokes || spokeCount(s.sides);
+  // z of row r (r = ring * rows + row) from the drum's middle
+  const z = r => { const j = Math.floor(r / rows), row = r % rows; return -s.L / 2 + ringL * (j + 0.5) + (rows > 1 ? (row ? 1 : -1) * (s.corridor / 2 + roomL / 2) : 0); };
+  const corrZ = j => -s.L / 2 + ringL * (j + 0.5);
+  return { rows, ringL, roomL, spokes, R: s.rings * rows, z, corrZ };
+}
+function planRooms(A, ship) {
+  const est = crewEstimate(A), crew = est.total, marines = ship.marines || 0;
+  const officers = Math.round(crew * 0.12), enlisted = crew - officers;
+  const hangarZ = []; { let zz = -A.T / 2; for (const x of A.secs) { if (x.s.type === 'hangar') hangarZ.push(zz + x.size.L / 2); zz += x.size.L; } }
+  const slots = []; let z = -A.T / 2;
+  for (const x of A.secs) {
+    const s = x.s, L = x.size.L, z0 = z; z += L;
+    if (!x.spin) continue;
+    const drum = s.type === 'drum';
+    const lay = drum ? drumLayout(s) : null;
+    const S = drum ? s.sides : s.count, R = drum ? lay.R : podRooms(s), D = drum ? (s.decks || 1) : 1;
+    const spokes = drum ? lay.spokes : S, roomL = drum ? lay.roomL : s.podL / R;
+    for (let r = 0; r < R; r++) {
+      const zc = drum ? z0 + L / 2 + lay.z(r) : z0 + L / 2 + (r + 0.5 - R / 2) * roomL;
+      const hd = hangarZ.length ? Math.min(...hangarZ.map(h => Math.abs(h - zc))) : 0;
+      for (let k = 0; k < S; k++) {
+        let dist = 0, arc = k;
+        if (drum) {
+          const a = k / S * spokes; let best = Infinity;
+          for (let j = 0; j < spokes; j++) { const df = Math.abs(a - (j + 0.5)); best = Math.min(best, df, spokes - df); }
+          dist = best * S / spokes; arc = Math.floor(a);
+        }
+        for (let d = 0; d < D; d++) {
+          const rd = drum ? x.spin.rFloor - d * x.spin.living / D : s.reach;
+          const area = drum ? 2 * rd * Math.tan(Math.PI / S) * roomL : roomL * s.podW;
+          slots.push({ sec: x.i, ring: r, side: k, deck: d, S, R, D, rows: drum ? lay.rows : 1, dist, arc, hd, mid: R > 1 ? 1 - Math.abs(r - (R - 1) / 2) / ((R - 1) / 2) : 1, area, gG: x.spin.gG * rd / x.spin.rFloor, use: null });
+        }
+      }
+    }
+  }
+  const maxHd = Math.max(1e-9, ...slots.map(s => s.hd));
+  for (const s of slots) s.nh = hangarZ.length ? 1 - s.hd / maxHd : 0.5;
+  const key = (sec, ring, side, deck) => `${sec}|${ring}|${side}|${deck}`;
+  const byKey = new Map(slots.map((s, i) => [key(s.sec, s.ring, s.side, s.deck), i]));
+  const avgArea = slots.length ? slots.reduce((a, s) => a + s.area, 0) / slots.length : 172;
+  const minArea = slots.length ? Math.min(...slots.map(s => s.area)) : 172; // size cabins by the smallest room, so bunks never fall short
+  const f = avgArea / 172; // rooms here hold this much more (or less) than a 172 m² room, today's mess
+  const all = crew + marines;
+  const need = {
+    medical: Math.max(2, Math.ceil(crew / 150 / f)), flight: A.fighters ? Math.max(1, Math.ceil(A.fighters / 6 / f)) : 0,
+    ops: Math.max(2, Math.ceil(crew / 120 / f)), mess: Math.max(2, Math.ceil((enlisted + marines) / 100 / f)),
+    wardroom: Math.max(1, Math.ceil(officers / 60 / f)), officers: Math.ceil(officers / capOf('officers', minArea)),
+    berths: Math.ceil(enlisted / capOf('berths', minArea)), marines: marines ? Math.ceil(marines / capOf('marines', minArea)) : 0,
+    gym: Math.max(1, Math.ceil(all / 150 / f)), stores: A.secs.some(x => x.s.type === 'drum' && x.spin.belt > 0 && x.s.beltKind === 'tanks') ? Math.max(1, Math.ceil(all / 400 / f)) : Math.max(2, Math.ceil(all / 100 / f)), workshop: Math.max(1, Math.ceil(crew / 200 / f)), hydro: 0 };
+  const essential = Object.values(need).reduce((a, b) => a + b, 0);
+  need.hydro = Math.max(0, Math.min(Math.round(slots.length * 0.15), slots.length - essential));
+  const placed = Object.fromEntries(USES.map(u => [u.id, 0]));
+  const arcCount = new Map();
+  const free = new Set(slots.keys());
+  const assign = (i, u) => { const s = slots[i]; s.use = u; free.delete(i); placed[u]++; const ak = `${u}|${s.sec}|${s.arc}`; arcCount.set(ak, (arcCount.get(ak) || 0) + 1); };
+  const same = (s, u) => {
+    let n = 0;
+    for (const dk of [-1, 1]) { const j = byKey.get(key(s.sec, s.ring, (s.side + dk + s.S) % s.S, s.deck)); if (j !== undefined && slots[j].use === u) n++; }
+    for (const dr of [-1, 1]) { const j = byKey.get(key(s.sec, s.ring + dr, s.side, s.deck)); if (j !== undefined && slots[j].use === u) n += 0.5; }
+    return n;
+  };
+  for (const u of Object.keys(PLACE)) {
+    while (placed[u] < need[u] && free.size) {
+      let best = -1, bs = -Infinity;
+      for (const i of free) {
+        const s = slots[i]; let sc = PLACE[u](s) + 2 * same(s, u);
+        if (SPREAD.has(u)) sc -= 6 * (arcCount.get(`${u}|${s.sec}|${s.arc}`) || 0);
+        if (sc > bs) { bs = sc; best = i; }
+      }
+      assign(best, u);
+      if (USE[u].heavy && placed[u] < need[u] && slots[best].S % 2 === 0) {
+        const s = slots[best], j = byKey.get(key(s.sec, s.ring, (s.side + s.S / 2) % s.S, s.deck));
+        if (j !== undefined && free.has(j)) assign(j, u);
+      }
+    }
+  }
+  for (const i of free) { slots[i].use = 'spare'; placed.spare++; }
+  const area = Object.fromEntries(USES.map(u => [u.id, 0]));
+  for (const s of slots) area[s.use] += s.area;
+  const short = {}; for (const u of Object.keys(need)) if (u !== 'hydro' && placed[u] < need[u]) short[u] = need[u] - placed[u];
+  const perRing = {}; for (const s of slots) perRing[s.sec] = s.S * s.D;
+  const ringsNow = A.secs.filter(x => x.spin).reduce((a, x) => a + (x.s.type === 'drum' ? x.s.rings : 1), 0);
+  const avgPerRing = slots.length / Math.max(1, ringsNow);
+  return { crew, officers, enlisted, marines, est, need, placed, area, short, slots, byKey, key, essential,
+    bunks: slots.reduce((a, s) => a + capOf(s.use, s.area), 0), avgArea, hasDrum: A.secs.some(x => x.s.type === 'drum'),
+    ringsNow, ringsNeeded: Math.ceil(essential * 1.15 / Math.max(1, avgPerRing)) };
+}
+
+// ---- getting about: spokes, lifts, ladders, journeys ----
+const HUB_R = 6;        // the turning hub ring round the fixed corridor, where the spokes start
+const FLOAT = 1.5;      // m/s, hand over hand along rails in zero-g
+const WALK = 1.4;       // m/s
+const TRANSFER = 15;    // s, catching the hub ring and getting into the lift lobby
+const SUIT = 300;       // s, suiting up to cross a vacuum space
+function access(A, ship) {
+  const drums = A.secs.filter(x => x.s.type === 'drum');
+  if (!drums.length) return null;
+  const v = ship.liftSpeed, door = 8;
+  const zs = []; { let z = -A.T / 2; for (const x of A.secs) { zs.push([z, z + x.size.L]); z += x.size.L; } }
+  const per = drums.map(x => {
+    const s = x.s, sp = x.spin, D = s.decks || 1, dd = sp.living / D, lay = drumLayout(s);
+    const rIn = sp.rFloor - (D - 1) * dd;               // inner deck floor
+    const len = Math.max(1, rIn - HUB_R);               // lift shaft
+    const ride = len / v + v + door * D;                // run, speed up and slow down at 1 m/s², a stop per deck
+    const sideways = 2 * sp.w * v / G0;                 // Coriolis push in a moving lift, in g
+    const crossR = 2 * v / sp.w;                        // below this radius the sideways push beats "down"
+    const ladderEq = sp.w * sp.w * (rIn * rIn - HUB_R * HUB_R) / 2 / G0; // the climb, as metres in 1 g
+    const circ = 2 * Math.PI * rIn, walkMax = circ / (2 * lay.spokes);
+    const round = 2 * ride + 30;                        // up, down, loading at each end
+    const liftFlow = lay.spokes * ship.lifts * ship.carSize / round;
+    const ladderFlow = lay.spokes * 0.12;               // one climber every ~3 m, at ~0.4 m/s
+    return { x, z: (zs[x.i][0] + zs[x.i][1]) / 2, len, ride, sideways, crossR, ladderEq, storeys: ladderEq / 3, spokes: lay.spokes, circ, walkMax,
+      walkAvg: walkMax / 2 / WALK, liftFlow, ladderFlow, w: sp.w, rIn, rFloor: sp.rFloor, gIn: sp.w * sp.w * rIn / G0, corridor: s.corridor || 0, rows: lay.rows };
+  });
+  const P = A.plan, inDrum = Math.round(P.crew * 2 / 3 + P.marines);
+  const flow = per.reduce((a, p) => a + p.liftFlow + p.ladderFlow, 0);
+  const muster = inDrum / flow + Math.max(...per.map(p => p.ride)) + 90;
+  // places
+  const find = t => A.secs.findIndex(x => x.s.type === t), findLast = t => A.secs.map(x => x.s.type).lastIndexOf(t);
+  const iBow = find('bow'), iHangar = find('hangar'), iStern = findLast('stern');
+  const near = z => per.reduce((b, p) => Math.abs(p.z - z) < Math.abs(b.z - z) ? p : b);
+  const between = (za, zb, i) => { const [a, b] = zs[i]; return Math.min(za, zb) < b && Math.max(za, zb) > a; };
+  const crossesHangar = (za, zb) => A.secs.some((x, i) => x.s.type === 'hangar' && between(za, zb, i) && !(za >= zs[i][0] && za <= zs[i][1]));
+  const tunnelOk = A.secs.every(x => x.s.type !== 'hangar' || x.s.tunnel);
+  const journeys = [];
+  if (iBow >= 0) {
+    const zT = zs[iBow][0] + 10, d = near(zT);
+    const steps = [[`Float aft along the spine from the torpedo room, ${fmtm(Math.abs(d.z - zT))}`, Math.abs(d.z - zT) / FLOAT]];
+    if (crossesHangar(zT, d.z)) steps.push(tunnelOk ? ['Through the hangar tunnel', 0] : ['Suit up to cross the airless hangar', SUIT]);
+    steps.push(['Catch the turning hub ring and swing into the lift lobby', TRANSFER], [`Lift down ${fmtm(d.len)}, from weightless to ${d.gIn.toFixed(2)} g`, d.ride], ['Walk the ring corridor to your cabin', d.walkAvg]);
+    journeys.push({ title: 'Torpedo room to your bunk', steps });
+  }
+  if (iHangar >= 0) {
+    const zH = zs[iHangar][0] + 5, zHe = zs[iHangar][1] - 5, d = near((zH + zHe) / 2), zIn = Math.abs(d.z - zH) < Math.abs(d.z - zHe) ? zH : zHe;
+    const steps = [['Walk the ring corridor to the nearest lift', d.walkAvg], [`Lift up ${fmtm(d.len)} to the hub`, d.ride], ['Float out of the lobby onto the fixed spine', TRANSFER],
+      [`Float to the hangar, ${fmtm(Math.abs(d.z - zIn))}`, Math.abs(d.z - zIn) / FLOAT],
+      tunnelOk ? ['Along the hangar tunnel and down a boarding tube into the cockpit', 45] : ['Suit up and cross the airless hangar to the fighter', SUIT + 60]];
+    journeys.push({ title: 'Scramble: bunk to cockpit', steps, note: 'Pilots on alert should wait in a weightless ready room by the hangar, which saves the first three steps.' });
+  }
+  if (iStern >= 0) {
+    const zB = zs[iStern][0] + A.secs[iStern].size.L * 0.6, d = near(zB);
+    const steps = [['Walk the ring corridor to the nearest lift', d.walkAvg], [`Lift up ${fmtm(d.len)} to the hub`, d.ride], ['Float out of the lobby onto the fixed spine', TRANSFER],
+      [`Float aft along the spine, ${fmtm(Math.abs(zB - d.z))}`, Math.abs(zB - d.z) / FLOAT]];
+    if (crossesHangar(d.z, zB)) steps.push(tunnelOk ? ['(the spine runs through the hangar in its tunnel)', 0] : ['Suit up to cross the airless hangar', SUIT]);
+    if (A.secs[iStern].s.bridge === 'tower') steps.push(['Up the tower to the bridge', 20]);
+    journeys.push({ title: 'Bunk to the bridge', steps });
+  }
+  for (const j of journeys) j.total = j.steps.reduce((a, st) => a + st[1], 0);
+  return { per, inDrum, flow, muster, journeys, tunnelOk };
+}
+function fmtm(m) { return `${Math.round(m)} m`; }
+
+function recoil(A, ship, which, dir) {
+  // returns impulse (N s), linear dv (m/s), turn rate (rad/s), axis
+  const shellP = ship.shell * ship.vel;
+  const yTop = A.hullH / 2 + 3;
+  if (which === 'rail') {
+    const p = ship.railSlug * ship.railVel;
+    const off = Math.min(9, A.hullH * 0.25); // the muzzle sits low on the keel, as on today's carrier
+    return { p, dv: p / (A.M * 1000), rate: p * off / A.Ipitch, axis: 'pitch', rounds: 1 };
+  }
+  const nTop = A.top * ship.barrels, nBot = A.bottom * ship.barrels;
+  const nt = which === 'top' ? nTop : which === 'bottom' ? 0 : nTop;
+  const nb = which === 'bottom' ? nBot : which === 'top' ? 0 : nBot;
+  const p = (nt + nb) * shellP;
+  const torque = Math.abs(nt - nb) * shellP * yTop;
+  const I = dir === 'broad' ? A.Iroll : A.Ipitch;
+  return { p, dv: p / (A.M * 1000), rate: torque / I, axis: dir === 'broad' ? 'roll' : 'pitch', rounds: nt + nb };
+}
+// ==/LOGIC==
+
+// ---------- state ----------
+const clone = o => JSON.parse(JSON.stringify(o));
+const presetById = id => PRESETS.find(p => p.id === id);
+const norm = d => ({ ...d, ship: { ...SHIP_DEF, ...d.ship }, sections: d.sections.filter(s => TYPES[s.type]).map(s => ({ ...TYPES[s.type].def, ...s })) });
+const state = {
+  designs: new Map(PRESETS.map(p => [p.id, norm({ ...clone(p), saved: false })])),
+  saved: new Map(),
+  current: 'twin-drum', sel: 0, open: new Set(['s0']),
+  ui: { spin: true, burn: false, action: false, xray: true, labels: true, fireDir: 'broad' },
+};
+// Browser drafts hold only unsaved edits, stamped with the version they started from (baseAt).
+// A newer built-in design or a newer saved version always wins over an older draft.
+const PRESET_STAMP = 1795121000000; // bump when PRESETS change
+for (const d of state.designs.values()) d.baseAt = PRESET_STAMP;
+const LS = 'threadspace.ship-designer.drafts';
+try { const raw = localStorage.getItem(LS); if (raw) { const o = JSON.parse(raw); for (const [id, d] of Object.entries(o.designs || {})) {
+  if (!d?.dirty || !d?.ship || !Array.isArray(d.sections)) continue;
+  if (presetById(id) && (d.baseAt || 0) < PRESET_STAMP) continue;
+  if (state.designs.has(id) || id.startsWith('copy-')) state.designs.set(id, norm(d));
+} if (o.current && state.designs.has(o.current)) state.current = o.current; } } catch {}
+function saveDraft() { try { localStorage.setItem(LS, JSON.stringify({ current: state.current, designs: Object.fromEntries([...state.designs].filter(([, d]) => d.dirty)) })); } catch {} }
+const cur = () => state.designs.get(state.current);
+
+// ---------- helpers ----------
+const $ = s => document.querySelector(s);
+const css = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+const fmt = (v, d = 0) => Number(v).toLocaleString('en-GB', { maximumFractionDigits: d, minimumFractionDigits: d });
+function sci(v, unit) {
+  const a = Math.abs(v);
+  if (a === 0) return '0 ' + unit;
+  if (a >= 1e9) return fmt(v / 1e9, 2) + ' G' + unit;
+  if (a >= 1e6) return fmt(v / 1e6, 2) + ' M' + unit;
+  if (a >= 1e3) return fmt(v / 1e3, 1) + ' k' + unit;
+  return fmt(v, 1) + ' ' + unit;
+}
+function dur(s) { if (!isFinite(s)) return 'never'; if (s < 90) return fmt(s, 0) + ' s'; if (s < 5400) return fmt(s / 60, 0) + ' min'; if (s < 172800) return fmt(s / 3600, 1) + ' h'; return fmt(s / 86400, 1) + ' days'; }
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+function comfort(rpm) {
+  if (rpm <= 2) return ['good', 'comfortable'];
+  if (rpm <= 4) return ['warn', 'most adapt in days'];
+  if (rpm <= 6) return ['bad', 'needs training'];
+  return ['bad', 'sickening'];
+}
+function secTitle(s, i) { const T = TYPES[s.type]; const arrow = T.spun ? (s.dir > 0 ? ' ↻' : ' ↺') : ''; return `${i + 1} · ${T.label}${arrow}`; }
+function secSummary(x) {
+  const s = x.s;
+  if (x.spin) return `${fmt(x.spin.gG, 2)} g · ${fmt(s.rpm, 1)} rpm · r ${fmt(x.spin.rFloor, 0)} m`;
+  if (s.type === 'hangar') return `${s.fighters} fighters · ${s.tubesSide * 2} side tubes`;
+  if (s.type === 'bow') return `${s.tubes} tubes${s.spinal ? ' · railgun' : ''}`;
+  if (s.type === 'stern') return `${s.engines} engines · bridge ${s.bridge}`;
+  return `${fmt(s.L)} m`;
+}
+
+// ---------- 3D ----------
+const view = $('#view');
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(2, devicePixelRatio));
+renderer.setClearColor(0x070a10);
+view.prepend(renderer.domElement);
+const labelR = new CSS2DRenderer({ element: $('#lbls') });
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(38, 1, 1, 20000);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true; controls.dampingFactor = 0.08;
+scene.add(new THREE.HemisphereLight(0xcfe0ff, 0x1a1410, 1.1));
+const sun = new THREE.DirectionalLight(0xfff1dc, 2.2); sun.position.set(-400, 500, -250); scene.add(sun);
+const rim = new THREE.DirectionalLight(0x7fa6ff, 0.7); rim.position.set(300, -200, 400); scene.add(rim);
+{ // stars
+  const n = 1800, p = new Float32Array(n * 3);
+  for (let i = 0; i < n; i++) { const u = Math.random() * 2 - 1, t = Math.random() * Math.PI * 2, r = 6000, q = Math.sqrt(1 - u * u); p.set([r * q * Math.cos(t), r * u, r * q * Math.sin(t)], i * 3); }
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(p, 3));
+  scene.add(new THREE.Points(g, new THREE.PointsMaterial({ color: 0xaab8cc, size: 1.6, sizeAttenuation: false })));
+}
+const ship = new THREE.Group(); scene.add(ship);
+const shipInner = new THREE.Group(); ship.add(shipInner);
+
+const C = { hullLight: new THREE.Color(0x8794a3), hullDark: new THREE.Color(0x3c444e), rooms: 0x86dccb, roomsAlt: 0x6cc2b2, corridor: 0xc9d2dc, turret: 0x59626d, barrel: 0x2d333a, tube: 0xd9735c, rad: 0xb8743a, engine: 0x4f5965, glow: 0x9cc2ff, hangar: 0xe2a14a, fighter: 0xd8dee6, bridge: 0xf2d38a, spoke: 0x9aa6b4 };
+const matCache = new Map();
+function mat(color, o = {}) {
+  const key = `${color}|${o.opacity ?? 1}|${o.emissive ?? 0}`;
+  if (!matCache.has(key)) {
+    const m = new THREE.MeshStandardMaterial({ color, roughness: 0.75, metalness: 0.15, flatShading: true, transparent: (o.opacity ?? 1) < 1, opacity: o.opacity ?? 1, depthWrite: (o.opacity ?? 1) >= 1, side: (o.opacity ?? 1) < 1 ? THREE.DoubleSide : THREE.FrontSide, emissive: o.emissive ?? 0, emissiveIntensity: o.emissive ? 1 : 0 });
+    matCache.set(key, m);
+  }
+  return matCache.get(key);
+}
+const tempMat = m => { m.userData.temp = true; return m; };
+const lineMats = { normal: new THREE.LineBasicMaterial({ color: 0x0a0d12, transparent: true, opacity: 0.55 }), sel: new THREE.LineBasicMaterial({ color: 0xf0a43a }) };
+const edgeCache = new WeakMap();
+function mesh(geo, material, edges = true) {
+  const m = new THREE.Mesh(geo, material);
+  if (edges) {
+    let eg = edgeCache.get(geo); if (!eg) { eg = new THREE.EdgesGeometry(geo, 25); edgeCache.set(geo, eg); }
+    const e = new THREE.LineSegments(eg, lineMats.normal); e.userData.edge = true; m.add(e); }
+  return m;
+}
+function frustum(w, h, L, front, back) { // square frustum along z, -z end scaled by `front`
+  const g = new THREE.CylinderGeometry(front * Math.SQRT1_2, back * Math.SQRT1_2, L, 4, 1);
+  g.rotateY(Math.PI / 4); g.rotateX(-Math.PI / 2); g.scale(w, h, 1); return g;
+}
+function hullMat(armour) { const c = C.hullLight.clone().lerp(C.hullDark, Math.min(1, armour / 0.6)); return mat(c.getHex()); }
+
+const fx = { muzzles: { top: [], bottom: [], rail: [] }, flashes: [] };
+function turret(shipCfg, up) {
+  const g = new THREE.Group();
+  g.add(mesh(new THREE.CylinderGeometry(3.6, 4.4, 1.6, 10), mat(C.turret)));
+  const house = mesh(new THREE.BoxGeometry(7.5, 3.2, 9), mat(C.turret)); house.position.y = 2.3; g.add(house);
+  const n = shipCfg.barrels;
+  for (let b = 0; b < n; b++) {
+    const bar = mesh(new THREE.CylinderGeometry(0.42, 0.55, shipCfg.barrel, 8), mat(C.barrel), false);
+    bar.rotation.x = Math.PI / 2; bar.position.set((b - (n - 1) / 2) * 1.8, 2.6, -4 - shipCfg.barrel / 2); g.add(bar);
+    const tip = new THREE.Object3D(); tip.position.set((b - (n - 1) / 2) * 1.8, 2.6, -4 - shipCfg.barrel); g.add(tip);
+    fx.muzzles[up ? 'top' : 'bottom'].push(tip);
+  }
+  if (!up) g.rotation.z = Math.PI;
+  return g;
+}
+function spread(n, L, k = 0.36) { if (n <= 0) return []; if (n === 1) return [0]; return Array.from({ length: n }, (_, i) => -k * L + (2 * k * L) * i / (n - 1)); }
+function addGuns(g, s, shipCfg, yTop, yBot) {
+  for (const z of spread(s.gunsTop || 0, s.L)) { const t = turret(shipCfg, true); t.position.set(0, yTop, z); g.add(t); }
+  for (const z of spread(s.gunsBottom || 0, s.L)) { const t = turret(shipCfg, false); t.position.set(0, yBot, z); g.add(t); }
+}
+function addPdc(g, n, L, x) {
+  spread(n, L, 0.3).forEach((z, i) => {
+    const side = i % 2 ? 1 : -1;
+    const p = mesh(new THREE.SphereGeometry(1.6, 8, 6), mat(C.turret), false); p.position.set(side * (x + 0.8), 0, z); g.add(p);
+    const b = mesh(new THREE.CylinderGeometry(0.2, 0.2, 3.2, 5), mat(C.barrel), false); b.rotation.z = Math.PI / 2; b.position.set(side * (x + 2.6), 0.6, z); g.add(b);
+  });
+}
+function tubeMouth(r) { return mesh(new THREE.RingGeometry(r * 0.55, r, 14), mat(C.tube, { emissive: 0x2a0d08 }), false); }
+
+let planNow = null;
+function roomMat(sec, ring, side, deck) {
+  const i = planNow?.byKey.get(planNow.key(sec, ring, side, deck));
+  const u = i === undefined ? 'spare' : planNow.slots[i].use;
+  return mat(parseInt(USE[u].color.slice(1), 16));
+}
+const live = []; // per-section animation handles
+function build() {
+  const d = cur(); const A = analyze(d); planNow = A.plan;
+  shipInner.traverse(o => { o.geometry?.dispose(); if (o.material?.userData?.temp) o.material.dispose(); });
+  shipInner.clear(); live.length = 0; fx.muzzles = { top: [], bottom: [], rail: [] };
+  for (const o of labelObjs) o.removeFromParent(); labelObjs.length = 0;
+  let z = -A.T / 2;
+  A.secs.forEach((x, i) => {
+    const s = x.s, L = x.size.L;
+    const g = new THREE.Group(); g.position.z = z + L / 2; z += L;
+    g.userData.sec = i; shipInner.add(g);
+    const h = { i, s, g, cars: [], carPeriod: 60, spinner: null, w: 0, spinF: state.ui.spin ? 1 : 0, deploy: state.ui.action ? 0 : 1, rad: [], glow: [], doors: [], arms: [] };
+    const build = BUILDERS[s.type]; build(g, s, d.ship, h, x);
+    // label
+    const div = document.createElement('div'); div.className = 'lbl' + (i === state.sel ? ' sel' : '');
+    div.style.setProperty('--c', css(TYPES[s.type].color));
+    div.innerHTML = `<b>${esc(secTitle(s, i))}</b><span>${esc(secSummary(x))}</span>`;
+    const lo = new CSS2DObject(div); lo.position.set(0, x.size.h / 2 + 14 + (i % 2) * 12, 0); lo.visible = state.ui.labels; g.add(lo); labelObjs.push(lo);
+    live.push(h);
+  });
+  markSelected();
+  return A;
+}
+const labelObjs = [];
+function markSelected() {
+  live.forEach(h => h.g.traverse(o => { if (o.userData.edge) o.material = h.i === state.sel ? lineMats.sel : lineMats.normal; }));
+  labelObjs.forEach((o, i) => o.element.classList.toggle('sel', i === state.sel));
+}
+
+const BUILDERS = {
+  bow(g, s, sc) {
+    g.add(mesh(frustum(s.w, s.h, s.L, s.taper, 1), hullMat(s.armour)));
+    const fw = s.w * s.taper, fh = s.h * s.taper;
+    const cols = Math.min(s.tubes, Math.max(1, Math.ceil(s.tubes / 2))), rows = Math.ceil(s.tubes / cols);
+    for (let t = 0; t < s.tubes; t++) {
+      const cx = cols === 1 ? 0 : ((t % cols) / (cols - 1) - 0.5) * fw * 0.6, cy = rows === 1 ? fh * 0.12 : ((Math.floor(t / cols)) / (rows - 1) - 0.5) * fh * 0.5 + fh * 0.1;
+      const m = tubeMouth(Math.min(1.6, fw / (cols * 3))); m.rotation.y = Math.PI; m.position.set(cx, cy, -s.L / 2 - 0.05); g.add(m);
+    }
+    if (s.spinal) {
+      const len = s.L + 14, y = -fh * 0.28;
+      const r = mesh(new THREE.CylinderGeometry(1.3, 1.6, len, 10), mat(C.barrel), false); r.rotation.x = Math.PI / 2; r.position.set(0, y, -7); g.add(r);
+      const tip = new THREE.Object3D(); tip.position.set(0, y, -s.L / 2 - 14); g.add(tip); fx.muzzles.rail.push(tip);
+    }
+    addGuns(g, s, sc, s.h * (1 + s.taper) / 4, -s.h * (1 + s.taper) / 4);
+    addPdc(g, s.pdc, s.L, s.w * (1 + s.taper) / 4);
+  },
+  drum(g, s, sc, h, x) {
+    const sp = x.spin;
+    const cor = mesh(new THREE.CylinderGeometry(3, 3, s.L, 12), mat(C.corridor)); cor.rotation.x = Math.PI / 2; g.add(cor);
+    const spinner = new THREE.Group(); g.add(spinner); h.spinner = spinner; h.w = sp.w * s.dir;
+    const lay = drumLayout(s), ringL = lay.ringL, roomL = lay.roomL, D = s.decks || 1, dd = sp.living / D;
+    if (sp.belt > 0) {
+      const rb = sp.rOuter - sp.belt / 2, bg = new THREE.BoxGeometry(2 * rb * Math.tan(Math.PI / s.sides) * 0.99, sp.belt - 0.15, ringL - 0.6);
+      const bm = mat(s.beltKind === 'armour' ? 0x4a525c : 0x3f86b0);
+      for (let j = 0; j < s.rings; j++) for (let k = 0; k < s.sides; k++) {
+        const a = k * 2 * Math.PI / s.sides, m = mesh(bg, bm);
+        m.position.set(Math.sin(a) * rb, Math.cos(a) * rb, -s.L / 2 + ringL * (j + 0.5)); m.rotation.z = -a; m.userData.belt = s.beltKind; spinner.add(m);
+      }
+    }
+    const geos = Array.from({ length: D }, (_, dk) => { const rr = sp.rFloor - (dk + 0.5) * dd; return { rr, g: new THREE.BoxGeometry(2 * rr * Math.tan(Math.PI / s.sides) * 0.96, dd - 0.35, roomL) }; });
+    for (let r = 0; r < lay.R; r++) {
+      const zz = lay.z(r);
+      for (let k = 0; k < s.sides; k++) {
+        const a = k * 2 * Math.PI / s.sides;
+        geos.forEach(({ rr, g: geo }, dk) => {
+          const m = mesh(geo, roomMat(h.i, r, k, dk)); m.position.set(Math.sin(a) * rr, Math.cos(a) * rr, zz); m.rotation.z = -a;
+          m.userData.slot = [h.i, r, k, dk]; spinner.add(m);
+        });
+      }
+    }
+    // the hub ring the spokes hang from, turning with the drum round the fixed corridor
+    const hubL = Math.min(s.L - 2, Math.max(4, (s.corridor || 3) + 2));
+    for (let j = 0; j < s.rings; j++) {
+      const zc = lay.corrZ(j);
+      const hub = mesh(new THREE.CylinderGeometry(HUB_R, HUB_R, hubL, 18), mat(0xf0a43a)); hub.rotation.x = Math.PI / 2; hub.position.z = zc; hub.userData.hub = true; spinner.add(hub);
+      if (lay.rows > 1) geos.forEach(({ rr }, dk) => { // ring corridor on each deck
+        const cg = new THREE.BoxGeometry(2 * rr * Math.tan(Math.PI / s.sides) * 1.0, dd - 0.6, s.corridor - 0.2), cm = mat(0xd6dde6);
+        for (let k = 0; k < s.sides; k++) { const a = k * 2 * Math.PI / s.sides, m = mesh(cg, cm, false); m.position.set(Math.sin(a) * rr, Math.cos(a) * rr, zc); m.rotation.z = -a; m.userData.corr = true; spinner.add(m); }
+      });
+      const len = Math.max(1, s.inner - HUB_R);
+      if (len > 2) for (let k = 0; k < lay.spokes; k++) {
+        const a = (k + 0.5) * 2 * Math.PI / lay.spokes;
+        const arm = new THREE.Group(); arm.rotation.z = -a; arm.position.z = zc; spinner.add(arm);
+        const sk = mesh(new THREE.BoxGeometry(3.2, len, 3.2), mat(C.spoke, { opacity: 0.55 })); sk.position.y = HUB_R + len / 2; sk.userData.spoke = true; arm.add(sk);
+        for (let c = 0; c < sc.lifts; c++) {
+          const car = mesh(new THREE.BoxGeometry(1.3, 2.4, 1.3), mat(0xf0a43a, { emissive: 0x4a2c06 }), false);
+          car.position.x = (c - (sc.lifts - 1) / 2) * 1.4; arm.add(car);
+          h.cars.push({ m: car, r0: HUB_R + 1.2, r1: HUB_R + len - 1.2, phase: (k * 0.37 + c * 0.5) % 1 });
+        }
+      }
+    }
+    h.carPeriod = 2 * (Math.max(1, s.inner - HUB_R) / sc.liftSpeed + sc.liftSpeed) + 30;
+    for (const e of [-1, 1]) { const c = mesh(new THREE.CylinderGeometry(4.5, 4.5, 1.2, 16), mat(C.spoke)); c.rotation.x = Math.PI / 2; c.position.z = e * (s.L / 2 - 0.6); g.add(c); }
+    if (s.sleeve) {
+      const R = sp.rOuter + 2.5;
+      const geo = new THREE.CylinderGeometry(R, R, s.L, 16, 1, true); geo.rotateX(Math.PI / 2); geo.rotateZ(Math.PI / 16);
+      const sl = mesh(geo, state.ui.xray ? mat(hullMat(s.armour).color.getHex(), { opacity: 0.22 }) : hullMat(s.armour)); g.add(sl); h.sleeve = sl;
+      addGuns(g, s, sc, R * 0.99, -R * 0.99);
+    }
+  },
+  hangar(g, s, sc, h) {
+    const geo = new THREE.BoxGeometry(s.w, s.h, s.L);
+    g.add(mesh(geo, state.ui.xray ? mat(hullMat(s.armour).color.getHex(), { opacity: 0.2 }) : hullMat(s.armour)));
+    const frame = new THREE.LineSegments(new THREE.EdgesGeometry(geo), tempMat(new THREE.LineBasicMaterial({ color: C.hangar, transparent: true, opacity: 0.6 }))); g.add(frame);
+    // fighters racked on the deck and the deckhead (no gravity, so both)
+    const perRow = Math.max(1, Math.ceil(s.fighters / 2));
+    for (let f = 0; f < s.fighters; f++) {
+      const row = f < perRow ? 0 : 1, k = row ? f - perRow : f, n = row ? s.fighters - perRow : perRow;
+      const fm = mesh(new THREE.ConeGeometry(3.2, 13, 3), mat(C.fighter)); fm.scale.set(1, 1, 0.35); fm.rotation.x = -Math.PI / 2;
+      fm.position.set(n === 1 ? 0 : (k / (n - 1) - 0.5) * s.w * 0.55, row ? s.h / 2 - 4 : -s.h / 2 + 4, (row ? 1 : -1) * 0);
+      fm.position.z = (k % 2 ? 1 : -1) * s.L * 0.18; if (row) fm.rotation.z = Math.PI;
+      g.add(fm);
+    }
+    const sides = s.doors === 'both' ? [-1, 1] : s.doors === 'port' ? [-1] : s.doors === 'stbd' ? [1] : [];
+    for (const side of sides) {
+      const door = mesh(new THREE.PlaneGeometry(s.L * 0.62, s.h * 0.5), mat(0x1a1d22, { opacity: 0.9 }), false);
+      door.rotation.y = side * Math.PI / 2; door.position.set(side * (s.w / 2 + 0.2), s.h * 0.12, 0); g.add(door); h.doors.push(door);
+      const outline = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.PlaneGeometry(s.L * 0.62, s.h * 0.5)), tempMat(new THREE.LineBasicMaterial({ color: C.hangar })));
+      outline.rotation.copy(door.rotation); outline.position.copy(door.position); outline.position.x += side * 0.1; g.add(outline);
+    }
+    for (const side of [-1, 1]) spread(s.tubesSide, s.L, 0.4).forEach(zz => {
+      const m = tubeMouth(1.5); m.rotation.y = side * Math.PI / 2; m.position.set(side * (s.w / 2 + 0.3), -s.h * 0.3, zz); g.add(m);
+    });
+    if (s.tunnel) {
+      const t = mesh(new THREE.CylinderGeometry(2.4, 2.4, s.L, 12), mat(0xd6dde6)); t.rotation.x = Math.PI / 2; t.position.y = s.h / 2 - 4; t.userData.tunnel = true; g.add(t);
+      const nb = Math.min(s.fighters, 6);
+      for (let b = 0; b < nb; b++) { const bz = (b / Math.max(1, nb - 1) - 0.5) * s.L * 0.6; const tube = mesh(new THREE.CylinderGeometry(0.9, 0.9, 6, 8), mat(0xd6dde6), false); tube.position.set(0, s.h / 2 - 7.5, bz); tube.userData.tunnel = true; g.add(tube); }
+    }
+    addGuns(g, s, sc, s.h / 2, -s.h / 2);
+    addPdc(g, s.pdc, s.L, s.w / 2);
+  },
+  arms(g, s, sc, h, x) {
+    const sp = x.spin, hubL = Math.max(s.L, s.podL + 4);
+    const hub = mesh(new THREE.CylinderGeometry(6, 6, hubL, 14), mat(C.corridor)); hub.rotation.x = Math.PI / 2; g.add(hub);
+    const spinner = new THREE.Group(); g.add(spinner); h.spinner = spinner; h.w = sp.w * s.dir;
+    const rIn = Math.max(6 + 1, s.podW / 2 / Math.tan(Math.PI / s.count) + 1); // where pods park when reeled in
+    for (let k = 0; k < s.count; k++) {
+      const a = k * 2 * Math.PI / s.count;
+      const arm = new THREE.Group(); arm.rotation.z = -a; spinner.add(arm);
+      const truss = mesh(new THREE.BoxGeometry(2, 1, 2), mat(C.spoke), false); arm.add(truss);
+      const pod = new THREE.Group(); arm.add(pod);
+      const n = podRooms(s), rl = s.podL / n;
+      for (let r = 0; r < n; r++) { const m = mesh(new THREE.BoxGeometry(s.podW, s.depth, rl - 0.4), roomMat(h.i, r, k, 0)); m.position.z = (r + 0.5 - n / 2) * rl; m.userData.slot = [h.i, r, k, 0]; pod.add(m); }
+      h.arms.push({ truss, pod, rOut: sp.rC, rIn: rIn + s.depth / 2 });
+    }
+    setArms(h, h.deploy);
+  },
+  spine(g, s, sc) {
+    const c = mesh(new THREE.CylinderGeometry(s.r, s.r, s.L, 8), hullMat(s.armour)); c.rotation.x = Math.PI / 2; c.rotation.y = Math.PI / 8; g.add(c);
+    addGuns(g, s, sc, s.r, -s.r); addPdc(g, s.pdc, s.L, s.r);
+  },
+  stern(g, s, sc, h) {
+    g.add(mesh(frustum(s.w, s.h, s.L, 1, 0.82), hullMat(s.armour)));
+    const cols = Math.ceil(Math.sqrt(s.engines * s.w / s.h)), rows = Math.ceil(s.engines / cols);
+    const bw = s.w * 0.82, bh = s.h * 0.82, r = Math.min(bw / cols, bh / rows) * 0.42;
+    for (let e = 0; e < s.engines; e++) {
+      const c = e % cols, rr = Math.floor(e / cols), inRow = rr === rows - 1 ? s.engines - cols * (rows - 1) : cols;
+      const ex = inRow === 1 ? 0 : (c / (inRow - 1) - 0.5) * (bw - 2 * r) , ey = rows === 1 ? 0 : (rr / (rows - 1) - 0.5) * (bh - 2 * r);
+      const bell = mesh(new THREE.CylinderGeometry(r * 0.55, r, r * 1.6, 14, 1, true), mat(C.engine), false); bell.rotation.x = Math.PI / 2; bell.position.set(ex, ey, s.L / 2 + r * 0.8); g.add(bell);
+      const glow = new THREE.Mesh(new THREE.ConeGeometry(r * 0.9, r * 7, 16, 1, true), tempMat(new THREE.MeshBasicMaterial({ color: C.glow, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending })));
+      glow.rotation.x = -Math.PI / 2; glow.position.set(ex, ey, s.L / 2 + r * 1.6 + r * 3.5); g.add(glow); h.glow.push(glow);
+    }
+    if (s.radSpan > 0) for (const side of [-1, 1]) {
+      const piv = new THREE.Group(); piv.position.set(side * s.w * 0.41, 0, 0); g.add(piv);
+      const p = mesh(new THREE.BoxGeometry(s.radSpan, 0.6, Math.min(s.radLen, s.L * 1.6)), mat(C.rad, { emissive: 0x2a1404 })); p.position.x = side * s.radSpan / 2; piv.add(p);
+      h.rad.push(piv);
+    }
+    if (s.bridge === 'tower') {
+      const t = mesh(new THREE.BoxGeometry(s.w * 0.22, 12, 16), hullMat(s.armour)); t.position.set(0, s.h * 0.41 + 6, s.L * 0.22); g.add(t);
+      const top = mesh(new THREE.BoxGeometry(s.w * 0.5, 5, 12), hullMat(s.armour)); top.position.set(0, s.h * 0.41 + 14, s.L * 0.22); g.add(top);
+      const win = mesh(new THREE.BoxGeometry(s.w * 0.48, 1.1, 0.4), mat(C.bridge, { emissive: 0x6b5520 }), false); win.position.set(0, s.h * 0.41 + 14.6, s.L * 0.22 - 6.1); g.add(win);
+    } else if (s.bridge === 'buried') {
+      const b = mesh(new THREE.BoxGeometry(s.w * 0.3, 4, 12), mat(C.bridge, { emissive: 0x6b5520, opacity: 0.85 })); b.position.set(0, 0, -s.L * 0.1); g.add(b);
+    }
+    addGuns(g, s, sc, s.h * 0.91 / 2, -s.h * 0.91 / 2);
+    addPdc(g, s.pdc, s.L, s.w * 0.45);
+  },
+};
+function setArms(h, d) {
+  for (const a of h.arms) {
+    const r = a.rIn + (a.rOut - a.rIn) * d; // pod centre radius
+    a.pod.position.y = r;
+    const len = Math.max(0.1, r - h.s.depth / 2 - 6);
+    a.truss.scale.y = len; a.truss.position.y = 6 + len / 2; a.truss.visible = len > 0.5;
+  }
+}
+
+// views
+function setView(v) {
+  const A = lastA, R = Math.max(A.T, A.maxW * 1.6) * 1.25;
+  const p = { '3q': [-0.62, 0.38, -0.58], side: [-1, 0.05, 0.001], top: [0.001, 1, 0.02], bow: [0.001, 0.06, -1] }[v];
+  camera.position.set(p[0] * R, p[1] * R, p[2] * R); controls.target.set(0, 0, 0); controls.update();
+  document.querySelectorAll('[data-view]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.view === v)));
+}
+function resize() { const r = view.getBoundingClientRect(); renderer.setSize(r.width, r.height); labelR.setSize(r.width, r.height); camera.aspect = r.width / r.height; camera.updateProjectionMatrix(); }
+new ResizeObserver(resize).observe(view);
+
+// pick a section by clicking
+const ray = new THREE.Raycaster(); let down = null;
+renderer.domElement.addEventListener('pointerdown', e => { down = [e.clientX, e.clientY]; });
+renderer.domElement.addEventListener('pointerup', e => {
+  if (!down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 5) return;
+  const r = renderer.domElement.getBoundingClientRect();
+  ray.setFromCamera(new THREE.Vector2((e.clientX - r.left) / r.width * 2 - 1, -(e.clientY - r.top) / r.height * 2 + 1), camera);
+  const hit = ray.intersectObjects(shipInner.children, true).find(h => h.object.isMesh);
+  if (!hit) return;
+  const ud = hit.object.userData;
+  if (ud.hub) $('#hint').textContent = 'Hub ring: turns with the drum round the fixed corridor. It moves at about walking pace, so you catch a handhold on it as it comes past and swing into the lift lobby. A slower, spin-matched car carries stretchers and cargo.';
+  if (ud.spoke) $('#hint').textContent = 'Spoke: two lift shafts and a ladder tube. Going down, you get heavier the whole way, from weightless at the hub to full weight on the deck. The ladder is the backup; near the hub it is just handholds.';
+  if (ud.corr) $('#hint').textContent = 'Ring corridor: runs right round the ring, so no one walks through rooms. The floor curves up ahead and behind you until the corridor disappears overhead. Pressure doors every few rooms; it doubles as a running track.';
+  if (ud.tunnel) $('#hint').textContent = 'Crew tunnel: a pressurised tube along the top of the airless hangar, carrying the spine from bow to stern. Boarding tubes drop from it to the fighters, so pilots never need a suit.';
+  if (hit.object.userData.belt) $('#hint').textContent = hit.object.userData.belt === 'armour' ? 'Outer belt: solid steel armour, spinning with the drum. It stops what gets through the sleeve, but it is very heavy.' : 'Outer belt: water tanks and stores. It catches fragments from anything that gets through the sleeve, shields the crew from radiation, and can be pumped between tanks to rebalance the drum.';
+  const slot = hit.object.userData.slot;
+  if (slot && planNow) {
+    const i = planNow.byKey.get(planNow.key(...slot)), sl = planNow.slots[i], u = USE[sl.use], cap = capOf(sl.use, sl.area);
+    const where = sl.D > 1 ? `${sl.deck === 0 ? 'outer' : sl.deck === sl.D - 1 ? 'inner' : 'middle'} deck, ` : '';
+    $('#hint').textContent = `${secTitle(cur().sections[sl.sec], sl.sec)}, ring ${sl.ring + 1}, ${where}${fmt(sl.gG, 2)} g, ${fmt(sl.area)} m²: ${u.label}${cap ? ` (${cap} bunks)` : ''}. ${u.desc}`;
+  }
+  let o = hit.object; while (o && o.userData.sec === undefined) o = o.parent;
+  if (o) select(o.userData.sec, true);
+});
+
+// recoil kick (exaggerated)
+const kick = { t: 99, amp: 0, axis: 'pitch', slide: 0 };
+function fire(which) {
+  const A = lastA, sc = cur().ship;
+  const r = recoil(A, sc, which, state.ui.fireDir);
+  if (!r.rounds) { $('#kicknote').textContent = which === 'rail' ? 'No spinal railgun on this design.' : 'No turrets there. Add some in the section nodes.'; return; }
+  const realDeg3s = r.rate * 3 * 180 / Math.PI;
+  const shown = r.rate > 0 ? 4 : 0;
+  kick.t = 0; kick.axis = r.axis; kick.amp = shown * Math.PI / 180 * (which === 'bottom' ? -1 : 1); kick.slide = 1;
+  $('#kicknote').textContent = r.rate > 0 ? `Shown about ${fmt(shown / realDeg3s, 0)}× bigger than real` : 'Top and bottom cancel: no turn at all, just a tiny push';
+  const tips = which === 'rail' ? fx.muzzles.rail : which === 'both' ? [...fx.muzzles.top, ...fx.muzzles.bottom] : fx.muzzles[which];
+  for (const tip of tips) {
+    const f = new THREE.Mesh(new THREE.SphereGeometry(which === 'rail' ? 3 : 2.2, 10, 8), new THREE.MeshBasicMaterial({ color: 0xffd08a, transparent: true, opacity: 1, depthWrite: false, blending: THREE.AdditiveBlending }));
+    tip.getWorldPosition(f.position); ship.worldToLocal(f.position); ship.add(f); fx.flashes.push({ m: f, t: 0 });
+  }
+}
+
+let last = performance.now();
+function frame(now) {
+  const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  for (const h of live) {
+    if (h.spinner) {
+      const wantSpin = state.ui.spin && !(h.s.type === 'arms' && state.ui.action) ? 1 : 0;
+      const wantDeploy = state.ui.action ? 0 : 1;
+      if (h.s.type === 'arms') {
+        // despin before reeling in; reel out before spinning up
+        if (wantDeploy < h.deploy) { if (h.spinF > 0.001) h.spinF = Math.max(0, h.spinF - dt * 0.5); else h.deploy = Math.max(0, h.deploy - dt * 0.35); }
+        else if (wantDeploy > h.deploy) { h.deploy = Math.min(1, h.deploy + dt * 0.35); }
+        else h.spinF += Math.sign(wantSpin - h.spinF) * Math.min(Math.abs(wantSpin - h.spinF), dt * 0.5);
+        setArms(h, h.deploy);
+      } else h.spinF += Math.sign(wantSpin - h.spinF) * Math.min(Math.abs(wantSpin - h.spinF), dt * 0.5);
+      h.spinner.rotation.z -= h.w * h.spinF * dt;
+    }
+    if (h.cars.length) { const t = now / 1000 / h.carPeriod; for (const c of h.cars) { const ph = (t + c.phase) % 1, u = ph < 0.5 ? ph * 2 : 2 - ph * 2, e = Math.min(1, Math.max(0, (u - 0.1) / 0.8)); c.m.position.y = c.r0 + (c.r1 - c.r0) * (e * e * (3 - 2 * e)); } }
+    for (const p of h.rad) { const want = state.ui.action ? 0.06 : 1; p.scale.x += (want - p.scale.x) * Math.min(1, dt * 1.5); }
+    for (const gl of h.glow) { const want = state.ui.burn ? 0.55 : 0; gl.material.opacity += (want - gl.material.opacity) * Math.min(1, dt * 4); gl.scale.y = 0.85 + Math.random() * 0.15 * (state.ui.burn ? 1 : 0); }
+    for (const dr of h.doors) dr.material.opacity = state.ui.action ? 0.95 : 0.35;
+  }
+  kick.t += dt;
+  const env = kick.t < 8 ? (1 - Math.exp(-kick.t * 4)) * Math.exp(-kick.t * 0.45) : 0;
+  ship.rotation.set(kick.axis === 'pitch' ? kick.amp * env : 0, 0, kick.axis === 'roll' ? kick.amp * env : 0);
+  ship.position.z = kick.t < 8 ? kick.slide * 2.5 * env : 0;
+  for (let i = fx.flashes.length - 1; i >= 0; i--) { const f = fx.flashes[i]; f.t += dt; f.m.material.opacity = Math.max(0, 1 - f.t * 2.5); f.m.scale.setScalar(1 + f.t * 6); if (f.t > 0.4) { f.m.removeFromParent(); fx.flashes.splice(i, 1); } }
+  controls.update();
+  renderer.render(scene, camera); labelR.render(scene, camera);
+  requestAnimationFrame(frame);
+}
+
+// ---------- panel ----------
+function propRow(p, val, idp) {
+  if (p.type === 'bool') return `<div class="prop bool"><label for="${idp}">${p.label}</label><input type="checkbox" id="${idp}" data-k="${p.k}" ${val ? 'checked' : ''}></div>`;
+  if (p.type === 'select') return `<div class="prop"><label for="${idp}">${p.label}</label><select id="${idp}" data-k="${p.k}">${p.options.map(([v, l]) => `<option value="${v}" ${String(v) === String(val) ? 'selected' : ''}>${l}</option>`).join('')}</select></div>`;
+  if (p.type === 'text') return `<div class="prop"><label for="${idp}">${p.label}</label><input type="text" id="${idp}" data-k="${p.k}" value="${esc(val)}"></div>`;
+  return `<div class="prop"><label for="${idp}">${p.label}${p.unit ? ` <span class="muted">(${p.unit})</span>` : ''}</label><input type="range" id="${idp}" data-k="${p.k}" min="${p.min}" max="${p.max}" step="${p.step}" value="${val}" aria-label="${p.label}"><input type="number" id="${idp}-n" data-k="${p.k}" min="${p.min}" max="${p.max}" step="${p.step}" value="${val}" aria-label="${p.label} value"></div>`;
+}
+function nodeHtml(key, T, obj, title, i) {
+  const open = state.open.has(key);
+  const isSel = i === state.sel;
+  const tools = i === undefined ? '' : `<span class="tools"><button data-act="up" title="Move toward the bow" aria-label="Move toward the bow">↑</button><button data-act="down" title="Move toward the stern" aria-label="Move toward the stern">↓</button><button data-act="dup" title="Duplicate" aria-label="Duplicate">⧉</button><button data-act="del" title="Remove" aria-label="Remove">✕</button></span>`;
+  const rows = T.params.filter(p => !p.when || p.when(obj)).map(p => propRow(p, obj[p.k], `${key}-${p.k}`)).join('');
+  return `<article class="node ${open ? '' : 'closed'} ${isSel ? 'sel' : ''}" data-key="${key}" ${i !== undefined ? `data-i="${i}"` : ''} style="--nc: var(${T.color})">
+    <header data-act="toggle"><span class="dot"></span><span class="name">${esc(title)}</span><span class="tag">${T.tag}</span><span class="sum" id="sum-${key}"></span>${tools}</header>
+    <div class="props">${rows}</div></article>`;
+}
+function renderPanel() {
+  const d = cur();
+  const parts = [nodeHtml('ship', TYPES.ship, d.ship, 'Ship')];
+  d.sections.forEach((s, i) => parts.push(nodeHtml('s' + i, TYPES[s.type], s, secTitle(s, i), i)));
+  $('#chain').innerHTML = parts.join('<div class="link"></div>');
+  updateSummaries();
+}
+function updateSummaries() {
+  const A = lastA; if (!A) return;
+  const sumShip = document.getElementById('sum-ship'); if (sumShip) sumShip.textContent = `${fmt(A.T)} m · ${fmt(A.M / 1000, 0)} kt`;
+  A.secs.forEach((x, i) => { const el = document.getElementById('sum-s' + i); if (el) el.textContent = secSummary(x); });
+  labelObjs.forEach((o, i) => { const x = A.secs[i]; if (x) o.element.querySelector('span').textContent = secSummary(x); });
+}
+function select(i, fromView) {
+  state.sel = i; state.open.add('s' + i);
+  markSelected(); renderPanel();
+  if (fromView) document.querySelector(`.node[data-i="${i}"]`)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+}
+const chain = $('#chain');
+chain.addEventListener('click', e => {
+  const btn = e.target.closest('[data-act]'); if (!btn) return;
+  const node = btn.closest('.node'); const key = node.dataset.key; const i = node.dataset.i !== undefined ? +node.dataset.i : undefined;
+  const d = cur(); const act = btn.dataset.act;
+  if (act === 'toggle') {
+    if (e.target.closest('.tools')) return;
+    if (state.open.has(key) && (i === undefined || i === state.sel)) state.open.delete(key); else state.open.add(key);
+    if (i !== undefined) { state.sel = i; markSelected(); }
+    renderPanel(); return;
+  }
+  e.stopPropagation();
+  if (act === 'up' && i > 0) { [d.sections[i - 1], d.sections[i]] = [d.sections[i], d.sections[i - 1]]; state.sel = i - 1; }
+  if (act === 'down' && i < d.sections.length - 1) { [d.sections[i + 1], d.sections[i]] = [d.sections[i], d.sections[i + 1]]; state.sel = i + 1; }
+  if (act === 'dup') { const c = clone(d.sections[i]); if (TYPES[c.type].spun) c.dir = -c.dir; d.sections.splice(i + 1, 0, c); state.sel = i + 1; }
+  if (act === 'del') { if (d.sections.length <= 1) return; d.sections.splice(i, 1); state.sel = Math.max(0, Math.min(state.sel, d.sections.length - 1)); }
+  state.open = new Set(['s' + state.sel]);
+  changed(true);
+});
+function onValue(e) {
+  const el = e.target; const k = el.dataset.k; if (!k) return;
+  const node = el.closest('.node'); const d = cur();
+  const obj = node.dataset.key === 'ship' ? d.ship : d.sections[+node.dataset.i];
+  const T = node.dataset.key === 'ship' ? TYPES.ship : TYPES[obj.type];
+  const p = T.params.find(q => q.k === k);
+  let v;
+  if (p.type === 'bool') v = el.checked;
+  else if (p.type === 'select') { const opt = p.options.find(([o]) => String(o) === el.value); v = opt ? opt[0] : el.value; }
+  else if (p.type === 'text') v = el.value;
+  else { v = parseFloat(el.value); if (!isFinite(v)) return; v = Math.min(p.max, Math.max(p.min, v)); const twin = el.type === 'range' ? document.getElementById(el.id + '-n') : document.getElementById(el.id.replace(/-n$/, '')); if (twin && e.type === 'input') twin.value = v; }
+  obj[k] = v;
+  if (node.dataset.i !== undefined && +node.dataset.i !== state.sel) { state.sel = +node.dataset.i; markSelected(); document.querySelectorAll('.node').forEach(n => n.classList.toggle('sel', n.dataset.i === String(state.sel))); }
+  if (p.type === 'text') { renderTabs(); renderReadouts(); saveDraft(); return; }
+  changed(p.type === 'bool' || p.type === 'select');
+}
+chain.addEventListener('input', onValue);
+chain.addEventListener('change', e => { if (e.target.type === 'checkbox' || e.target.tagName === 'SELECT') onValue(e); });
+
+$('#addtype').innerHTML = Object.entries(TYPES).filter(([k]) => k !== 'ship').map(([k, T]) => `<option value="${k}">${T.label} (${T.tag})</option>`).join('');
+$('#addbtn').addEventListener('click', () => {
+  const t = $('#addtype').value; const d = cur();
+  d.sections.splice(state.sel + 1, 0, { type: t, ...clone(TYPES[t].def) });
+  state.sel = Math.min(d.sections.length - 1, state.sel + 1); state.open = new Set(['s' + state.sel]); changed(true);
+});
+
+let lastA = null, pending = false, pendingPanel = false;
+function changed(panel) {
+  cur().dirty = true; pendingPanel = pendingPanel || panel;
+  if (pending) return; pending = true;
+  requestAnimationFrame(() => { pending = false; lastA = build(); if (pendingPanel) renderPanel(); else updateSummaries(); pendingPanel = false; renderReadouts(); renderTabs(); saveDraft(); });
+}
+
+// ---------- readouts ----------
+const MASS_KEYS = [['structure', 'Structure', '--t-spine'], ['armour', 'Armour', '--t-bow'], ['belt', 'Drum belt', '--accent'], ['rooms', 'Spun rooms', '--t-drum'], ['guns', 'Guns, tubes, fighters', '--t-hangar'], ['engines', 'Engines', '--t-stern'], ['radiators', 'Radiators', '--t-ship']];
+function renderReadouts() {
+  const A = lastA, d = cur(), sc = d.ship;
+  $('#designname').textContent = sc.name;
+  const gNow = A.a / G0;
+  $('#stats').innerHTML = [
+    ['Length', `${fmt(A.T)} m`, `${fmt(A.hullW)} × ${fmt(A.hullH)} m hull`],
+    ['Mass', `${fmt(A.M / 1000, 0)} kt`, `today's carrier: 200 kt`],
+    ['Drive', `${fmt(gNow, 2)} g`, `${A.engines} × ${sc.thrust} MN`],
+    ['Armour', `${fmt(A.parts.armour / A.M * 100, 0)}%`, `of the mass`],
+    ['Crew', `${fmt(A.plan.crew + A.plan.marines)}`, `${fmt(A.plan.bunks)} bunks planned${A.plan.marines ? `, incl. ${A.plan.marines} marines` : ''}`],
+    ['Spun floor', `${fmt(A.floor, 0)} m²`, `${A.plan.slots.length} rooms of about ${fmt(A.plan.avgArea, 0)} m²`],
+    ['Weapons', `${A.top + A.bottom} turrets`, `${A.tubesFwd} bow + ${A.tubesSide * 2} side tubes · ${A.pdc} PDC`],
+    ['Fighters', `${A.fighters}`, A.rail ? 'plus a spinal railgun' : 'no spinal railgun'],
+  ].map(([k, v, s]) => `<div class="stat"><span>${k}</span><b>${v}</b><em>${s}</em></div>`).join('');
+  $('#massbar').innerHTML = MASS_KEYS.map(([k, , c]) => A.parts[k] > 0 ? `<i style="width:${A.parts[k] / A.M * 100}%;background:var(${c})" title="${k}"></i>` : '').join('');
+  $('#masslegend').innerHTML = MASS_KEYS.filter(([k]) => A.parts[k] > 0).map(([k, l, c]) => `<span><i style="background:var(${c})"></i>${l} ${fmt(A.parts[k] / 1000, 1)} kt</span>`).join('');
+
+  // gravity table
+  if (!A.spun.length) {
+    $('#gravtbl').innerHTML = `<tr><td style="white-space:normal">No spin sections. The crew only get weight while the drive burns (${fmt(gNow, 2)} g), like today's carrier.</td></tr>`;
+  } else {
+    $('#gravtbl').innerHTML = `<tr><th>Section</th><th>Floor radius</th><th>Spin</th><th>Floor g (outer / inner)</th><th>Comfort</th><th>Walking spinward</th><th>Head vs feet</th><th>Floor edge tilt</th><th>Tilt at full burn</th></tr>` +
+      A.spun.map(x => { const sp = x.spin, [cls, word] = comfort(x.s.rpm); const tilt = Math.atan(A.a / sp.g) * 180 / Math.PI;
+        return `<tr><td>${esc(secTitle(x.s, x.i))}</td><td>${fmt(sp.rFloor, 1)} m</td><td>${fmt(x.s.rpm, 1)} rpm</td><td>${fmt(sp.gG, 2)}${sp.gInnerG !== null ? ` / ${fmt(sp.gInnerG, 2)}` : ''} g</td><td><span class="pill ${cls}">${word}</span></td><td>±${fmt(sp.coriolis, 0)}% weight</td><td>${fmt(sp.gradient, 0)}% lighter</td><td>${fmt(sp.edgeTilt, 1)}°</td><td>${fmt(tilt, 0)}° aft</td></tr>`; }).join('');
+  }
+  // spin balance
+  if (A.spun.length) {
+    const ratio = A.sumL ? A.netL / A.sumL : 0, pct = Math.abs(ratio) * 50;
+    const cls = Math.abs(ratio) < 0.05 ? 'good' : Math.abs(ratio) < 0.3 ? 'warn' : 'bad';
+    const tau = Math.abs(A.netL) * Math.PI / 180;
+    $('#balance').innerHTML = `<span>Spin balance</span><div class="track"><div class="fill" style="background:var(--${cls});${ratio >= 0 ? `left:50%;width:${pct}%` : `right:50%;width:${pct}%`}"></div></div>`;
+    $('#gravsay').innerHTML = cls === 'good'
+      ? `<span class="pill good">balanced</span> The drums cancel each other out, so the ship turns as if they weren't spinning.`
+      : `<span class="pill ${cls}">${Math.abs(ratio) < 0.3 ? 'a little off' : 'unbalanced'}</span> Net spin of ${sci(Math.abs(A.netL), 'N·m·s')}. Swinging the nose round at 1°/s needs a steady ${sci(tau, 'N·m')} of extra torque, and the ship twists sideways when you try. Spin a matching section the other way, or duplicate this one (⧉ flips its spin).`;
+  } else { $('#balance').innerHTML = ''; $('#gravsay').textContent = 'Add a spin drum or spin arms to give the crew weight while coasting.'; }
+  renderRooms();
+  renderAccess();
+  renderRecoil();
+  $('#notes').value = d.notes || '';
+  $('#notesfor').textContent = sc.name;
+}
+function renderRooms() {
+  const A = lastA, P = A.plan;
+  if (!P.slots.length) { $('#roomsub').textContent = ''; $('#roomsay').textContent = 'No spin sections, so no rooms with gravity to plan.'; $('#roomtbl').innerHTML = ''; $('#roomplans').innerHTML = ''; return; }
+  $('#roomsub').textContent = `${P.slots.length} rooms, planned from the crew this ship needs`;
+  const e = P.est.parts;
+  const shortTxt = Object.entries(P.short).map(([u, n]) => `${n} ${USE[u].label.toLowerCase()}`).join(', ');
+  const spare = P.placed.spare, sparePct = spare / P.slots.length * 100;
+  let say = `Crew needed: about ${fmt(P.crew)} (guns ${e.guns}, torpedoes ${e.torpedoes}, point defence ${e.pdc}, flight ${e.flight}, engineering ${e.engineering}, command ${e.command}, damage control ${e.damage}, and support ${e.medical + e.supply + e.security})${P.marines ? `, plus ${P.marines} marines` : ''}. ${fmt(P.officers)} are officers. `;
+  if (shortTxt) say += `Not enough room: short of ${shortTxt}. Make the spin sections bigger or add another.`;
+  else if (sparePct > 30 && P.hasDrum) say += `${spare} rooms (${fmt(sparePct, 0)}%) are spare. Everything the crew needs, with a garden, fits in about ${P.ringsNeeded} of the ${P.ringsNow} rings. Shorten the drum, drop a deck, or give the spare rooms a job.`;
+  else say += `${spare} rooms spare.`;
+  $('#roomsay').textContent = say;
+  $('#roomtbl').innerHTML = `<tr><th>Use</th><th>Rooms</th><th>Floor</th><th>Bunks</th><th>In one room</th></tr>` + USES.filter(u => P.placed[u.id]).map(u => {
+    const b = P.slots.reduce((a, s) => a + (s.use === u.id ? capOf(u.id, s.area) : 0), 0);
+    return `<tr><td><span class="sw" style="background:${u.color}"></span>${u.label}</td><td>${P.placed[u.id]}</td><td>${fmt(P.area[u.id], 0)} m²</td><td>${b || ''}</td><td>${u.desc}</td></tr>`;
+  }).join('');
+  // what a shell passes through, outside in
+  $('#layers').innerHTML = A.spun.filter(x => x.s.type === 'drum').map(x => {
+    const s = x.s, sp = x.spin, D = s.decks || 1, dd = sp.living / D;
+    const parts = [];
+    if (s.sleeve) parts.push(['Sleeve', `${fmt(s.armour, 2)} m steel`, Math.max(s.armour, 0.6), '#8794a3'], ['Gap', '2.5 m', 2.5, 'gap']);
+    else if (s.armour > 0) parts.push(['Plating', `${fmt(s.armour, 2)} m steel`, Math.max(s.armour, 0.6), '#8794a3']);
+    if (sp.belt > 0) parts.push([s.beltKind === 'armour' ? 'Steel belt' : 'Water and stores', `${fmt(sp.belt, 1)} m · ${fmt(sp.beltT / 1000, 0)} kt`, sp.belt, s.beltKind === 'armour' ? '#5b636d' : '#3f86b0']);
+    for (let k = 0; k < D; k++) { const g = sp.gG * (sp.rFloor - k * dd) / sp.rFloor; parts.push([D > 1 ? `Deck ${k + 1}` : 'Rooms', `${fmt(dd, 1)} m · ${fmt(g, 2)} g`, dd, k % 2 ? '#7fb2ff' : '#5b8de0']); }
+    const total = parts.reduce((a, p) => a + p[2], 0);
+    const ink = c => ['#5b636d', '#3f86b0', '#5b8de0'].includes(c) ? '#f4f7fb' : '#0d1117';
+    const cells = parts.map(([n, t, w, c]) => `<div ${c === 'gap' ? 'class="gap" ' : ''}style="flex:${w / total * 82} 1 0;${c === 'gap' ? '' : `background:${c};color:${ink(c)}`}" title="${n}: ${t}"><b>${n}</b><span>${t}</span></div>`).join('');
+    return `<div><h3>${esc(secTitle(s, x.i))}: what a shell meets, outside in</h3><div class="xs">${cells}<div class="void" style="flex:18 1 0"><b>Hollow</b><span>${fmt(s.inner - 3, 0)} m to the corridor</span></div></div></div>`;
+  }).join('');
+  // unrolled plan per spin section
+  const out = [];
+  for (const x of A.spun) {
+    const sl = P.slots.filter(s => s.sec === x.i); if (!sl.length) continue;
+    const S = sl[0].S, R = sl[0].R, D = sl[0].D, rows = sl[0].rows || 1, drum = x.s.type === 'drum';
+    const cell = Math.max(9, Math.min(18, Math.floor(620 / S))), left = 92, top = 4, gap = 6, corrH = 12;
+    const ys = []; let yc = top, svgCorr = '';
+    const spk = drum ? (x.s.spokes || spokeCount(S)) : 0;
+    for (let r = 0; r < R; r++) {
+      if (r > 0 && r % rows === 0) yc += gap;
+      ys.push(yc); yc += D * cell;
+      if (drum && rows > 1 && r % rows === 0) {
+        svgCorr += `<rect x="${left}" y="${yc + 1}" width="${S * cell - 1}" height="${corrH - 2}" rx="2" fill="var(--panel-2)" stroke="var(--line)"><title>Ring corridor, all the way round</title></rect><text x="0" y="${yc + corrH * 0.75}">corridor</text>`;
+        for (let j = 0; j < spk; j++) { const cx = left + (j + 0.5) / spk * S * cell; svgCorr += `<rect class="lift" x="${cx - 4}" y="${yc + 2}" width="8" height="${corrH - 4}" rx="1.5"><title>Spoke: lifts and ladder up to the hub</title></rect>`; }
+        yc += corrH;
+      }
+    }
+    if (drum && rows === 1) for (let j = 0; j < spk; j++) { const cx = left + (j + 0.5) / spk * S * cell; svgCorr += `<path class="lift" d="M${cx - 4} ${yc + 9} L${cx + 4} ${yc + 9} L${cx} ${yc + 2} Z"><title>Lift up the spoke</title></path>`; }
+    const W = left + S * cell + 4, H = yc + (drum && rows === 1 ? 12 : 2);
+    let svg = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Unrolled room plan">` + svgCorr;
+    for (let r = 0; r < R; r++) for (let d = 0; d < D; d++) {
+      const y = ys[r] + d * cell, j = Math.floor(r / rows), row = r % rows;
+      const lbl = drum ? `${R / rows > 1 ? `ring ${j + 1} ` : ''}${rows > 1 ? (row ? 'aft' : 'fore') : ''}${D > 1 ? (d === 0 ? ' outer' : d === D - 1 ? ' inner' : ' mid') : ''}` : `room ${r + 1}`;
+      svg += `<text x="0" y="${y + cell * 0.72}">${lbl.trim()}</text>`;
+      for (let k = 0; k < S; k++) {
+        const s = P.slots[P.byKey.get(P.key(x.i, r, k, d))]; const u = USE[s.use];
+        svg += `<rect class="cell" x="${left + k * cell}" y="${y}" width="${cell - 1}" height="${cell - 1}" rx="1.5" fill="${u.color}"><title>${u.label}, ${fmt(s.gG, 2)} g</title></rect>`;
+      }
+    }
+    svg += '</svg>';
+    out.push(`<div class="plan"><h3>${esc(secTitle(x.s, x.i))}, unrolled</h3><p class="say muted" style="font-size:12px;margin-bottom:6px">${drum ? (rows > 1 ? 'Left to right is once round the ring. Rooms sit fore and aft of the ring corridor, which runs all the way round; the white marks are the spokes, where the lifts come down into the corridor. The outer deck has full gravity.' : 'Left to right is once round the ring; ▲ marks a lift up a spoke. With no corridor, people walk through rooms to get anywhere.') : 'One column per arm; rooms run along each pod.'}</p><div class="tblwrap">${svg}</div></div>`);
+  }
+  $('#roomplans').innerHTML = out.join('');
+}
+function renderAccess() {
+  const A = lastA, X = access(A, cur().ship);
+  if (!X) { $('#accstats').innerHTML = ''; $('#accchart').innerHTML = ''; $('#accsay').innerHTML = '<p>No spin drum, so nobody rides a spoke: everyone lives weightless or under thrust.</p>'; $('#journeys').innerHTML = ''; return; }
+  const p = X.per[0], sc = cur().ship;
+  $('#accstats').innerHTML = [
+    ['Lift ride', `${fmt(p.ride, 0)} s`, `${fmt(p.len, 0)} m from hub to the inner deck`],
+    ['Ladder climb', `${fmt(p.storeys, 0)} storeys`, `the same effort as ${fmt(p.ladderEq, 0)} m in full gravity`],
+    ['Longest walk', `${fmt(p.walkMax, 0)} m`, `from a lift, ${p.spokes} spokes a ring`],
+    ['Clear the drum', `${fmt(X.muster / 60, 1)} min`, `${fmt(X.inDrum)} people to action stations`],
+  ].map(([k, v, e]) => `<div class="stat"><span>${k}</span><b>${v}</b><em>${e}</em></div>`).join('');
+  // chart: felt gravity and the sideways push down the spoke
+  const Wd = 520, Ht = 210, L = 40, R = 14, T = 12, Bm = 30, xmax = p.rFloor - HUB_R, ymax = Math.max(1, Math.ceil(Math.max(p.gIn * 1.08, p.sideways * 1.3) * 10) / 10);
+  const xs = d => L + d / xmax * (Wd - L - R), ys = g => T + (1 - g / ymax) * (Ht - T - Bm);
+  let svg = `<svg viewBox="0 0 ${Wd} ${Ht}" role="img" aria-label="Felt gravity down the spoke">`;
+  for (let g = 0; g <= ymax + 1e-9; g += ymax > 1.2 ? 0.5 : 0.25) svg += `<line x1="${L}" x2="${Wd - R}" y1="${ys(g)}" y2="${ys(g)}" stroke="var(--line)" stroke-width="1"/><text x="${L - 6}" y="${ys(g) + 3}" text-anchor="end">${g.toFixed(2)}</text>`;
+  const step = xmax > 40 ? 10 : 5;
+  for (let d = 0; d <= xmax + 1e-9; d += step) svg += `<text x="${xs(d)}" y="${Ht - Bm + 14}" text-anchor="middle">${d}</text>`;
+  svg += `<text x="${(L + Wd - R) / 2}" y="${Ht - 4}" text-anchor="middle">metres down from the hub</text>`;
+  const pts = []; for (let i = 0; i <= 40; i++) { const d = xmax * i / 40; pts.push(`${xs(d).toFixed(1)},${ys(p.w * p.w * (HUB_R + d) / G0).toFixed(1)}`); }
+  svg += `<polygon points="${xs(0)},${ys(0)} ${pts.join(' ')} ${xs(xmax)},${ys(0)}" fill="var(--accent)" fill-opacity="0.12"/>`;
+  svg += `<polyline points="${pts.join(' ')}" fill="none" stroke="var(--accent)" stroke-width="2.2"/>`;
+  svg += `<line x1="${xs(0)}" x2="${xs(xmax)}" y1="${ys(p.sideways)}" y2="${ys(p.sideways)}" stroke="var(--t-bow)" stroke-width="2" stroke-dasharray="6 4"/>`;
+  const dx = Math.max(0, p.crossR - HUB_R);
+  if (dx > 0 && dx < xmax) svg += `<line x1="${xs(dx)}" x2="${xs(dx)}" y1="${T}" y2="${Ht - Bm}" stroke="var(--muted)" stroke-dasharray="2 3"/><text x="${xs(dx) + 4}" y="${T + 10}">${fmt(dx, 0)} m: down wins</text>`;
+  const dDeck = p.rIn - HUB_R;
+  svg += `<rect x="${xs(dDeck)}" y="${T}" width="${xs(xmax) - xs(dDeck)}" height="${Ht - Bm - T}" fill="var(--t-drum)" fill-opacity="0.12"/><text x="${xs(dDeck) - 4}" y="${ys(p.gIn) - 8}" text-anchor="end" class="lbl-g">${p.gIn.toFixed(2)} g on deck</text>`;
+  svg += `<text x="${xs(xmax * 0.42)}" y="${ys(p.w * p.w * (HUB_R + xmax * 0.42) / G0) - 8}" class="lbl-g">your weight</text><text x="${xs(xmax * 0.06)}" y="${ys(p.sideways) - 6}" class="lbl-s">sideways push at ${sc.liftSpeed} m/s</text>`;
+  svg += `<circle cx="${xs(xmax)}" cy="${ys(p.w * p.w * p.rFloor / G0)}" r="3.5" fill="var(--accent)"/></svg>`;
+  $('#accchart').innerHTML = svg;
+  const hubSpeed = p.w * HUB_R;
+  $('#accsay').innerHTML = `
+    <p><b>The hub.</b> The spine corridor doesn't turn; the drum does. Where they meet, the hub ring moves past at ${fmt(hubSpeed, 1)} m/s, about walking pace, so you catch a handhold as it comes by and swing into the lift lobby. Stretchers and cargo use a slow car that spins up to match.</p>
+    <p><b>The ride.</b> You get heavier the whole way down: weightless at the hub, ${fmt(p.w * p.w * (HUB_R + xmax / 2) / G0, 2)} g halfway, ${p.gIn.toFixed(2)} g on the inner deck. The drum's turn also pushes a moving lift car sideways (${fmt(p.sideways, 2)} g at ${sc.liftSpeed} m/s). For the first ${fmt(dx, 0)} m that push is stronger than "down", so the cars run slowly near the hub, everyone holds a rail, and the seats face across the shaft.</p>
+    <p><b>The ladder.</b> A ladder tube beside the lifts is the backup. Near the hub it is just handholds; lower down it is a real climb, and going up from the deck is like ${fmt(p.storeys, 0)} storeys, getting easier as you go.</p>
+    <p><b>Action stations.</b> Most stations are in the weightless hull: guns, tubes, the hangar, engineering, the bridge. About ${fmt(X.inDrum)} people go up the spokes at once, which takes about ${fmt(X.muster / 60, 1)} minutes with ${p.spokes} spokes, ${sc.lifts} lifts each and cars for ${sc.carSize}. The sick bay and damage control parties stay in the drum.</p>`;
+  $('#journeys').innerHTML = X.journeys.map(j => `<article class="journey"><header><b>${j.title}</b><span>${j.total >= 90 ? `${fmt(j.total / 60, 1)} min` : `${fmt(j.total, 0)} s`}</span></header><ol>${j.steps.map(([t, s]) => `<li>${esc(t)}${s ? ` <span>${fmt(s, 0)} s</span>` : ''}</li>`).join('')}</ol>${j.note ? `<p>${j.note}</p>` : ''}${!X.tunnelOk ? '<p>The hangar has no crew tunnel, so crossing it means a suit.</p>' : ''}</article>`).join('');
+}
+function renderRecoil() {
+  const A = lastA, sc = cur().ship, dir = state.ui.fireDir;
+  const rows = [['top', 'Top'], ['bottom', 'Bottom'], ['both', 'Top + bottom'], ['rail', 'Railgun']].map(([w, l]) => {
+    const r = recoil(A, sc, w, dir);
+    if (!r.rounds) return `<tr><td>${l}</td><td colspan="3" class="muted">none fitted</td></tr>`;
+    const degs = r.rate * 180 / Math.PI;
+    return `<tr><td>${l} <span class="muted">×${r.rounds}</span></td><td>${fmt(r.dv * 1000, 2)} mm/s</td><td>${r.rate > 0 ? `${degs < 0.01 ? degs.toExponential(1) : fmt(degs, 3)}°/s ${r.axis}` : 'none'}</td><td>${r.rate > 0 ? dur((Math.PI / 180) / r.rate) : '—'}</td></tr>`;
+  }).join('');
+  const iowa = 9 * 1225 * 762;
+  const shellP = sc.shell * sc.vel;
+  $('#recoiltbl').innerHTML = `<tr><th>Salvo</th><th>Push back</th><th>Turn</th><th>1° off in</th></tr>${rows}`;
+  $('#recoilsay').textContent = `${dir === 'broad' ? 'Fired sideways from the top only, a salvo rolls the ship, and a long ship rolls far more easily than it pitches. Top and bottom together cancel the roll.' : 'Fired ahead, the push is straight back along the keel. Guns above the centreline also tip the nose up a little, and the bottom guns cancel that.'} One ${fmt(sc.shell)} kg shell at ${fmt(sc.vel)} m/s carries ${sci(shellP, 'N·s')}, as much as ${fmt(shellP / Math.max(1, A.thrust) * 1000, 1)} ms of main drive. A 1940s battleship's 9-gun broadside (about ${sci(iowa, 'N·s')}) pushed 45,000 t sideways at about 0.19 m/s and the sea soaked it up. In space the RCS has to. Shell size and speed are in the Ship node.`;
+}
+$('#notes').addEventListener('input', e => { cur().notes = e.target.value; cur().dirty = true; renderTabs(); saveDraft(); });
+document.querySelectorAll('[data-fire]').forEach(b => b.addEventListener('click', () => fire(b.dataset.fire)));
+for (const [id, v] of [['#dir-ahead', 'ahead'], ['#dir-broad', 'broad']]) $(id).addEventListener('click', () => { state.ui.fireDir = v; $('#dir-ahead').setAttribute('aria-pressed', String(v === 'ahead')); $('#dir-broad').setAttribute('aria-pressed', String(v === 'broad')); renderRecoil(); });
+
+// view toggles
+function toggle(id, key, rebuild) { $(id).addEventListener('click', () => { state.ui[key] = !state.ui[key]; $(id).setAttribute('aria-pressed', String(state.ui[key])); if (key === 'labels') labelObjs.forEach(o => o.visible = state.ui.labels); if (rebuild) { lastA = build(); } }); }
+toggle('#t-spin', 'spin'); toggle('#t-burn', 'burn'); toggle('#t-action', 'action'); toggle('#t-xray', 'xray', true); toggle('#t-labels', 'labels');
+document.querySelectorAll('[data-view]').forEach(b => b.addEventListener('click', () => setView(b.dataset.view)));
+
+// ---------- tabs and saving ----------
+function renderTabs() {
+  const list = [...state.designs.values()];
+  $('#tabs').innerHTML = list.map(d => {
+    const p = presetById(d.id);
+    const tag = p ? `<small>${p.short}${d.dirty ? ' · edited' : ''}</small>` : `<small>copy${d.dirty ? ' · edited' : ''}</small>`;
+    return `<button class="tab" role="tab" data-id="${d.id}" aria-selected="${d.id === state.current}">${esc(d.ship.name)}${tag}</button>`;
+  }).join('');
+  const d = cur();
+  $('#reset').hidden = !presetById(d.id);
+  $('#del').hidden = !!presetById(d.id) || !db;
+}
+$('#tabs').addEventListener('click', e => { const b = e.target.closest('.tab'); if (!b) return; switchTo(b.dataset.id); });
+function switchTo(id, keepView) {
+  state.current = id; state.sel = 0; state.open = new Set(['s0']);
+  lastA = build(); renderPanel(); renderReadouts(); renderTabs(); if (!keepView) setView('3q'); saveDraft();
+}
+$('#reset').addEventListener('click', () => {
+  const p = presetById(state.current); if (!p) return;
+  const saved = state.saved.get(p.id);
+  state.designs.set(p.id, saved ? { ...clone(saved), id: p.id, dirty: false } : norm({ ...clone(p), dirty: false }));
+  switchTo(p.id, true); setStatus(saved ? 'Back to the last saved version.' : 'Back to the original.');
+});
+$('#copy').addEventListener('click', async () => {
+  const d = cur(); const txt = JSON.stringify({ name: d.ship.name, ship: d.ship, sections: d.sections, notes: d.notes }, null, 2);
+  try { await navigator.clipboard.writeText(txt); setStatus('Copied. Paste it into the chat.'); }
+  catch { const ta = $('#notes'); const keep = ta.value; ta.value = txt; ta.select(); setStatus('Copy failed. The JSON is selected in the notes box: press Ctrl/Cmd+C, then edit any field to restore your notes.'); cur().notes = keep; }
+});
+function setStatus(t) { $('#status').textContent = t; }
+
+let db = null;
+async function connect() {
+  try { db = await window.claude?.use?.('db'); } catch { db = null; }
+  if (!db) { setStatus('Saving is off here. Copy JSON works.'); return; }
+  $('#save').disabled = false; $('#saveas').disabled = false; renderTabs();
+  setStatus('Saved designs load here.');
+  const timer = setTimeout(() => setStatus('The scratchpad store is slow to answer. Edits stay in this browser.'), 10000);
+  db.collection('designs').onSnapshot(snap => {
+    clearTimeout(timer);
+    const replaced = [];
+    for (const doc of snap.docs) {
+      const v = doc.data(); if (!v || !v.ship || !Array.isArray(v.sections)) continue;
+      const rec = { id: doc.id, ship: { ...SHIP_DEF, ...v.ship }, sections: v.sections.filter(s => TYPES[s.type]).map(s => ({ ...TYPES[s.type].def, ...s })), notes: String(v.notes || ''), dirty: false, baseAt: Number(v.updatedAt) || 0 };
+      if (!rec.sections.length) continue;
+      state.saved.set(doc.id, rec);
+      const mine = state.designs.get(doc.id);
+      if (!mine || !mine.dirty) state.designs.set(doc.id, clone(rec));
+      else if (rec.baseAt > (mine.baseAt || 0)) { state.designs.set(doc.id, clone(rec)); replaced.push(rec.ship.name); }
+    }
+    for (const ch of snap.docChanges()) if (ch.type === 'removed' && !presetById(ch.doc.id)) { state.saved.delete(ch.doc.id); if (state.current !== ch.doc.id) state.designs.delete(ch.doc.id); }
+    if (!state.designs.has(state.current)) state.current = PRESETS[0].id;
+    lastA = build(); renderPanel(); renderReadouts(); renderTabs();
+    setStatus(replaced.length ? `Loaded the newer saved version of ${replaced.join(', ')}; older unsaved edits in this browser were replaced.` : state.saved.size ? `${state.saved.size} saved design${state.saved.size > 1 ? 's' : ''} in the scratchpad.` : 'Nothing saved yet.');
+  }, err => { clearTimeout(timer); setStatus(err?.code === 'permission_denied' ? 'You can look but not save here.' : 'Could not reach the scratchpad store. Edits stay in this browser.'); });
+}
+let saving = false;
+async function saveDesign(asCopy) {
+  if (!db || saving) return;
+  const d = cur(); let id = d.id;
+  if (asCopy) { id = 'copy-' + Date.now().toString(36); }
+  const body = { name: asCopy ? d.ship.name + ' (copy)' : d.ship.name, ship: { ...d.ship, name: asCopy ? d.ship.name + ' (copy)' : d.ship.name }, sections: clone(d.sections), notes: d.notes || '', from: presetById(d.id)?.id || d.from || null, updatedAt: Date.now() };
+  saving = true; setStatus('Saving…');
+  try {
+    await db.collection('designs').doc(id).set(body);
+    if (asCopy) { state.designs.set(id, { id, ...clone(body), dirty: false, baseAt: body.updatedAt }); switchTo(id, true); }
+    else { d.dirty = false; d.baseAt = body.updatedAt; }
+    saveDraft();
+    renderTabs(); setStatus(`Saved “${body.name}”.`);
+  } catch (e) { setStatus(e?.code === 'permission_denied' ? 'You can look but not save here.' : 'Save failed. Try again, or use Copy JSON.'); }
+  saving = false;
+}
+$('#save').addEventListener('click', () => saveDesign(false));
+$('#saveas').addEventListener('click', () => saveDesign(true));
+$('#del').addEventListener('click', async () => {
+  const d = cur(); if (presetById(d.id) || !db) return;
+  if ($('#del').dataset.armed !== '1') { $('#del').dataset.armed = '1'; $('#del').textContent = 'Click again to delete'; setTimeout(() => { $('#del').dataset.armed = ''; $('#del').textContent = 'Delete saved copy'; }, 3000); return; }
+  try { await db.collection('designs').doc(d.id).delete(); state.designs.delete(d.id); state.saved.delete(d.id); switchTo(PRESETS[0].id); setStatus('Deleted.'); } catch { setStatus('Delete failed.'); }
+});
+
+// ---------- go ----------
+lastA = build(); resize(); setView('3q'); renderPanel(); renderReadouts(); renderTabs();
+requestAnimationFrame(frame);
+connect();
+</script>

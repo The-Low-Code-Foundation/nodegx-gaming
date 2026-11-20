@@ -35,6 +35,7 @@ const _t = new THREE.Vector3();
 export function controls() {
   return {
     burn: false, // the main drive (held)
+    boost: false, // hard burn: the drive past its rating (held with burn; gload.mjs)
     retro: false, // the retro jet, at the bow (held)
     slide: [0, 0], // x right, y up: -1, 0 or 1 (held)
     turn: [0, 0, 0], // keys: pitch up, yaw left, roll left, -1..1 (rad/s asks, scaled by `keyRate` / `rollRate`)
@@ -279,12 +280,17 @@ export class Flight {
     if (ctl.retro) this.openFor(this.alloc[2][0], 1e-4);
     this.valves();
 
+    // Hard burn: the drive's push rises past its rating while boost is held with it (`boost` times, over `spool` s).
+    const B = this.boostSpec;
+    const hard = !!ctl.boost && this.burning;
+    this.boostK = B ? clamp((this.boostK ?? 0) + (hard ? dt / B.spool : -dt * 3), 0, 1) : 0;
+    const push = this.power * this.mainAcc * (1 + (B ? (B.boost - 1) * this.boostK : 0));
     // The pushes: the open nozzles, and the main drive along the axis. Each costs propellant.
-    const la = _a.set(0, 0, -this.power * this.mainAcc), aa = _t.set(0, 0, 0);
+    const la = _a.set(0, 0, -push), aa = _t.set(0, 0, 0);
     let flow = 0;
     for (const n of this.noz) if (n.open) (la.add(n.lin), aa.add(n.ang), (flow += n.F / (this.S.isp.rcs * G0)));
     this.prop.rcs = Math.max(0, this.prop.rcs - flow * dt);
-    this.prop.main = Math.max(0, this.prop.main - ((this.power * b.mass * this.mainAcc) / (this.S.isp.main * G0)) * dt);
+    this.prop.main = Math.max(0, this.prop.main - ((push * b.mass) / (this.S.isp.main * G0)) * dt);
     this.acc.copy(la);
     this.angAcc.copy(aa);
     b.ang.addScaledVector(aa, dt);

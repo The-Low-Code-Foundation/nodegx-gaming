@@ -54,17 +54,18 @@ export class Approach {
     this.state = { along: Infinity, side: 0, up: 0, closing: 0, want: 0, inLane: false, nose: 0, call: 'lane' };
   }
 
-  /** Puts the lane on the line through pad `z` (the fighter you are in). */
-  setPad(z) {
+  /** Puts the lane on the line through pad `z` (the fighter you are in), on her side `out` (-1 port, +1 starboard). */
+  setPad(z, out = -1) {
     this.padZ = z;
+    this.out = out;
     const [gx, gy] = this.S.gate;
-    for (const r of this.rings) r.position.set(gx - r.userData.along, gy, z);
+    for (const r of this.rings) r.position.set(out * (Math.abs(gx) + r.userData.along), gy, z);
   }
 
   /** A point on the lane's centre line, `along` metres out, in the world. */
   pointAt(along, t = new THREE.Vector3()) {
     const [gx, gy] = this.S.gate;
-    return this.C.frame.localToWorld(t.set(gx - along, gy, this.padZ));
+    return this.C.frame.localToWorld(t.set((this.out ?? -1) * (Math.abs(gx) + along), gy, this.padZ));
   }
 
   /** Works out where `fighter` is on the lane; `show` lights the rings. `carrier` is the carrier's Rigid. */
@@ -76,16 +77,17 @@ export class Approach {
     const frame = this.C.frame;
     frame.updateWorldMatrix(true, false);
     const p = frame.worldToLocal(fighter.obj.getWorldPosition(_v));
-    s.along = gx - p.x;
+    const o = this.out ?? -1;
+    s.along = p.x * o - Math.abs(gx); // metres out from the gate, on her side
     s.side = p.z - this.padZ;
     s.up = p.y - gy;
-    // Her velocity relative to the carrier, in the carrier's frame: +x is inbound.
+    // Her velocity relative to the carrier, in the carrier's frame: -out is inbound.
     const cq = frame.getWorldQuaternion(_q);
     const rel = _n.copy(fighter.body.vel).sub(carrier.vel).applyQuaternion(cq.clone().invert());
-    s.closing = rel.x;
+    s.closing = -o * rel.x;
     s.want = wantAt(Math.max(0, s.along));
     const nose = new THREE.Vector3(0, 0, -1).applyQuaternion(fighter.obj.getWorldQuaternion(new THREE.Quaternion())).applyQuaternion(cq.invert());
-    s.nose = nose.x;
+    s.nose = -o * nose.x;
     const off = Math.hypot(s.side, s.up);
     s.inLane = s.along > -10 && s.along < this.len + 30 && off < 25 + s.along * 0.08 && s.nose > 0.2; // and pointed in, not leaving
     const K = this.S.catch;

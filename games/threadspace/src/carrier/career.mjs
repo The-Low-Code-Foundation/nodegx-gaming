@@ -15,12 +15,13 @@ import * as THREE from 'three';
 import { crewMember } from './crew.mjs';
 import { frameOf, sideOf } from './wayfinding.mjs';
 import { fmt as fmtTime } from './watch.mjs';
+import { drumToShip } from './drum.mjs';
 
 const KEY = 'threadspace.carrier.career';
 const ALL = ['guns', 'raids', 'fighters', 'helm'];
 // A step that needs you in a seat, picked up again after a reload, backs up to the step that seats you.
 // (The gunnery steps need no backing up: out of the turret, their card sends you back up into it.)
-const BACK = { launch: 'board', land: 'board', turn: 'helm', muster: 'sleep' };
+const BACK = { launch: 'board', land: 'board', turn: 'helm', transit: 'helm', muster: 'sleep' };
 const GOLD = new THREE.MeshBasicMaterial({ color: '#ffc850', transparent: true, opacity: 0.85, toneMapped: false, depthTest: false });
 const CHEVRON = new THREE.MeshBasicMaterial({ color: '#ffc850', toneMapped: false });
 const _v = new THREE.Vector3();
@@ -52,8 +53,9 @@ export class Career {
     const crewCount = this.L.stations.length;
     this.K.people.forEach((p, k) => {
       const room = this.C.rooms.get(p.room);
-      const I = this.C.decks.get(room.deck);
-      const who = { ...p, deck: room.deck, I, m: null };
+      const seg = p.seg ?? room.seg; // a drum room: its segment's Interior, in that segment's frame (drum.mjs)
+      const I = this.C.interiorOf(room, seg);
+      const who = { ...p, deck: room.deck, seg, I, m: null };
       this.people.set(p.id, who);
       const u = I.use(`talk-${p.id}`, `Talk to ${p.name}`, p.at[0], p.at[1], () => this.talked(p.id), { r: 2.4, y: I.floorY + 1.5 });
       u.hidden = () => !this.on;
@@ -77,9 +79,9 @@ export class Career {
     });
   }
 
-  /** The officers' clips play on the decks being drawn. */
-  tickPeople(dt, visibleDeck) {
-    for (const p of this.people.values()) if (p.m && visibleDeck(p.deck)) p.m.update(dt);
+  /** The officers' clips play where they are being drawn (`drawn(person)`). */
+  tickPeople(dt, drawn) {
+    for (const p of this.people.values()) if (p.m && drawn(p)) p.m.update(dt);
   }
 
   // --- starting, saving ---
@@ -115,11 +117,12 @@ export class Career {
     this.enter();
     if (!s || !this.i) {
       this.tell(null, this.K.start.say, 14);
-      return { deck: this.K.start.deck, x: this.K.start.at[0], z: this.K.start.at[1], yaw: this.K.start.yaw };
+      const S = this.K.start, sr = S.room && this.C.rooms.get(S.room);
+      return { deck: sr ? sr.deck : S.deck, x: S.at[0], z: S.at[1], yaw: S.yaw, seg: S.seg ?? sr?.seg };
     }
-    const r = this.C.rooms.get(this.K.resume.room);
+    const r = this.C.rooms.get(this.K.resume.room), at = this.K.resume.at;
     this.tell(null, this.K.resume.say, 8);
-    return { deck: r.deck, x: (r.x[0] + r.x[1]) / 2, z: (r.z[0] + r.z[1]) / 2, yaw: 0 };
+    return { deck: r.deck, x: at ? at[0] : (r.x[0] + r.x[1]) / 2, z: at ? at[1] : (r.z[0] + r.z[1]) / 2, yaw: this.K.resume.yaw ?? 0, seg: r.seg };
   }
 
   /** Free roam: no orders, the whole ship open. */
@@ -234,6 +237,7 @@ export class Career {
   frame(dt, where) {
     if (!this.on) return;
     this.deckNow = where.deck;
+    this.segNow = where.seg;
     const st = this.step, s = this.s;
     s && (s.t += dt);
     if (this.msg) this.msg.t -= dt;
@@ -271,6 +275,9 @@ export class Career {
       case 'drill':
         // The chief calls it a moment after you are sent.
         if (!s.job && s.t > 1.5) s.job = this.dc.raise(st.kind, st.room);
+        break;
+      case 'suit':
+        if (this.ship.suit) this.complete();
         break;
       case 'man':
         if (mode === 'gun') this.complete();
@@ -332,6 +339,18 @@ export class Career {
         if (s.deg >= st.deg - 4 && s.rate < 0.2) this.complete();
         break;
       }
+      case 'transit': {
+        // The navigator lays the waypoint in once you have the helm (helmsight.mjs); arriving on it at rest completes.
+        const N = this.nav;
+        if (!N) break;
+        s.arr0 ??= N.arrivals;
+        if (N.arrivals > s.arr0) this.complete();
+        else if (!N.nav && mode === 'helm' && s.t > 2 && !s.laid) {
+          s.laid = true;
+          N.toggleNav(st.dist ?? 15000, st.off ?? 40);
+        }
+        break;
+      }
     }
   }
 
@@ -343,12 +362,12 @@ export class Career {
     if (!st) return null;
     const room = (id) => {
       const r = this.C.rooms.get(id);
-      return r && { deck: r.deck, x: (r.x[0] + r.x[1]) / 2, z: (r.z[0] + r.z[1]) / 2, room: r };
+      return r && { deck: r.deck, seg: r.seg, x: (r.x[0] + r.x[1]) / 2, z: (r.z[0] + r.z[1]) / 2, room: r };
     };
     switch (st.do) {
       case 'talk': {
         const p = this.people.get(st.who);
-        return { deck: p.deck, x: p.at[0], z: p.at[1], room: this.C.rooms.get(p.room), who: p };
+        return { deck: p.deck, seg: p.seg, x: p.at[0], z: p.at[1], room: this.C.rooms.get(p.room), who: p };
       }
       case 'go':
         return room(st.room);
@@ -363,25 +382,34 @@ export class Career {
       case 'muster': {
         const y = this.routine?.you;
         const r = y && this.C.rooms.get(y.muster);
-        return r && { deck: r.deck, x: y.at[0], z: y.at[1], room: r };
+        return r && { deck: r.deck, seg: r.seg, x: y.at[0], z: y.at[1], room: r };
       }
       case 'rounds':
         return room(st.rooms.find((r) => !this.s?.seen?.has(r)) ?? st.rooms[0]);
       case 'drill':
         return this.s?.job ? null : room(st.room); // once it is called, damage control's own red marker has it
+      case 'suit':
+        return this.ship.suit ? null : room('damage-control');
       case 'man':
       case 'shoot':
       case 'raid': {
         const f = this.L.weapons.turrets[0].from;
         return { deck: f.deck, x: f.at[0], z: f.at[1], room: null };
       }
-      case 'board':
+      case 'board': {
+        // Down a boarding tube where the fighters have them (the spin-drum carrier's hangar is airless), else the hangar.
+        const b = this.L.fighters?.[0]?.boarding, from = b && this.C.rooms.get(b.from);
+        return from ? { deck: from.deck, x: b.at[0], z: b.at[1], room: from } : room('hangar');
+      }
       case 'launch':
       case 'land':
         return room('hangar');
       case 'helm':
       case 'turn':
-        return { deck: 1, x: this.L.helm.at[0], z: this.L.helm.at[1], room: this.C.rooms.get('bridge') };
+      case 'transit': {
+        const br = this.C.rooms.get('bridge');
+        return { deck: br.deck, x: this.L.helm.at[0], z: this.L.helm.at[1], room: br };
+      }
     }
     return null;
   }
@@ -394,17 +422,29 @@ export class Career {
     }
     this.marker.visible = !!t;
     if (!t) return;
-    this.marker.position.set(t.x, this.C.decks.get(t.deck).floorY, t.z);
+    if (this.C.isDrum(t.deck)) drumToShip(this.C, t.deck, t.seg ?? 0, t.x, this.C.interior(t.deck, t.seg ?? 0).floorY, t.z, this.marker.position);
+    else this.marker.position.set(t.x, this.C.decks.get(t.deck).floorY, t.z);
     this.marker.scale.setScalar(this.markScale * (1 + 0.2 * Math.sin(performance.now() / 250)));
   }
 
-  /** "Main deck · frame 95 · starboard · follow the blue Bridge line", for the step's target. */
+  /** "Main deck · frame 95 · starboard · follow the blue Bridge line", for the step's target. In a drum: "after drum,
+   *  inner deck (a lift down from the spine) · segment 9 (you are in 3) · frame 40". */
   hint(t, deckNow) {
     if (!t) return '';
-    const deck = this.L.decks.find((d) => d.id === t.deck);
+    const drum = this.C.isDrum, name = this.C.deckName(t.deck).toLowerCase();
+    if (drum(t.deck)) {
+      const same = t.deck === deckNow, sameHalf = drum(deckNow) && deckNow.split('-')[1] === t.deck.split('-')[1];
+      const how = same ? '' : sameHalf ? ' (the ladder at a lift)' : drum(deckNow) ? ' (a lift up to the spine, then down)' : ' (a lift down from the spine)';
+      const parts = [`${name}${how}`, `segment ${t.seg}${same && this.segNow !== t.seg ? ` (you are in ${this.segNow})` : ''}`, `frame ${frameOf(this.L, t.z)}`];
+      const line = !drum(deckNow) && this.L.routes.lines.find((l) => l.to === 'spine'); // the line to the lifts
+      if (line) parts.push(`<i style="--c:${line.color}">follow the ${line.name} line</i>`);
+      return parts.join(' · ');
+    }
     // The side is the room's (a room across the centreline is on it, wherever in it the officer stands).
     const x = t.room ? (t.room.x[0] < 0 && t.room.x[1] > 0 ? 0 : (t.room.x[0] + t.room.x[1]) / 2) : t.x;
-    const parts = [`${deck.name.toLowerCase()}${t.deck !== deckNow ? (t.deck < deckNow ? ' (up)' : ' (down)') : ''}`, `frame ${frameOf(this.L, t.z)}`, sideOf(x)];
+    const floor = (d) => this.L.decks.find((k) => k.id === d)?.floor ?? 0; // up or down by the decks' heights, not their numbers
+    const how = t.deck === deckNow ? '' : drum(deckNow) ? ' (a lift up to the spine)' : floor(t.deck) > floor(deckNow) ? ' (up)' : ' (down)';
+    const parts = [`${name}${how}`, `frame ${frameOf(this.L, t.z)}`, sideOf(x)];
     const line = t.room && this.L.routes.lines.find((l) => l.to === t.room.id);
     if (line) parts.push(`<i style="--c:${line.color}">follow the ${line.name} line</i>`);
     return parts.join(' · ');

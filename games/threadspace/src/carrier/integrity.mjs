@@ -27,6 +27,15 @@
 // And what it does to you: the air you breathe is your compartment's. A venting room pulls you toward the hole; below
 // `faint` you have seconds before you black out, and a damage control party drags you to the nearest room with air.
 //
+// Armour: a belt round her stops some shells outright (a scar on the plating, no hole); the rest come through it with
+// less left in them. A torpedo is never stopped: it goes off inside.
+//
+// Condition one: at action stations the ship sets condition one. Everyone puts on a vac suit (the grey VAC SUITS
+// lockers, `suit`), and once the warning has run the air in the crew spaces is pumped down into the tanks, so a hit
+// cannot blow a room out, a shell cannot start a fire, and a hole is only a hole. After the stand-down the air comes
+// back. With your helmet on you breathe your suit's air (`suitAir`), not the room's; the helmet closes by itself when
+// the room's air is thin and opens again when it is good.
+//
 // Fires, electrical faults and coolant leaks (damage.mjs's jobs) now come from hits: a hit that does real damage to a
 // walkable room can start one there. And an attack is what makes hits: every few minutes a raider makes a firing pass
 // down one side (`attack`), and the speakers call out what it hit.
@@ -100,7 +109,9 @@ export class Integrity {
     for (const c of C.L.compartments) {
       const b = boxOf(C.L, c);
       const vol = (b.x[1] - b.x[0]) * (b.y[1] - b.y[0]) * (b.z[1] - b.z[0]);
-      this.nodes.set(c.id, { c, b, vol, air: A.nominal, health: 100, rate: 0, was: A.nominal, drain: null, holes: [], low: false, green: 0 });
+      // A `vacuum` compartment (the spin-drum carrier's hangar) is airless for good: open to space, never refilled.
+      const p = c.vacuum ? 0 : A.nominal;
+      this.nodes.set(c.id, { c, b, vol, air: p, health: 100, rate: 0, was: p, drain: null, holes: [], low: false, green: 0 });
     }
     this.links = []; // doors and hatches between walkable rooms
     this.holes = [];
@@ -111,10 +122,17 @@ export class Integrity {
     this.shake = 0;
     this.hypoxia = 0;
     this.rescuing = false;
+    // Condition one, and your vac suit: worn or not, the helmet closed or not, the seconds of air in it.
+    this.cond = null; // { t: when set, venting, secured }
+    this.suit = false;
+    this.helmet = false;
+    this.suitAir = this.N.suit?.air ?? 1800;
+    this.status = null; // () → [[name, 0..1, note]]: rows other systems add to the status board (main.mjs)
     this.log = [];
     this.buildDoors();
     this.buildHatches();
     this.buildOverlay();
+    this.buildDrum();
     // Which compartment each manoeuvring cluster is fixed to: the nearest one to it.
     this.thrusters = thrusters;
     for (const t of thrusters) {
@@ -122,6 +140,7 @@ export class Integrity {
       let best = null, bd = Infinity;
       const p = t.at;
       for (const n of this.nodes.values()) {
+        if (!n.b) continue;
         const q = new THREE.Vector3(clamp(p.x, n.b.x[0], n.b.x[1]), clamp(p.y, n.b.y[0], n.b.y[1]), clamp(p.z, n.b.z[0], n.b.z[1]));
         const d = q.distanceTo(p);
         if (d < bd) (bd = d), (best = n);
@@ -130,6 +149,7 @@ export class Integrity {
     }
     this.systems();
     this.veil = document.getElementById('c-veil');
+    this.helmetEl = document.getElementById('c-helmet');
     this.gauge = document.getElementById('c-air');
     this.board = document.getElementById('c-ship');
     this.boardT = 0;
@@ -137,6 +157,29 @@ export class Integrity {
 
   node(id) {
     return this.nodes.get(id);
+  }
+
+  /** The spin drums (drum.mjs), when she has them: each room and each deck's ring corridor is a node of the air network
+   *  too, with no box (`drum`): a room shares its air with its ring through its doorway, which has no door (`drumLinks`),
+   *  and a ring corridor is the whole ring, all forty segments of it. A shell's path finds them through `C.drumAt`,
+   *  which turns the point back by the drum's spin and reads the segment it lands in. A hole in a drum room vents it and
+   *  its ring; the drones seal it (it has no hole drawn yet, so you cannot patch it yourself). */
+  buildDrum() {
+    this.drumLinks = [];
+    const A = this.N.air;
+    for (const c of this.C.rooms.values()) {
+      if (!c.drum) continue;
+      const vol = (c.x[1] - c.x[0]) * (c.z[1] - c.z[0]) * (c.h ?? 3) * (c.seg == null ? this.L.drum.sides : 1);
+      this.nodes.set(c.id, { c, b: null, drum: true, vol, air: A.nominal, health: 100, rate: 0, was: A.nominal, drain: null, holes: [], low: false, green: 0 });
+      if (c.seg != null) this.drumLinks.push({ a: c.id, b: `ring-${c.half}-${c.ring}`, area: 1.4 * 2.5, x: (c.x[0] + c.x[1]) / 2, z: c.row === 'fore' ? c.z[1] : c.z[0] });
+    }
+  }
+
+  /** A room's lamps to `mode` (alarm colours): a drum room's in its segment, if built; a ring's in every built segment. */
+  alarm(n, mode) {
+    const c = n.c;
+    if (!c.drum) return this.C.decks.get(c.deck).alarm(c.id, mode);
+    for (const b of this.C.drums?.built.values() ?? []) if (b.I.deck.id === c.deck && (c.seg == null || b.seg === c.seg)) b.I.alarm(c.id, mode);
   }
 
   /** The air in compartment `id`, kPa. */
@@ -181,6 +224,21 @@ export class Integrity {
       const u = I.use(`pdoor-${i}`, 'Open the pressure door', alongX ? mid : line, alongX ? line : mid, () => this.tryOpen(link), { r: 2.2 });
       const link = { kind: 'door', a: A.id, b: B.id, area: d.w * DOOR_H, open: true, k: 1, door, lamp, lampMat, use: u, deck: A.deck, quiet: 0, x: alongX ? mid : line, z: alongX ? line : mid };
       u.hidden = () => link.open || link.k > 0.5;
+      // A door onto an airless compartment starts shut. Between an `airlock` and it, it is the airlock's outer door:
+      // E cycles the lock (airlockFrame) instead of opening it.
+      const vac = [A, B].find((c) => c.vacuum);
+      if (vac) {
+        link.open = false;
+        link.k = 0;
+        door.set(0);
+        const lock = [A, B].find((c) => c.airlock);
+        if (lock) {
+          link.airlock = lock.id;
+          u.use = () => this.cycle(link);
+          u.hidden = () => false;
+          Object.defineProperty(u, 'label', { get: () => (link.cyc ? 'The airlock is cycling' : link.open ? 'Cycle the airlock: shut it and fill it' : 'Cycle the airlock: pump it down') });
+        }
+      }
       this.links.push(link);
     });
   }
@@ -199,6 +257,50 @@ export class Integrity {
   hatchOpen(l) {
     const h = this.links.find((k) => k.ladder === l);
     return !h || h.open || Math.abs(this.airOf(h.a) - this.airOf(h.b)) <= this.N.air.openWithin;
+  }
+
+  /** E at an airlock's outer door. Shut, with air in the lock: dog the hatches, pump the lock down, open the door (only
+   *  in a vac suit). Open: shut it, fill the lock, open the hatches. airlockFrame() does the pumping. */
+  cycle(link) {
+    if (link.cyc) return;
+    const lock = this.nodes.get(link.airlock);
+    if (!link.open && lock.air > 1) {
+      if (!this.suit) {
+        this.sfx?.cue('clunk', { vol: 0.3 });
+        this.dc?.say(null, "The airlock won't cycle without a vac suit on: the hangar is airless. Suits are in the VAC SUITS lockers.");
+        return;
+      }
+      link.cyc = 'out';
+    } else link.cyc = 'in';
+    link.hatches = this.links.filter((l) => l.kind === 'hatch' && (l.a === link.airlock || l.b === link.airlock));
+    for (const h of link.hatches) (h.held = true), (h.open = false);
+    link.open = false;
+    link.pumping = false;
+    this.sfx?.cue('servo', { dur: 1.2 });
+  }
+
+  airlockFrame(link, dt) {
+    const A = this.N.air, lock = this.nodes.get(link.airlock);
+    if (link.k > 0 || link.hatches.some((h) => h.k > 0)) return; // the door and the hatches shut first
+    if (!link.pumping) {
+      link.pumping = true;
+      this.sfx?.cue('hiss', { dur: 3.5, vol: 0.5 });
+      this.dc?.say(null, link.cyc === 'out' ? 'Airlock: pumping down.' : 'Airlock: filling.', 0, 3);
+    }
+    const rate = this.N.air.lockRate ?? 25; // kPa a second
+    if (link.cyc === 'out') {
+      lock.air = Math.max(0, lock.air - rate * dt);
+      if (lock.air > 0.5) return;
+      lock.air = 0;
+      link.open = true;
+    } else {
+      lock.air = Math.min(A.nominal, lock.air + rate * dt);
+      if (lock.air < A.nominal - 0.5) return;
+      lock.air = A.nominal;
+      for (const h of link.hatches) (h.held = false), (h.open = true);
+    }
+    link.cyc = null;
+    this.sfx?.cue('servo', { dur: 1.2 });
   }
 
   /** E on a shut door: open it if the two sides are close enough in pressure, else say why not. */
@@ -244,13 +346,14 @@ export class Integrity {
   }
 
   compartmentAt(p) {
-    for (const n of this.nodes.values()) if (inside(n.b, p)) return n;
-    return null;
+    for (const n of this.nodes.values()) if (n.b && inside(n.b, p)) return n;
+    const d = this.C.drumAt?.(p); // in a spinning drum (drum.mjs)
+    return d ? this.nodes.get(d) ?? null : null;
   }
 
   /** Picks a compartment, weighted by its volume (a big target is hit more often). */
   pick() {
-    const all = [...this.nodes.values()];
+    const all = [...this.nodes.values()].filter((n) => n.b); // aimed at the fixed hull; a shell can go on into a drum
     let t = this.rand() * all.reduce((s, n) => s + n.vol, 0);
     for (const n of all) if ((t -= n.vol) <= 0) return n;
     return all[0];
@@ -307,7 +410,7 @@ export class Integrity {
       const n = this.compartmentAt(q);
       if (n && n !== prev) {
         // A new compartment: holed at the face the shell came through, to space or to the compartment before.
-        const face = this.face(n.b, q, dir);
+        const face = n.b ? this.face(n.b, q, dir) : { at: q.clone(), n: dir.clone() };
         this.makeHole(n, last, face.at, face.n, last ? hole * 0.7 : hole);
         this.hurt(n, damage * (1 - (0.5 * s) / pen));
         path.push(n);
@@ -319,7 +422,7 @@ export class Integrity {
     const burst = this.compartmentAt(stop) ?? last;
     if (burst) this.hurt(burst, damage * 0.8);
     for (const n of this.nodes.values()) {
-      if (n === burst || !inside(n.b, stop, 4)) continue;
+      if (n === burst || !n.b || !inside(n.b, stop, 4)) continue;
       this.hurt(n, damage * 0.3);
     }
     const res = { from, entry, stop, path: path.map((n) => n.c.id), burst: burst?.c.id ?? null };
@@ -358,12 +461,18 @@ export class Integrity {
     if (to) to.holes.push(h);
     this.holes.push(h);
     // In a walkable room you see it: a ragged black hole in the plating, glowing at its edge for a while.
-    if (n.c.access === 'walk') this.holeLook(h, n);
-    else if (to?.c.access === 'walk') this.holeLook(h, to, true);
+    if (n.c.access === 'walk' && n.b) this.holeLook(h, n);
+    else if (to?.c.access === 'walk' && to.b) this.holeLook(h, to, true);
     // In the cutaway: a red dot, yellow once it is sealed.
     h.mark = at(new THREE.Mesh(new THREE.SphereGeometry(1.1, 10, 8), MARK_HOLE), p.x, p.y, p.z);
     h.mark.renderOrder = 6;
     this.overlay.add(h.mark);
+    // In a drum the hole turns with it: kept as a point in the half's own (unturned) frame, placed each frame.
+    const hv = n.drum ? this.C.drums?.halves.find((x) => x.id === n.c.half) : null;
+    if (hv) {
+      const r = -hv.node.rotation.z, c = Math.cos(r), s = Math.sin(r);
+      h.spin = { hv, x: p.x * c - p.y * s, y: p.x * s + p.y * c };
+    }
     return h;
   }
 
@@ -482,11 +591,14 @@ export class Integrity {
     const breached = path.find((n) => n.c.access === 'walk') ?? path[0];
     if (!breached) return;
     const h = breached.holes.at(-1);
-    const deck = breached.c.access === 'walk' ? this.L.decks.find((d) => d.id === breached.c.deck).name.toLowerCase() : null;
-    const z = h?.at.z ?? (breached.b.z[0] + breached.b.z[1]) / 2;
-    const where = deck ? `${deck[0].toUpperCase() + deck.slice(1)}, frame ${frameOf(this.L, z)}, ${sideOf(h?.at.x ?? 0)}.` : `Frame ${frameOf(this.L, z)}.`;
+    const deck = breached.c.access === 'walk' ? this.C.deckName(breached.c.deck).toLowerCase() : null;
+    const z = h?.at.z ?? (breached.b ? (breached.b.z[0] + breached.b.z[1]) / 2 : (breached.c.z[0] + breached.c.z[1]) / 2);
+    const side = breached.c.drum ? (breached.c.seg != null ? `segment ${breached.c.seg}` : 'the ring') : sideOf(h?.at.x ?? 0);
+    const where = deck ? `${deck[0].toUpperCase() + deck.slice(1)}, frame ${frameOf(this.L, z)}, ${side}.` : `Frame ${frameOf(this.L, z)}.`;
     const what = breached.c.access === 'walk' ? 'Hull breach' : 'Hit';
-    this.dc?.say(`${what} in the ${breached.c.name.toLowerCase()}. ${where}`, `${what}: ${breached.c.name}. ${where}`, 400, 6);
+    const spare = breached.c.drum && /^spare/i.test(breached.c.name); // a drum's unnamed rooms are numbered spares
+    const said = spare ? 'an empty room' : `the ${breached.c.name.toLowerCase()}`, shown = spare ? 'empty room' : breached.c.name;
+    this.dc?.say(`${what} in ${said}. ${where}`, `${what}: ${shown}. ${where}`, 400, 6);
   }
 
   // --- attacks -------------------------------------------------------------------------------------------------------
@@ -501,6 +613,7 @@ export class Integrity {
     this.stations = true;
     for (const l of this.links) (l.open = false), (l.hold = 0);
     this.wait = A.between[0] + this.rand() * (A.between[1] - A.between[0]);
+    this.setCondition();
     if (this.hooks.raid) {
       // A raider you can see and fight (weapons.mjs): its own shells make the hits, and it says when the raid is over.
       this.dc?.say(`Action stations, action stations. Raider closing ${side}. Gun crews close up. Close all pressure doors.`, `Action stations: a raider closing ${side}. Gun crews closing up; all pressure doors closing.`, 300, 6);
@@ -527,22 +640,70 @@ export class Integrity {
   /** A shell that flew here (weapons.mjs) meets the hull at `entry` going `dir` (both in the ship's frame): what it
    *  does is dealt from the layout's `integrity.shell` like any other, unless `opts` says. */
   arrive(entry, dir, opts = {}) {
-    const S = this.N.shell, r = this.rand;
+    const S = this.N.shell, r = this.rand, AR = this.N.armour;
     const ax = Math.abs(dir.x) >= Math.abs(dir.y) ? 'x' : 'y';
     const from = ax === 'x' ? (dir.x > 0 ? 'port' : 'starboard') : dir.y > 0 ? 'below' : 'above';
+    // The armour belt: a gun shell is stopped by it some of the time, and loses some of its reach when it is not.
+    if (opts.shell && AR && r() < AR.stop) return this.glance(entry, dir);
+    const pen = opts.pen ?? S.pen[0] + r() * (S.pen[1] - S.pen[0]) - (opts.shell && AR ? AR.pen : 0);
+    if (opts.torpedo) {
+      const z = entry.z;
+      this.dc?.say(`Torpedo hit. Frame ${frameOf(this.L, z)}, ${sideOf(entry.x)}.`, `Torpedo hit: frame ${frameOf(this.L, z)}, ${sideOf(entry.x)}.`, 200, 6);
+    }
     return this.strike({
       from, dir: dir.clone().normalize(), entry: entry.clone(),
-      pen: opts.pen ?? S.pen[0] + r() * (S.pen[1] - S.pen[0]),
+      pen: Math.max(2, pen),
       damage: opts.damage ?? S.damage[0] + r() * (S.damage[1] - S.damage[0]),
       hole: opts.hole ?? S.hole[0] + r() * (S.hole[1] - S.hole[0])
     });
+  }
+
+  /** A shell the armour stopped: a flash and a bang on the plating, a scar, no hole. */
+  glance(entry, dir) {
+    this.impact(entry, dir);
+    this.shake *= 0.6;
+    const res = { from: null, entry, stop: entry, path: [], burst: null, glance: true };
+    this.log.push(res);
+    if (!this.glanceCalled || this.time - this.glanceCalled > 10) {
+      this.glanceCalled = this.time;
+      this.dc?.say(null, `Hit on the armour belt, frame ${frameOf(this.L, entry.z)}. No breach.`, 0, 4);
+    }
+    return res;
   }
 
   /** The raid is over: the doors may open again (each one once the air both sides of it is good). */
   standDown() {
     this.stations = false;
     this.sfx?.cue('chime');
-    this.dc?.say('Stand down from action stations.', 'Stand down from action stations.', 0, 4);
+    if (this.cond) {
+      this.cond.secured = this.time;
+      this.cond.venting = false;
+      this.dc?.say('Stand down from action stations. Secure from condition one. Repressurising the ship.', 'Stand down: condition one secured, the air is coming back. Keep your helmet on until it is.', 0, 6);
+    } else this.dc?.say('Stand down from action stations.', 'Stand down from action stations.', 0, 4);
+  }
+
+  /** Condition one: suits on, then (after `condition.warn` seconds) the crew spaces are pumped down. Called with
+   *  action stations; `__carrier.ship.setCondition()` sets it as a drill. */
+  setCondition() {
+    const K = this.N.condition;
+    if (!K || this.cond) return;
+    this.cond = { t: this.time, venting: false, secured: null };
+    this.dc?.say(`Set condition one throughout the ship. All hands, don vac suits. Venting in ${K.warn} seconds.`, `Condition one: put on a vac suit (VAC SUITS lockers). The ship vents in ${K.warn} s.`, 1800, 7);
+    this.events.push({ t: this.time + K.warn, fn: () => {
+      if (!this.cond || this.cond.secured) return;
+      this.cond.venting = true;
+      this.sfx?.cue('klaxon', { n: 2 });
+      this.dc?.say('Venting the ship. Helmets on.', 'Venting: the crew spaces are being pumped down.', 0, 5);
+    } });
+  }
+
+  /** You put on a vac suit (from a VAC SUITS locker): a full suit of air. */
+  don() {
+    const had = this.suit;
+    this.suit = true;
+    this.suitAir = this.N.suit?.air ?? 1800;
+    this.sfx?.cue('clunk', { vol: 0.5 });
+    this.dc?.say(null, had ? 'You swap your air bottles for full ones.' : 'You pull on a vac suit. The helmet closes by itself when the air goes thin.', 0, 5);
   }
 
   /** One shell of a pass: its tracer in to where it will strike, then the strike. */
@@ -610,18 +771,32 @@ export class Integrity {
       if (l.k <= 0.02) continue;
       this.share(this.nodes.get(l.a), this.nodes.get(l.b), l.area * l.k * A.through, h, l.x, l.z, drainTo);
     }
-    // Life support tops up any compartment that is no longer open to space; the supply to a breached zone is cut.
-    const fill = A.refill * this.lsFactor;
+    for (const l of this.drumLinks) this.share(this.nodes.get(l.a), this.nodes.get(l.b), l.area * A.through, h, l.x, l.z, drainTo); // the drum's open doorways
+    for (const n of this.nodes.values()) if (n.c.vacuum) n.air = 0; // as good as space
+    // Condition one: the crew spaces are pumped down into the tanks, and nothing is put back until it is secured.
+    const K = this.N.condition, cond = this.cond;
+    if (cond?.venting) {
+      for (const n of this.nodes.values()) if (n.c.access === 'walk' && n.air > K.to) n.air = Math.max(K.to, n.air - K.pump * h * (this.power ? 1 : 0.5));
+      return;
+    }
+    // Life support tops up any compartment that is no longer open to space; the supply to a breached zone is cut. After
+    // condition one, the tanks give the air back faster than the plant makes it.
+    const fill = cond?.secured != null ? Math.max(A.refill, K.repress) * this.lsFactor : A.refill * this.lsFactor;
     for (const n of this.nodes.values()) {
       if (n.air >= A.nominal || this.breached.has(n)) continue;
       n.air = Math.min(A.nominal, n.air + fill * h);
+    }
+    // Condition one is over once every crew space that is not open to space has its air back.
+    if (cond?.secured != null && [...this.nodes.values()].every((n) => n.c.access !== 'walk' || this.breached.has(n) || n.air > A.nominal - 4)) {
+      this.cond = null;
+      this.dc?.say('The ship is repressurised. You may open your helmets.', 'The air is back: helmets may come off.', 0, 5);
     }
   }
 
   /** The compartments that are open to space: holed to it, or joined to one that is by holes and open doors. */
   zone() {
     const out = new Set();
-    let q = this.holes.filter((h) => !h.sealed && !h.to).map((h) => h.n);
+    let q = [...this.holes.filter((h) => !h.sealed && !h.to).map((h) => h.n), ...[...this.nodes.values()].filter((n) => n.c.vacuum)];
     q.forEach((n) => out.add(n));
     while (q.length) {
       const next = [];
@@ -629,6 +804,7 @@ export class Integrity {
       for (const n of q) {
         for (const h of n.holes) if (!h.sealed && h.to) add(h.n === n ? h.to : h.n);
         for (const l of this.links) if (l.k > 0.02 && (l.a === n.c.id || l.b === n.c.id)) add(this.nodes.get(l.a === n.c.id ? l.b : l.a));
+        for (const l of this.drumLinks) if (l.a === n.c.id || l.b === n.c.id) add(this.nodes.get(l.a === n.c.id ? l.b : l.a));
       }
       q = next;
     }
@@ -655,8 +831,13 @@ export class Integrity {
       const a = this.nodes.get(l.a), b = this.nodes.get(l.b);
       if (l.hold > 0) l.hold -= dt;
       const lo = Math.min(a.air, b.air);
+      // An airlock's door and hatches are worked by the lock, not by the pressure.
+      if (l.airlock) l.cyc && this.airlockFrame(l, dt);
+      else if (l.held || a.c.vacuum || b.c.vacuum) {
+        if (l.open && !(l.hold > 0) && !l.held) l.open = false; // a door onto a vacuum you opened yourself
+      }
       // At action stations every door is kept shut: one you open by hand shuts again behind you.
-      if (this.stations && l.open && !(l.hold > 0)) l.open = false, l.kind === 'door' && this.heard(l, 'servo');
+      else if (this.stations && l.open && !(l.hold > 0)) l.open = false, l.kind === 'door' && this.heard(l, 'servo');
       else if (l.open && !(l.hold > 0) && lo < A.doorsShut && (falling(a) || falling(b))) {
         l.open = false;
         if (l.kind === 'door') this.heard(l, 'servo');
@@ -809,10 +990,10 @@ export class Integrity {
       else if (n.low && n.air > A.nominal - 3) (n.low = false), (n.green = 4);
       if (n.green > 0) n.green -= dt;
       const venting = n.rate < -A.falling * 2 || n.holes.some((h) => !h.sealed && n.air > 3);
-      const mode = venting ? 'red' : n.air < 20 ? 'vacuum' : moving.has(n.c.id) ? 'amber' : n.green > 0 ? 'green' : !this.power ? 'dim' : null;
+      const mode = n.c.vacuum ? null : venting ? 'red' : n.air < 20 ? 'vacuum' : moving.has(n.c.id) ? 'amber' : n.green > 0 ? 'green' : !this.power ? 'dim' : null;
       if (mode !== n.mode) {
         n.mode = mode;
-        this.C.decks.get(n.c.deck).alarm(n.c.id, mode);
+        this.alarm(n, mode);
       }
     }
   }
@@ -822,7 +1003,8 @@ export class Integrity {
     const A = this.N.air;
     const deck = walker.interior?.deck?.id;
     this.walkDeck = mode === 'walk' ? deck : null;
-    const room = mode === 'walk' ? roomAt(this.C, deck, walker.pos.x, walker.pos.z) : null;
+    const I = walker.interior, inDrum = I?.half != null; // a drum segment (drum.mjs): its room or ring
+    const room = mode !== 'walk' ? null : inDrum ? this.C.drumRoomAt(I, walker.pos.x, walker.pos.z) : roomAt(this.C, deck, walker.pos.x, walker.pos.z);
     const n = room ? this.nodes.get(room.id) : null;
     this.here = n;
     if (n?.drain && !this.rescuing) {
@@ -835,8 +1017,25 @@ export class Integrity {
         walker.slide(0, (dz / d) * v * dt);
       }
     }
+    // Your suit: the helmet closes on thin air (or while the ship vents) and opens on good air; closed, you breathe the
+    // suit's bottles, not the room's air.
+    const amb = n ? n.air : A.nominal;
+    const U = this.N.suit;
+    if (this.suit) {
+      const want = amb < A.unsafe + 15 || !!this.cond?.venting || (n?.rate ?? 0) < -A.falling * 3;
+      if (want !== this.helmet && (want || amb > A.nominal - 6)) {
+        this.helmet = want;
+        this.sfx?.cue(want ? 'servo' : 'hiss', { dur: 0.6, vol: 0.4 });
+      }
+      if (this.helmet) {
+        const was = this.suitAir;
+        this.suitAir = Math.max(0, this.suitAir - dt);
+        if (U && was > U.low && this.suitAir <= U.low) this.dc?.say(null, 'Suit air low. Change your bottles at a VAC SUITS locker.', 0, 6);
+      }
+    } else this.helmet = false;
+    const sealed = this.helmet && this.suitAir > 0;
     // Breathing: below `faint` the clock runs to blacking out; with air again it runs back.
-    const p = n ? n.air : A.nominal;
+    const p = sealed ? A.nominal : amb;
     if (p < A.faint) this.hypoxia += dt * (1 + (A.faint - p) / A.faint);
     else this.hypoxia = Math.max(0, this.hypoxia - dt * 0.5);
     if (this.hypoxia >= A.blackout && !this.rescuing) this.rescue(n);
@@ -845,16 +1044,20 @@ export class Integrity {
       this.veil.style.opacity = k ? (0.35 + 0.65 * k).toFixed(3) : '0';
     }
     if (this.gauge) {
-      const show = mode === 'walk' && p < A.nominal - 5;
+      const show = mode === 'walk' && (amb < A.nominal - 5 || this.helmet || (!!this.cond && !this.suit));
       this.gauge.hidden = !show;
       if (show) {
-        const trend = n.rate < -A.falling ? ' · falling' : n.rate > A.falling ? ' · rising' : '';
-        const word = p < A.faint ? 'NO AIR: get out' : p < A.unsafe ? 'thin air' : 'air';
-        const html = `<b>${Math.round(p)} kPa</b> ${word}${trend}`;
+        const trend = n && n.rate < -A.falling ? ' · falling' : n && n.rate > A.falling ? ' · rising' : '';
+        const word = amb < A.faint ? (sealed ? 'vacuum' : 'NO AIR: get out') : amb < A.unsafe ? 'thin air' : 'air';
+        const mmss = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+        let html = `<b>${Math.round(amb)} kPa</b> ${word}${trend}`;
+        if (this.helmet) html = `<b>SUIT ${mmss(this.suitAir)}</b> helmet closed · amb ${Math.round(amb)} kPa${trend}`;
+        else if (this.cond && !this.suit) html += ' · <b>no suit: get one</b>';
         if (html !== this.gaugeHtml) (this.gauge.innerHTML = html), (this.gaugeHtml = html);
-        this.gauge.classList.toggle('bad', p < A.unsafe);
+        this.gauge.classList.toggle('bad', (p < A.unsafe) || (this.helmet && this.suitAir < (U?.low ?? 240)) || (!!this.cond && !this.suit));
       }
     }
+    if (this.helmetEl) this.helmetEl.hidden = !(mode === 'walk' && this.helmet);
   }
 
   /** You blacked out: a damage control party carries you to the nearest room with good air. */
@@ -863,14 +1066,27 @@ export class Integrity {
     const A = this.N.air;
     // Breadth-first through every way between rooms, doors open or not (they carry you through).
     const ways = portals(this.C);
+    // In a drum: from a room to its ring, from a ring to its rooms, the other deck's ring (the ladders) and the spine
+    // (the lifts). A ring is gone through, not carried to: they take you into a room off it.
+    const C = this.C, rings = [...C.rooms.values()].filter((c) => c.drum && c.seg == null);
+    const drumWays = (id) => {
+      const c = C.rooms.get(id);
+      if (id === 'spine') return rings.map((r) => ({ to: r.id }));
+      if (!c?.drum) return [];
+      if (c.seg != null) return [{ to: `ring-${c.half}-${c.ring}` }];
+      // The rooms off it nearest round the ring first (from the segment you fell in), so they carry you next door.
+      const S = this.L.drum.sides, from = n?.c.seg ?? 0, far = (r) => Math.min((r.seg - from + S) % S, (from - r.seg + S) % S);
+      const off = [...C.rooms.values()].filter((r) => r.drum && r.seg != null && r.deck === c.deck).sort((a, b) => far(a) - far(b));
+      return [...off, ...rings.filter((r) => r.half === c.half && r !== c), C.rooms.get('spine')].filter(Boolean).map((r) => ({ to: r.id }));
+    };
     const seen = new Set([n?.c.id]);
     let q = [n?.c.id], to = null;
     while (q.length && !to) {
       const next = [];
-      for (const id of q) for (const p of ways.get(id) ?? []) {
+      for (const id of q) for (const p of [...(ways.get(id) ?? []), ...drumWays(id)]) {
         if (seen.has(p.to)) continue;
         seen.add(p.to);
-        if (this.airOf(p.to) > A.unsafe + 10) {
+        if (this.airOf(p.to) > A.unsafe + 10 && C.rooms.get(p.to)?.seg !== null) {
           to = p.to;
           break;
         }
@@ -879,7 +1095,21 @@ export class Integrity {
       q = next;
     }
     to ??= 'damage-control';
-    this.dc?.say(null, `You blacked out. A damage control party dragged you to the ${this.C.rooms.get(to).name.toLowerCase()}.`, 0, 7);
+    if (this.cond) {
+      // At condition one there is nowhere with air to take you: they get a suit on you where you lie.
+      this.suit = true;
+      this.helmet = true;
+      this.suitAir = this.N.suit?.air ?? 1800;
+      this.dc?.say(null, 'You blacked out. A damage control party found you and got a suit on you.', 0, 7);
+      this.hooks.rescue?.(n?.c ?? this.C.rooms.get(to), () => {
+        this.hypoxia = 0;
+        this.rescuing = false;
+      });
+      return;
+    }
+    const t = this.C.rooms.get(to), spare = t.drum && /^spare/i.test(t.name); // a drum's unnamed rooms are numbered spares
+    const place = spare ? `an empty room off the ring corridor, segment ${t.seg}` : `the ${t.name.toLowerCase()}`;
+    this.dc?.say(null, `You blacked out. A damage control party dragged you to ${place}.`, 0, 7);
     this.hooks.rescue?.(this.C.rooms.get(to), () => {
       this.hypoxia = 0;
       this.rescuing = false;
@@ -890,8 +1120,14 @@ export class Integrity {
     if (!this.C.overlay.visible) return;
     const A = this.N.air;
     const blink = (this.time * 2.5) % 1 < 0.6;
+    for (const h of this.holes) {
+      if (!h.spin) continue;
+      const r = h.spin.hv.node.rotation.z, c = Math.cos(r), s = Math.sin(r);
+      h.mark.position.set(h.spin.x * c - h.spin.y * s, h.spin.x * s + h.spin.y * c, h.at.z);
+    }
     for (const n of this.nodes.values()) {
       const venting = n.holes.some((h) => !h.sealed);
+      if (!n.tint) continue; // a drum node: the cutaway shows the drum's own blocks
       const m = n.tint.material;
       let show = true;
       if (venting) m.color.set('#ff2a1a'), (m.opacity = blink ? 0.55 : 0.25);
@@ -917,13 +1153,14 @@ export class Integrity {
       ['Main drive', this.driveFactor ?? 1, ''],
       ['Manoeuvring', rcsOk, ''],
       ['Life support', this.sys('life-support'), ''],
-      ['Shields', this.sys('shield'), this.shieldCharge != null ? `charge ${Math.round(this.shieldCharge * 100)}%` : ''],
-      ['Sensors', this.sys('sensors'), '']
+      ['Sensors', this.sys('sensors'), ''],
+      ...(this.status?.() ?? [])
     ];
     const open = this.holes.filter((h) => !h.sealed).length, shut = this.holes.length - open;
     const busy = this.drones.length;
     const thin = [...this.nodes.values()].filter((n) => n.c.access === 'walk' && n.air < this.N.air.unsafe).map((n) => n.c.name);
-    let html = `<div class="s-head">Ship's status${this.stations ? ' · <span class="bad">action stations</span>' : ''}</div><div class="s-grid">${rows.map(([k, v, note]) => `<span>${k}</span><b class="${cls(v)}">${pc(v)}${note ? ` <i>${note}</i>` : ''}</b>`).join('')}
+    const cond = this.cond ? (this.cond.venting ? ' · <span class="bad">condition one: vented</span>' : this.cond.secured != null ? ' · <span class="warn">repressurising</span>' : ' · <span class="bad">condition one</span>') : '';
+    let html = `<div class="s-head">Ship's status${this.stations ? ' · <span class="bad">action stations</span>' : ''}${cond}</div><div class="s-grid">${rows.map(([k, v, note]) => `<span>${k}</span><b class="${cls(v)}">${pc(v)}${note ? ` <i>${note}</i>` : ''}</b>`).join('')}
       <span>Repair drones</span><b class="${this.droneCount ? 'ok' : 'bad'}">${busy} out of ${this.droneCount}</b>
       <span>Hull breaches</span><b class="${open ? 'bad' : 'ok'}">${open} open${shut ? `, ${shut} sealed` : ''}</b></div>`;
     if (thin.length) html += `<div class="s-thin">No air: ${thin.join(', ')}</div>`;

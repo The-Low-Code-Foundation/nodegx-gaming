@@ -3,7 +3,7 @@
 | What | Author | Licence | Source | Where in this folder |
 |---|---|---|---|---|
 | three.js r186 (`three.module.js`, `three.core.js`) | the three.js authors | MIT | https://github.com/mrdoob/three.js (npm `three@0.186.1`) | `vendor/three/` (licence: `vendor/three/LICENSE`) |
-| three.js addons: `OrbitControls.js`, `BufferGeometryUtils.js`, `GLTFLoader.js`, `SkeletonUtils.js`, and the post-processing used for the fighter's bloom (`postprocessing/`: `EffectComposer`, `RenderPass`, `ShaderPass`, `MaskPass`, `Pass`, `UnrealBloomPass`, `OutputPass`; `shaders/`: `CopyShader`, `LuminosityHighPassShader`, `OutputShader`) | the three.js authors | MIT | same package, `examples/jsm/` | `vendor/three-addons/` |
+| three.js addons: `OrbitControls.js`, `BufferGeometryUtils.js`, `GLTFLoader.js`, `SkeletonUtils.js`, `CSS2DRenderer.js` (the ship designer's labels), and the post-processing used for the fighter's bloom (`postprocessing/`: `EffectComposer`, `RenderPass`, `ShaderPass`, `MaskPass`, `Pass`, `UnrealBloomPass`, `OutputPass`; `shaders/`: `CopyShader`, `LuminosityHighPassShader`, `OutputShader`) | the three.js authors | MIT | same package, `examples/jsm/` | `vendor/three-addons/` |
 | Six realistic people (Rocketbox adults: Female 01, 05, 12; Male 01, 04, 08), converted to GLB with smaller textures (the same files as the Life Sim game in this repository) | Microsoft | MIT (`assets/people/LICENSE.md`) | https://github.com/microsoft/Microsoft-Rocketbox | `assets/people/` |
 | Motion-capture clips (idle, walk, sitting, working at a table, talking, looking around; female and male), one GLB per clip | Microsoft (Rocketbox) | MIT (`assets/people/LICENSE.md`) | https://github.com/microsoft/Microsoft-Rocketbox | `assets/people/anims/` |
 

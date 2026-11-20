@@ -14,7 +14,9 @@ import { box, cyl, at, mat, glow } from '../util.mjs';
 import { hazardMat, bake, drawSign, SignAtlas } from '../decor.mjs';
 import { plan, dressDeck } from './wayfinding.mjs';
 import { dressKits } from './damage.mjs';
+import { roomSurfaces, roomLights, dressRoom, dressHangar, SETS, messTable, desk, lookKey, P as PAL } from './sets.mjs';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { buildDrums } from './drum.mjs';
 
 const H = 3; // room height unless the layout says otherwise
 const GAP = 1.5; // two rooms whose walls are closer than this can share a door
@@ -36,7 +38,8 @@ export const SYSTEMS = {
   reactor: ['#ff6a2a', 'Reactor'],
   drive: ['#ff9a40', 'Main drive'],
   power: ['#ffd040', 'Power'],
-  shield: ['#7a8cff', 'Shield generators'],
+  heat: ['#ff8a5a', 'Heat sinks'],
+  pdc: ['#c86a7a', 'Point defence'],
   tanks: ['#3a8acc', 'Water and propellant'],
   magazine: ['#ff4040', 'Magazines'],
   turret: ['#d04848', 'Turret machinery'],
@@ -48,15 +51,11 @@ export const SYSTEMS = {
   cooling: ['#ff7a6a', 'Reactor cooling']
 };
 
-const LOOKS = {
-  default: { wall: '#8d96a3', floor: '#5f666f', ceil: '#7a818b', trim: '#2b3038' },
-  hangar: { wall: '#7c848e', floor: '#4a4f56', ceil: '#5d636b', trim: '#26292e' },
-  engineering: { wall: '#8a8676', floor: '#55524a', ceil: '#6e6b62', trim: '#2e2b26' },
-  bridge: { wall: '#6f7a8a', floor: '#3e444e', ceil: '#59626e', trim: '#1f242b' }
-};
-
 /** Builds the whole ship. `hooks.ladder(ladder, end)`, `hooks.helm()`, `hooks.bay()`, `hooks.fighter(i)` are what E
  *  does at each. */
+/** A hangar's launch doors: `bayDoors` (any number), or today's single `bayDoor`. */
+const bayDoorsOf = (c) => c.bayDoors ?? (c.bayDoor ? [c.bayDoor] : []);
+
 export function buildCarrier(L, hooks = {}) {
   const obj = new THREE.Group();
   obj.name = 'carrier';
@@ -82,10 +81,18 @@ export function buildCarrier(L, hooks = {}) {
 
   buildHull(C);
   for (const d of L.decks) buildDeck(C, d, hooks);
+  boardingTubes(C, hooks);
   for (const c of L.compartments) if (c.access === 'sealed') buildSealed(C, c);
   bake(C.machinery);
   lightViewed(C);
   buildOutside(C);
+  buildDrums(C); // the spin drums, when the layout has them (drum.mjs)
+  // Where a room's things go: its deck's Interior. A drum room's is its segment's (drum.mjs `places` sets these for
+  // the spin-drum carrier); a ship without drums has only decks.
+  C.interior ??= (deck) => C.decks.get(deck);
+  C.interiorOf ??= (room) => C.decks.get(room.deck);
+  C.deckName ??= (deck) => L.decks.find((d) => d.id === deck)?.name ?? `Deck ${deck}`;
+  C.isDrum ??= () => false;
   return C;
 }
 
@@ -101,11 +108,18 @@ function buildHull(C) {
     C.frame.add(mesh);
     C.hull.push(mesh);
   }
-  // Armour belts and seams: dark bands round the hull every 40 m, so its length reads.
+  // Armour belts and seams: dark bands round the hull every 40 m, so its length reads. Each sits on the flat sides and
+  // the flat top of the section where it falls.
   const belt = mat('#59616b');
-  for (let z = -140; z <= 150; z += 40) {
-    for (const s of [-1, 1]) C.outside.add(at(box(0.6, 22, 1.2, belt), s * 34.2, -7, z));
-    C.outside.add(at(box(46, 0.6, 1.2, belt), 0, 10.2, z));
+  const S = C.L.hull.main;
+  for (let z = Math.ceil((S[0].z + 20) / 40) * 40 - 20; z <= S[S.length - 1].z - 10; z += 40) {
+    let i = 0;
+    while (S[i + 1].z < z) i++;
+    if (S[i + 1].z - S[i].z < 2 || S[i].w !== S[i + 1].w || S[i].h !== S[i + 1].h) continue; // only where the hull runs straight
+    const t = (z - S[i].z) / (S[i + 1].z - S[i].z), lerp = (k, d = 0) => (S[i][k] ?? d) + ((S[i + 1][k] ?? d) - (S[i][k] ?? d)) * t;
+    const w = lerp('w'), h = lerp('h'), y = lerp('y'), c = Math.min(w, h) / 2 * lerp('c', 0.32);
+    for (const s of [-1, 1]) C.outside.add(at(box(0.6, h - 2 * c - 1, 1.2, belt), s * (w / 2 + 0.2), y, z));
+    C.outside.add(at(box((w - 2 * c) * 0.8, 0.6, 1.2, belt), 0, y + h / 2 + 0.2, z));
   }
 }
 
@@ -121,7 +135,7 @@ function buildDeck(C, deck, hooks) {
   const open = new Map(rooms.map((c) => [c.id, { n: [], s: [], w: [], e: [] }]));
   for (const c of rooms) {
     for (const w of c.windows ?? []) open.get(c.id)[w.side].push({ a: w.from, b: w.to, kind: 'window', sill: w.sill ?? 1, head: w.head });
-    if (c.bayDoor) open.get(c.id)[c.bayDoor.side].push({ a: c.bayDoor.from, b: c.bayDoor.to, kind: 'bay', head: c.bayDoor.height });
+    for (const bd of bayDoorsOf(c)) open.get(c.id)[bd.side].push({ a: bd.from, b: bd.to, kind: 'bay', head: bd.height });
   }
   const passages = [];
   for (const d of C.L.doors) {
@@ -134,13 +148,14 @@ function buildDeck(C, deck, hooks) {
     passages.push({ ...rel, at: d.at, w: d.w });
   }
   for (const c of rooms) {
-    I.look(LOOKS[c.system] ?? (c.system === 'flight' ? LOOKS.bridge : c.system === 'repair' ? LOOKS.engineering : LOOKS.default));
+    I.s = roomSurfaces(c); // the room's finish and lamps by what it is for (sets.mjs)
     room(I, c, open.get(c.id));
-    lights(I, c);
+    roomLights(I, c);
     furnish(C, I, c, hooks, open.get(c.id));
+    dressRoom(C, I, c, open.get(c.id));
     floorOverlay(C, c, deck.floor);
   }
-  I.look(LOOKS.default);
+  I.s = roomSurfaces({ system: 'corridor' });
   for (const p of passages) I.passage(p.along, p.a1, p.a2, p.at - p.w / 2, p.at + p.w / 2);
   dressDeck(C, I, deck, open);
   dressKits(C, I, deck);
@@ -166,7 +181,7 @@ export function facing(A, B) {
 }
 
 /** A room like `Interior.room`, but each wall can have any number of doors, windows and a bay door along it. */
-function room(I, c, open) {
+export function room(I, c, open) {
   const y = I.floorY, h = c.h ?? H, g = I.group, S = I.s;
   const [x1, x2] = c.x, [z1, z2] = c.z;
   const cx = (x1 + x2) / 2, cz = (z1 + z2) / 2, w = x2 - x1, d = z2 - z1;
@@ -213,18 +228,6 @@ function room(I, c, open) {
   return { cx, cz, w, d, h };
 }
 
-function lights(I, c) {
-  const [x1, x2] = c.x, [z1, z2] = c.z, h = c.h ?? H;
-  const w = x2 - x1, d = z2 - z1;
-  const big = h > 6;
-  const step = big ? 16 : 8;
-  const nx = Math.max(1, Math.round(w / step)), nz = Math.max(1, Math.round(d / step));
-  const color = c.system === 'bridge' ? '#cfe2ff' : c.system === 'engineering' ? '#ffe0b0' : '#ffe6c4';
-  for (let i = 0; i < nx; i++) for (let k = 0; k < nz; k++) {
-    I.light(x1 + (w * (i + 0.5)) / nx, z1 + (d * (k + 0.5)) / nz, color, big ? 60 : 16, big ? 34 : 12, I.floorY + h);
-  }
-}
-
 // --- furniture -----------------------------------------------------------------------------------------------------
 
 const BUNK = mat('#3a4049'), SHEET = mat('#c9c4b6'), STEEL = mat('#5b626c'), TABLE = mat('#454c56'), CRATE = mat('#6a6248');
@@ -233,62 +236,12 @@ function furnish(C, I, c, hooks, open) {
   const [x1, x2] = c.x, [z1, z2] = c.z;
   const cx = (x1 + x2) / 2, cz = (z1 + z2) / 2;
   const signColor = SYSTEMS[c.system]?.[0] ?? '#9fd4ff';
-  switch (c.id) {
-    case 'bridge': {
-      // The helm forward, under the windows; navigation and weapons either side; the captain's chair behind.
-      I.console(0, -147.6, 3.2, 0, '#58b0ff', 0.72, 'nav');
-      I.seat(0, -146, 0, '#3a4a60', { arms: true, tall: true });
-      I.use('helm', 'Take the helm', 0, -146.4, () => hooks.helm?.(), { r: 2.2 });
-      for (const s of [-1, 1]) {
-        I.console(s * 4, -145.6, 2.4, 0, s < 0 ? '#39d27a' : '#ff6a50', 0.9, s < 0 ? 'nav' : 'radar');
-        I.seat(s * 4, -144, 0, '#3a4a60', { low: true });
-      }
-      I.seat(0, -139, 0, '#5a4a30', { arms: true, tall: true });
-      I.console(-7.2, -138, 2.2, Math.PI / 2, '#ffb347', 0.9, 'status');
-      I.console(7.2, -138, 2.2, -Math.PI / 2, '#b48cff', 0.9, 'comms');
-      I.screen('map', 0, 2.3, -134.15, Math.PI, '#58b0ff', 4, 1.2);
-      break;
-    }
-    case 'cic': {
-      I.prop(box(3, 0.9, 6, TABLE), cx + 0.6, cz, { y: 0.45 });
-      I.prop(box(2.8, 0.04, 5.8, glow('#2a6aa0', 0.9)), cx + 0.6, cz, { y: 0.92, collide: false });
-      for (const z of [z1 + 3, z1 + 8, z1 + 13]) I.screen('map', x1 + 0.15, 1.8, z, Math.PI / 2, '#58b0ff', 2.2, 1.0);
-      break;
-    }
+  if (SETS[c.id]) SETS[c.id](C, I, c, hooks, open); // the rooms built as sets of their own (sets.mjs)
+  else switch (c.id) {
     case 'ready-room': {
       I.prop(box(2.2, 0.8, 1.1, TABLE), cx, cz - 1.5, { y: 0.4 });
       I.seat(cx, cz - 0.3, 0, '#5a4a30', { arms: true });
       I.screen('status', x2 - 0.15, 1.7, cz, -Math.PI / 2, '#b48cff', 1.6, 0.9);
-      break;
-    }
-    case 'quarters-a': case 'quarters-b': case 'quarters-c': {
-      // Two-high bunks along the outboard wall (away from the passage), lockers between them, a table inboard.
-      const s = cx < 0 ? 1 : -1, wall = cx < 0 ? x1 : x2;
-      for (let z = z1 + 1.6; z < z2 - 1.2; z += 3.2) {
-        bunk(I, wall + s * 1.2, z);
-        I.prop(box(0.6, 2.0, 1.0, STEEL), wall + s * 0.4, z + 1.6, { y: 1.0 });
-      }
-      I.prop(box(1.4, 0.75, 3, TABLE), cx - s * 0.6, cz, { y: 0.37 });
-      break;
-    }
-    case 'mess': {
-      for (let z = z1 + 3; z < z2 - 2; z += 4.5) {
-        I.prop(box(6, 0.75, 1.4, TABLE), cx, z, { y: 0.37 });
-        for (const s of [-1, 1]) I.prop(box(6, 0.45, 0.45, STEEL), cx, z + s * 1.1, { y: 0.22 });
-      }
-      I.screen('status', x2 - 0.15, 1.8, cz, -Math.PI / 2, '#e0b060', 2.4, 1.2);
-      break;
-    }
-    case 'galley': {
-      I.prop(box(6, 0.95, 0.8, STEEL), cx + 0.5, z1 + 0.6, { y: 0.47 });
-      I.prop(box(6, 0.95, 0.8, STEEL), cx + 0.5, z2 - 0.6, { y: 0.47 });
-      break;
-    }
-    case 'medbay': {
-      for (let z = z1 + 2.5; z < z2 - 1; z += 3.5) {
-        I.prop(box(1.0, 0.7, 2.1, mat('#d8dde4')), x2 - 1.4, z, { y: 0.35 });
-        I.screen('status', x2 - 0.15, 1.6, z, -Math.PI / 2, '#ff7a8a', 0.8, 0.5);
-      }
       break;
     }
     case 'ls-control': {
@@ -305,11 +258,11 @@ function furnish(C, I, c, hooks, open) {
       }
       break;
     }
-    case 'hangar': hangar(C, I, c, hooks); break;
+    case 'hangar': hangar(C, I, c, hooks), dressHangar(C, I, c); break;
     case 'flight-control': {
-      for (const z of [-4.5, -1.5]) I.console(x1 + 1.4, z, 2.2, -Math.PI / 2, '#4fd0e0', 0.9, 'nav');
-      I.use('bay', 'Open the bay doors', x1 + 1.6, -3, () => hooks.bay?.(), { r: 2.6 });
-      I.screen('status', x2 - 0.15, 1.7, 0, -Math.PI / 2, '#4fd0e0', 1.8, 0.9);
+      for (const z of [cz - 1.5, cz + 1.5]) I.console(x1 + 1.4, z, 2.2, -Math.PI / 2, '#4fd0e0', 0.9, 'nav');
+      I.use('bay', 'Open the bay doors', x1 + 1.6, cz, () => hooks.bay?.(), { r: 2.6 });
+      I.screen('status', x2 - 0.15, 1.7, cz + 3, -Math.PI / 2, '#4fd0e0', 1.8, 0.9);
       break;
     }
     case 'drone-bay': {
@@ -320,12 +273,6 @@ function furnish(C, I, c, hooks, open) {
         d.position.set(x2 - 0.8, I.floorY + 1.6, z);
         I.group.add(d);
       }
-      break;
-    }
-    case 'eng-control': {
-      for (const x of [-4, 0, 4]) I.console(x, 143.8, 2.6, Math.PI, '#ffb347', 0.9, x === 0 ? 'reactor' : 'status');
-      I.screen('status', x1 + 0.15, 1.9, cz, Math.PI / 2, '#ffb347', 3, 1.2);
-      I.screen('map', x2 - 0.15, 1.9, cz, -Math.PI / 2, '#ff6a2a', 3, 1.2);
       break;
     }
     default:
@@ -354,7 +301,7 @@ function furnish(C, I, c, hooks, open) {
  *  laundry, cells, office, machines, lockers, briefing. It is laid out in the room's own terms: u runs along the wall
  *  with the door in it, v away from that wall into the room, so a fit works on whichever side of a passage the room is.
  *  Nothing stands within 2 m of the door wall, or in front of a door in any other wall. */
-function fit(I, c, open, color) {
+export function fit(I, c, open, color) {
   const side = ['e', 'w', 'n', 's'].find((k) => open[k].some((o) => o.kind === 'door')) ?? 'e';
   const [x1, x2] = c.x, [z1, z2] = c.z;
   const alongZ = side === 'e' || side === 'w';
@@ -405,8 +352,7 @@ function fit(I, c, open, color) {
     case 'tables': {
       const tw = Math.min(U - 3.2, 6);
       for (let v = 3.4; v < V - 2; v += 3.4) {
-        put(G(at(box(tw, 0.08, 1.2, TABLE), 0, 0.74, 0), at(box(0.2, 0.7, 0.6, STEEL), 0, 0.35, 0)), U / 2, v, face);
-        for (const s of [-1, 1]) put(box(tw, 0.45, 0.4, STEEL), U / 2, v + s * 0.95, face, { y: 0.22 });
+        put(messTable(tw, Math.max(2, Math.floor(tw / 1.4)), { top: lookKey(c) === 'quarters' ? PAL.laminate : PAL.tableTop }), U / 2, v, face);
       }
       backScreen('status', 2.4, 1.2);
       endRows(0.7, 2.4, () => G(at(box(2.2, 0.95, 0.7, STEEL), 0, 0.47, 0), at(box(2.2, 0.04, 0.7, mat('#2a3442')), 0, 0.96, 0)), 1.6);
@@ -496,7 +442,7 @@ function fit(I, c, open, color) {
       for (let v = 3.6; v < V - 1.6; v += 3.2) for (let u = 1.6; u < U - 1.4; u += 2.6) {
         if (!free(u, v, 1.1, 0.8)) continue;
         const [x, z] = P(u, v);
-        I.console(x, z, 2.0, face, color, 0.9, ['status', 'nav', 'radar'][Math.floor(u + v) % 3]);
+        I.prop(desk(2.0, color, [['status', 'nav', 'radar'][Math.floor(u + v) % 3], 'text']), x, z, { ry: face });
         const [sx, sz] = P(u, v - 0.9);
         I.seat(sx, sz, face, '#3a4a60', { low: true });
       }
@@ -536,16 +482,6 @@ function fit(I, c, open, color) {
   }
 }
 
-function bunk(I, x, z) {
-  const b = new THREE.Group();
-  for (const y of [0, 1.15]) {
-    b.add(at(box(1.0, 0.3, 2.1, BUNK), 0, y + 0.2, 0));
-    b.add(at(box(0.92, 0.12, 2.0, SHEET), 0, y + 0.41, 0));
-  }
-  b.add(at(box(1.0, 2.2, 0.1, STEEL), 0, 1.1, -1.05), at(box(1.0, 2.2, 0.1, STEEL), 0, 1.1, 1.05));
-  I.prop(b, x, z);
-}
-
 function drone() {
   const g = new THREE.Group();
   g.add(new THREE.Mesh(new THREE.SphereGeometry(0.32, 10, 8), mat('#c8ccd2')));
@@ -556,9 +492,10 @@ function drone() {
 
 function hangar(C, I, c, hooks) {
   const [x1, x2] = c.x, [z1, z2] = c.z;
-  // Launch lanes: a painted strip from each fighter to the bay door.
+  // Launch lanes: a painted strip from each fighter to the bay door on the side she faces (yaw +90° is port, -x).
   C.L.fighters.forEach((f, i) => {
-    const lane = at(box(x1 - f.at[0] + 6, 0.02, 0.4, glow('#4fd0e0', 0.35)), (x1 + f.at[0] - 6) / 2 + 3, I.floorY + 0.01, f.at[1]);
+    const out = f.yaw >= 0 ? -1 : 1, wall = out < 0 ? x1 : x2, tail = f.at[0] - out * 3;
+    const lane = at(box(Math.abs(wall - tail), 0.02, 0.4, glow('#4fd0e0', 0.35)), (wall + tail) / 2, I.floorY + 0.01, f.at[1]);
     I.group.add(lane);
     const w = fighter({ paint: '#c9c4b6' });
     foldWings(w, 1);
@@ -568,17 +505,25 @@ function hangar(C, I, c, hooks) {
     for (const p of [...w.userData.plumes, ...w.userData.halos]) p.visible = false;
     I.group.add(w);
     C.fighters.push(w);
-    I.collider(f.at[0] - 3, I.floorY, f.at[1] - 3.8, f.at[0] + 6, I.floorY + 3, f.at[1] + 3.8);
+    I.collider(Math.min(f.at[0] + out * 3, f.at[0] - out * 6), I.floorY, f.at[1] - 3.8, Math.max(f.at[0] + out * 3, f.at[0] - out * 6), I.floorY + 3, f.at[1] + 3.8);
     // Her ladder, on her port side: E climbs in (main.mjs, fighter.mjs).
     I.use(`fighter-${i}`, 'Climb into the fighter', f.at[0] + 1, f.at[1] - 4.6, () => hooks.fighter?.(i), { r: 2.8 });
   });
   // Crates and a fuel cart along the inboard wall, gantries overhead.
-  for (let z = z1 + 3; z < z2 - 3; z += 9) I.prop(box(2.2, 1.6, 2.2, CRATE), x2 - 2.2, z, { y: 0.8 });
+  // Crates and a fuel cart along a wall with no door in it, gantries overhead.
+  const doors = bayDoorsOf(c), sides = new Set(doors.map((d) => d.side));
+  const crateX = !sides.has('e') ? x2 - 2.2 : !sides.has('w') ? x1 + 2.2 : null;
+  const clear = (z) => !doors.some((d) => z > d.from - 4 && z < d.to + 4);
+  for (let z = z1 + 3; z < z2 - 3; z += 9) if (crateX !== null || clear(z)) I.prop(box(2.2, 1.6, 2.2, CRATE), crateX ?? x2 - 2.2, z, { y: 0.8 });
   for (let z = z1 + 10; z < z2; z += 20) I.prop(box(x2 - x1 - 1, 0.5, 0.6, TRIM), (x1 + x2) / 2, z, { y: 10.5, collide: false });
-  I.sign('HANGAR', x2 - 0.15, 8, -16, -Math.PI / 2, '#4fd0e0', 6);
-  // The bay door: one slab that lifts into the deck above.
-  const door = at(box(0.4, c.bayDoor.height, c.bayDoor.to - c.bayDoor.from, metal('#6a727c', { metalness: 0.5 })), x1 - 0.1, I.floorY + c.bayDoor.height / 2, (c.bayDoor.from + c.bayDoor.to) / 2);
-  C.bayDoor = I.door('bay', door, new THREE.Vector3(0, c.bayDoor.height - 0.4, 0));
+  I.sign('HANGAR', x2 - 0.15, 8, crateX === null ? (z1 + doors[0].from) / 2 : -16, -Math.PI / 2, '#4fd0e0', 6);
+  // The bay doors: each one slab that lifts into the deck above. C.bayDoor moves them all.
+  const slabs = doors.map((d, k) => {
+    const x = d.side === 'w' ? x1 - 0.1 : x2 + 0.1;
+    const door = at(box(0.4, d.height, d.to - d.from, metal('#6a727c', { metalness: 0.5 })), x, I.floorY + d.height / 2, (d.from + d.to) / 2);
+    return I.door(k ? `bay-${k}` : 'bay', door, new THREE.Vector3(0, d.height - 0.4, 0));
+  });
+  C.bayDoor = slabs.length === 1 ? slabs[0] : { set: (k) => slabs.forEach((d) => d.set(k)) };
 }
 
 function ladder(C, I, l, end, hooks) {
@@ -598,6 +543,36 @@ function ladder(C, I, l, end, hooks) {
   I.group.add(g);
   const name = C.L.decks.find((d) => d.id === other.deck).name;
   I.use(`${l.id}-${end}`, `${up ? 'Climb up' : 'Climb down'} to the ${name.toLowerCase()}`, x, z, () => hooks.ladder?.(l, end), { r: 2 });
+}
+
+/** The boarding tubes, where a fighter has `boarding` (the spin-drum carrier, whose hangar is airless): a hatch in the
+ *  deck of the room it names, over her, and a tube from the hangar's roof down to her canopy, so a pilot goes from the
+ *  crew tunnel into her seat without a suit. E at the hatch boards her (`hooks.fighter`). */
+function boardingTubes(C, hooks) {
+  const hc = [...C.rooms.values()].find((c) => c.system === 'hangar' && c.access === 'walk');
+  const HI = hc && C.decks.get(hc.deck);
+  const steel = mat('#b9bec6'), ring = mat('#6a7380');
+  C.L.fighters.forEach((f, i) => {
+    const b = f.boarding, from = b && C.rooms.get(b.from), I = from && C.decks.get(from.deck);
+    if (!I) return;
+    const side = Math.sign(f.at[0]) || 1;
+    const x = Math.min(from.x[1] - 0.5, Math.max(from.x[0] + 0.5, b.at[0] + side * 0.85)), z = b.at[1];
+    const g = new THREE.Group();
+    g.add(at(cyl(0.62, 0.62, 0.04, hazardMat(), 20), 0, 0.02, 0), at(cyl(0.48, 0.48, 0.06, '#1a1d22', 20), 0, 0.03, 0));
+    for (const s of [-1, 1]) g.add(at(box(0.05, 1.1, 0.05, '#c9a43a'), s * 0.55, 0.55, 0), at(box(0.05, 0.05, 1.0, '#c9a43a'), s * 0.55, 1.1, 0));
+    g.position.set(x, I.floorY, z);
+    I.group.add(g);
+    I.use(`tube-${i}`, `Down the boarding tube to fighter ${i + 1}`, x, z, () => hooks.fighter?.(i), { r: 2 });
+    if (!HI) return;
+    const out = f.yaw >= 0 ? -1 : 1; // her nose points out of her side's door
+    const top = HI.floorY + (hc.h ?? 3), bottom = HI.floorY + 3.3, tx = f.at[0] + out * 1.5;
+    const t = new THREE.Group();
+    t.add(at(cyl(0.75, 0.75, top - bottom, steel, 14), 0, (top + bottom) / 2, 0));
+    for (let y = bottom + 0.3; y < top; y += 2.5) t.add(at(cyl(0.82, 0.82, 0.18, ring, 14), 0, y, 0));
+    t.add(at(cyl(1.0, 0.85, 0.4, ring, 14), 0, bottom + 0.2, 0));
+    t.position.set(tx, 0, f.at[1]);
+    HI.group.add(t);
+  });
 }
 
 // --- sealed compartments: machinery you see but do not walk into -----------------------------------------------------
@@ -626,6 +601,8 @@ function buildSealed(C, c) {
 }
 
 const HOT = (c) => new THREE.MeshBasicMaterial({ color: c, toneMapped: false });
+/** The heat sinks' bands: dark when the ship runs cool, a dull red to orange as the sinks fill (plant.mjs). */
+export const HEAT_GLOW = new THREE.MeshBasicMaterial({ color: '#3a1a10', toneMapped: false });
 
 function machine(system, g, w, h, d, C) {
   const dark = mat('#3b4048'), mid = mat('#5d646e'), pipeM = mat('#7a6a50');
@@ -673,11 +650,24 @@ function machine(system, g, w, h, d, C) {
       }
       break;
     }
-    case 'shield': {
-      for (const z of [-d * 0.25, d * 0.25]) {
-        g.add(at(cyl(2.6, 3.2, h * 0.85, dark, 16), 0, h * 0.43, z));
-        for (let k = 1; k <= 4; k++) g.add(at(new THREE.Mesh(new THREE.TorusGeometry(3.3, 0.25, 6, 24), HOT('#7a8cff')), 0, (h * 0.85 * k) / 5, z, Math.PI / 2));
+    case 'heat': {
+      // The heat sinks: banks of insulated tanks of a wax that melts as it soaks up heat, coolant headers along the top
+      // carrying it out to the radiators. The bands glow as the ship runs hot (plant.mjs drives HEAT_GLOW).
+      const n = Math.max(2, Math.floor(d / 9));
+      for (let i = 0; i < n; i++) {
+        const z = -d / 2 + (d * (i + 0.5)) / n;
+        for (const x of [-w * 0.22, w * 0.22]) {
+          g.add(at(cyl(w * 0.18, w * 0.18, h * 0.82, mat('#6a6258'), 14), x, h * 0.42, z));
+          g.add(at(new THREE.Mesh(new THREE.TorusGeometry(w * 0.185, 0.18, 5, 22), HEAT_GLOW), x, h * 0.6, z, Math.PI / 2));
+        }
       }
+      for (const x of [-w * 0.22, w * 0.22]) g.add(at(cyl(0.6, 0.6, d * 0.95, pipeM, 8), x, h * 0.9, 0, Math.PI / 2));
+      break;
+    }
+    case 'pdc': {
+      // Point defence: belt boxes of tracer rounds in racks, and the fire-control cabinets.
+      for (let z = -d / 2 + 2; z < d / 2 - 2; z += 3) g.add(at(box(w * 0.5, h * 0.7, 1.6, mat('#5a5a3a')), -w * 0.18, h * 0.36, z));
+      for (let z = -d / 2 + 4; z < d / 2 - 2; z += 8) g.add(at(box(w * 0.2, h * 0.8, 1.2, dark), w * 0.3, h * 0.4, z));
       break;
     }
     case 'tanks': {
@@ -856,27 +846,37 @@ function buildOutside(C) {
   const O = C.outside;
   for (const m of C.L.mounts) {
     if (m.kind === 'turret') O.add(turret(m));
-    else if (m.kind === 'emitter') O.add(emitter(m));
+    else if (m.kind === 'pdc') O.add(pdcBase(m));
     else if (m.kind === 'radiator') {
       const [a, b] = m.x, [z1, z2] = m.z;
       const panel = at(box(b - a, 0.5, z2 - z1, mat('#3a2e2a')), (a + b) / 2, m.y, (z1 + z2) / 2);
       O.add(panel);
       // Heat lines across the panel: they glow dull red, the ship shedding heat.
       for (let z = z1 + 2; z < z2; z += 4) O.add(at(box(b - a - 1, 0.55, 0.3, HOT('#7a2a18')), (a + b) / 2, m.y, z));
-      O.add(at(box(Math.abs(b - a) * 0.1, 3, z2 - z1, TRIM), Math.sign(a) * 34.8, m.y, (z1 + z2) / 2));
+      const inboard = Math.abs(a) < Math.abs(b) ? a : b; // the edge against the hull
+      O.add(at(box(Math.abs(b - a) * 0.1, 3, z2 - z1, TRIM), inboard + Math.sign(inboard) * 0.8, m.y, (z1 + z2) / 2));
     } else if (m.kind === 'bay-door') {
       const [y0, y1] = m.y, [z1, z2] = m.z;
-      // The outer door: lifts with the inner one (main.mjs drives both), so the bay opens onto space.
-      C.bayPanel = at(box(0.6, y1 - y0, z2 - z1, mat('#4a525c')), m.x - 0.2, (y0 + y1) / 2, (z1 + z2) / 2);
-      C.bayPanel.userData.live = true;
-      C.bayPanel.userData.home = C.bayPanel.position.y;
-      C.bayPanel.userData.travel = y1 - y0 - 0.4;
-      O.add(C.bayPanel);
-      for (const z of [z1, z2]) O.add(at(box(0.8, y1 - y0 + 1, 1, hazardMat()), m.x - 0.3, (y0 + y1) / 2, z));
+      // The outer door: lifts with the inner one (main.mjs drives all of them), so the bay opens onto space.
+      const out = Math.sign(m.x) || -1;
+      const panel = at(box(0.6, y1 - y0, z2 - z1, mat('#4a525c')), m.x + out * 0.2, (y0 + y1) / 2, (z1 + z2) / 2);
+      panel.userData.live = true;
+      panel.userData.home = panel.position.y;
+      panel.userData.travel = y1 - y0 - 0.4;
+      O.add(panel);
+      (C.bayPanels ??= []).push(panel);
+      C.bayPanel ??= panel;
+      for (const z of [z1, z2]) O.add(at(box(0.8, y1 - y0 + 1, 1, hazardMat()), m.x + out * 0.3, (y0 + y1) / 2, z));
     }
   }
-  // The bridge's armoured shutters: open plates above and below the window line.
-  O.add(at(box(17, 1.2, 0.8, TRIM), 0, 17.6, -151.2), at(box(17, 0.8, 0.8, TRIM), 0, 13.6, -151.2));
+  // The bridge's armoured shutters: open plates above and below each window, outside the wall.
+  const br = C.rooms.get('bridge'), fl = br && C.L.decks.find((d) => d.id === br.deck)?.floor;
+  for (const w of br?.windows ?? []) {
+    const len = w.to - w.from + 1.4, mid = (w.from + w.to) / 2, y1 = fl + (w.head ?? 3.3) + 1.3, y0 = fl + (w.sill ?? 1) + 0.15;
+    const along = w.side === 'n' || w.side === 's';
+    const off = { n: br.z[0] - 1.7, s: br.z[1] + 1.7, w: br.x[0] - 1.7, e: br.x[1] + 1.7 }[w.side];
+    for (const [y, t] of [[y1, 1.2], [y0, 0.8]]) O.add(along ? at(box(len, t, 0.8, TRIM), mid, y, off) : at(box(0.8, t, len, TRIM), off, y, mid));
+  }
   bake(O);
 }
 
@@ -904,12 +904,11 @@ function turret(m) {
   return g;
 }
 
-function emitter(m) {
+/** A point defence mount's armoured sponson (the rotary gun that turns on it is weapons.mjs's, in both hulls). */
+function pdcBase(m) {
   const g = new THREE.Group();
-  const s = Math.sign(m.up[0]);
-  g.add(at(box(2, 6, 10, TRIM), s * 1, 0, 0));
-  g.add(at(cyl(2.4, 1.2, 2.4, DARK, 14), s * 3, 0, 0, 0, 0, Math.PI / 2));
-  g.add(at(cyl(1.0, 1.0, 0.3, HOT('#7a8cff'), 14), s * 4.3, 0, 0, 0, 0, Math.PI / 2));
+  g.add(at(cyl(2.2, 2.8, 1.6, TRIM, 14), 0, 0.8, 0));
+  g.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), new THREE.Vector3(...m.up));
   g.position.set(...m.at);
   return g;
 }
@@ -934,7 +933,7 @@ export async function loadHull(C, url = 'assets/carrier/hull.glb') {
     return false;
   }
   for (const m of C.hull) m.removeFromParent();
-  for (const o of [...C.outside.children]) if (o !== C.bayPanel) o.visible = false;
+  for (const o of [...C.outside.children]) if (!C.bayPanels?.includes(o)) o.visible = false;
   C.frame.traverse((o) => {
     if (o.userData.fitting) o.visible = false;
   });

@@ -1,12 +1,12 @@
-# Builds the carrier's outside from the same layout the game walks: ships/carrier.layout.json. The hull follows the
+# Builds the first carrier's outside (carrier.html?ship=v1) from the layout it walks: ships/carrier-v1.layout.json. The hull follows the
 # layout's loft sections, plated in panels; the port side has a real bay opening over the hangar; the fittings (turrets,
-# shield-disruptor emitters, radiators, drive bells, manoeuvring-thruster clusters, armour belts, bridge windows, masts
+# point defence sponsons, radiators (each its own object, hinged, so the game folds them), drive bells, manoeuvring-thruster clusters, armour belts, bridge windows, masts
 # and navigation lights) sit at the layout's mounts. The machinery inside stays the game's (layout.mjs) for now.
 #
 #   blender -b --factory-startup --python tools/blender/carrier_build.py            (from the threadspace folder)
 #   blender -b --factory-startup --python tools/blender/carrier_build.py -- --blend /tmp/carrier.blend
 #
-# Output: assets/carrier/hull.glb. The game loads it if it is there and falls back to its own lofted hull if not.
+# Output: assets/carrier/hull-v1.glb. The game loads it if it is there and falls back to its own lofted hull if not.
 # Change the ship's shape in the layout, then run this again.
 import sys, os, json, math, random
 
@@ -15,10 +15,10 @@ sys.path.insert(0, HERE)
 import shipkit as K
 
 ROOT = os.path.dirname(os.path.dirname(HERE))
-L = json.load(open(os.path.join(ROOT, 'ships', 'carrier.layout.json')))
+L = json.load(open(os.path.join(ROOT, 'ships', 'carrier-v1.layout.json')))
 args = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else []
 blend = args[args.index('--blend') + 1] if '--blend' in args else None
-OUT = os.path.join(ROOT, 'assets', 'carrier', 'hull.glb')
+OUT = os.path.join(ROOT, 'assets', 'carrier', 'hull-v1.glb')
 
 K.reset()
 rnd = random.Random(11)
@@ -40,7 +40,6 @@ M = {
     'red': K.material('NavRed', '#ff3020', 0.0, 0.5, emit='#ff3020', strength=8),
     'green': K.material('NavGreen', '#30ff60', 0.0, 0.5, emit='#30ff60', strength=8),
     'white': K.material('NavWhite', '#ffffff', 0.0, 0.5, emit='#ffffff', strength=8),
-    'emitter': K.material('EmitterCore', '#7a8cff', 0.0, 0.4, emit='#7a8cff', strength=5),
 }
 
 bay = next(m for m in L['mounts'] if m['kind'] == 'bay-door')
@@ -197,26 +196,39 @@ for t in turrets:
     turret_parts.append(origin_at(K.join(house, t['id']), (x, y + s * 2.2, z)))
     turret_parts.append(origin_at(K.join(guns, t['id'] + '-guns'), (x, y + s * 3.9, z - 6.2)))
 
-# --- shield-disruptor emitters: a dish in an armoured housing, the beam's core glowing ------------------------------
-for e in (m for m in L['mounts'] if m['kind'] == 'emitter'):
+# --- point defence: an armoured sponson on each `pdc` mount; the rotary gun on it is the game's (weapons.mjs) ----------
+for e in (m for m in L['mounts'] if m['kind'] == 'pdc'):
     x, y, z = e['at']
-    s = 1 if e['up'][0] > 0 else -1
-    parts.append(K.box('emitter-housing', (x + s * 1.0, y, z), (2.2, 7, 12), M['armour'], bevel=0.3))
-    parts.append(K.lathe('emitter-dish', [(0, 0.6), (0.4, 2.0), (1, 3.1)], (x + s * 1.8, y, z), (x + s * 3.6, y, z), M['bell'], 20))
-    parts.append(K.cyl('emitter-core', (x + s * 1.8, y, z), (x + s * 4.2, y, z), 0.5, 0.35, M['emitter'], 10))
+    u = e['up']
+    a = (x - u[0] * 0.6, y - u[1] * 0.6, z - u[2] * 0.6)
+    b = (x + u[0] * 1.6, y + u[1] * 1.6, z + u[2] * 1.6)
+    parts.append(K.cyl('pdc-sponson', a, b, 2.9, 2.2, M['armour'], 14))
+    parts.append(K.cyl('pdc-ring', b, (b[0] + u[0] * 0.3, b[1] + u[1] * 0.3, b[2] + u[2] * 0.3), 2.3, 2.3, M['dark'], 14))
 
-# --- radiators: wide panels edge-on to the sides, ribbed, glowing dull red ------------------------------------------
+# --- the railgun's muzzle: the slug leaves through the bow, down the keel ------------------------------------------
+rg = L['weapons'].get('railgun')
+if rg:
+    mx, my, mz = rg['muzzle']
+    parts.append(K.box('railgun-housing', (mx, my, mz + 14), (5, 4, 30), M['armour'], bevel=0.3))
+    parts.append(K.cyl('railgun-muzzle', (mx, my, mz + 1.5), (mx, my, mz - 0.4), 1.6, 1.4, M['dark'], 16))
+    parts.append(K.cyl('railgun-bore', (mx, my, mz - 0.38), (mx, my, mz - 0.45), 0.7, 0.7, M['throat'], 12))
+
+# --- radiators: wide panels edge-on to the sides, ribbed, glowing as the ship runs hot ------------------------------
+# Each is its own object named for its mount (`radiator-port`), origin on its hinge at the spar, so the game folds it
+# up against the hull (rotation about z) and sets its glow (the `RadiatorHot` material) from the heat in the sinks.
+radiator_parts = []
 for r in (m for m in L['mounts'] if m['kind'] == 'radiator'):
     a, b = r['x']
     zz0, zz1 = r['z']
     s = 1 if a > 0 else -1
-    parts.append(K.box('radiator', ((a + b) / 2, r['y'], (zz0 + zz1) / 2), (abs(b - a), 0.4, zz1 - zz0), M['radiator']))
+    panel = [K.box('radiator', ((a + b) / 2, r['y'], (zz0 + zz1) / 2), (abs(b - a), 0.4, zz1 - zz0), M['radiator'])]
     for z in range(int(zz0) + 2, int(zz1), 3):
-        parts.append(K.box('fin', ((a + b) / 2, r['y'], z), (abs(b - a) - 1, 0.7, 0.35), M['hot']))
-    parts.append(K.box('radiator-spar', (s * 36.5, r['y'], (zz0 + zz1) / 2), (5, 2.4, zz1 - zz0 + 2), M['trim'], bevel=0.3))
-    parts.append(K.box('radiator-edge', (b if s > 0 else a, r['y'], (zz0 + zz1) / 2), (0.8, 1.0, zz1 - zz0), M['trim']))
+        panel.append(K.box('fin', ((a + b) / 2, r['y'], z), (abs(b - a) - 1, 0.7, 0.35), M['hot']))
+    panel.append(K.box('radiator-edge', (b if s > 0 else a, r['y'], (zz0 + zz1) / 2), (0.8, 1.0, zz1 - zz0), M['trim']))
     tip = b if s > 0 else a
-    parts.append(K.box('nav', (tip, r['y'] + 0.8, (zz0 + zz1) / 2), (0.7, 0.7, 0.7), M['green'] if s > 0 else M['red']))
+    panel.append(K.box('nav', (tip, r['y'] + 0.8, (zz0 + zz1) / 2), (0.7, 0.7, 0.7), M['green'] if s > 0 else M['red']))
+    radiator_parts.append(origin_at(K.join(panel, r['id']), (s * 36.5, r['y'], (zz0 + zz1) / 2)))
+    parts.append(K.box('radiator-spar', (s * 36.5, r['y'], (zz0 + zz1) / 2), (5, 2.4, zz1 - zz0 + 2), M['trim'], bevel=0.3))
 parts.append(K.box('nav-bow', (0, -6, -200.4), (0.8, 0.8, 0.8), M['white']))
 
 # --- main drives: four bells in a thrust frame ----------------------------------------------------------------------
@@ -241,5 +253,5 @@ for c in L['thrusters']['rcs']:
 
 fittings = K.join(parts, 'fittings')
 kb = K.export(OUT, blend)
-tris = sum(len(p.vertices) - 2 for o in (hull, island, fittings, *turret_parts) for p in o.data.polygons)
+tris = sum(len(p.vertices) - 2 for o in (hull, island, fittings, *turret_parts, *radiator_parts) for p in o.data.polygons)
 print(f'carrier hull: {OUT} {kb} KB, about {tris} triangles')

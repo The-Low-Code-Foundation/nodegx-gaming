@@ -18,8 +18,8 @@
 // The game never calls Gemini: it plays these files, and a line with no clip is spoken by the browser's own speech
 // (src/carrier/voice.mjs). So the key is only needed here, and only in the environment; never write it into a file.
 //
-// Every line the game can say with fixed words is worked out from the data: the officers' orders in
-// ships/carrier.career.json, the leading hand and the pipes in ships/carrier.watches.json, and the ship's calls listed
+// Every line the game can say with fixed words is worked out from the data (both carriers': ships/carrier.* and the
+// first one's, ships/carrier-v1.*): the officers' orders in ships/carrier.career.json, the leading hand and the pipes in ships/carrier.watches.json, and the ship's calls listed
 // in ships/carrier.voices.json (which also holds who speaks in which voice). Lines with a place or a frame number in
 // them (a fire's call-out, a hull breach) are not recorded; the browser speaks those.
 //
@@ -39,9 +39,6 @@ import { spawnSync } from 'node:child_process';
 const here = (p) => new URL(`../${p}`, import.meta.url);
 const json = (p) => JSON.parse(readFileSync(here(p)));
 const V = json('ships/carrier.voices.json');
-const K = json('ships/carrier.career.json');
-const W = json('ships/carrier.watches.json');
-const L = json('ships/carrier.layout.json');
 const OUT = here('assets/voice/');
 const INDEX = here('assets/voice/index.json');
 
@@ -58,6 +55,13 @@ const add = (speaker, text) => {
   if (!text || !V.speakers[speaker]) return;
   if (!lines.some((l) => l.speaker === speaker && l.text === text)) lines.push({ speaker, text });
 };
+
+// Both carriers' lines: today's (ships/carrier.*) and the first one's (ships/carrier-v1.*, carrier.html?ship=v1), so
+// --prune keeps the first carrier's clips. Lines both say are recorded once.
+for (const ship of ['carrier', 'carrier-v1']) {
+const K = json(`ships/${ship}.career.json`);
+const W = json(`ships/${ship}.watches.json`);
+const L = json(`ships/${ship}.layout.json`);
 
 // The officers: what each says when you report, and when you come back too soon.
 for (const st of K.steps) if (st.do === 'talk') add(st.who, st.say);
@@ -85,6 +89,7 @@ for (const t of V.ship) add('ship', t);
 add('ship', W.pipes.down);
 add('ship', W.pipes.call);
 for (const s of W.sections) for (const w of W.watches) add('ship', fill(W.pipes.change, s, w));
+}
 
 // --- how a line is said ---
 

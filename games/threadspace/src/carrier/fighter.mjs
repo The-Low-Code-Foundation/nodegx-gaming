@@ -19,10 +19,15 @@
 // Landing yourself: fly down the approach lane (approach.mjs) and through its last ring slowly and on the line, and
 // flight control catches you (`capture`) and sets you on your pad, with a grade (`lastLanding`).
 //
+// Either side: a pad's fighter launches the way her nose points across the ship (`out`, -1 port, +1 starboard), and
+// comes home through a gate and a lane on that side. The layout's `fighter.launch.clear` and `fighter.landing.gate[0]`
+// are distances out from the ship's centre line (their sign is ignored).
+//
 // Phases: parked (nobody aboard) · seated (in the hangar) · launch · flying · landing · turn (on the pad).
 
 import * as THREE from 'three';
 import { Rigid } from './newton.mjs';
+import { GLoad } from './gload.mjs';
 import { Flight, controls } from './flight.mjs';
 import { DriveFx } from './gas.mjs';
 import { foldWings, openCanopy } from '../ships.mjs';
@@ -51,6 +56,8 @@ export class Fighter {
     this.deck = C.decks.get(3);
     this.body = new Rigid({ mass: this.S.mass, size: this.S.size });
     this.flight = new Flight(this.S.flight, this.body, this.S.thrusters.main[0].force);
+    this.flight.boostSpec = this.S.g ?? null; // hard burn (Shift with W)
+    this.gl = new GLoad(this.S.g ?? { tolerate: 99, onset: 0, juiceCut: 1, recover: 1, juice: 0 }); // what the g does to you
     this.fx = new DriveFx(gas, this.flight); // her flame, gas and jets, moved onto whichever fighter you are in
     this.audio = audio;
     this.debug = debug;
@@ -101,6 +108,7 @@ export class Fighter {
     this.index = i;
     this.obj = w;
     this.home = { pos: w.position.clone(), quat: w.quaternion.clone() }; // the pad, in the carrier's frame
+    this.out = Math.sign(_v.set(0, 0, -1).applyQuaternion(w.quaternion).x) || -1; // the side she launches to and lands from
     // Each fighter keeps her own tanks: what you leave in her is what the next sortie starts with.
     w.userData.prop ??= { ...this.S.flight.tank };
     this.flight.reset(w, w.userData.prop);
@@ -157,7 +165,27 @@ export class Fighter {
   gateWorld(t = new THREE.Vector3()) {
     const [x, y] = this.S.landing.gate;
     const z = this.home?.pos.z ?? 0;
-    return this.C.frame.localToWorld(t.set(x, y, z));
+    return this.C.frame.localToWorld(t.set((this.out ?? -1) * Math.abs(x), y, z));
+  }
+
+  /** The hull's half-width and half-height (from the ship's axis) anywhere between z0 and z1, from the layout's lofts:
+   *  what a path round her has to clear. Also where she ends, bow and stern. */
+  hullSpan(z0, z1) {
+    const H = this.C.L.hull;
+    let w = 0, h = 0;
+    for (const list of [H.main, H.island ?? []]) {
+      for (let i = 0; i < list.length; i++) {
+        const a = list[i], b = list[i + 1] ?? a;
+        if (Math.max(a.z, b.z) < z0 || Math.min(a.z, b.z) > z1) continue;
+        for (const s of [a, b]) (w = Math.max(w, s.w / 2)), (h = Math.max(h, Math.abs(s.y ?? 0) + s.h / 2));
+      }
+    }
+    return { w, h, bow: H.main[0].z, stern: H.main.at(-1).z };
+  }
+
+  /** Her nose into the hangar, coming in from her side. */
+  inbound() {
+    return new THREE.Quaternion().setFromEuler(new THREE.Euler(0, (this.out ?? -1) * (Math.PI / 2), 0));
   }
 
   /** Hands her to flight control: back into the carrier's frame and along a path that goes round the hull. */
@@ -170,21 +198,23 @@ export class Fighter {
     const pad = this.home.pos;
     const hover = pad.y + this.S.launch.lift;
     const pts = [p0];
-    // From starboard, above or below her, first get clear of the hull, then cross to the port side.
-    if (p0.x > -40) {
-      const beyond = p0.z < -215 || p0.z > 200;
-      if (beyond) pts.push(new THREE.Vector3(-100, p0.y, p0.z));
+    const o = this.out, [gx, gy] = this.S.landing.gate, G = Math.abs(gx);
+    // Not yet out on her side, clear of the hull: first get clear of it (out past the bow or stern, or over or under
+    // her, as high as the hull is anywhere between here and the pad), then cross to her side.
+    const S = this.hullSpan(Math.min(p0.z, pad.z) - 30, Math.max(p0.z, pad.z) + 30);
+    if (p0.x * o < S.w + 8) {
+      const wide = o * (S.w + 40);
+      if (p0.z < S.bow - 15 || p0.z > S.stern + 15) pts.push(new THREE.Vector3(wide, p0.y, p0.z));
       else {
-        const yS = p0.y > -7 ? Math.max(p0.y, 34) : Math.min(p0.y, -52);
-        pts.push(new THREE.Vector3(p0.x, yS, p0.z), new THREE.Vector3(-100, yS, clamp(p0.z, -60, 60)));
+        const yS = p0.y > gy ? Math.max(p0.y, S.h + 16) : Math.min(p0.y, -S.h - 16);
+        pts.push(new THREE.Vector3(p0.x, yS, p0.z), new THREE.Vector3(wide, yS, clamp(p0.z, pad.z - 60, pad.z + 60)));
       }
     }
-    const [gx, gy] = this.S.landing.gate;
-    pts.push(new THREE.Vector3(gx - 30, gy, pad.z), new THREE.Vector3(gx, gy, pad.z), new THREE.Vector3(pad.x - 8, hover, pad.z), new THREE.Vector3(pad.x, hover, pad.z));
+    pts.push(new THREE.Vector3(o * (G + 30), gy, pad.z), new THREE.Vector3(o * G, gy, pad.z), new THREE.Vector3(pad.x + o * 8, hover, pad.z), new THREE.Vector3(pad.x, hover, pad.z));
     this.path = new THREE.CatmullRomCurve3(pts, false, 'centripetal');
     this.pathT = clamp(this.path.getLength() / 22, 7, 32);
     this.q0 = w.quaternion.clone();
-    this.qIn = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, -Math.PI / 2, 0)); // nose into the hangar
+    this.qIn = this.inbound(); // nose into the hangar
     this.ease = 'both';
     this.lastLanding = { manual: false };
     this.phase = 'landing';
@@ -204,16 +234,16 @@ export class Fighter {
     const p0 = w.position.clone();
     const pad = this.home.pos;
     const hover = pad.y + this.S.launch.lift;
-    const [gx, gy] = this.S.landing.gate;
+    const o = this.out, [gx, gy] = this.S.landing.gate, G = Math.abs(gx);
     const pts = [p0];
-    if (p0.x < gx - 3) pts.push(new THREE.Vector3(gx, gy, pad.z));
-    pts.push(new THREE.Vector3(pad.x - 8, hover, pad.z), new THREE.Vector3(pad.x, hover, pad.z));
+    if (p0.x * o > G + 3) pts.push(new THREE.Vector3(o * G, gy, pad.z));
+    pts.push(new THREE.Vector3(pad.x + o * 8, hover, pad.z), new THREE.Vector3(pad.x, hover, pad.z));
     this.path = new THREE.CatmullRomCurve3(pts, false, 'centripetal');
     // Eased out only: she enters the path at the speed she had (2·length/time at the start of 1 − (1 − k)²).
     this.pathT = clamp((2 * this.path.getLength()) / Math.max(3, lane.closing), 3, 14);
     this.ease = 'out';
     this.q0 = w.quaternion.clone();
-    this.qIn = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, -Math.PI / 2, 0));
+    this.qIn = this.inbound();
     this.lastLanding = { manual: true, speed: lane.closing, off: Math.hypot(lane.side, lane.up) };
     this.phase = 'landing';
     this.t = 0;
@@ -278,10 +308,12 @@ export class Fighter {
         this.vLocal.copy(ahead).multiplyScalar(L.accel * tt);
         fl.carried(dt, { power: L.accel / fl.mainAcc });
       }
-      if (w.position.x < -36) this.wingsWant = 0; // spread them once she is through the door
-      if (w.position.x < L.clear) this.handOver(env.carrier);
+      const out = w.position.x * this.out; // how far out on her side
+      if (out > (L.wings ?? Math.abs(L.clear) - 10)) this.wingsWant = 0; // spread them once she is through the door
+      if (out > Math.abs(L.clear)) this.handOver(env.carrier);
     } else if (this.phase === 'flying') {
-      fl.frame(hands ? this.controls(f, dt) : this.controls(IDLE, dt), dt);
+      // Blacked out, your hands are off the controls: the drive cuts, and she flies on as she was.
+      fl.frame(hands && !this.gl.out ? this.controls(f, dt) : this.controls(IDLE, dt), dt);
     } else if (this.phase === 'landing') {
       this.t += dt;
       const k = Math.min(1, this.t / this.pathT);
@@ -298,7 +330,7 @@ export class Fighter {
       this.t += dt;
       const k = Math.min(1, this.t / TURN_T);
       const pad = this.home.pos;
-      w.rotation.set(0, -Math.PI / 2 + Math.PI * smooth(k), 0);
+      w.rotation.set(0, this.out * (Math.PI / 2) - this.out * Math.PI * smooth(k), 0); // from nose-in round to nose-out
       w.position.set(pad.x, pad.y + this.S.launch.lift * (1 - smooth(Math.min(1, k * 1.3))), pad.z);
       fl.carried(dt, { hover: k < 0.75 ? 0.5 : 0 });
       if (k >= 1) {
@@ -308,8 +340,10 @@ export class Fighter {
         // On the pad: the deck crew hook her up and top up both tanks.
         this.refuelT = REFUEL_T;
         this.audio?.refill();
+        this.gl.refill();
       }
     }
+    this.gl.frame(dt, fl.acc, this.phase === 'flying');
     this.fx.frame(w, dt);
   }
 
@@ -321,6 +355,7 @@ export class Fighter {
     if (space && !this.spaceWas) this.flight.toggleAssist();
     this.spaceWas = space;
     c.burn = k.has('KeyW');
+    c.boost = k.has('ShiftLeft') || k.has('ShiftRight');
     c.retro = k.has('KeyS');
     c.slide[0] = key('KeyD') - key('KeyA');
     c.slide[1] = key('KeyR') - key('KeyF');

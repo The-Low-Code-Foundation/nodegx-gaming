@@ -292,7 +292,21 @@ export class Cockpit {
       g.fillRect(cx - 40, by - 4, 80 * fl.power, 8);
       g.font = font(10);
       g.textAlign = 'center';
-      g.fillText(fl.burning ? 'BURN' : fl.online ? 'DRIVE' : 'COLD', cx, by + 14);
+      g.fillText(fl.burning ? ((fl.boostK ?? 0) > 0.05 ? 'HARD BURN' : 'BURN') : fl.online ? 'DRIVE' : 'COLD', cx, by + 14);
+      // What the g is doing to you (gload.mjs): the couch's juice, the strain, blacking out.
+      const GL = f.gl;
+      if (GL) {
+        g.textAlign = 'right';
+        g.font = font(10);
+        g.fillStyle = GL.juice <= 0 ? RED : GL.juiced ? AMBER : GREEN;
+        g.fillText(`JUICE ${Math.round((GL.juice / Math.max(1, GL.S.juice)) * 100)}%`, cx + R, by + 14);
+        if (GL.strain > 0.3 || GL.out) {
+          g.textAlign = 'center';
+          g.font = font(14, 600);
+          g.fillStyle = RED;
+          if (GL.out || performance.now() % 700 < 450) g.fillText(GL.out ? 'G-LOC' : 'G STRAIN: EASE OFF', cx, cy - R * 0.55);
+        }
+      }
 
       // The lane's needles: fly toward them. Off to her right of the line puts the line to her left.
       if (lane?.inLane && lane.nose > 0.3) {

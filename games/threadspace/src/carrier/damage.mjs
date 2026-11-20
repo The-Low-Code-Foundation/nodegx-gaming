@@ -71,9 +71,43 @@ function lockers(C, I, P, D) {
   });
 }
 
+/** The racks of kit a drum room keeps (drum.mjs builds its segment as you come near, and calls this). */
+export function drumKits(C, I, c) {
+  const D = C.L.damage;
+  if (D) Object.entries(D.kits).filter(([, kit]) => kit.rooms?.includes(c.id)).forEach(([k, kit], i) => rack(C, I, c, k, kit, i));
+}
+
+/** The kit cabinets along a drum's ring corridor (segment `seg`'s piece of it, `corr`): an extinguisher cabinet on the
+ *  fore wall every other segment, and the other locker kits (repair lockers, vac suits) on the aft wall in turn, every
+ *  fifth. They keep clear of the doorways (mid-segment), the lift (fore wall, x 2.6) and the ladder and plate (aft
+ *  wall, x < -2). */
+export function drumLockers(C, I, corr, seg) {
+  const D = C.L.damage;
+  if (!D) return;
+  const kits = Object.entries(D.kits).filter(([, k]) => k.lockers);
+  const put = ([k, kit], big, x, fore) => {
+    const [w, h, d, y] = big ? [1.0, 1.9, 0.38, 0.95] : [0.5, 0.85, 0.22, 1.15];
+    const wz = fore ? corr.z[0] : corr.z[1], inward = fore ? 1 : -1, face = fore ? 0 : Math.PI;
+    const g = new THREE.Group();
+    g.add(at(box(w, h, d, kit.color), 0, 0, 0));
+    if (big) g.add(at(box(0.04, 0.3, 0.04, '#1a1a1a'), w * 0.3, 0.1, d / 2 + 0.02), at(box(w - 0.1, 0.02, 0.02, '#1a1a1a'), 0, 0, d / 2 + 0.01));
+    else g.add(at(box(w - 0.1, h - 0.1, 0.02, mat('#e8d0c8')), 0, 0, d / 2 + 0.01), at(cyl(0.09, 0.09, 0.55, '#a8201a', 8), 0, -0.05, 0.02));
+    I.prop(g, x, wz + inward * (d / 2 + 0.1), { y, ry: face });
+    const label = C.atlas.plane(0.62, 0.15, (gg, pw, ph) => drawSign(gg, pw, ph, kit.lockers, kit.color), 300);
+    I.group.add(at(label, x, I.floorY + y + h / 2 + 0.2, wz + inward * 0.12, 0, face, 0));
+    I.use(`kit-${k}-${corr.id}-${seg}`, `Take ${kit.name}`, x, wz + inward * 0.6, () => C.hooks.kit?.(k), { r: 2 });
+  };
+  if (kits[0] && seg % 2 === 0) put(kits[0], false, -2.9, true);
+  const rest = kits.slice(1);
+  if (rest.length && seg % 5 === 1) put(rest[Math.floor(seg / 5) % rest.length], true, 2.9, false);
+}
+
+/** A room's door: { x, z, side } from the routes (wayfinding.mjs), or a drum room's doorway (drum.mjs). */
+const doorOf = (C, c) => C.ways.portals.get(c.id)?.find((q) => q.kind === 'door') ?? C.doorOf?.(c) ?? null;
+
 /** A rack of kit on the wall just inside a room's door (the `i`th in this room: each one 1.4 m further along). */
 function rack(C, I, c, k, kit, i) {
-  const p = C.ways.portals.get(c.id).find((q) => q.kind === 'door');
+  const p = doorOf(C, c);
   if (!p) return;
   const alongZ = p.side === 'e' || p.side === 'w';
   const inward = { e: [-1, 0], w: [1, 0], n: [0, 1], s: [0, -1] }[p.side];
@@ -138,14 +172,14 @@ export class DamageControl {
     for (const id of this.D.switchboards ?? []) {
       const c = C.rooms.get(id);
       if (!c) continue;
-      const I = C.decks.get(c.deck);
+      const I = C.interiorOf(c);
       const u = I.use(`isolate-${id}`, 'Isolate the supply', (c.x[0] + c.x[1]) / 2, (c.z[0] + c.z[1]) / 2, () => this.isolate(), { r: 4.5 });
       u.hidden = () => !(this.job?.K.isolate && !this.job.isolated);
       this.uses.push(u);
     }
     const dcc = C.rooms.get('damage-control');
     if (dcc) {
-      const u = C.decks.get(dcc.deck).use('call-drill', 'Call a drill', (dcc.x[0] + dcc.x[1]) / 2, (dcc.z[0] + dcc.z[1]) / 2, () => this.raise(), { r: 4.5 });
+      const u = C.interiorOf(dcc).use('call-drill', 'Call a drill', (dcc.x[0] + dcc.x[1]) / 2, (dcc.z[0] + dcc.z[1]) / 2, () => this.raise(), { r: 4.5 });
       u.hidden = () => !!this.job;
     }
     this.marker = this.makeMarker();
@@ -181,24 +215,32 @@ export class DamageControl {
     const rooms = this.placesFor(K);
     const room = where ? this.C.rooms.get(where) : rooms[Math.floor(this.rand() * rooms.length)];
     if (!room) return null;
-    const I = this.C.decks.get(room.deck);
+    const I = this.C.interiorOf(room); // a drum room's: its segment's, in that segment's frame (drum.mjs)
     const spot = kind === 'leak' ? this.leakSpot(room) : kind === 'electrical' ? this.wallSpot(room, I) : this.floorSpot(room, I);
     const job = { kind, K, room, I, spot, t: 0, size: 1, progress: 0, isolated: false, idle: 0 };
-    job.code = `${room.deck}-${frameOf(this.L, spot.z)}-${Math.abs(spot.x) < 0.8 && room.x[0] < 0 && room.x[1] > 0 ? 0 : spot.x > 0 ? 1 : 2}`;
-    job.side = Math.abs(spot.x) < 0.8 ? 'centreline' : sideOf(spot.x);
+    const drum = room.drum;
+    job.code = drum ? `${room.half}${room.ring}-${String(room.seg).padStart(2, '0')}-${frameOf(this.L, spot.z)}` : `${room.deck}-${frameOf(this.L, spot.z)}-${Math.abs(spot.x) < 0.8 && room.x[0] < 0 && room.x[1] > 0 ? 0 : spot.x > 0 ? 1 : 2}`;
+    job.side = drum ? `segment ${room.seg}` : Math.abs(spot.x) < 0.8 ? 'centreline' : sideOf(spot.x);
     job.place = kind === 'leak' ? `the ${room.name.toLowerCase()}` : `the ${room.name.toLowerCase()}`;
     job.use = I.use(`job-${kind}`, VERB[kind], spot.ux, spot.uz, () => this.press(), { r: kind === 'leak' ? 2.8 : 2.6 });
     job.fx = this.effects(job);
     this.job = job;
-    this.marker.position.set(spot.x, I.floorY, spot.z);
+    this.placeMarker();
     this.marker.visible = true;
     // The alarm, then the call.
     if (kind === 'fire') this.sfx?.cue('klaxon', { n: 4 });
     else this.sfx?.cue('chime'), setTimeout(() => this.sfx?.cue('chime'), 450);
-    const deckName = this.L.decks.find((d) => d.id === room.deck).name.toLowerCase();
+    const deckName = this.C.deckName(room.deck).toLowerCase();
     const call = `${K.call} ${K.name} in ${job.place}. ${deckName[0].toUpperCase() + deckName.slice(1)}, frame ${frameOf(this.L, spot.z)}, ${job.side}.`;
     this.say(call, `${K.call} ${K.name} in ${job.place}.`, kind === 'fire' ? 2600 : 900);
     return job;
+  }
+
+  /** The cutaway's red marker on the job's spot, in the ship's frame. */
+  placeMarker() {
+    const job = this.job, { spot, I, room } = job;
+    if (room.drum) this.C.toShip(room.deck, room.seg, spot.x, I.floorY, spot.z, this.marker.position);
+    else this.marker.position.set(spot.x, I.floorY, spot.z);
   }
 
   placesFor(K) {
@@ -210,7 +252,7 @@ export class DamageControl {
 
   /** A clear patch of floor, toward the back of the room. */
   floorSpot(c, I) {
-    const door = this.C.ways.portals.get(c.id).find((p) => p.kind === 'door');
+    const door = doorOf(this.C, c);
     const free = (x, z) => !I.colliders.some((b) => b.min.y < I.floorY + 1 && b.max.y > I.floorY + 0.05 && x > b.min.x - 0.7 && x < b.max.x + 0.7 && z > b.min.z - 0.7 && z < b.max.z + 0.7);
     const cand = [];
     for (let x = c.x[0] + 1; x <= c.x[1] - 1; x += 0.5) for (let z = c.z[0] + 1; z <= c.z[1] - 1; z += 0.5) {
@@ -225,7 +267,7 @@ export class DamageControl {
 
   /** The middle of the wall across from the door: a distribution panel with its cover off. */
   wallSpot(c, I) {
-    const door = this.C.ways.portals.get(c.id).find((p) => p.kind === 'door');
+    const door = doorOf(this.C, c);
     const back = { e: 'w', w: 'e', n: 's', s: 'n' }[door?.side ?? 'e'];
     const cx = (c.x[0] + c.x[1]) / 2, cz = (c.z[0] + c.z[1]) / 2;
     const wall = { e: [c.x[1] - 0.12, cz, -1, 0], w: [c.x[0] + 0.12, cz, 1, 0], n: [cx, c.z[0] + 0.12, 0, 1], s: [cx, c.z[1] - 0.12, 0, -1] }[back];
@@ -352,7 +394,8 @@ export class DamageControl {
         this.sfx?.cue('hiss', { dur: 1.2, vol: (1 - near / 14) * Math.max(0.2, left) });
       }
     }
-    // The cutaway's marker breathes.
+    // The cutaway's marker breathes (and, in a drum, turns with it).
+    if (this.job?.room.drum) this.placeMarker();
     this.marker.scale.setScalar(this.markScale * (1 + 0.25 * Math.sin(t * 5)));
   }
 
@@ -510,7 +553,7 @@ export class DamageControl {
     let html = '';
     if (job) {
       const K = job.K, kit = this.D.kits[K.kit];
-      const deck = this.L.decks.find((d) => d.id === job.room.deck);
+      const deck = { name: this.C.deckName(job.room.deck) };
       const steps = [];
       if (K.isolate) {
         const sb = this.switchboard();

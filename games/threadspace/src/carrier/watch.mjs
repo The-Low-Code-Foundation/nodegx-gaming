@@ -241,7 +241,7 @@ export class Routine {
       // Fall out: they march off along `out`, and leave once you are not looking.
       m.phase = 'out';
       const room = this.C.rooms.get(this.you.muster);
-      const y = this.C.decks.get(room.deck).floorY;
+      const y = this.C.interiorOf(room).floorY;
       for (const f of m.figs) {
         if (!f.m) continue;
         f.face = undefined;
@@ -266,7 +266,7 @@ export class Routine {
     const M = this.W.muster, room = this.C.rooms.get(this.you.muster);
     const si = this.sections.indexOf(this.mine);
     const walkIn = this.seen(room.deck, M.line[0][0], M.line[0][1]);
-    const y = this.C.decks.get(room.deck).floorY;
+    const y = this.C.interiorOf(room).floorY;
     const spots = [...M.line.slice(0, M.hands).map((at) => ({ at, yaw: M.face })), { at: M.leader.at, yaw: M.leader.yaw }];
     const m = { x, phase: 'in', figs: [] };
     spots.forEach((sp, j) => {
@@ -299,11 +299,21 @@ export class Routine {
   board() {
     const office = this.C.rooms.get('ship-office');
     if (!office) return;
-    const I = this.C.decks.get(office.deck);
-    // On the wall of the passage the office opens onto, beside its door.
-    const door = this.L.doors.find((d) => d.between.includes('ship-office'));
-    const P = this.C.rooms.get(door.between.find((r) => r !== 'ship-office'));
-    const x = P.x[1] - 0.13, z = door.at - 2.4; // the wall's panels stand 0.13 m into the passage
+    const I = this.C.interiorOf(office);
+    // On the wall of the passage the office opens onto, beside its door. In a drum (drum.mjs) that is the ring
+    // corridor's wall, beside the room's doorway, in the room's segment's frame; elsewhere the side passage's wall.
+    let x, z, yaw, off;
+    if (office.drum) {
+      const ring = this.C.rooms.get(`ring-${office.half}-${office.ring}`), fore = office.row === 'fore';
+      const cx = (office.x[0] + office.x[1]) / 2;
+      (x = cx + (fore ? -2.2 : 2.2)), (z = fore ? ring.z[0] + 0.13 : ring.z[1] - 0.13), (yaw = fore ? 0 : Math.PI), (off = [0, fore ? -0.03 : 0.03]);
+      this.boardAt = { deck: office.deck, seg: office.seg, x, z: z + (fore ? 0.8 : -0.8) };
+    } else {
+      const door = this.L.doors.find((d) => d.between.includes('ship-office'));
+      const P = this.C.rooms.get(door.between.find((r) => r !== 'ship-office'));
+      (x = P.x[1] - 0.13), (z = door.at - 2.4), (yaw = -Math.PI / 2), (off = [0.03, 0]); // the wall's panels stand 0.13 m into the passage
+      this.boardAt = { deck: office.deck, x: x - 0.8, z };
+    }
     const cols = this.sections.map((s) => s.color);
     const face = this.C.atlas.plane(1.1, 0.8, (g, pw, ph) => {
       g.fillStyle = '#3a3226';
@@ -328,20 +338,21 @@ export class Routine {
       }
     }, 300);
     face.position.set(x, I.floorY + 1.55, z);
-    face.rotation.y = -Math.PI / 2;
+    face.rotation.y = yaw;
     const frame = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.9, 1.2), new THREE.MeshStandardMaterial({ color: '#2b3038', roughness: 0.8 }));
-    frame.position.set(x + 0.03, I.floorY + 1.55, z);
+    frame.position.set(x + off[0], I.floorY + 1.55, z + off[1]);
+    frame.rotation.y = yaw + Math.PI / 2;
     I.group.add(face, frame);
-    this.boardAt = { deck: office.deck, x: x - 0.8, z };
-    I.use('watch-bill', 'Read the watch bill', x - 0.3, z, () => this.openBill(true), { r: 2 });
+    const ux = office.drum ? x : x - 0.3, uz = office.drum ? z + Math.cos(yaw) * 0.3 : z; // a step out from the board
+    I.use('watch-bill', 'Read the watch bill', ux, uz, () => this.openBill(true), { r: 2 });
   }
 
   /** Your bunk: turn in, and be shaken for your watch. */
   bunk() {
     const b = this.you.bunk, room = this.C.rooms.get(b.room);
     if (!room) return;
-    const I = this.C.decks.get(room.deck);
-    this.bunkAt = { deck: room.deck, x: b.at[0], z: b.at[1] };
+    const I = this.C.interiorOf(room, b.seg ?? room.seg);
+    this.bunkAt = { deck: room.deck, seg: b.seg ?? room.seg, x: b.at[0], z: b.at[1] };
     I.use('bunk', 'Turn in: you are called for your watch', b.at[0], b.at[1], () => {
       const why = this.cantSleep();
       if (why) return this.tell(null, why, 6);

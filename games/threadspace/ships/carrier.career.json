@@ -1,23 +1,111 @@
 {
   "about": {
     "what": "Your first week aboard, as the most junior hand on the ship: the orders you are given, by whom, and the rank each one earns. career.mjs runs it, one step at a time, in order.",
-    "start": "Where a new hand comes aboard (deck, [x, z] in metres in the ship's frame, yaw), the rank they start at, and the first thing they are told. A career picked up again starts in `resume` (your bunk).",
+    "start": "Where a new hand comes aboard (`room`, and [x, z] in metres in that room's frame: a drum room's is its segment's; or `deck` and [x, z] in the ship's frame), yaw, the rank they start at, and the first thing they are told. A career picked up again starts in `resume` (your bunk, `at` in its room).",
     "people": "The officers who give the orders. Each stands at `at` in `room` (deck from the room), facing `yaw`, in the `pose` and `dept` uniform of crew.mjs. `voice` is the browser speech's pitch and rate for them.",
-    "steps": "`do` is what the step waits for: talk (use `who`), go (stand in `room`), drill (a damage control job of `kind` in `room`, put out or mended), man (sit in a turret), shoot (a gunnery drill: a tug tows a target sled down the side `from`, once you are in a turret; you must hit the sled `hits` times; nothing shoots back), raid (a raider `from` a side, `wait` seconds after you are in a turret; you must hit it `hits` times yourself), board / launch (a fighter), land (back aboard; `manual` means down the lane, not handed over), helm (take it), turn (turn her through `deg` and stop her turning), read (the watch bill on its board outside the ship's office), sleep (turn in at your bunk, and be called for your watch), muster (stand in your muster room when the roll is called at the change of your watch; adrift, your name goes in the book and you must report there late: `adrift` is what is called, the order, and what is said when you get there), rounds (stand in each of `rooms`, in any order). `order` is the card's line; `say` what is said when the step is done (a talk step: what that person tells you); `start` what is said when it begins; `fail` what is said when it goes wrong (the step runs again). `rank` and `unlock` take effect when the step is done.",
+    "steps": "`do` is what the step waits for: talk (use `who`), go (stand in `room`), drill (a damage control job of `kind` in `room`, put out or mended), suit (put on a vac suit from a VAC SUITS locker), man (sit in a turret), shoot (a gunnery drill: a tug tows a target sled down the side `from`, once you are in a turret; you must hit the sled `hits` times; nothing shoots back), raid (a raider `from` a side, `wait` seconds after you are in a turret; you must hit it `hits` times yourself), board / launch (a fighter), land (back aboard; `manual` means down the lane, not handed over), helm (take it), turn (turn her through `deg` and stop her turning), transit (at the helm the navigator lays in a waypoint `dist` metres out (15000), `off` degrees off the bow (40); arrive on it inside 2 km at under 20 m/s), read (the watch bill on its board outside the ship's office), sleep (turn in at your bunk, and be called for your watch), muster (stand in your muster room when the roll is called at the change of your watch; adrift, your name goes in the book and you must report there late: `adrift` is what is called, the order, and what is said when you get there), rounds (stand in each of `rooms`, in any order). `order` is the card's line; `say` what is said when the step is done (a talk step: what that person tells you); `start` what is said when it begins; `fail` what is said when it goes wrong (the step runs again). `rank` and `unlock` take effect when the step is done.",
     "unlock": "guns (the turret hatches), raids (raiders come by themselves), fighters (climbing into one), helm (taking it). Before they are unlocked, `refuse` says why not."
   },
   "start": {
     "rank": "Apprentice",
-    "deck": 3, "at": [-2, 0], "yaw": 1.5708,
-    "say": "The afternoon shuttle has set you down in the hangar. You are the newest, most junior hand aboard. Report to the coxswain in the ship's office, on the main deck."
+    "room": "tunnel",
+    "at": [
+      0,
+      -6
+    ],
+    "yaw": 0,
+    "say": "The afternoon shuttle has docked under the hangar roof, and you have come up her boarding tube into the crew tunnel. You are the newest, most junior hand aboard. Report to the coxswain in the ship's office, in the after drum, on the inner deck: follow the purple Drums line to the spine, and take a lift down."
   },
-  "resume": { "room": "quarters-c", "say": "You wake in your bunk in quarters C. Your orders stand." },
+  "resume": {
+    "room": "quarters-c",
+    "at": [
+      1.2,
+      -69.2
+    ],
+    "yaw": 0,
+    "say": "You wake in your bunk in quarters C. Your orders stand."
+  },
   "people": [
-    { "id": "cox", "name": "Coxswain Hale", "room": "ship-office", "at": [9, -95], "yaw": 1.5708, "pose": "idle", "dept": "command", "voice": { "pitch": 0.75, "rate": 0.98 } },
-    { "id": "dc", "name": "Chief Okoro", "room": "damage-control", "at": [1.6, -4], "yaw": 1.5708, "pose": "lookAround", "dept": "crew", "voice": { "pitch": 0.7, "rate": 1.04 } },
-    { "id": "guns", "name": "Lieutenant Varga", "room": "dorsal-access", "at": [9, -22], "yaw": 1.5708, "pose": "idle", "dept": "command", "voice": { "pitch": 1.05, "rate": 1.06 } },
-    { "id": "flight", "name": "Lieutenant Moss", "room": "pilots-ready", "at": [8.5, 1.5], "yaw": 1.5708, "pose": "idle", "dept": "flight", "voice": { "pitch": 1.15, "rate": 1.08 } },
-    { "id": "ootw", "name": "Commander Reyes", "room": "bridge", "at": [2.6, -138.5], "yaw": 0, "pose": "lookAround", "dept": "command", "voice": { "pitch": 0.9, "rate": 0.96 } }
+    {
+      "id": "cox",
+      "name": "Coxswain Hale",
+      "room": "ship-office",
+      "at": [
+        1.3,
+        -42.1
+      ],
+      "yaw": 3.1416,
+      "pose": "idle",
+      "dept": "command",
+      "voice": {
+        "pitch": 0.75,
+        "rate": 0.98
+      }
+    },
+    {
+      "id": "dc",
+      "name": "Chief Okoro",
+      "room": "damage-control",
+      "at": [
+        -4.5,
+        114.5
+      ],
+      "yaw": 3.1416,
+      "pose": "lookAround",
+      "dept": "crew",
+      "voice": {
+        "pitch": 0.7,
+        "rate": 1.04
+      }
+    },
+    {
+      "id": "guns",
+      "name": "Lieutenant Varga",
+      "room": "dorsal-access",
+      "at": [
+        6,
+        -94
+      ],
+      "yaw": 1.5708,
+      "pose": "idle",
+      "dept": "command",
+      "voice": {
+        "pitch": 1.05,
+        "rate": 1.06
+      }
+    },
+    {
+      "id": "flight",
+      "name": "Lieutenant Moss",
+      "room": "pilots-ready",
+      "at": [
+        8.5,
+        -18
+      ],
+      "yaw": 1.5708,
+      "pose": "idle",
+      "dept": "flight",
+      "voice": {
+        "pitch": 1.15,
+        "rate": 1.08
+      }
+    },
+    {
+      "id": "ootw",
+      "name": "Commander Reyes",
+      "room": "bridge",
+      "at": [
+        2.6,
+        114.5
+      ],
+      "yaw": 0,
+      "pose": "lookAround",
+      "dept": "command",
+      "voice": {
+        "pitch": 0.9,
+        "rate": 0.96
+      }
+    }
   ],
   "refuse": {
     "helm": "Nobody takes the helm without the officer of the watch's say-so.",
@@ -25,59 +113,196 @@
     "guns": "The turret's locked. You are not on the gun crews' list yet."
   },
   "steps": [
-    { "do": "talk", "who": "cox", "order": "Report to the coxswain in the ship's office",
-      "say": "So you're the new apprentice. Welcome aboard. You're in Blue watch, berthed in quarters C. Read the watch bill on the board outside this office: it tells you when you're on, and where you muster." },
-    { "do": "read", "order": "Read the watch bill outside the ship's office",
-      "say": "Blue watch, damage control party. You muster at the amidships repair locker at the change of watch. Now find your bunk." },
-    { "do": "go", "room": "quarters-c", "order": "Find your bunk in quarters C",
-      "say": "Your bunk and your locker: that is all the room you get. Blue watch is off. Turn in while you can: your leading hand will shake you for the watch." },
-    { "do": "sleep", "order": "Turn in at your bunk until you are called" },
-    { "do": "muster", "order": "Muster with Blue watch at the amidships repair locker",
+    {
+      "do": "talk",
+      "who": "cox",
+      "order": "Report to the coxswain in the ship's office",
+      "say": "So you're the new apprentice. Welcome aboard. You're in Blue watch, berthed in quarters C, in the forward drum, on this deck. Read the watch bill on the board outside this office: it tells you when you're on, and where you muster."
+    },
+    {
+      "do": "read",
+      "order": "Read the watch bill outside the ship's office",
+      "say": "Blue watch, damage control party. You muster at the midships repair locker, off the crew tunnel, at the change of watch. Now find your bunk."
+    },
+    {
+      "do": "go",
+      "room": "quarters-c",
+      "order": "Find your bunk in quarters C",
+      "say": "Your bunk and your locker: that is all the room you get. Blue watch is off. Turn in while you can: your leading hand will shake you for the watch."
+    },
+    {
+      "do": "sleep",
+      "order": "Turn in at your bunk until you are called"
+    },
+    {
+      "do": "muster",
+      "order": "Muster with Blue watch at the midships repair locker",
       "say": "Apprentice: report to Chief Okoro in damage control.",
-      "adrift": { "call": "Apprentice! Get yourself here, now.", "order": "You were adrift: report to Leading Hand Lund at the amidships repair locker",
-        "say": "Adrift on your first watch. That's in my book, and the coxswain will hear of it. Now report to Chief Okoro in damage control." } },
-    { "do": "talk", "who": "dc", "order": "Report to Chief Okoro in damage control",
-      "say": "So you're Blue watch's new hand in my party. Everyone aboard fights fires before they do anything else. I'm lighting a drill fire in the gym. The red cabinets in the passages hold extinguishers. Take one, find the fire, put it out. Go." },
-    { "do": "drill", "kind": "fire", "room": "gym", "order": "Put out the drill fire in the gym",
-      "say": "Fire's out. Back to the chief.", "fail": "You lost it. The chief resets the drill: again." },
-    { "do": "talk", "who": "dc", "order": "Report back to Chief Okoro",
-      "say": "Not bad. Now an electrical fault, in the electrical shop. Isolate the supply at the switchboard aft first, or it will bite you. Repair kits are in the yellow lockers." },
-    { "do": "drill", "kind": "electrical", "room": "elec-shop", "order": "Mend the drill fault in the electrical shop",
-      "say": "Mended. Back to the chief.", "fail": "It caught. The chief resets the drill: again." },
-    { "do": "talk", "who": "dc", "order": "Report back to Chief Okoro",
-      "say": "Mended, and you didn't get bitten. One more thing every hand on watch does: rounds. Look into the three repair lockers, forward, amidships and aft, and come back to me." },
-    { "do": "rounds", "rooms": ["repair-fwd", "repair-mid", "dc-store"], "order": "Rounds: look into the three repair lockers",
-      "say": "Rounds done. Back to the chief." },
-    { "do": "talk", "who": "dc", "order": "Report back to Chief Okoro", "rank": "Crewman",
-      "say": "That's your damage control ticket. You're a crewman now, not an apprentice. The gunnery officer wants every hand who can see straight: Lieutenant Varga, at the dorsal turret trunk, starboard side, forward of the mess." },
-    { "do": "talk", "who": "guns", "order": "Report to Lieutenant Varga at the dorsal turret trunk", "unlock": ["guns"],
-      "say": "Before you shoot at anything that shoots back, you shoot at a sled. A tug is streaming a target down our starboard side. Climb up into the dorsal turret. Lay your sight on the amber diamond, not on the sled: that is where the sled will be when your shell gets there. Three hits." },
-    { "do": "man", "order": "Climb into the dorsal turret" },
-    { "do": "shoot", "from": "starboard", "hits": 3, "order": "Gunnery drill: hit the towed target three times",
+      "adrift": {
+        "call": "Apprentice! Get yourself here, now.",
+        "order": "You were adrift: report to Leading Hand Lund at the midships repair locker",
+        "say": "Adrift on your first watch. That's in my book, and the coxswain will hear of it. Now report to Chief Okoro in damage control."
+      }
+    },
+    {
+      "do": "talk",
+      "who": "dc",
+      "order": "Report to Chief Okoro in damage control",
+      "say": "So you're Blue watch's new hand in my party. Everyone aboard fights fires before they do anything else. I'm lighting a drill fire in the gym, in the forward drum, outer deck. The red cabinets in the passages and along the ring corridors hold extinguishers. Take one, find the fire, put it out. Go."
+    },
+    {
+      "do": "drill",
+      "kind": "fire",
+      "room": "gym",
+      "order": "Put out the drill fire in the gym",
+      "say": "Fire's out. Back to the chief.",
+      "fail": "You lost it. The chief resets the drill: again."
+    },
+    {
+      "do": "talk",
+      "who": "dc",
+      "order": "Report back to Chief Okoro",
+      "say": "Not bad. Now an electrical fault, in the electrical shop, in the after drum, outer deck. Isolate the supply at the main switchboard aft of here first, or it will bite you. Tool kits are on the rack in the shop itself."
+    },
+    {
+      "do": "drill",
+      "kind": "electrical",
+      "room": "elec-shop",
+      "order": "Mend the drill fault in the electrical shop",
+      "say": "Mended. Back to the chief.",
+      "fail": "It caught. The chief resets the drill: again."
+    },
+    {
+      "do": "talk",
+      "who": "dc",
+      "order": "Report back to Chief Okoro",
+      "say": "Mended, and you didn't get bitten. One more thing every hand on watch does: rounds. Look into the three repair lockers, forward, amidships and aft, and come back to me."
+    },
+    {
+      "do": "rounds",
+      "rooms": [
+        "repair-fwd",
+        "repair-mid",
+        "dc-store"
+      ],
+      "order": "Rounds: look into the three repair lockers",
+      "say": "Rounds done. Back to the chief."
+    },
+    {
+      "do": "talk",
+      "who": "dc",
+      "order": "Report back to Chief Okoro",
+      "rank": "Crewman",
+      "say": "That's your damage control ticket. You're a crewman now, not an apprentice. The gunnery officer wants every hand who can see straight: Lieutenant Varga, at the bow dorsal turret access, starboard side, forward of the drums."
+    },
+    {
+      "do": "talk",
+      "who": "guns",
+      "order": "Report to Lieutenant Varga at the bow dorsal turret access",
+      "unlock": [
+        "guns"
+      ],
+      "say": "Before you shoot at anything that shoots back, you shoot at a sled. A tug is streaming a target down our starboard side. First, draw a vac suit from one of the grey VAC SUITS lockers, in the spine, at damage control or in the flight gear room: at action stations this ship sets condition one and pumps her air out, so a hole cannot blow anyone out with it. Then climb up into the dorsal turret. Lay your sight on the amber diamond, not on the sled: that is where the sled will be when your shell gets there. Three hits."
+    },
+    {
+      "do": "suit",
+      "order": "Draw a vac suit from a VAC SUITS locker",
+      "say": "Suited. The helmet closes by itself when the air goes. Now the turret."
+    },
+    {
+      "do": "man",
+      "order": "Climb into the dorsal turret"
+    },
+    {
+      "do": "shoot",
+      "from": "starboard",
+      "hits": 3,
+      "order": "Gunnery drill: hit the towed target three times",
       "start": "Turret, bridge. Target tug running in to starboard. The range is clear. Commence.",
       "say": "Turret, bridge. Three hits on the sled: check fire. Stay in your seat. A Rook corvette has been shadowing us, and the captain is letting her close.",
-      "fail": "The tug has finished her runs and you are short of three hits. She is coming round again." },
-    { "do": "raid", "from": "starboard", "hits": 3, "wait": 14, "order": "Hit the raider three times yourself",
+      "fail": "The tug has finished her runs and you are short of three hits. She is coming round again."
+    },
+    {
+      "do": "raid",
+      "from": "starboard",
+      "hits": 3,
+      "wait": 14,
+      "order": "Hit the raider three times yourself",
       "start": "Turret, bridge. Raider closing starboard. Weapons free.",
       "say": "Turret, bridge. Good shooting. Report to Lieutenant Varga.",
-      "fail": "Not enough hits from you, and she's gone. She'll come round again." },
-    { "do": "talk", "who": "guns", "order": "Report to Lieutenant Varga", "rank": "Gunner", "unlock": ["raids"],
-      "say": "Hits under fire. You're a gunner. From now on, when the klaxon goes, you have a turret. And the flight officer has asked for you: Lieutenant Moss, in the pilots' ready room." },
-    { "do": "talk", "who": "flight", "order": "Report to Lieutenant Moss in the pilots' ready room", "unlock": ["fighters"],
-      "say": "Every gunner gets a go in a fighter. Take any of them on the pads. Launch, fly about, then fly yourself home down the lane of rings. Don't call flight control to bring you in: fly it." },
-    { "do": "board", "order": "Climb into a fighter in the hangar" },
-    { "do": "launch", "order": "Launch: hold W once the bay is open" },
-    { "do": "land", "manual": true, "order": "Fly yourself home down the lane of rings",
+      "fail": "Not enough hits from you, and she's gone. She'll come round again."
+    },
+    {
+      "do": "talk",
+      "who": "guns",
+      "order": "Report to Lieutenant Varga",
+      "rank": "Gunner",
+      "unlock": [
+        "raids"
+      ],
+      "say": "Hits under fire. You're a gunner. From now on, when the klaxon goes, you have a turret. And the flight officer has asked for you: Lieutenant Moss, in the pilots' ready room."
+    },
+    {
+      "do": "talk",
+      "who": "flight",
+      "order": "Report to Lieutenant Moss in the pilots' ready room",
+      "unlock": [
+        "fighters"
+      ],
+      "say": "Every gunner gets a go in a fighter. The hangar has no air: go down a boarding tube from the crew tunnel into any of them. Launch, fly about, then fly yourself home down the lane of rings. Don't call flight control to bring you in: fly it."
+    },
+    {
+      "do": "board",
+      "order": "Down a boarding tube from the crew tunnel into a fighter"
+    },
+    {
+      "do": "launch",
+      "order": "Launch: hold W once the bay is open"
+    },
+    {
+      "do": "land",
+      "manual": true,
+      "order": "Fly yourself home down the lane of rings",
       "say": "Down, and you flew it. Report to Lieutenant Moss.",
-      "fail": "Flight control brought you in. Go again, and fly it yourself this time." },
-    { "do": "talk", "who": "flight", "order": "Report to Lieutenant Moss", "rank": "Flight cadet",
-      "say": "You'll make a pilot. Not this week. Commander Reyes wants you on the bridge: she says anyone who can land a fighter can learn to steer a ship." },
-    { "do": "talk", "who": "ootw", "order": "Report to Commander Reyes on the bridge", "unlock": ["helm"],
-      "say": "Take the helm. Bring her round ninety degrees, either way, and stop her turning. Gently: that is four hundred metres of ship." },
-    { "do": "helm", "order": "Take the helm" },
-    { "do": "turn", "deg": 90, "order": "Turn her through 90° and stop her turning",
-      "say": "Steady. Hand over the helm and report to me." },
-    { "do": "talk", "who": "ootw", "order": "Report to Commander Reyes", "rank": "Helmsman",
-      "say": "Fires, guns, a fighter and the helm, in your first week. You're a helmsman. The ship is yours to serve." }
+      "fail": "Flight control brought you in. Go again, and fly it yourself this time."
+    },
+    {
+      "do": "talk",
+      "who": "flight",
+      "order": "Report to Lieutenant Moss",
+      "rank": "Flight cadet",
+      "say": "You'll make a pilot. Not this week. Commander Reyes wants you on the bridge: she says anyone who can land a fighter can learn to steer a ship."
+    },
+    {
+      "do": "talk",
+      "who": "ootw",
+      "order": "Report to Commander Reyes on the bridge",
+      "unlock": [
+        "helm"
+      ],
+      "say": "Take the helm. Bring her round ninety degrees, either way, and stop her turning. Gently: that is three hundred metres of ship."
+    },
+    {
+      "do": "helm",
+      "order": "Take the helm"
+    },
+    {
+      "do": "turn",
+      "deg": 90,
+      "order": "Turn her through 90° and stop her turning",
+      "say": "Steady. Now a transit. Navigator has a waypoint for you, fifteen kilometres out: get us there and stop on it. Point her at it and burn. When the plot calls turnover, flip her end for end and burn the other way. There are no brakes out here."
+    },
+    {
+      "do": "transit",
+      "order": "Fly to the waypoint and stop on it: burn, flip, burn (N lays it in again)",
+      "say": "On station. Most people overshoot the first time. Hand over the helm and report to me."
+    },
+    {
+      "do": "talk",
+      "who": "ootw",
+      "order": "Report to Commander Reyes",
+      "rank": "Helmsman",
+      "say": "Fires, guns, a fighter and the helm, in your first week. You're a helmsman. The ship is yours to serve."
+    }
   ]
 }

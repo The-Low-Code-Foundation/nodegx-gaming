@@ -2,7 +2,8 @@
 // craft, not a jet: an armoured crew capsule under a framed canopy, propellant tanks along her flanks, radiators that
 // fold up for stowage where a plane would have wings, the drive on its gimbal, a thruster quad at every manoeuvring
 // cluster the physics fires, chin guns, missiles, landing gear, navigation lights and a strobe, and a cockpit with its
-// seat, panel, three screens and the head-up display's glass. Each fighter in the hangar is a copy with its own side
+// seat, panel, three screens, the head-up display's glass, side consoles, stick and throttle, the pilot's legs, and the
+// placards and lit legends (one texture, `Placard` / `LampLegend`). Each fighter in the hangar is a copy with its own side
 // number. (The radiators are `wingFolds` to the code: they fold the same way.)
 //
 // The copy carries what the rest of the code expects of a fighter (ships.mjs `fighter()`): `canopyHinge`, `wingFolds`,
@@ -15,7 +16,7 @@ import { foldWings } from '../ships.mjs';
 
 let proto = null;
 const CANOPY = new THREE.MeshStandardMaterial({ name: 'CanopyGlass', color: '#9fb8d0', metalness: 0, roughness: 0.05, transparent: true, opacity: 0.07, depthWrite: false, side: THREE.DoubleSide, envMapIntensity: 0.2 });
-const COMBINER = new THREE.MeshBasicMaterial({ name: 'HudGlass', color: '#7fffb0', transparent: true, opacity: 0.035, depthWrite: false, toneMapped: false, blending: THREE.AdditiveBlending });
+const COMBINER = new THREE.MeshBasicMaterial({ name: 'HudGlass', color: '#7fffb0', transparent: true, opacity: 0.012, depthWrite: false, toneMapped: false, blending: THREE.AdditiveBlending });
 
 /** The canopy is a closed shell in the model, with a flat cap across the sill just below the pilot's eye. Seen through
  *  double-sided glass that cap is a band across the middle of the view, so its triangles (every corner at the shell's
@@ -58,6 +59,8 @@ export async function loadFighterModel(url = 'assets/carrier/fighter.glb') {
       o.renderOrder = 3;
     }
     if (/^Screen/.test(m.name) || /^Lamp|^Nav|Strobe|Throat/.test(m.name)) m.toneMapped = false;
+    // The cockpit's labels are read at a slant (the side consoles): keep them sharp.
+    for (const t of [m.map, m.emissiveMap]) if (t) t.anisotropy = 8;
   });
   return true;
 }
