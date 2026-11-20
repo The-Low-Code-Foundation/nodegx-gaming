@@ -2,23 +2,23 @@
  "about": "Made by tools/voices.mjs (Gemini TTS). Keyed \"<speaker>|<the exact line>\"; src/carrier/voice.mjs plays the file for a line it finds here.",
  "model": "gemini-3.8-flash-tts",
  "lines": {
-  "cox|So you're the new apprentice. Welcome aboard. You're in Blue watch, berthed in quarters C. Read the watch bill on the board outside this office: it tells you when you're on, and where you muster.": {
-   "file": "cox-so-you-re-the-new-apprentice-welcome-988c2e.mp3",
-   "hash": "988c2ec24e",
+  "cox|So you're the new apprentice. Welcome aboard. You're in Blue watch, berthed in quarters C, in the forward drum, on this deck. Read the watch bill on the board outside this office: it tells you when you're on, and where you muster.": {
+   "file": "cox-so-you-re-the-new-apprentice-welcome-6c4449.mp3",
+   "hash": "6c4449d931",
    "voice": "voice_p5jimz0zc72a",
-   "secs": 13.87
+   "secs": 16.49
   },
-  "dc|So you're Blue watch's new hand in my party. Everyone aboard fights fires before they do anything else. I'm lighting a drill fire in the gym. The red cabinets in the passages hold extinguishers. Take one, find the fire, put it out. Go.": {
-   "file": "dc-so-you-re-blue-watch-s-new-hand-in-m-31394d.mp3",
-   "hash": "31394dce73",
+  "dc|So you're Blue watch's new hand in my party. Everyone aboard fights fires before they do anything else. I'm lighting a drill fire in the gym, in the forward drum, outer deck. The red cabinets in the passages and along the ring corridors hold extinguishers. Take one, find the fire, put it out. Go.": {
+   "file": "dc-so-you-re-blue-watch-s-new-hand-in-m-c85223.mp3",
+   "hash": "c85223169d",
    "voice": "voice_nm8fatgcnafz",
-   "secs": 13.72
+   "secs": 16.73
   },
-  "dc|Not bad. Now an electrical fault, in the electrical shop. Isolate the supply at the switchboard aft first, or it will bite you. Repair kits are in the yellow lockers.": {
-   "file": "dc-not-bad-now-an-electrical-fault-in-t-e57219.mp3",
-   "hash": "e57219e1c6",
+  "dc|Not bad. Now an electrical fault, in the electrical shop, in the after drum, outer deck. Isolate the supply at the main switchboard aft of here first, or it will bite you. Tool kits are on the rack in the shop itself.": {
+   "file": "dc-not-bad-now-an-electrical-fault-in-t-c0a02f.mp3",
+   "hash": "c0a02fa8fa",
    "voice": "voice_nm8fatgcnafz",
-   "secs": 10.31
+   "secs": 13.71
   },
   "dc|Mended, and you didn't get bitten. One more thing every hand on watch does: rounds. Look into the three repair lockers, forward, amidships and aft, and come back to me.": {
    "file": "dc-mended-and-you-didn-t-get-bitten-one-9d9d7c.mp3",
@@ -26,29 +26,29 @@
    "voice": "voice_nm8fatgcnafz",
    "secs": 10.85
   },
-  "dc|That's your damage control ticket. You're a crewman now, not an apprentice. The gunnery officer wants every hand who can see straight: Lieutenant Varga, at the dorsal turret trunk, starboard side, forward of the mess.": {
-   "file": "dc-that-s-your-damage-control-ticket-yo-4f88b1.mp3",
-   "hash": "4f88b114ea",
+  "dc|That's your damage control ticket. You're a crewman now, not an apprentice. The gunnery officer wants every hand who can see straight: Lieutenant Varga, at the bow dorsal turret access, starboard side, forward of the drums.": {
+   "file": "dc-that-s-your-damage-control-ticket-yo-a1c5d7.mp3",
+   "hash": "a1c5d7b0ea",
    "voice": "voice_nm8fatgcnafz",
-   "secs": 11.55
-  },
-  "guns|Before you shoot at anything that shoots back, you shoot at a sled. A tug is streaming a target down our starboard side. Climb up into the dorsal turret. Lay your sight on the amber diamond, not on the sled: that is where the sled will be when your shell gets there. Three hits.": {
-   "file": "guns-before-you-shoot-at-anything-that-sh-19011d.mp3",
-   "hash": "19011d1a69",
-   "voice": "voice_3uge17k0jmq0",
-   "secs": 18.3
-  },
-  "guns|Hits under fire. You're a gunner. From now on, when the klaxon goes, you have a turret. And the flight officer has asked for you: Lieutenant Moss, in the pilots' ready room.": {
-   "file": "guns-hits-under-fire-you-re-a-gunner-from-e0aca7.mp3",
-   "hash": "e0aca75c1f",
-   "voice": "voice_3uge17k0jmq0",
-   "secs": 10.59
-  },
-  "flight|Every gunner gets a go in a fighter. Take any of them on the pads. Launch, fly about, then fly yourself home down the lane of rings. Don't call flight control to bring you in: fly it.": {
-   "file": "flight-every-gunner-gets-a-go-in-a-fighter-7d7ca9.mp3",
-   "hash": "7d7ca96046",
-   "voice": "voice_y99kim4gm369",
    "secs": 11.83
+  },
+  "guns|Before you shoot at anything that shoots back, you shoot at a sled. A tug is streaming a target down our starboard side. First, draw a vac suit from one of the grey VAC SUITS lockers, in the spine, at damage control or in the flight gear room: at general quarters this ship sets condition one and pumps the air out of the fixed hull, so a hole cannot blow anyone out with it. The drums keep theirs. Then climb up into the dorsal turret. Lay your sight on the amber diamond, not on the sled: that is where the sled will be when your shell gets there. Three hits.": {
+   "file": "guns-before-you-shoot-at-anything-that-sh-d36be4.mp3",
+   "hash": "d36be4e2b7",
+   "voice": "voice_3uge17k0jmq0",
+   "secs": 35.42
+  },
+  "guns|Hits under fire. You're a gunner. From now on, at general quarters, you have a turret. And the flight officer has asked for you: Lieutenant Moss, in the pilots' ready room.": {
+   "file": "guns-hits-under-fire-you-re-a-gunner-from-754d76.mp3",
+   "hash": "754d7688e8",
+   "voice": "voice_3uge17k0jmq0",
+   "secs": 10.89
+  },
+  "flight|Every gunner gets a go in a fighter. The hangar has no air: go down a boarding tube from the crew tunnel into any of them. Launch, fly about, then fly yourself home down the lane of rings. Don't call flight control to bring you in: fly it.": {
+   "file": "flight-every-gunner-gets-a-go-in-a-fighter-6e3a3f.mp3",
+   "hash": "6e3a3f49c7",
+   "voice": "voice_y99kim4gm369",
+   "secs": 15.44
   },
   "flight|You'll make a pilot. Not this week. Commander Reyes wants you on the bridge: she says anyone who can land a fighter can learn to steer a ship.": {
    "file": "flight-you-ll-make-a-pilot-not-this-week-co-372e07.mp3",
@@ -56,11 +56,11 @@
    "voice": "voice_y99kim4gm369",
    "secs": 8.19
   },
-  "ootw|Take the helm. Bring her round ninety degrees, either way, and stop her turning. Gently: that is four hundred metres of ship.": {
-   "file": "ootw-take-the-helm-bring-her-round-ninety-190ee4.mp3",
-   "hash": "190ee4e50d",
+  "ootw|Take the helm. Bring her round ninety degrees, either way, and stop her turning. Gently: that is three hundred metres of ship.": {
+   "file": "ootw-take-the-helm-bring-her-round-ninety-8bdd33.mp3",
+   "hash": "8bdd332a49",
    "voice": "voice_dr6r455uf36c",
-   "secs": 8.74
+   "secs": 9.41
   },
   "ootw|Fires, guns, a fighter and the helm, in your first week. You're a helmsman. The ship is yours to serve.": {
    "file": "ootw-fires-guns-a-fighter-and-the-helm-in-7d41e7.mp3",
@@ -128,6 +128,324 @@
    "voice": "voice_dr6r455uf36c",
    "secs": 0.76
   },
+  "lund|Blue watch, on your feet. You have the middle watch. Muster at the midships repair locker at 0000.": {
+   "file": "lund-blue-watch-on-your-feet-you-have-the-7b0cc4.mp3",
+   "hash": "7b0cc45321",
+   "voice": "voice_9qx9ovq63lde",
+   "secs": 6.62
+  },
+  "lund|Blue watch, on your feet. You have the morning watch. Muster at the midships repair locker at 0400.": {
+   "file": "lund-blue-watch-on-your-feet-you-have-the-bfa4b7.mp3",
+   "hash": "bfa4b71784",
+   "voice": "voice_9qx9ovq63lde",
+   "secs": 5.68
+  },
+  "lund|Blue watch, on your feet. You have the forenoon watch. Muster at the midships repair locker at 0800.": {
+   "file": "lund-blue-watch-on-your-feet-you-have-the-dc9cf2.mp3",
+   "hash": "dc9cf29f8d",
+   "voice": "voice_9qx9ovq63lde",
+   "secs": 6.79
+  },
+  "lund|Blue watch, on your feet. You have the afternoon watch. Muster at the midships repair locker at 1200.": {
+   "file": "lund-blue-watch-on-your-feet-you-have-the-4bb4da.mp3",
+   "hash": "4bb4da31b7",
+   "voice": "voice_9qx9ovq63lde",
+   "secs": 7.58
+  },
+  "lund|Blue watch, on your feet. You have the first dog watch. Muster at the midships repair locker at 1600.": {
+   "file": "lund-blue-watch-on-your-feet-you-have-the-df0d7c.mp3",
+   "hash": "df0d7caebe",
+   "voice": "voice_9qx9ovq63lde",
+   "secs": 6.99
+  },
+  "lund|Blue watch, on your feet. You have the last dog watch. Muster at the midships repair locker at 1800.": {
+   "file": "lund-blue-watch-on-your-feet-you-have-the-a1d4a8.mp3",
+   "hash": "a1d4a8da18",
+   "voice": "voice_9qx9ovq63lde",
+   "secs": 7.34
+  },
+  "lund|Blue watch, on your feet. You have the first watch. Muster at the midships repair locker at 2000.": {
+   "file": "lund-blue-watch-on-your-feet-you-have-the-8d9689.mp3",
+   "hash": "8d968985a9",
+   "voice": "voice_9qx9ovq63lde",
+   "secs": 6.31
+  },
+  "lund|Blue watch, all present or accounted for. Carry on to your stations.": {
+   "file": "lund-blue-watch-all-present-or-accounted-3e0fa7.mp3",
+   "hash": "3e0fa7dabb",
+   "voice": "voice_9qx9ovq63lde",
+   "secs": 4.21
+  },
+  "lund|Blue watch: one hand absent from muster. The new apprentice. On report.": {
+   "file": "lund-blue-watch-one-hand-absent-from-must-c9e50a.mp3",
+   "hash": "c9e50af50e",
+   "voice": "voice_9qx9ovq63lde",
+   "secs": 5.92
+  },
+  "lund|Apprentice: report to Chief Okoro in damage control.": {
+   "file": "lund-apprentice-report-to-chief-okoro-in-4284ae.mp3",
+   "hash": "4284aed62d",
+   "voice": "voice_9qx9ovq63lde",
+   "secs": 3.58
+  },
+  "lund|Apprentice! Get yourself here, now.": {
+   "file": "lund-apprentice-get-yourself-here-now-ce7870.mp3",
+   "hash": "ce787058c1",
+   "voice": "voice_9qx9ovq63lde",
+   "secs": 2.65
+  },
+  "lund|Late for muster on your first watch. That goes on report, and the coxswain will hear of it. Now report to Chief Okoro in damage control.": {
+   "file": "lund-late-for-muster-on-your-first-watch-71ee0c.mp3",
+   "hash": "71ee0c4b05",
+   "voice": "voice_9qx9ovq63lde",
+   "secs": 8.09
+  },
+  "dc|You are not at your battle station. You are on report. Get to the midships repair locker.": {
+   "file": "dc-you-are-not-at-your-battle-station-y-715458.mp3",
+   "hash": "715458c0c3",
+   "voice": "voice_nm8fatgcnafz",
+   "secs": 5.19
+  },
+  "dc|At your battle station: the midships repair locker. Stay there until the ship secures from general quarters.": {
+   "file": "dc-at-your-battle-station-the-midships-804be4.mp3",
+   "hash": "804be447cf",
+   "voice": "voice_nm8fatgcnafz",
+   "secs": 6.06
+  },
+  "guns|You are not at your battle station. You are on report. Get to the dorsal turret.": {
+   "file": "guns-you-are-not-at-your-battle-station-y-535745.mp3",
+   "hash": "5357458167",
+   "voice": "voice_3uge17k0jmq0",
+   "secs": 5.73
+  },
+  "guns|At your battle station: the dorsal turret. Stay there until the ship secures from general quarters.": {
+   "file": "guns-at-your-battle-station-the-dorsal-tu-6a542a.mp3",
+   "hash": "6a542a270e",
+   "voice": "voice_3uge17k0jmq0",
+   "secs": 5.99
+  },
+  "flight|You are not at your battle station. You are on report. Get to a fighter, in her seat.": {
+   "file": "flight-you-are-not-at-your-battle-station-y-e6206f.mp3",
+   "hash": "e6206fc129",
+   "voice": "voice_y99kim4gm369",
+   "secs": 5.59
+  },
+  "flight|At your battle station: a fighter, in her seat. Stay there until the ship secures from general quarters.": {
+   "file": "flight-at-your-battle-station-a-fighter-in-446d4b.mp3",
+   "hash": "446d4bd8a4",
+   "voice": "voice_y99kim4gm369",
+   "secs": 6.93
+  },
+  "ootw|You are not at your battle station. You are on report. Get to the helm.": {
+   "file": "ootw-you-are-not-at-your-battle-station-y-ac9962.mp3",
+   "hash": "ac99621c0a",
+   "voice": "voice_dr6r455uf36c",
+   "secs": 5.58
+  },
+  "ootw|At your battle station: the helm. Stay there until the ship secures from general quarters.": {
+   "file": "ootw-at-your-battle-station-the-helm-stay-d29195.mp3",
+   "hash": "d291952243",
+   "voice": "voice_dr6r455uf36c",
+   "secs": 5.18
+  },
+  "ship|Turret, bridge. Target tug running in to starboard. The range is clear. Commence.": {
+   "file": "ship-turret-bridge-target-tug-running-in-1de46a.mp3",
+   "hash": "1de46a441a",
+   "voice": "voice_av0j47o3r5ps",
+   "secs": 5.81
+  },
+  "ship|Turret, bridge. Raider closing starboard. Weapons free.": {
+   "file": "ship-turret-bridge-raider-closing-starboa-af1057.mp3",
+   "hash": "af10570eaf",
+   "voice": "voice_av0j47o3r5ps",
+   "secs": 3.73
+  },
+  "ship|Taps, taps. Lights out. Darken ship: the passages go to red lighting.": {
+   "file": "ship-taps-taps-lights-out-darken-ship-the-69a3fc.mp3",
+   "hash": "69a3fc372a",
+   "voice": "voice_av0j47o3r5ps",
+   "secs": 5.39
+  },
+  "ship|Reveille, reveille. All hands, out of your racks.": {
+   "file": "ship-reveille-reveille-all-hands-out-of-y-80d241.mp3",
+   "hash": "80d241ddb2",
+   "voice": "voice_av0j47o3r5ps",
+   "secs": 3.6
+  },
+  "ship|Now relieve the watch. Red watch has the middle watch.": {
+   "file": "ship-now-relieve-the-watch-red-watch-has-d28c31.mp3",
+   "hash": "d28c313676",
+   "voice": "voice_av0j47o3r5ps",
+   "secs": 3.47
+  },
+  "ship|Now relieve the watch. Red watch has the morning watch.": {
+   "file": "ship-now-relieve-the-watch-red-watch-has-4236f2.mp3",
+   "hash": "4236f2ea30",
+   "voice": "voice_av0j47o3r5ps",
+   "secs": 3.97
+  },
+  "ship|Now relieve the watch. Red watch has the forenoon watch.": {
+   "file": "ship-now-relieve-the-watch-red-watch-has-812b24.mp3",
+   "hash": "812b24a9c9",
+   "voice": "voice_av0j47o3r5ps",
+   "secs": 3.93
+  },
+  "ship|Now relieve the watch. Red watch has the afternoon watch.": {
+   "file": "ship-now-relieve-the-watch-red-watch-has-b8beb5.mp3",
+   "hash": "b8beb52bae",
+   "voice": "voice_av0j47o3r5ps",
+   "secs": 4.28
+  },
+  "ship|Now relieve the watch. Red watch has the first dog watch.": {
+   "file": "ship-now-relieve-the-watch-red-watch-has-279599.mp3",
+   "hash": "279599f768",
+   "voice": "voice_av0j47o3r5ps",
+   "secs": 4.02
+  },
+  "ship|Now relieve the watch. Red watch has the last dog watch.": {
+   "file": "ship-now-relieve-the-watch-red-watch-has-66c181.mp3",
+   "hash": "66c1813703",
+   "voice": "voice_av0j47o3r5ps",
+   "secs": 3.89
+  },
+  "ship|Now relieve the watch. Red watch has the first watch.": {
+   "file": "ship-now-relieve-the-watch-red-watch-has-295bd3.mp3",
+   "hash": "295bd37b34",
+   "voice": "voice_av0j47o3r5ps",
+   "secs": 3.7
+  },
+  "ship|Now relieve the watch. White watch has the middle watch.": {
+   "file": "ship-now-relieve-the-watch-white-watch-ha-9fc797.mp3",
+   "hash": "9fc7971f95",
+   "voice": "voice_av0j47o3r5ps",
+   "secs": 3.35
+  },
+  "ship|Now relieve the watch. White watch has the morning watch.": {
+   "file": "ship-now-relieve-the-watch-white-watch-ha-540229.mp3",
+   "hash": "540229d598",
+   "voice": "voice_av0j47o3r5ps",
+   "secs": 3.83
+  },
+  "ship|Now relieve the watch. White watch has the forenoon watch.": {
+   "file": "ship-now-relieve-the-watch-white-watch-ha-1057a2.mp3",
+   "hash": "1057a2acea",
+   "voice": "voice_av0j47o3r5ps",
+   "secs": 4.4
+  },
+  "ship|Now relieve the watch. White watch has the afternoon watch.": {
+   "file": "ship-now-relieve-the-watch-white-watch-ha-973389.mp3",
+   "hash": "97338988bb",
+   "voice": "voice_av0j47o3r5ps",
+   "secs": 4.18
+  },
+  "ship|Now relieve the watch. White watch has the first dog watch.": {
+   "file": "ship-now-relieve-the-watch-white-watch-ha-88f603.mp3",
+   "hash": "88f603f9f7",
+   "voice": "voice_av0j47o3r5ps",
+   "secs": 3.83
+  },
+  "ship|Now relieve the watch. White watch has the last dog watch.": {
+   "file": "ship-now-relieve-the-watch-white-watch-ha-744f86.mp3",
+   "hash": "744f86b72a",
+   "voice": "voice_av0j47o3r5ps",
+   "secs": 4.65
+  },
+  "ship|Now relieve the watch. White watch has the first watch.": {
+   "file": "ship-now-relieve-the-watch-white-watch-ha-3320e2.mp3",
+   "hash": "3320e2e7b1",
+   "voice": "voice_av0j47o3r5ps",
+   "secs": 3.5
+  },
+  "ship|Now relieve the watch. Blue watch has the middle watch.": {
+   "file": "ship-now-relieve-the-watch-blue-watch-has-22093c.mp3",
+   "hash": "22093c2b35",
+   "voice": "voice_av0j47o3r5ps",
+   "secs": 3.9
+  },
+  "ship|Now relieve the watch. Blue watch has the morning watch.": {
+   "file": "ship-now-relieve-the-watch-blue-watch-has-592463.mp3",
+   "hash": "592463ac09",
+   "voice": "voice_av0j47o3r5ps",
+   "secs": 3.83
+  },
+  "ship|Now relieve the watch. Blue watch has the forenoon watch.": {
+   "file": "ship-now-relieve-the-watch-blue-watch-has-d95013.mp3",
+   "hash": "d950137eb2",
+   "voice": "voice_av0j47o3r5ps",
+   "secs": 4.23
+  },
+  "ship|Now relieve the watch. Blue watch has the afternoon watch.": {
+   "file": "ship-now-relieve-the-watch-blue-watch-has-e714ff.mp3",
+   "hash": "e714fff9cc",
+   "voice": "voice_av0j47o3r5ps",
+   "secs": 3.53
+  },
+  "ship|Now relieve the watch. Blue watch has the first dog watch.": {
+   "file": "ship-now-relieve-the-watch-blue-watch-has-63678e.mp3",
+   "hash": "63678ec8d4",
+   "voice": "voice_av0j47o3r5ps",
+   "secs": 3.83
+  },
+  "ship|Now relieve the watch. Blue watch has the last dog watch.": {
+   "file": "ship-now-relieve-the-watch-blue-watch-has-38fc4f.mp3",
+   "hash": "38fc4f8706",
+   "voice": "voice_av0j47o3r5ps",
+   "secs": 3.99
+  },
+  "ship|Now relieve the watch. Blue watch has the first watch.": {
+   "file": "ship-now-relieve-the-watch-blue-watch-has-a84a92.mp3",
+   "hash": "a84a922d4f",
+   "voice": "voice_av0j47o3r5ps",
+   "secs": 3.41
+  },
+  "cox|So you're the new apprentice. Welcome aboard. You're in Blue watch, berthed in quarters C. Read the watch bill on the board outside this office: it tells you when you're on, and where you muster.": {
+   "file": "cox-so-you-re-the-new-apprentice-welcome-988c2e.mp3",
+   "hash": "988c2ec24e",
+   "voice": "voice_p5jimz0zc72a",
+   "secs": 13.87
+  },
+  "dc|So you're Blue watch's new hand in my party. Everyone aboard fights fires before they do anything else. I'm lighting a drill fire in the gym. The red cabinets in the passages hold extinguishers. Take one, find the fire, put it out. Go.": {
+   "file": "dc-so-you-re-blue-watch-s-new-hand-in-m-31394d.mp3",
+   "hash": "31394dce73",
+   "voice": "voice_nm8fatgcnafz",
+   "secs": 13.72
+  },
+  "dc|Not bad. Now an electrical fault, in the electrical shop. Isolate the supply at the switchboard aft first, or it will bite you. Repair kits are in the yellow lockers.": {
+   "file": "dc-not-bad-now-an-electrical-fault-in-t-e57219.mp3",
+   "hash": "e57219e1c6",
+   "voice": "voice_nm8fatgcnafz",
+   "secs": 10.31
+  },
+  "dc|That's your damage control ticket. You're a crewman now, not an apprentice. The gunnery officer wants every hand who can see straight: Lieutenant Varga, at the dorsal turret trunk, starboard side, forward of the mess.": {
+   "file": "dc-that-s-your-damage-control-ticket-yo-4f88b1.mp3",
+   "hash": "4f88b114ea",
+   "voice": "voice_nm8fatgcnafz",
+   "secs": 11.55
+  },
+  "guns|Before you shoot at anything that shoots back, you shoot at a sled. A tug is streaming a target down our starboard side. First, draw a vac suit from one of the grey VAC SUITS lockers, at damage control or the flight gear room: at action stations this ship sets condition one and pumps her air out, so a hole cannot blow anyone out with it. Then climb up into the dorsal turret. Lay your sight on the amber diamond, not on the sled: that is where the sled will be when your shell gets there. Three hits.": {
+   "file": "guns-before-you-shoot-at-anything-that-sh-d194d6.mp3",
+   "hash": "d194d6e0cc",
+   "voice": "voice_3uge17k0jmq0",
+   "secs": 31.65
+  },
+  "guns|Hits under fire. You're a gunner. From now on, when the klaxon goes, you have a turret. And the flight officer has asked for you: Lieutenant Moss, in the pilots' ready room.": {
+   "file": "guns-hits-under-fire-you-re-a-gunner-from-e0aca7.mp3",
+   "hash": "e0aca75c1f",
+   "voice": "voice_3uge17k0jmq0",
+   "secs": 10.59
+  },
+  "flight|Every gunner gets a go in a fighter. Take any of them on the pads. Launch, fly about, then fly yourself home down the lane of rings. Don't call flight control to bring you in: fly it.": {
+   "file": "flight-every-gunner-gets-a-go-in-a-fighter-7d7ca9.mp3",
+   "hash": "7d7ca96046",
+   "voice": "voice_y99kim4gm369",
+   "secs": 11.83
+  },
+  "ootw|Take the helm. Bring her round ninety degrees, either way, and stop her turning. Gently: that is four hundred metres of ship.": {
+   "file": "ootw-take-the-helm-bring-her-round-ninety-190ee4.mp3",
+   "hash": "190ee4e50d",
+   "voice": "voice_dr6r455uf36c",
+   "secs": 8.74
+  },
   "lund|Blue watch, wakey wakey. You have the middle watch. Muster at the repair locker (amidships) at 0000.": {
    "file": "lund-blue-watch-wakey-wakey-you-have-the-730052.mp3",
    "hash": "730052319f",
@@ -182,125 +500,59 @@
    "voice": "voice_9qx9ovq63lde",
    "secs": 5.97
   },
-  "lund|Apprentice: report to Chief Okoro in damage control.": {
-   "file": "lund-apprentice-report-to-chief-okoro-in-4284ae.mp3",
-   "hash": "4284aed62d",
-   "voice": "voice_9qx9ovq63lde",
-   "secs": 3.58
-  },
-  "lund|Apprentice! Get yourself here, now.": {
-   "file": "lund-apprentice-get-yourself-here-now-ce7870.mp3",
-   "hash": "ce787058c1",
-   "voice": "voice_9qx9ovq63lde",
-   "secs": 2.65
-  },
   "lund|Adrift on your first watch. That's in my book, and the coxswain will hear of it. Now report to Chief Okoro in damage control.": {
    "file": "lund-adrift-on-your-first-watch-that-s-in-da41bf.mp3",
    "hash": "da41bf3a86",
    "voice": "voice_9qx9ovq63lde",
    "secs": 7.51
   },
-  "ship|Turret, bridge. Target tug running in to starboard. The range is clear. Commence.": {
-   "file": "ship-turret-bridge-target-tug-running-in-1de46a.mp3",
-   "hash": "1de46a441a",
-   "voice": "voice_av0j47o3r5ps",
-   "secs": 5.81
+  "dc|You are adrift from your action station. Name in the book. Close up at the midships repair locker.": {
+   "file": "dc-you-are-adrift-from-your-action-stat-8c7b59.mp3",
+   "hash": "8c7b59247d",
+   "voice": "voice_nm8fatgcnafz",
+   "secs": 4.73
   },
-  "ship|Turret, bridge. Raider closing starboard. Weapons free.": {
-   "file": "ship-turret-bridge-raider-closing-starboa-af1057.mp3",
-   "hash": "af10570eaf",
-   "voice": "voice_av0j47o3r5ps",
-   "secs": 3.73
+  "dc|Closed up at the midships repair locker. Stay there until the stand down.": {
+   "file": "dc-closed-up-at-the-midships-repair-loc-833cc6.mp3",
+   "hash": "833cc69dab",
+   "voice": "voice_nm8fatgcnafz",
+   "secs": 3.87
   },
-  "ship|Action stations, action stations. Raider closing to port. Gun crews close up. Close all pressure doors.": {
-   "file": "ship-action-stations-action-stations-raid-2b5942.mp3",
-   "hash": "2b5942e7af",
-   "voice": "voice_av0j47o3r5ps",
-   "secs": 6.56
+  "guns|You are adrift from your action station. Name in the book. Close up at the dorsal turret.": {
+   "file": "guns-you-are-adrift-from-your-action-stat-8730f7.mp3",
+   "hash": "8730f72b1b",
+   "voice": "voice_3uge17k0jmq0",
+   "secs": 5.48
   },
-  "ship|Action stations, action stations. Raider closing to starboard. Gun crews close up. Close all pressure doors.": {
-   "file": "ship-action-stations-action-stations-raid-ebbb68.mp3",
-   "hash": "ebbb68ae56",
-   "voice": "voice_av0j47o3r5ps",
-   "secs": 7.18
+  "guns|Closed up at the dorsal turret. Stay there until the stand down.": {
+   "file": "guns-closed-up-at-the-dorsal-turret-stay-60be9c.mp3",
+   "hash": "60be9c244e",
+   "voice": "voice_3uge17k0jmq0",
+   "secs": 3.13
   },
-  "ship|Action stations, action stations. Raider closing from above. Gun crews close up. Close all pressure doors.": {
-   "file": "ship-action-stations-action-stations-raid-24869a.mp3",
-   "hash": "24869ac4a0",
-   "voice": "voice_av0j47o3r5ps",
-   "secs": 6.64
+  "flight|You are adrift from your action station. Name in the book. Close up at a fighter, in her seat.": {
+   "file": "flight-you-are-adrift-from-your-action-stat-396332.mp3",
+   "hash": "3963327fee",
+   "voice": "voice_y99kim4gm369",
+   "secs": 6.68
   },
-  "ship|Action stations, action stations. Raider closing from below. Gun crews close up. Close all pressure doors.": {
-   "file": "ship-action-stations-action-stations-raid-8b6079.mp3",
-   "hash": "8b6079155c",
-   "voice": "voice_av0j47o3r5ps",
-   "secs": 6.91
+  "flight|Closed up at a fighter, in her seat. Stay there until the stand down.": {
+   "file": "flight-closed-up-at-a-fighter-in-her-seat-s-07c191.mp3",
+   "hash": "07c19127c9",
+   "voice": "voice_y99kim4gm369",
+   "secs": 3.93
   },
-  "ship|Action stations, action stations. Incoming fire to port. Close all pressure doors. Brace, brace, brace.": {
-   "file": "ship-action-stations-action-stations-inco-27afca.mp3",
-   "hash": "27afca39d2",
-   "voice": "voice_av0j47o3r5ps",
-   "secs": 7.64
+  "ootw|You are adrift from your action station. Name in the book. Close up at the helm.": {
+   "file": "ootw-you-are-adrift-from-your-action-stat-f2ecb6.mp3",
+   "hash": "f2ecb6d8f6",
+   "voice": "voice_dr6r455uf36c",
+   "secs": 6.03
   },
-  "ship|Action stations, action stations. Incoming fire to starboard. Close all pressure doors. Brace, brace, brace.": {
-   "file": "ship-action-stations-action-stations-inco-887527.mp3",
-   "hash": "8875278cb0",
-   "voice": "voice_av0j47o3r5ps",
-   "secs": 7.42
-  },
-  "ship|Action stations, action stations. Incoming fire from above. Close all pressure doors. Brace, brace, brace.": {
-   "file": "ship-action-stations-action-stations-inco-37d3ab.mp3",
-   "hash": "37d3abeea0",
-   "voice": "voice_av0j47o3r5ps",
-   "secs": 6.94
-  },
-  "ship|Action stations, action stations. Incoming fire from below. Close all pressure doors. Brace, brace, brace.": {
-   "file": "ship-action-stations-action-stations-inco-80df76.mp3",
-   "hash": "80df767881",
-   "voice": "voice_av0j47o3r5ps",
-   "secs": 7.85
-  },
-  "ship|Stand down from action stations.": {
-   "file": "ship-stand-down-from-action-stations-2d75fd.mp3",
-   "hash": "2d75fd58f3",
-   "voice": "voice_av0j47o3r5ps",
-   "secs": 2.1
-  },
-  "ship|Shields are down.": {
-   "file": "ship-shields-are-down-228c64.mp3",
-   "hash": "228c643c96",
-   "voice": "voice_av0j47o3r5ps",
-   "secs": 1.49
-  },
-  "ship|Shields are back up.": {
-   "file": "ship-shields-are-back-up-a7cf3e.mp3",
-   "hash": "a7cf3edb44",
-   "voice": "voice_av0j47o3r5ps",
-   "secs": 1.29
-  },
-  "ship|The raider's shields are down.": {
-   "file": "ship-the-raider-s-shields-are-down-0bf7b9.mp3",
-   "hash": "0bf7b9df21",
-   "voice": "voice_av0j47o3r5ps",
-   "secs": 1.83
-  },
-  "ship|The raider is breaking off.": {
-   "file": "ship-the-raider-is-breaking-off-e8692b.mp3",
-   "hash": "e8692bdd39",
-   "voice": "voice_av0j47o3r5ps",
-   "secs": 1.7
-  },
-  "ship|Splash one. The raider is destroyed. Well done, gunners.": {
-   "file": "ship-splash-one-the-raider-is-destroyed-w-65f214.mp3",
-   "hash": "65f214bba0",
-   "voice": "voice_av0j47o3r5ps",
-   "secs": 3.75
-  },
-  "ship|Flight control. You are hit and dead in space. Hands off: we are bringing you in.": {
-   "file": "ship-flight-control-you-are-hit-and-dead-84d4ba.mp3",
-   "hash": "84d4ba55ee",
-   "voice": "voice_av0j47o3r5ps",
-   "secs": 4.85
+  "ootw|Closed up at the helm. Stay there until the stand down.": {
+   "file": "ootw-closed-up-at-the-helm-stay-there-unt-99e2eb.mp3",
+   "hash": "99e2eb45e9",
+   "voice": "voice_dr6r455uf36c",
+   "secs": 3.12
   },
   "ship|Pipe down. Darken ship: the passages go to red lighting.": {
    "file": "ship-pipe-down-darken-ship-the-passages-g-7e46eb.mp3",
@@ -439,6 +691,1032 @@
    "hash": "4feb1a26cd",
    "voice": "voice_av0j47o3r5ps",
    "secs": 3
+  },
+  "ai|Fire, fire, fire.": {
+   "file": "ai-fire-fire-fire-a8b4b0.mp3",
+   "hash": "a8b4b0400e",
+   "voice": "voice_86u1detsknuf",
+   "secs": 2.28
+  },
+  "ai|Forward torpedo room.": {
+   "file": "ai-forward-torpedo-room-9222d0.mp3",
+   "hash": "9222d09a0c",
+   "voice": "voice_86u1detsknuf",
+   "secs": 1.57
+  },
+  "ai|Bow passage.": {
+   "file": "ai-bow-passage-621853.mp3",
+   "hash": "6218532f4b",
+   "voice": "voice_86u1detsknuf",
+   "secs": 1.19
+  },
+  "ai|Sensor processing.": {
+   "file": "ai-sensor-processing-d33520.mp3",
+   "hash": "d3352056b4",
+   "voice": "voice_86u1detsknuf",
+   "secs": 1.39
+  },
+  "ai|Forward repair locker.": {
+   "file": "ai-forward-repair-locker-ee521f.mp3",
+   "hash": "ee521f0256",
+   "voice": "voice_86u1detsknuf",
+   "secs": 1.51
+  },
+  "ai|Security office.": {
+   "file": "ai-security-office-157b27.mp3",
+   "hash": "157b27ba59",
+   "voice": "voice_86u1detsknuf",
+   "secs": 1.35
+  },
+  "ai|Forward fan room.": {
+   "file": "ai-forward-fan-room-5e904c.mp3",
+   "hash": "5e904c5c62",
+   "voice": "voice_86u1detsknuf",
+   "secs": 1.39
+  },
+  "ai|Bow upper passage.": {
+   "file": "ai-bow-upper-passage-4b204f.mp3",
+   "hash": "4b204f3958",
+   "voice": "voice_86u1detsknuf",
+   "secs": 1.57
+  },
+  "ai|Sensor operations.": {
+   "file": "ai-sensor-operations-829101.mp3",
+   "hash": "8291016728",
+   "voice": "voice_86u1detsknuf",
+   "secs": 1.82
+  },
+  "ai|Armoury.": {
+   "file": "ai-armoury-70c49e.mp3",
+   "hash": "70c49e2778",
+   "voice": "voice_86u1detsknuf",
+   "secs": 0.82
+  },
+  "ai|Bow dorsal turret access.": {
+   "file": "ai-bow-dorsal-turret-access-6e0c09.mp3",
+   "hash": "6e0c09e50a",
+   "voice": "voice_86u1detsknuf",
+   "secs": 2.09
+  },
+  "ai|Brig.": {
+   "file": "ai-brig-0860db.mp3",
+   "hash": "0860db57f7",
+   "voice": "voice_86u1detsknuf",
+   "secs": 0.72
+  },
+  "ai|Bow lower passage.": {
+   "file": "ai-bow-lower-passage-7f2bc0.mp3",
+   "hash": "7f2bc01f50",
+   "voice": "voice_86u1detsknuf",
+   "secs": 1.56
+  },
+  "ai|Bow ventral turret access.": {
+   "file": "ai-bow-ventral-turret-access-68cf95.mp3",
+   "hash": "68cf958b0d",
+   "voice": "voice_86u1detsknuf",
+   "secs": 2.2
+  },
+  "ai|Torpedo workshop.": {
+   "file": "ai-torpedo-workshop-63610b.mp3",
+   "hash": "63610b676e",
+   "voice": "voice_86u1detsknuf",
+   "secs": 1.38
+  },
+  "ai|Cold stores.": {
+   "file": "ai-cold-stores-e2f54b.mp3",
+   "hash": "e2f54bcb10",
+   "voice": "voice_86u1detsknuf",
+   "secs": 1.15
+  },
+  "ai|Spine.": {
+   "file": "ai-spine-774140.mp3",
+   "hash": "774140f2f5",
+   "voice": "voice_86u1detsknuf",
+   "secs": 1.1
+  },
+  "ai|Forward trunk.": {
+   "file": "ai-forward-trunk-17213a.mp3",
+   "hash": "17213a7b63",
+   "voice": "voice_86u1detsknuf",
+   "secs": 1.16
+  },
+  "ai|Hangar airlock.": {
+   "file": "ai-hangar-airlock-fbf8aa.mp3",
+   "hash": "fbf8aa7b5e",
+   "voice": "voice_86u1detsknuf",
+   "secs": 1.27
+  },
+  "ai|Hangar.": {
+   "file": "ai-hangar-2b2057.mp3",
+   "hash": "2b20570174",
+   "voice": "voice_86u1detsknuf",
+   "secs": 0.7
+  },
+  "ai|Crew tunnel.": {
+   "file": "ai-crew-tunnel-520855.mp3",
+   "hash": "520855cbc9",
+   "voice": "voice_86u1detsknuf",
+   "secs": 0.87
+  },
+  "ai|Pilots' ready room.": {
+   "file": "ai-pilots-ready-room-e08e8c.mp3",
+   "hash": "e08e8c0e25",
+   "voice": "voice_86u1detsknuf",
+   "secs": 1.18
+  },
+  "ai|Flight gear.": {
+   "file": "ai-flight-gear-6d58ed.mp3",
+   "hash": "6d58ed3413",
+   "voice": "voice_86u1detsknuf",
+   "secs": 0.93
+  },
+  "ai|Flight operations.": {
+   "file": "ai-flight-operations-fb8bd4.mp3",
+   "hash": "fb8bd4a3fd",
+   "voice": "voice_86u1detsknuf",
+   "secs": 1.49
+  },
+  "ai|Flight control.": {
+   "file": "ai-flight-control-758701.mp3",
+   "hash": "7587017187",
+   "voice": "voice_86u1detsknuf",
+   "secs": 1.1
+  },
+  "ai|Midships repair locker.": {
+   "file": "ai-midships-repair-locker-855e4b.mp3",
+   "hash": "855e4b5566",
+   "voice": "voice_86u1detsknuf",
+   "secs": 1.55
+  },
+  "ai|Avionics workshop.": {
+   "file": "ai-avionics-workshop-30a906.mp3",
+   "hash": "30a906c663",
+   "voice": "voice_86u1detsknuf",
+   "secs": 1.47
+  },
+  "ai|Midships fan room.": {
+   "file": "ai-midships-fan-room-6da3c6.mp3",
+   "hash": "6da3c6d2fe",
+   "voice": "voice_86u1detsknuf",
+   "secs": 1.48
+  },
+  "ai|Aircrew office.": {
+   "file": "ai-aircrew-office-4daff9.mp3",
+   "hash": "4daff99136",
+   "voice": "voice_86u1detsknuf",
+   "secs": 1.22
+  },
+  "ai|Flight equipment.": {
+   "file": "ai-flight-equipment-5ef7b1.mp3",
+   "hash": "5ef7b131ab",
+   "voice": "voice_86u1detsknuf",
+   "secs": 1.17
+  },
+  "ai|Keel passage.": {
+   "file": "ai-keel-passage-df6c12.mp3",
+   "hash": "df6c12b451",
+   "voice": "voice_86u1detsknuf",
+   "secs": 1.17
+  },
+  "ai|Engineering passage.": {
+   "file": "ai-engineering-passage-e0b66c.mp3",
+   "hash": "e0b66c4074",
+   "voice": "voice_86u1detsknuf",
+   "secs": 1.43
+  },
+  "ai|Combat information centre.": {
+   "file": "ai-combat-information-centre-340f31.mp3",
+   "hash": "340f317e9c",
+   "voice": "voice_86u1detsknuf",
+   "secs": 1.6
+  },
+  "ai|Damage control centre.": {
+   "file": "ai-damage-control-centre-b70338.mp3",
+   "hash": "b7033889a0",
+   "voice": "voice_86u1detsknuf",
+   "secs": 1.58
+  },
+  "ai|Main switchboard.": {
+   "file": "ai-main-switchboard-d512fe.mp3",
+   "hash": "d512fe9df4",
+   "voice": "voice_86u1detsknuf",
+   "secs": 1.29
+  },
+  "ai|Damage control store.": {
+   "file": "ai-damage-control-store-d586be.mp3",
+   "hash": "d586befa71",
+   "voice": "voice_86u1detsknuf",
+   "secs": 1.5
+  },
+  "ai|Flag plot.": {
+   "file": "ai-flag-plot-81492c.mp3",
+   "hash": "81492c06b5",
+   "voice": "voice_86u1detsknuf",
+   "secs": 0.97
+  },
+  "ai|Communications.": {
+   "file": "ai-communications-369bbd.mp3",
+   "hash": "369bbdf5a8",
+   "voice": "voice_86u1detsknuf",
+   "secs": 1.17
+  },
+  "ai|Engineering control.": {
+   "file": "ai-engineering-control-5fa940.mp3",
+   "hash": "5fa9400af2",
+   "voice": "voice_86u1detsknuf",
+   "secs": 1.16
+  },
+  "ai|Engineer's office.": {
+   "file": "ai-engineer-s-office-b96791.mp3",
+   "hash": "b9679147e6",
+   "voice": "voice_86u1detsknuf",
+   "secs": 1.29
+  },
+  "ai|Bridge.": {
+   "file": "ai-bridge-871121.mp3",
+   "hash": "87112135fd",
+   "voice": "voice_86u1detsknuf",
+   "secs": 0.72
+  },
+  "ai|Tower passage.": {
+   "file": "ai-tower-passage-cfb25a.mp3",
+   "hash": "cfb25af41c",
+   "voice": "voice_86u1detsknuf",
+   "secs": 1.11
+  },
+  "ai|Navigation office.": {
+   "file": "ai-navigation-office-009735.mp3",
+   "hash": "0097351034",
+   "voice": "voice_86u1detsknuf",
+   "secs": 1.32
+  },
+  "ai|Captain's cabin.": {
+   "file": "ai-captain-s-cabin-8661ed.mp3",
+   "hash": "8661ed6b8d",
+   "voice": "voice_86u1detsknuf",
+   "secs": 1.14
+  },
+  "ai|Aft keel lobby.": {
+   "file": "ai-aft-keel-lobby-2b11a2.mp3",
+   "hash": "2b11a21f74",
+   "voice": "voice_86u1detsknuf",
+   "secs": 1.38
+  },
+  "ai|Midships stores.": {
+   "file": "ai-midships-stores-fbb129.mp3",
+   "hash": "fbb12932c2",
+   "voice": "voice_86u1detsknuf",
+   "secs": 1.26
+  },
+  "ai|Midships washroom.": {
+   "file": "ai-midships-washroom-a34728.mp3",
+   "hash": "a3472899ec",
+   "voice": "voice_86u1detsknuf",
+   "secs": 1.49
+  },
+  "ai|Aircrew rest room.": {
+   "file": "ai-aircrew-rest-room-524f43.mp3",
+   "hash": "524f431368",
+   "voice": "voice_86u1detsknuf",
+   "secs": 1.28
+  },
+  "ai|Marines' berths.": {
+   "file": "ai-marines-berths-d6c0a6.mp3",
+   "hash": "d6c0a6be83",
+   "voice": "voice_86u1detsknuf",
+   "secs": 1.35
+  },
+  "ai|Marines.": {
+   "file": "ai-marines-b6724b.mp3",
+   "hash": "b6724b1c8c",
+   "voice": "voice_86u1detsknuf",
+   "secs": 0.83
+  },
+  "ai|Sick bay.": {
+   "file": "ai-sick-bay-8be54a.mp3",
+   "hash": "8be54a858f",
+   "voice": "voice_86u1detsknuf",
+   "secs": 0.84
+  },
+  "ai|Galley and mess.": {
+   "file": "ai-galley-and-mess-b748af.mp3",
+   "hash": "b748afb3f7",
+   "voice": "voice_86u1detsknuf",
+   "secs": 1.28
+  },
+  "ai|Gym and rec.": {
+   "file": "ai-gym-and-rec-9e3924.mp3",
+   "hash": "9e3924a75b",
+   "voice": "voice_86u1detsknuf",
+   "secs": 0.98
+  },
+  "ai|Drum stores.": {
+   "file": "ai-drum-stores-49a2a3.mp3",
+   "hash": "49a2a33e51",
+   "voice": "voice_86u1detsknuf",
+   "secs": 1.14
+  },
+  "ai|Empty compartment.": {
+   "file": "ai-empty-compartment-da4280.mp3",
+   "hash": "da4280748e",
+   "voice": "voice_86u1detsknuf",
+   "secs": 1.24
+  },
+  "ai|Laundry.": {
+   "file": "ai-laundry-0d6f6b.mp3",
+   "hash": "0d6f6ba885",
+   "voice": "voice_86u1detsknuf",
+   "secs": 0.83
+  },
+  "ai|Rec room.": {
+   "file": "ai-rec-room-128c24.mp3",
+   "hash": "128c245973",
+   "voice": "voice_86u1detsknuf",
+   "secs": 0.91
+  },
+  "ai|Senior rates' mess.": {
+   "file": "ai-senior-rates-mess-24aa5c.mp3",
+   "hash": "24aa5c9d4c",
+   "voice": "voice_86u1detsknuf",
+   "secs": 1.55
+  },
+  "ai|Training room.": {
+   "file": "ai-training-room-1ae152.mp3",
+   "hash": "1ae1526694",
+   "voice": "voice_86u1detsknuf",
+   "secs": 0.96
+  },
+  "ai|Main stores.": {
+   "file": "ai-main-stores-5eec32.mp3",
+   "hash": "5eec32b56b",
+   "voice": "voice_86u1detsknuf",
+   "secs": 1.29
+  },
+  "ai|Galley.": {
+   "file": "ai-galley-e2d118.mp3",
+   "hash": "e2d1183cd5",
+   "voice": "voice_86u1detsknuf",
+   "secs": 0.72
+  },
+  "ai|Mess.": {
+   "file": "ai-mess-dd8894.mp3",
+   "hash": "dd8894df65",
+   "voice": "voice_86u1detsknuf",
+   "secs": 0.78
+  },
+  "ai|Gym.": {
+   "file": "ai-gym-017c4b.mp3",
+   "hash": "017c4bdb3d",
+   "voice": "voice_86u1detsknuf",
+   "secs": 0.9
+  },
+  "ai|Stores.": {
+   "file": "ai-stores-4966f7.mp3",
+   "hash": "4966f757b0",
+   "voice": "voice_86u1detsknuf",
+   "secs": 1.02
+  },
+  "ai|Quarters A.": {
+   "file": "ai-quarters-a-f11afd.mp3",
+   "hash": "f11afd3dae",
+   "voice": "voice_86u1detsknuf",
+   "secs": 1.04
+  },
+  "ai|Quarters B.": {
+   "file": "ai-quarters-b-7dccf1.mp3",
+   "hash": "7dccf1fb2e",
+   "voice": "voice_86u1detsknuf",
+   "secs": 1.2
+  },
+  "ai|Quarters C.": {
+   "file": "ai-quarters-c-48e414.mp3",
+   "hash": "48e414ec33",
+   "voice": "voice_86u1detsknuf",
+   "secs": 1.37
+  },
+  "ai|Berths.": {
+   "file": "ai-berths-2b1bae.mp3",
+   "hash": "2b1bae0fc1",
+   "voice": "voice_86u1detsknuf",
+   "secs": 0.86
+  },
+  "ai|Hydroponic garden.": {
+   "file": "ai-hydroponic-garden-44bbca.mp3",
+   "hash": "44bbca94d3",
+   "voice": "voice_86u1detsknuf",
+   "secs": 1.38
+  },
+  "ai|Garden.": {
+   "file": "ai-garden-f1e52a.mp3",
+   "hash": "f1e52a2ece",
+   "voice": "voice_86u1detsknuf",
+   "secs": 0.79
+  },
+  "ai|Aircrew quarters.": {
+   "file": "ai-aircrew-quarters-ae25cb.mp3",
+   "hash": "ae25cbc234",
+   "voice": "voice_86u1detsknuf",
+   "secs": 1.34
+  },
+  "ai|Aircrew.": {
+   "file": "ai-aircrew-f3e6f6.mp3",
+   "hash": "f3e6f6dca6",
+   "voice": "voice_86u1detsknuf",
+   "secs": 0.89
+  },
+  "ai|Wardroom.": {
+   "file": "ai-wardroom-71cc51.mp3",
+   "hash": "71cc513aa1",
+   "voice": "voice_86u1detsknuf",
+   "secs": 0.94
+  },
+  "ai|Machine shop.": {
+   "file": "ai-machine-shop-d95489.mp3",
+   "hash": "d95489693a",
+   "voice": "voice_86u1detsknuf",
+   "secs": 1.08
+  },
+  "ai|Electrical shop.": {
+   "file": "ai-electrical-shop-577ca8.mp3",
+   "hash": "577ca8ff65",
+   "voice": "voice_86u1detsknuf",
+   "secs": 1.02
+  },
+  "ai|Pipe shop.": {
+   "file": "ai-pipe-shop-52768f.mp3",
+   "hash": "52768fd3e7",
+   "voice": "voice_86u1detsknuf",
+   "secs": 0.97
+  },
+  "ai|Engineers' workshop.": {
+   "file": "ai-engineers-workshop-697a67.mp3",
+   "hash": "697a67c285",
+   "voice": "voice_86u1detsknuf",
+   "secs": 1.32
+  },
+  "ai|Workshop.": {
+   "file": "ai-workshop-0f0e52.mp3",
+   "hash": "0f0e524c81",
+   "voice": "voice_86u1detsknuf",
+   "secs": 0.96
+  },
+  "ai|Ship's office.": {
+   "file": "ai-ship-s-office-961141.mp3",
+   "hash": "9611410a4d",
+   "voice": "voice_86u1detsknuf",
+   "secs": 1.07
+  },
+  "ai|Briefing room.": {
+   "file": "ai-briefing-room-b0c615.mp3",
+   "hash": "b0c6157aee",
+   "voice": "voice_86u1detsknuf",
+   "secs": 0.84
+  },
+  "ai|Intelligence office.": {
+   "file": "ai-intelligence-office-e94255.mp3",
+   "hash": "e942550fd0",
+   "voice": "voice_86u1detsknuf",
+   "secs": 1.36
+  },
+  "ai|Office.": {
+   "file": "ai-office-fe5faf.mp3",
+   "hash": "fe5fafdfda",
+   "voice": "voice_86u1detsknuf",
+   "secs": 0.84
+  },
+  "ai|Officers' cabins.": {
+   "file": "ai-officers-cabins-1263ca.mp3",
+   "hash": "1263ca9a97",
+   "voice": "voice_86u1detsknuf",
+   "secs": 1.32
+  },
+  "ai|Officers.": {
+   "file": "ai-officers-e7c6fb.mp3",
+   "hash": "e7c6fb4864",
+   "voice": "voice_86u1detsknuf",
+   "secs": 1.02
+  },
+  "ai|Ring corridor.": {
+   "file": "ai-ring-corridor-46bef0.mp3",
+   "hash": "46bef06bca",
+   "voice": "voice_86u1detsknuf",
+   "secs": 1.46
+  },
+  "ai|Spine deck.": {
+   "file": "ai-spine-deck-c27491.mp3",
+   "hash": "c27491e724",
+   "voice": "voice_86u1detsknuf",
+   "secs": 1.02
+  },
+  "ai|Upper deck.": {
+   "file": "ai-upper-deck-2d5472.mp3",
+   "hash": "2d5472af77",
+   "voice": "voice_86u1detsknuf",
+   "secs": 0.93
+  },
+  "ai|Lower deck.": {
+   "file": "ai-lower-deck-b29deb.mp3",
+   "hash": "b29deb37eb",
+   "voice": "voice_86u1detsknuf",
+   "secs": 1
+  },
+  "ai|Hangar floor.": {
+   "file": "ai-hangar-floor-cb84cd.mp3",
+   "hash": "cb84cd3f91",
+   "voice": "voice_86u1detsknuf",
+   "secs": 1.17
+  },
+  "ai|Crew tunnel deck.": {
+   "file": "ai-crew-tunnel-deck-8d79d1.mp3",
+   "hash": "8d79d1e625",
+   "voice": "voice_86u1detsknuf",
+   "secs": 1.29
+  },
+  "ai|Keel passage deck.": {
+   "file": "ai-keel-passage-deck-2c5e10.mp3",
+   "hash": "2c5e107df3",
+   "voice": "voice_86u1detsknuf",
+   "secs": 1.44
+  },
+  "ai|Bridge tower.": {
+   "file": "ai-bridge-tower-94da15.mp3",
+   "hash": "94da15a58f",
+   "voice": "voice_86u1detsknuf",
+   "secs": 1.06
+  },
+  "ai|Forward drum, outer deck.": {
+   "file": "ai-forward-drum-outer-deck-7f922b.mp3",
+   "hash": "7f922b9ece",
+   "voice": "voice_86u1detsknuf",
+   "secs": 2.14
+  },
+  "ai|Forward drum, inner deck.": {
+   "file": "ai-forward-drum-inner-deck-82678f.mp3",
+   "hash": "82678f7867",
+   "voice": "voice_86u1detsknuf",
+   "secs": 1.93
+  },
+  "ai|After drum, outer deck.": {
+   "file": "ai-after-drum-outer-deck-b07a4e.mp3",
+   "hash": "b07a4eb51a",
+   "voice": "voice_86u1detsknuf",
+   "secs": 2
+  },
+  "ai|After drum, inner deck.": {
+   "file": "ai-after-drum-inner-deck-07db64.mp3",
+   "hash": "07db642f96",
+   "voice": "voice_86u1detsknuf",
+   "secs": 2.06
+  },
+  "ai|Away the damage control party.": {
+   "file": "ai-away-the-damage-control-party-b4e7d1.mp3",
+   "hash": "b4e7d1724a",
+   "voice": "voice_86u1detsknuf",
+   "secs": 1.93
+  },
+  "ai|Electrical fault.": {
+   "file": "ai-electrical-fault-377979.mp3",
+   "hash": "377979a6e1",
+   "voice": "voice_86u1detsknuf",
+   "secs": 1.25
+  },
+  "ai|Coolant leak.": {
+   "file": "ai-coolant-leak-0e8f2b.mp3",
+   "hash": "0e8f2b408f",
+   "voice": "voice_86u1detsknuf",
+   "secs": 1.17
+  },
+  "ai|Fire spreading.": {
+   "file": "ai-fire-spreading-a943af.mp3",
+   "hash": "a943af406e",
+   "voice": "voice_86u1detsknuf",
+   "secs": 1.31
+  },
+  "ai|Fire out.": {
+   "file": "ai-fire-out-ec0901.mp3",
+   "hash": "ec09013ec2",
+   "voice": "voice_86u1detsknuf",
+   "secs": 1.07
+  },
+  "ai|Fault repaired.": {
+   "file": "ai-fault-repaired-1af7cc.mp3",
+   "hash": "1af7cc3219",
+   "voice": "voice_86u1detsknuf",
+   "secs": 1.1
+  },
+  "ai|Leak patched.": {
+   "file": "ai-leak-patched-1c575b.mp3",
+   "hash": "1c575b1951",
+   "voice": "voice_86u1detsknuf",
+   "secs": 1.05
+  },
+  "ai|Hull breach.": {
+   "file": "ai-hull-breach-f721a1.mp3",
+   "hash": "f721a15ad1",
+   "voice": "voice_86u1detsknuf",
+   "secs": 0.94
+  },
+  "ai|Hit.": {
+   "file": "ai-hit-2a1557.mp3",
+   "hash": "2a15573f4c",
+   "voice": "voice_86u1detsknuf",
+   "secs": 0.69
+  },
+  "ai|Bow section.": {
+   "file": "ai-bow-section-691239.mp3",
+   "hash": "6912397f51",
+   "voice": "voice_86u1detsknuf",
+   "secs": 1.07
+  },
+  "ai|Forward drum.": {
+   "file": "ai-forward-drum-b3f36b.mp3",
+   "hash": "b3f36b0976",
+   "voice": "voice_86u1detsknuf",
+   "secs": 1.12
+  },
+  "ai|After drum.": {
+   "file": "ai-after-drum-64320f.mp3",
+   "hash": "64320f3c0d",
+   "voice": "voice_86u1detsknuf",
+   "secs": 1
+  },
+  "ai|Hangar section.": {
+   "file": "ai-hangar-section-fd155a.mp3",
+   "hash": "fd155a0e35",
+   "voice": "voice_86u1detsknuf",
+   "secs": 1.15
+  },
+  "ai|Stern section.": {
+   "file": "ai-stern-section-6c153b.mp3",
+   "hash": "6c153bd329",
+   "voice": "voice_86u1detsknuf",
+   "secs": 1.19
+  },
+  "medical|Casualty reported in the bow section. Medical team, away.": {
+   "file": "medical-casualty-reported-in-the-bow-section-4ad996.mp3",
+   "hash": "4ad9968c33",
+   "voice": "voice_4bwoukkohtst",
+   "secs": 2.77
+  },
+  "medical|Casualty reported in the forward drum. Medical team, away.": {
+   "file": "medical-casualty-reported-in-the-forward-dru-c57b46.mp3",
+   "hash": "c57b46a9ee",
+   "voice": "voice_4bwoukkohtst",
+   "secs": 2.74
+  },
+  "medical|Casualty reported in the after drum. Medical team, away.": {
+   "file": "medical-casualty-reported-in-the-after-drum-01895e.mp3",
+   "hash": "01895e9e76",
+   "voice": "voice_4bwoukkohtst",
+   "secs": 2.69
+  },
+  "medical|Casualty reported in the hangar section. Medical team, away.": {
+   "file": "medical-casualty-reported-in-the-hangar-sect-fe3293.mp3",
+   "hash": "fe3293b79e",
+   "voice": "voice_4bwoukkohtst",
+   "secs": 3.18
+  },
+  "medical|Casualty reported in the stern section. Medical team, away.": {
+   "file": "medical-casualty-reported-in-the-stern-secti-23e09b.mp3",
+   "hash": "23e09b5de1",
+   "voice": "voice_4bwoukkohtst",
+   "secs": 2.58
+  },
+  "ai|Torpedo hit.": {
+   "file": "ai-torpedo-hit-189de7.mp3",
+   "hash": "189de7d1c5",
+   "voice": "voice_86u1detsknuf",
+   "secs": 1.57
+  },
+  "ai|Hit on the forward drum's hub ring.": {
+   "file": "ai-hit-on-the-forward-drum-s-hub-ring-a0f24e.mp3",
+   "hash": "a0f24ea115",
+   "voice": "voice_86u1detsknuf",
+   "secs": 2.36
+  },
+  "ai|Hit on the after drum's hub ring.": {
+   "file": "ai-hit-on-the-after-drum-s-hub-ring-cfdc7c.mp3",
+   "hash": "cfdc7c4afd",
+   "voice": "voice_86u1detsknuf",
+   "secs": 2.14
+  },
+  "ai|Hit on a spoke of the forward drum.": {
+   "file": "ai-hit-on-a-spoke-of-the-forward-drum-346487.mp3",
+   "hash": "346487d27a",
+   "voice": "voice_86u1detsknuf",
+   "secs": 2.31
+  },
+  "ai|Hit on a spoke of the after drum.": {
+   "file": "ai-hit-on-a-spoke-of-the-after-drum-96caea.mp3",
+   "hash": "96caea1bc3",
+   "voice": "voice_86u1detsknuf",
+   "secs": 2.04
+  },
+  "ai|Hit on a sleeve strut.": {
+   "file": "ai-hit-on-a-sleeve-strut-012259.mp3",
+   "hash": "01225994ed",
+   "voice": "voice_86u1detsknuf",
+   "secs": 1.5
+  },
+  "ai|The ring corridor is venting.": {
+   "file": "ai-the-ring-corridor-is-venting-11168f.mp3",
+   "hash": "11168f5d85",
+   "voice": "voice_86u1detsknuf",
+   "secs": 2.13
+  },
+  "ai|Structure damaged, no breach.": {
+   "file": "ai-structure-damaged-no-breach-183658.mp3",
+   "hash": "183658302e",
+   "voice": "voice_86u1detsknuf",
+   "secs": 2.53
+  },
+  "captain|General quarters, general quarters. Raider closing to port. All hands, man your battle stations. Close all pressure doors.": {
+   "file": "captain-general-quarters-general-quarters-ra-7ef2c3.mp3",
+   "hash": "7ef2c38bb7",
+   "voice": "voice_10othgsdn3o3",
+   "secs": 6.3
+  },
+  "captain|General quarters, general quarters. Raider closing to starboard. All hands, man your battle stations. Close all pressure doors.": {
+   "file": "captain-general-quarters-general-quarters-ra-16366a.mp3",
+   "hash": "16366afde8",
+   "voice": "voice_10othgsdn3o3",
+   "secs": 7.31
+  },
+  "captain|General quarters, general quarters. Raider closing from above. All hands, man your battle stations. Close all pressure doors.": {
+   "file": "captain-general-quarters-general-quarters-ra-825f1d.mp3",
+   "hash": "825f1d18c5",
+   "voice": "voice_10othgsdn3o3",
+   "secs": 6.62
+  },
+  "captain|General quarters, general quarters. Raider closing from below. All hands, man your battle stations. Close all pressure doors.": {
+   "file": "captain-general-quarters-general-quarters-ra-9b6a63.mp3",
+   "hash": "9b6a6306d9",
+   "voice": "voice_10othgsdn3o3",
+   "secs": 6.65
+  },
+  "captain|General quarters, general quarters. Incoming fire to port. Close all pressure doors. Brace, brace, brace.": {
+   "file": "captain-general-quarters-general-quarters-in-54bc6f.mp3",
+   "hash": "54bc6f625f",
+   "voice": "voice_10othgsdn3o3",
+   "secs": 6.19
+  },
+  "captain|General quarters, general quarters. Incoming fire to starboard. Close all pressure doors. Brace, brace, brace.": {
+   "file": "captain-general-quarters-general-quarters-in-754d8d.mp3",
+   "hash": "754d8d989a",
+   "voice": "voice_10othgsdn3o3",
+   "secs": 5.66
+  },
+  "captain|General quarters, general quarters. Incoming fire from above. Close all pressure doors. Brace, brace, brace.": {
+   "file": "captain-general-quarters-general-quarters-in-aa58ea.mp3",
+   "hash": "aa58ea1448",
+   "voice": "voice_10othgsdn3o3",
+   "secs": 6.47
+  },
+  "captain|General quarters, general quarters. Incoming fire from below. Close all pressure doors. Brace, brace, brace.": {
+   "file": "captain-general-quarters-general-quarters-in-df8b6d.mp3",
+   "hash": "df8b6d66bd",
+   "voice": "voice_10othgsdn3o3",
+   "secs": 6.26
+  },
+  "captain|Secure from general quarters.": {
+   "file": "captain-secure-from-general-quarters-964768.mp3",
+   "hash": "964768672e",
+   "voice": "voice_10othgsdn3o3",
+   "secs": 1.43
+  },
+  "captain|Secure from general quarters. Secure from condition one. Repressurising the ship.": {
+   "file": "captain-secure-from-general-quarters-secure-2e03de.mp3",
+   "hash": "2e03de438a",
+   "voice": "voice_10othgsdn3o3",
+   "secs": 4.51
+  },
+  "captain|Set condition one throughout the ship. All hands, don vac suits. Venting in 10 seconds.": {
+   "file": "captain-set-condition-one-throughout-the-shi-416128.mp3",
+   "hash": "4161281103",
+   "voice": "voice_10othgsdn3o3",
+   "secs": 4.73
+  },
+  "captain|Set condition one throughout the ship. All hands, don vac suits. Venting the fixed hull in 10 seconds. The drums stay pressurised.": {
+   "file": "captain-set-condition-one-throughout-the-shi-9288b9.mp3",
+   "hash": "9288b90ad5",
+   "voice": "voice_10othgsdn3o3",
+   "secs": 6.91
+  },
+  "ai|Venting the ship. Helmets on.": {
+   "file": "ai-venting-the-ship-helmets-on-c5822a.mp3",
+   "hash": "c5822a1b6b",
+   "voice": "voice_86u1detsknuf",
+   "secs": 2.25
+  },
+  "ai|Venting the fixed hull. Helmets on.": {
+   "file": "ai-venting-the-fixed-hull-helmets-on-10a59e.mp3",
+   "hash": "10a59e6c0c",
+   "voice": "voice_86u1detsknuf",
+   "secs": 2.72
+  },
+  "ai|The ship is repressurised. You may open your helmets.": {
+   "file": "ai-the-ship-is-repressurised-you-may-op-fb5972.mp3",
+   "hash": "fb59728dc4",
+   "voice": "voice_86u1detsknuf",
+   "secs": 3.68
+  },
+  "ai|Airlock cycling. Pumping down.": {
+   "file": "ai-airlock-cycling-pumping-down-29216c.mp3",
+   "hash": "29216c82b1",
+   "voice": "voice_86u1detsknuf",
+   "secs": 2.65
+  },
+  "ai|Airlock cycling. Filling.": {
+   "file": "ai-airlock-cycling-filling-742539.mp3",
+   "hash": "74253980cd",
+   "voice": "voice_86u1detsknuf",
+   "secs": 2.41
+  },
+  "ai|Torpedo launch. Torpedoes inbound. Point defence is tracking.": {
+   "file": "ai-torpedo-launch-torpedoes-inbound-poi-d04b60.mp3",
+   "hash": "d04b601bbb",
+   "voice": "voice_86u1detsknuf",
+   "secs": 4.19
+  },
+  "ship|Tubes one and two, fire. Birds away.": {
+   "file": "ship-tubes-one-and-two-fire-birds-away-c3d7ce.mp3",
+   "hash": "c3d7cec08b",
+   "voice": "voice_av0j47o3r5ps",
+   "secs": 2.75
+  },
+  "ship|Port broadside, fire. Birds away.": {
+   "file": "ship-port-broadside-fire-birds-away-2e07b8.mp3",
+   "hash": "2e07b88afe",
+   "voice": "voice_av0j47o3r5ps",
+   "secs": 3.85
+  },
+  "ship|Starboard broadside, fire. Birds away.": {
+   "file": "ship-starboard-broadside-fire-birds-away-02013f.mp3",
+   "hash": "02013f8d68",
+   "voice": "voice_av0j47o3r5ps",
+   "secs": 3.08
+  },
+  "ship|Port railgun, fire.": {
+   "file": "ship-port-railgun-fire-89f448.mp3",
+   "hash": "89f448427b",
+   "voice": "voice_av0j47o3r5ps",
+   "secs": 1.86
+  },
+  "ship|Starboard railgun, fire.": {
+   "file": "ship-starboard-railgun-fire-fbc39b.mp3",
+   "hash": "fbc39bcef0",
+   "voice": "voice_av0j47o3r5ps",
+   "secs": 2.03
+  },
+  "ship|Torpedo hit on the raider.": {
+   "file": "ship-torpedo-hit-on-the-raider-51d919.mp3",
+   "hash": "51d9194f36",
+   "voice": "voice_av0j47o3r5ps",
+   "secs": 1.81
+  },
+  "ship|The raider is breaking off.": {
+   "file": "ship-the-raider-is-breaking-off-e8692b.mp3",
+   "hash": "e8692bdd39",
+   "voice": "voice_av0j47o3r5ps",
+   "secs": 1.7
+  },
+  "ship|Splash one. The raider is destroyed. Well done, gunners.": {
+   "file": "ship-splash-one-the-raider-is-destroyed-w-65f214.mp3",
+   "hash": "65f214bba0",
+   "voice": "voice_av0j47o3r5ps",
+   "secs": 3.75
+  },
+  "flight|Flight control. You are hit and dead in space. Hands off: we are bringing you in.": {
+   "file": "flight-flight-control-you-are-hit-and-dead-9eee65.mp3",
+   "hash": "9eee6596be",
+   "voice": "voice_y99kim4gm369",
+   "secs": 5.39
+  },
+  "engineer|Stand by for main drive. All hands, take hold.": {
+   "file": "engineer-stand-by-for-main-drive-all-hands-ta-6b8d7a.mp3",
+   "hash": "6b8d7a0adb",
+   "voice": "voice_wtxdmmbowidq",
+   "secs": 3.2
+  },
+  "ai|Main drive burning. Weightless spaces, hold on.": {
+   "file": "ai-main-drive-burning-weightless-spaces-8bb17d.mp3",
+   "hash": "8bb17d4275",
+   "voice": "voice_86u1detsknuf",
+   "secs": 3.16
+  },
+  "ai|Main drive burning. Hold on to something.": {
+   "file": "ai-main-drive-burning-hold-on-to-someth-aa15cf.mp3",
+   "hash": "aa15cfb1e0",
+   "voice": "voice_86u1detsknuf",
+   "secs": 2.38
+  },
+  "engineer|Heat warning. Heat sinks at eighty percent.": {
+   "file": "engineer-heat-warning-heat-sinks-at-eighty-pe-ab78a0.mp3",
+   "hash": "ab78a095ea",
+   "voice": "voice_wtxdmmbowidq",
+   "secs": 2.71
+  },
+  "engineer|Heat sinks full. Point defence and railguns holding fire. Main drive restricted.": {
+   "file": "engineer-heat-sinks-full-point-defence-and-ra-3e4126.mp3",
+   "hash": "3e4126b42d",
+   "voice": "voice_wtxdmmbowidq",
+   "secs": 5.03
+  },
+  "engineer|Heat sinks full. Point defence holding fire. Main drive restricted.": {
+   "file": "engineer-heat-sinks-full-point-defence-holdin-428a56.mp3",
+   "hash": "428a56d675",
+   "voice": "voice_wtxdmmbowidq",
+   "secs": 4.11
+  },
+  "engineer|Heat back under the limit. Weapons free.": {
+   "file": "engineer-heat-back-under-the-limit-weapons-fr-24d3f5.mp3",
+   "hash": "24d3f57746",
+   "voice": "voice_wtxdmmbowidq",
+   "secs": 2.05
+  },
+  "engineer|The port radiator is badly damaged.": {
+   "file": "engineer-the-port-radiator-is-badly-damaged-e350b7.mp3",
+   "hash": "e350b79ac3",
+   "voice": "voice_wtxdmmbowidq",
+   "secs": 2.27
+  },
+  "engineer|The starboard radiator is badly damaged.": {
+   "file": "engineer-the-starboard-radiator-is-badly-dama-de2261.mp3",
+   "hash": "de226142d3",
+   "voice": "voice_wtxdmmbowidq",
+   "secs": 2.43
+  },
+  "engineer|Propellant leak. A tank is holed.": {
+   "file": "engineer-propellant-leak-a-tank-is-holed-b205e2.mp3",
+   "hash": "b205e2d26d",
+   "voice": "voice_wtxdmmbowidq",
+   "secs": 2.23
+  },
+  "ship|Navigator. Waypoint Tango laid in.": {
+   "file": "ship-navigator-waypoint-tango-laid-in-6be4ab.mp3",
+   "hash": "6be4ab2ff8",
+   "voice": "voice_av0j47o3r5ps",
+   "secs": 2.6
+  },
+  "ship|Navigator. Waypoint Sierra laid in.": {
+   "file": "ship-navigator-waypoint-sierra-laid-in-bf2a6a.mp3",
+   "hash": "bf2a6af7f8",
+   "voice": "voice_av0j47o3r5ps",
+   "secs": 3.05
+  },
+  "ship|Navigator. Waypoint Romeo laid in.": {
+   "file": "ship-navigator-waypoint-romeo-laid-in-2b92d6.mp3",
+   "hash": "2b92d66a79",
+   "voice": "voice_av0j47o3r5ps",
+   "secs": 2.52
+  },
+  "ship|Navigator. Waypoint Kilo laid in.": {
+   "file": "ship-navigator-waypoint-kilo-laid-in-91c6bc.mp3",
+   "hash": "91c6bcd9c4",
+   "voice": "voice_av0j47o3r5ps",
+   "secs": 2.5
+  },
+  "ship|Navigator. Waypoint Victor laid in.": {
+   "file": "ship-navigator-waypoint-victor-laid-in-f69306.mp3",
+   "hash": "f693069505",
+   "voice": "voice_av0j47o3r5ps",
+   "secs": 2.48
+  },
+  "ship|Navigator. Turnover. Flip and burn.": {
+   "file": "ship-navigator-turnover-flip-and-burn-b73a69.mp3",
+   "hash": "b73a6994a1",
+   "voice": "voice_av0j47o3r5ps",
+   "secs": 2.81
+  },
+  "ship|Navigator. On station at waypoint Tango.": {
+   "file": "ship-navigator-on-station-at-waypoint-tan-665ffa.mp3",
+   "hash": "665ffa2836",
+   "voice": "voice_av0j47o3r5ps",
+   "secs": 2.88
+  },
+  "ship|Navigator. On station at waypoint Sierra.": {
+   "file": "ship-navigator-on-station-at-waypoint-sie-dbf180.mp3",
+   "hash": "dbf180cb98",
+   "voice": "voice_av0j47o3r5ps",
+   "secs": 2.9
+  },
+  "ship|Navigator. On station at waypoint Romeo.": {
+   "file": "ship-navigator-on-station-at-waypoint-rom-7e89d1.mp3",
+   "hash": "7e89d10040",
+   "voice": "voice_av0j47o3r5ps",
+   "secs": 3.01
+  },
+  "ship|Navigator. On station at waypoint Kilo.": {
+   "file": "ship-navigator-on-station-at-waypoint-kil-9f00fc.mp3",
+   "hash": "9f00fc6533",
+   "voice": "voice_av0j47o3r5ps",
+   "secs": 3.15
+  },
+  "ship|Navigator. On station at waypoint Victor.": {
+   "file": "ship-navigator-on-station-at-waypoint-vic-432478.mp3",
+   "hash": "43247868dc",
+   "voice": "voice_av0j47o3r5ps",
+   "secs": 3.02
   }
  }
 }
