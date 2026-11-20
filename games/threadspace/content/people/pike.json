@@ -1,0 +1,16 @@
+{
+  "id": "pike",
+  "name": "Leading Hand Pike",
+  "dept": "crew",
+  "voice": {
+    "pitch": 0.8,
+    "rate": 1
+  },
+  "cast": {
+    "voiceId": null,
+    "design": "A strong-voiced woman in her forties with a Kingston Jamaican accent, warm and no-nonsense.",
+    "gender": "female",
+    "language": "en-JM",
+    "style": "Runs a mess deck; firm, a dry humour."
+  }
+}

@@ -13,7 +13,7 @@ bridge's forward windows; the walkable catwalk; the first carrier archived in `a
 
 ## Where things stand
 
-- The carrier is about 12,000 lines in 29 modules under `src/carrier/`, plus 170 KB of `ships/carrier.layout.json`.
+- The carrier is about 12,000 lines in 29 modules under `src/carrier/`, plus 170 KB of `ships/carrier.layout.json` (since split into `ships/carrier/`).
   The main game (`game.mjs`, `data.mjs`, sectors, stations, the Kestrel) is a separate page and knows nothing of the
   carrier.
 - Already open before this feedback: the hand play-through of the first week; a second week of career; more kinds of
@@ -120,8 +120,25 @@ three that would otherwise end up wired into `main.mjs`.
 - **`weapons.mjs` and `sets.mjs` split** into `weapons/` (eight files mixed into the class) and `sets/` (fourteen),
   with the old file left as the front door so nothing that imports them changed.
 
-Still to do in this phase: the layout split into `ships/carrier/`, and the content folders with `tools/check.mjs`.
-The seats are named for the carrier still (`C`, `L`); they take any ship's layout, which decision 1 wants.
+**Second half done, 20 November 2026:**
+
+- **The ship is a folder**, `ships/carrier/`: her layout in ten files (`ship`, `decks`, `drum`, `mounts`, `fighter`,
+  `stations`, `damage`, `weapons`, `integrity`, `plant`) that `index.json` names, joined at load the same way by the
+  game (`src/core/ship.mjs`), the node tools and the Blender scripts (`shipkit.load_layout`), with her career, routine
+  and cast beside them. `tools/carrier-v2.mjs` writes the folder; run on the design, it wrote back exactly what was
+  split by hand. A second ship is a second folder.
+- **People** are the first content folder: `content/people/<id>.json`, one per officer and leading hand (name, uniform,
+  browser voice, recorded cast). The ship's files say only where each stands; `src/core/people.mjs` joins them. A
+  person can now change ships, as decision 1 wants.
+- **`tools/check.mjs`**, the one validator: the ship's folder against its index; every room the layout, the career and
+  the routine name; each career step's kind, officer, drill and unlocks; every spot inside its room; every person's
+  file; the cast and the clip index. The generator runs it after writing and the voice tool before recording. Broken
+  on purpose in a copy (a missing person, an unknown step, an officer outside her room, a stray entry), it caught each.
+- The fingerprints were the same after each of these too.
+
+Left for the phases that design their formats: `content/announcements/` (phase 3), `content/dialogue/` and
+`content/missions/` (phase 8); `check.mjs` takes a section for each. The seats are named for the carrier still (`C`,
+`L`); they take any ship's layout, which decision 1 wants.
 
 ## Phase 3. Announcements and voices (one session) [12]
 

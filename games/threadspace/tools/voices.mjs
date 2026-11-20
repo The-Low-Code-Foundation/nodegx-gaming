@@ -35,12 +35,18 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync, unlinkSync, readdir
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadLayout } from '../src/core/ship.mjs';
+import { PEOPLE, loadPeople, peopleNamed } from '../src/core/people.mjs';
+import { check } from './check.mjs';
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 
 const here = (p) => new URL(`../${p}`, import.meta.url);
 const json = (p) => JSON.parse(readFileSync(here(p)));
 const V = json('ships/carrier/voices.json');
+// Who speaks: the officers and leading hands, each in their own file (content/people/<id>.json, their `cast`), and the
+// ship's broadcast (`speakers.ship` in voices.json). `V.speakers` here is all of them; each is written back where it lives.
+const people = await loadPeople(peopleNamed(json('ships/carrier/career.json'), json('ships/carrier/watches.json')), async (p) => json(p));
+V.speakers = { ...Object.fromEntries([...people.values()].map((p) => [p.id, p.cast])), ...V.speakers };
 const OUT = here('assets/voice/');
 const INDEX = here('assets/voice/index.json');
 
@@ -153,6 +159,14 @@ if (flag('--prune')) {
 
 // --- recording ---
 
+// Content with problems would record lines the game will not say: tools/check.mjs first.
+{
+  const { problems } = await check();
+  if (problems.length) {
+    console.error(`tools/check.mjs found ${problems.length} problem${problems.length > 1 ? 's' : ''}; fix ${problems.length > 1 ? 'them' : 'it'} before recording:\n  ${problems.join('\n  ')}`);
+    process.exit(1);
+  }
+}
 const KEY = process.env.GEMINI_API_KEY ?? process.env.GEMINI_KEY;
 if (!KEY) {
   console.error('Set GEMINI_API_KEY in the environment (a Google AI Studio key). Never write it into a file here.');
@@ -202,7 +216,7 @@ async function call(path, body) {
   throw new Error('gave up after 6 tries');
 }
 
-/** Makes the saved voice for `id` from its description; writes its id into ships/carrier/voices.json. Returns its
+/** Makes the saved voice for `id` from its description; writes its id into the person's file (or voices.json, for the ship). Returns its
  *  preview (WAV bytes). */
 async function design(id) {
   const S = V.speakers[id];
@@ -211,7 +225,8 @@ async function design(id) {
     voice: { model: V.model, type: 'prompted', display_name: `ThreadSpace carrier: ${id}`, gender: S.gender, language_code: S.language, prompted: { input: S.design } },
   });
   S.voiceId = j.id;
-  writeFileSync(here('ships/carrier/voices.json'), JSON.stringify(V, null, 2) + '\n');
+  if (people.has(id)) writeFileSync(here(`${PEOPLE}/${id}.json`), JSON.stringify(people.get(id), null, 2) + '\n');
+  else writeFileSync(here('ships/carrier/voices.json'), JSON.stringify({ ...V, speakers: Object.fromEntries(Object.entries(V.speakers).filter(([k]) => !people.has(k))) }, null, 2) + '\n');
   return j.sample_audio?.data ? Buffer.from(j.sample_audio.data, 'base64') : null;
 }
 

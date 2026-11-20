@@ -1,0 +1,17 @@
+{
+  "id": "flight",
+  "name": "Lieutenant Moss",
+  "dept": "flight",
+  "voice": {
+    "pitch": 1.15,
+    "rate": 1.08
+  },
+  "cast": {
+    "voiceId": "voice_y99kim4gm369",
+    "design": "A relaxed, bright-voiced woman in her late twenties with a Brisbane Australian accent, easy and confident.",
+    "gender": "female",
+    "language": "en-AU",
+    "style": "Breezy, a grin in the voice; would rather be flying than talking.",
+    "sample": "Every gunner gets a go in a fighter. Take any of them on the pads. Launch, fly about, then fly yourself home down the lane of rings. Don't call flight control to bring you in: fly it."
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "id": "cox",
+  "name": "Coxswain Hale",
+  "dept": "command",
+  "voice": {
+    "pitch": 0.75,
+    "rate": 0.98
+  },
+  "cast": {
+    "voiceId": "voice_p5jimz0zc72a",
+    "design": "A gravelly, weathered man in his late fifties with a warm Cork Irish accent, low and dry, a smoker's rasp.",
+    "gender": "male",
+    "language": "en-IE",
+    "style": "Dry and unimpressed, but not unkind to a new recruit.",
+    "sample": "So you're the new apprentice. Welcome aboard. You're in Blue watch, berthed in quarters C. Read the watch bill on the board outside this office: it tells you when you're on, and where you muster."
+  }
+}

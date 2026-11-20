@@ -1,0 +1,17 @@
+{
+  "id": "dc",
+  "name": "Chief Okoro",
+  "dept": "crew",
+  "voice": {
+    "pitch": 0.7,
+    "rate": 1.04
+  },
+  "cast": {
+    "voiceId": "voice_nm8fatgcnafz",
+    "design": "A big, deep-voiced Nigerian man in his mid-forties from Lagos, resonant and commanding, with a Lagos Nigerian English accent.",
+    "gender": "male",
+    "language": "en-NG",
+    "style": "Brisk orders, coaching a new hand; a short burst of approval when it is earned.",
+    "sample": "So you're Blue watch's new hand in my party. Everyone aboard fights fires before they do anything else. I'm lighting a drill fire in the gym. The red cabinets in the passages hold extinguishers. Take one, find the fire, put it out. Go."
+  }
+}

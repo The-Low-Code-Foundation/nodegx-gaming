@@ -1,0 +1,17 @@
+{
+  "id": "guns",
+  "name": "Lieutenant Varga",
+  "dept": "command",
+  "voice": {
+    "pitch": 1.05,
+    "rate": 1.06
+  },
+  "cast": {
+    "voiceId": "voice_3uge17k0jmq0",
+    "design": "A sharp, clear-voiced woman in her early thirties with a Johannesburg South African accent, crisp and quick.",
+    "gender": "female",
+    "language": "en-ZA",
+    "style": "Precise and quietly keen on good shooting.",
+    "sample": "Hits under fire. You're a gunner. From now on, when the klaxon goes, you have a turret. And the flight officer has asked for you: Lieutenant Moss, in the pilots' ready room."
+  }
+}

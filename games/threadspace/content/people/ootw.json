@@ -1,0 +1,17 @@
+{
+  "id": "ootw",
+  "name": "Commander Reyes",
+  "dept": "command",
+  "voice": {
+    "pitch": 0.9,
+    "rate": 0.96
+  },
+  "cast": {
+    "voiceId": "voice_dr6r455uf36c",
+    "design": "A composed woman in her early fifties with a warm, low General American voice and a light San Antonio Texan lilt.",
+    "gender": "female",
+    "language": "en-US",
+    "style": "Calm authority on a working bridge; warm when she gives praise.",
+    "sample": "Take the helm. Bring her round ninety degrees, either way, and stop her turning. Gently: that is four hundred metres of ship."
+  }
+}

@@ -49,6 +49,7 @@ import { View } from './render.mjs';
 import { Drive } from './drive.mjs';
 import { Doors } from './doors.mjs';
 import { loadLayout, fetchJson } from '../core/ship.mjs';
+import { loadPeople, peopleNamed, joinPeople } from '../core/people.mjs';
 import { WalkSeat } from './seats/walk.mjs';
 import { HelmSeat } from './seats/helm.mjs';
 import { FighterSeat } from './seats/fighter.mjs';
@@ -64,6 +65,9 @@ const SHIP = 'ships/carrier';
 const L = await loadLayout(SHIP, fetchJson);
 const K = await fetchJson(`${SHIP}/career.json`); // your first week aboard (career.mjs)
 const W = await fetchJson(`${SHIP}/watches.json`); // the ship's routine: clock, watches, muster (watch.mjs)
+// The officers and leading hands are people (content/people/): the ship's files say where they stand, and their own
+// files who they are.
+joinPeople(K, W, await loadPeople(peopleNamed(K, W), fetchJson));
 const q = new URLSearchParams(location.search);
 if (L.weapons.railgun && !L.weapons.railgun.port) {
   // A ship with a railgun along her keel (the archived first carrier) aims it by turning the whole ship.

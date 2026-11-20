@@ -19,6 +19,7 @@
 
 import { readFileSync, writeFileSync } from 'node:fs';
 import { splitLayout } from '../src/core/ship.mjs';
+import { check } from './check.mjs';
 
 const here = (p) => new URL('../' + p, import.meta.url);
 const CHECK_ONLY = process.argv.includes('--check');
@@ -649,4 +650,12 @@ if (!CHECK_ONLY && !problems.length) {
   const files = splitLayout(L, index);
   for (const [f, part] of Object.entries(files)) writeFileSync(here(`ships/carrier/${f}.json`), JSON.stringify(part, null, 1) + '\n');
   console.log(`Wrote ships/carrier/: ${Object.keys(files).map((f) => f + '.json').join(', ')}`);
+}
+// The names the rest of the content gives (the career, the routine, the people, the cast) against what is on disk.
+{
+  const { problems: content } = await check();
+  if (content.length) {
+    console.log(`\ntools/check.mjs: ${content.length} problem${content.length > 1 ? 's' : ''}${CHECK_ONLY ? ' (in the layout on disk; this run wrote nothing)' : ''}:\n  ${content.join('\n  ')}`);
+    process.exitCode = 1;
+  } else console.log('tools/check.mjs: no problems.');
 }

@@ -2,7 +2,7 @@
   "about": {
     "what": "Your first week aboard, as the most junior hand on the ship: the orders you are given, by whom, and the rank each one earns. career.mjs runs it, one step at a time, in order.",
     "start": "Where a new hand comes aboard (`room`, and [x, z] in metres in that room's frame: a drum room's is its segment's; or `deck` and [x, z] in the ship's frame), yaw, the rank they start at, and the first thing they are told. A career picked up again starts in `resume` (your bunk, `at` in its room).",
-    "people": "The officers who give the orders. Each stands at `at` in `room` (deck from the room), facing `yaw`, in the `pose` and `dept` uniform of crew.mjs. `voice` is the browser speech's pitch and rate for them.",
+    "people": "The officers who give the orders, by `id`: each is a person in content/people/<id>.json (name, dept, voice, cast: src/core/people.mjs), and here only where they stand on this ship: at `at` in `room` (deck from the room), facing `yaw`, in the `pose` of crew.mjs. Their file says who they are, wherever they serve.",
     "steps": "`do` is what the step waits for: talk (use `who`), go (stand in `room`), drill (a damage control job of `kind` in `room`, put out or mended), suit (put on a vac suit from a VAC SUITS locker), man (sit in a turret), shoot (a gunnery drill: a tug tows a target sled down the side `from`, once you are in a turret; you must hit the sled `hits` times; nothing shoots back), raid (a raider `from` a side, `wait` seconds after you are in a turret; you must hit it `hits` times yourself), board / launch (a fighter), land (back aboard; `manual` means down the lane, not handed over), helm (take it), turn (turn her through `deg` and stop her turning), transit (at the helm the navigator lays in a waypoint `dist` metres out (15000), `off` degrees off the bow (40); arrive on it inside 2 km at under 20 m/s), read (the watch bill on its board outside the ship's office), sleep (turn in at your bunk, and be called for your watch), muster (stand in your muster room when the roll is called at the change of your watch; adrift, your name goes in the book and you must report there late: `adrift` is what is called, the order, and what is said when you get there), rounds (stand in each of `rooms`, in any order). `order` is the card's line; `say` what is said when the step is done (a talk step: what that person tells you); `start` what is said when it begins; `fail` what is said when it goes wrong (the step runs again). `rank` and `unlock` take effect when the step is done.",
     "unlock": "guns (the turret hatches), raids (raiders come by themselves), fighters (climbing into one), helm (taking it). Before they are unlocked, `refuse` says why not.",
     "stations": "Action stations, by your rank (career.mjs `closeUp`): when the ship goes to action stations (outside a `raid` order, which says where to go itself) the duty card says `say`, with `at` filled in from your rank's line in `ranks`: a `room` to stand in, or a `seat` (`gun`, `fighter` or `helm`; the helm also counts the bridge). Not closed up within `close` seconds and your name goes in the book, as at a muster: `who` (an officer's id) says `adrift`. `closed` is said when you get there."
@@ -29,83 +29,53 @@
   "people": [
     {
       "id": "cox",
-      "name": "Coxswain Hale",
       "room": "ship-office",
       "at": [
         1.3,
         -42.1
       ],
       "yaw": 3.1416,
-      "pose": "idle",
-      "dept": "command",
-      "voice": {
-        "pitch": 0.75,
-        "rate": 0.98
-      }
+      "pose": "idle"
     },
     {
       "id": "dc",
-      "name": "Chief Okoro",
       "room": "damage-control",
       "at": [
         -4.5,
         114.5
       ],
       "yaw": 3.1416,
-      "pose": "lookAround",
-      "dept": "crew",
-      "voice": {
-        "pitch": 0.7,
-        "rate": 1.04
-      }
+      "pose": "lookAround"
     },
     {
       "id": "guns",
-      "name": "Lieutenant Varga",
       "room": "dorsal-access",
       "at": [
         6,
         -94
       ],
       "yaw": 1.5708,
-      "pose": "idle",
-      "dept": "command",
-      "voice": {
-        "pitch": 1.05,
-        "rate": 1.06
-      }
+      "pose": "idle"
     },
     {
       "id": "flight",
-      "name": "Lieutenant Moss",
       "room": "pilots-ready",
       "at": [
         8.5,
         -18
       ],
       "yaw": 1.5708,
-      "pose": "idle",
-      "dept": "flight",
-      "voice": {
-        "pitch": 1.15,
-        "rate": 1.08
-      }
+      "pose": "idle"
     },
     {
       "id": "ootw",
-      "name": "Commander Reyes",
       "room": "bridge",
       "at": [
         2.6,
         114.5
       ],
       "yaw": 0,
-      "pose": "lookAround",
-      "dept": "command",
-      "voice": {
-        "pitch": 0.9,
-        "rate": 0.96
-      }
+      "pose": "lookAround"
     }
   ],
   "refuse": {

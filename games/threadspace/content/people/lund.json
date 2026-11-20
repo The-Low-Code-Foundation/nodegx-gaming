@@ -1,0 +1,17 @@
+{
+  "id": "lund",
+  "name": "Leading Hand Lund",
+  "dept": "crew",
+  "voice": {
+    "pitch": 0.95,
+    "rate": 1.04
+  },
+  "cast": {
+    "voiceId": "voice_9qx9ovq63lde",
+    "design": "A loud, gruff man in his forties with a broad Glasgow Scottish accent, a voice that carries down a passage.",
+    "gender": "male",
+    "language": "en-GB",
+    "style": "Firm, dry humour; sharp when someone is adrift.",
+    "sample": "Adrift on your first watch. That's in my book, and the coxswain will hear of it. Now report to Chief Okoro in damage control."
+  }
+}

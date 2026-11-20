@@ -3,7 +3,7 @@
     "what": "The ship's routine: the clock, the watches, the three watch sections that keep them in turn, your own line on the watch bill, the muster at the change of your watch, and night. watch.mjs runs it.",
     "clock": "`rate` is ship seconds per real second (30: a four-hour watch is eight minutes). `start` is the day and the time a new hand comes aboard.",
     "watches": "The day's watches, in order, `from` and `to` as hh:mm. The two dog watches make seven in a day, so with three sections the watch each section keeps moves round by one every day.",
-    "sections": "The watch sections. `first` is the one that keeps the middle watch on day 1; after that they take the watches in turn. `leader` is the section's leading hand, who musters it (crew.mjs `dept` and `voice` as in the career's `people`).",
+    "sections": "The watch sections. `first` is the one that keeps the middle watch on day 1; after that they take the watches in turn. `leader` is the section's leading hand, who musters it, by `id`: a person in content/people/<id>.json.",
     "you": "Your line on the bill: your `section`, your `part` of ship, where you `muster` (a room, and `at` the spot you are shown), and `shake`, the minutes before your watch you are called when you have turned in (`bunk`: the room and spot of your bunk).",
     "muster": "The muster: `early` minutes before the watch the section falls in (`hands` of them, at `line`, facing `face`; the leading hand at `leader`); at the bell the roll is called; `late` minutes after, they march `out`.",
     "night": "From `from` to `to` the passages are in red lighting (darken ship), and the hands not on watch are turned in.",
@@ -61,13 +61,7 @@
       "name": "Red watch",
       "color": "#e0574c",
       "leader": {
-        "id": "pike",
-        "name": "Leading Hand Pike",
-        "dept": "crew",
-        "voice": {
-          "pitch": 0.8,
-          "rate": 1
-        }
+        "id": "pike"
       }
     },
     {
@@ -75,13 +69,7 @@
       "name": "White watch",
       "color": "#e8e2d0",
       "leader": {
-        "id": "shaw",
-        "name": "Leading Hand Shaw",
-        "dept": "crew",
-        "voice": {
-          "pitch": 1.1,
-          "rate": 1.02
-        }
+        "id": "shaw"
       }
     },
     {
@@ -89,13 +77,7 @@
       "name": "Blue watch",
       "color": "#5f92ff",
       "leader": {
-        "id": "lund",
-        "name": "Leading Hand Lund",
-        "dept": "crew",
-        "voice": {
-          "pitch": 0.95,
-          "rate": 1.04
-        }
+        "id": "lund"
       }
     }
   ],
