@@ -15,7 +15,7 @@
 // any AI pilot fly exactly the same ship: same thrust, same tanks, same pops. An AI sets `ctl.aim` (a quaternion) and
 // `ctl.burn` instead of moving a mouse.
 //
-// Every number is the layout's `fighter.flight` (ships/carrier.layout.json).
+// Every number is the layout's `fighter.flight` (ships/carrier/).
 
 import * as THREE from 'three';
 import { clamp } from '../util.mjs';

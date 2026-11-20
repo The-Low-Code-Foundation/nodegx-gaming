@@ -1,4 +1,4 @@
-// Builds the spin-drum carrier's layout, ships/carrier.layout.json, from its design.
+// Builds the spin-drum carrier's layout, the files in ships/carrier/ that its index.json names, from her design.
 //
 //   node tools/carrier-v2.mjs            # from this folder; writes the layout and prints its checks
 //   node tools/carrier-v2.mjs --check    # checks only, writes nothing
@@ -18,6 +18,7 @@
 // axis). So the game can build a segment's rooms the way it builds a deck today, and spin the lot.
 
 import { readFileSync, writeFileSync } from 'node:fs';
+import { splitLayout } from '../src/core/ship.mjs';
 
 const here = (p) => new URL('../' + p, import.meta.url);
 const CHECK_ONLY = process.argv.includes('--check');
@@ -229,7 +230,7 @@ const sz0 = stn.z[0], sz1 = stn.z[1];
 }
 
 // The rest of the fixed hull: a warship has no empty space to spare (`node tools/carrier-space.mjs
-// ships/carrier.layout.json` maps what is left). Tanks and stores against the skin, the machinery that serves the
+// ships/carrier` maps what is left). Tanks and stores against the skin, the machinery that serves the
 // rooms beside it, the structure the hangar hangs from.
 {
   const z0 = bow.z[0], bz1 = bow.z[1] - 0.2, tz = z0 + 52;
@@ -561,7 +562,7 @@ const fighter = structuredClone(v1.fighter);
 }
 
 const L = {
-  about: 'The spin-drum carrier as data, built by tools/carrier-v2.mjs from design/carrier-v2.design.json (see design/SHIP-DESIGN.md and design/CARRIER-REBUILD.md). Metres, the ship\'s frame (x starboard, y up, -z the bow), the ship\'s axis at x = 0, y = 0. `compartments` are the fixed, weightless hull (grip shoes; down is -y); `drum` holds the spinning rooms, each in its own segment\'s frame. Do not edit by hand: change the design or the generator and run it again. The first carrier is ships/carrier-v1.layout.json (carrier.html?ship=v1).',
+  about: 'The spin-drum carrier as data, built by tools/carrier-v2.mjs from design/carrier-v2.design.json (see design/SHIP-DESIGN.md and design/CARRIER-REBUILD.md). Metres, the ship\'s frame (x starboard, y up, -z the bow), the ship\'s axis at x = 0, y = 0. `compartments` are the fixed, weightless hull (grip shoes; down is -y); `drum` holds the spinning rooms, each in its own segment\'s frame. Do not edit by hand: change the design or the generator and run it again. The first carrier is archived in archive/carrier-v1/.',
   name: design.name, version: 2, length: T, mass: Math.round(M), com: [0, 0, r1(comZ)],
   sections: Object.entries(sec).map(([id, s]) => ({ id, type: s.s.type, z: s.z.map(r1), w: r1(s.size.w), h: r1(s.size.h), mass: Math.round(s.mass * 1000) })),
   decks, hull, compartments: comps, doors, ladders, drum,
@@ -627,8 +628,8 @@ const walkJson = (o, path) => {
     else walkJson(v, `${path}.${k}`);
   }
 };
-walkJson(JSON.parse(readFileSync(here('ships/carrier.career.json'))), 'career');
-walkJson(JSON.parse(readFileSync(here('ships/carrier.watches.json'))), 'watches');
+walkJson(JSON.parse(readFileSync(here('ships/carrier/career.json'))), 'career');
+walkJson(JSON.parse(readFileSync(here('ships/carrier/watches.json'))), 'watches');
 const missing = [...new Set(named.filter(([, id]) => /^[a-z][a-z0-9-]*$/.test(id) && !ids.has(id)).map(([, id]) => id))];
 
 // ---- report ----
@@ -644,6 +645,8 @@ else console.log('\nEvery room the career and the watch bill name is here.');
 if (problems.length) { console.log(`\n${problems.length} problem${problems.length > 1 ? 's' : ''}:\n  ${problems.join('\n  ')}`); process.exitCode = 1; }
 else console.log('\nChecks: no overlaps, everything inside the hull and out of the drums, every room has a door, every name resolves.');
 if (!CHECK_ONLY && !problems.length) {
-  writeFileSync(here('ships/carrier.layout.json'), JSON.stringify(L, null, 1) + '\n');
-  console.log('Wrote ships/carrier.layout.json');
+  const index = JSON.parse(readFileSync(here('ships/carrier/index.json')));
+  const files = splitLayout(L, index);
+  for (const [f, part] of Object.entries(files)) writeFileSync(here(`ships/carrier/${f}.json`), JSON.stringify(part, null, 1) + '\n');
+  console.log(`Wrote ships/carrier/: ${Object.keys(files).map((f) => f + '.json').join(', ')}`);
 }

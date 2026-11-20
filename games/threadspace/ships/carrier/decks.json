@@ -1,0 +1,2794 @@
+{
+ "decks": [
+  {
+   "id": 1,
+   "name": "Bridge tower",
+   "floor": 26
+  },
+  {
+   "id": 2,
+   "name": "Crew tunnel deck",
+   "floor": 13
+  },
+  {
+   "id": 3,
+   "name": "Upper deck",
+   "floor": 3
+  },
+  {
+   "id": 4,
+   "name": "Spine deck",
+   "floor": -1.5
+  },
+  {
+   "id": 5,
+   "name": "Lower deck",
+   "floor": -6.5
+  },
+  {
+   "id": 6,
+   "name": "Hangar floor",
+   "floor": -12
+  },
+  {
+   "id": 7,
+   "name": "Keel passage deck",
+   "floor": -16.4
+  }
+ ],
+ "compartments": [
+  {
+   "id": "tube-nest",
+   "name": "Forward torpedo tubes",
+   "access": "sealed",
+   "system": "magazine",
+   "x": [
+    -9,
+    9
+   ],
+   "y": [
+    -5,
+    5
+   ],
+   "z": [
+    -141,
+    -128.4
+   ]
+  },
+  {
+   "id": "torpedo-room",
+   "name": "Forward torpedo room",
+   "deck": 4,
+   "access": "walk",
+   "system": "magazine",
+   "x": [
+    -10,
+    10
+   ],
+   "z": [
+    -128,
+    -114.4
+   ],
+   "h": 3.6,
+   "fit": "machines"
+  },
+  {
+   "id": "missile-mag",
+   "name": "Torpedo magazine",
+   "access": "sealed",
+   "system": "magazine",
+   "x": [
+    -12,
+    12
+   ],
+   "y": [
+    -8.8,
+    -2
+   ],
+   "z": [
+    -127,
+    -114.4
+   ]
+  },
+  {
+   "id": "bow-passage",
+   "name": "Bow passage",
+   "deck": 4,
+   "access": "walk",
+   "system": "corridor",
+   "x": [
+    -1.5,
+    1.5
+   ],
+   "z": [
+    -114,
+    -72.2
+   ]
+  },
+  {
+   "id": "sensor-proc",
+   "name": "Sensor processing",
+   "deck": 4,
+   "access": "walk",
+   "system": "sensors",
+   "x": [
+    -12,
+    -1.9
+   ],
+   "z": [
+    -114,
+    -102.4
+   ],
+   "fit": "office"
+  },
+  {
+   "id": "repair-fwd",
+   "name": "Forward repair locker",
+   "deck": 4,
+   "access": "walk",
+   "system": "damage",
+   "x": [
+    1.9,
+    12
+   ],
+   "z": [
+    -114,
+    -102.4
+   ],
+   "fit": "lockers"
+  },
+  {
+   "id": "security",
+   "name": "Security office",
+   "deck": 4,
+   "access": "walk",
+   "system": "armoury",
+   "x": [
+    -12,
+    -1.9
+   ],
+   "z": [
+    -102,
+    -90.4
+   ],
+   "fit": "office"
+  },
+  {
+   "id": "fan-fwd",
+   "name": "Forward fan room",
+   "deck": 4,
+   "access": "walk",
+   "system": "life-support",
+   "x": [
+    1.9,
+    12
+   ],
+   "z": [
+    -102,
+    -90.4
+   ],
+   "fit": "machines"
+  },
+  {
+   "id": "aux-fwd",
+   "name": "Forward auxiliary machinery",
+   "access": "sealed",
+   "system": "aux",
+   "x": [
+    -12,
+    -1.9
+   ],
+   "y": [
+    -1.5,
+    2.3
+   ],
+   "z": [
+    -90,
+    -72.2
+   ]
+  },
+  {
+   "id": "stores-fwd",
+   "name": "Forward stores",
+   "access": "sealed",
+   "system": "stores",
+   "x": [
+    1.9,
+    12
+   ],
+   "y": [
+    -1.5,
+    2.3
+   ],
+   "z": [
+    -90,
+    -72.2
+   ]
+  },
+  {
+   "id": "pdc-mag-p",
+   "name": "Point defence magazine, port",
+   "access": "sealed",
+   "system": "pdc",
+   "x": [
+    -20,
+    -12.4
+   ],
+   "y": [
+    -6,
+    2.3
+   ],
+   "z": [
+    -102,
+    -80
+   ]
+  },
+  {
+   "id": "pdc-mag-s",
+   "name": "Point defence magazine, starboard",
+   "access": "sealed",
+   "system": "pdc",
+   "x": [
+    12.4,
+    20
+   ],
+   "y": [
+    -6,
+    2.3
+   ],
+   "z": [
+    -102,
+    -80
+   ]
+  },
+  {
+   "id": "bow-upper",
+   "name": "Bow upper passage",
+   "deck": 3,
+   "access": "walk",
+   "system": "corridor",
+   "x": [
+    -1.5,
+    1.5
+   ],
+   "z": [
+    -112,
+    -80
+   ]
+  },
+  {
+   "id": "sensor-ops",
+   "name": "Sensor operations",
+   "deck": 3,
+   "access": "walk",
+   "system": "sensors",
+   "x": [
+    -10,
+    -1.9
+   ],
+   "z": [
+    -112,
+    -100.4
+   ],
+   "fit": "office"
+  },
+  {
+   "id": "armoury",
+   "name": "Armoury",
+   "deck": 3,
+   "access": "walk",
+   "system": "armoury",
+   "x": [
+    1.9,
+    10
+   ],
+   "z": [
+    -112,
+    -100.4
+   ],
+   "fit": "lockers"
+  },
+  {
+   "id": "dorsal-access",
+   "name": "Bow dorsal turret access",
+   "deck": 3,
+   "access": "walk",
+   "system": "turret",
+   "x": [
+    1.9,
+    10
+   ],
+   "z": [
+    -100,
+    -88.4
+   ]
+  },
+  {
+   "id": "brig",
+   "name": "Brig",
+   "deck": 3,
+   "access": "walk",
+   "system": "armoury",
+   "x": [
+    -10,
+    -1.9
+   ],
+   "z": [
+    -100,
+    -88.4
+   ],
+   "fit": "cells"
+  },
+  {
+   "id": "bow-lower",
+   "name": "Bow lower passage",
+   "deck": 5,
+   "access": "walk",
+   "system": "corridor",
+   "x": [
+    -1.5,
+    1.5
+   ],
+   "z": [
+    -112,
+    -80
+   ]
+  },
+  {
+   "id": "ventral-access",
+   "name": "Bow ventral turret access",
+   "deck": 5,
+   "access": "walk",
+   "system": "turret",
+   "x": [
+    1.9,
+    10
+   ],
+   "z": [
+    -100,
+    -88.4
+   ]
+  },
+  {
+   "id": "ordnance-shop",
+   "name": "Torpedo workshop",
+   "deck": 5,
+   "access": "walk",
+   "system": "magazine",
+   "x": [
+    -10,
+    -1.9
+   ],
+   "z": [
+    -112,
+    -100.4
+   ],
+   "fit": "workshop"
+  },
+  {
+   "id": "cold-stores",
+   "name": "Cold stores",
+   "deck": 5,
+   "access": "walk",
+   "system": "stores",
+   "x": [
+    1.9,
+    10
+   ],
+   "z": [
+    -112,
+    -100.4
+   ],
+   "fit": "shelves"
+  },
+  {
+   "id": "dorsal-barbette",
+   "name": "Bow dorsal barbette",
+   "access": "sealed",
+   "system": "turret",
+   "x": [
+    -4,
+    4
+   ],
+   "y": [
+    7.2,
+    11.2
+   ],
+   "z": [
+    -96,
+    -88
+   ]
+  },
+  {
+   "id": "magazine",
+   "name": "Bow dorsal magazine",
+   "access": "sealed",
+   "system": "magazine",
+   "x": [
+    -8,
+    8
+   ],
+   "y": [
+    7.2,
+    11.2
+   ],
+   "z": [
+    -87.6,
+    -78
+   ]
+  },
+  {
+   "id": "ventral-barbette",
+   "name": "Bow ventral barbette",
+   "access": "sealed",
+   "system": "turret",
+   "x": [
+    -4,
+    4
+   ],
+   "y": [
+    -11.2,
+    -7.2
+   ],
+   "z": [
+    -96,
+    -88
+   ]
+  },
+  {
+   "id": "magazine-fwd",
+   "name": "Bow ventral magazine",
+   "access": "sealed",
+   "system": "magazine",
+   "x": [
+    -8,
+    8
+   ],
+   "y": [
+    -11.2,
+    -7.2
+   ],
+   "z": [
+    -87.6,
+    -78
+   ]
+  },
+  {
+   "id": "spine",
+   "name": "Spine",
+   "deck": 4,
+   "access": "walk",
+   "system": "corridor",
+   "x": [
+    -1.5,
+    1.5
+   ],
+   "z": [
+    -71.8,
+    -28.2
+   ],
+   "float": true
+  },
+  {
+   "id": "fwd-trunk",
+   "name": "Forward trunk",
+   "deck": 4,
+   "access": "walk",
+   "system": "corridor",
+   "x": [
+    -1.5,
+    1.5
+   ],
+   "z": [
+    -27.6,
+    -24.4
+   ],
+   "float": true
+  },
+  {
+   "id": "hangar-lock",
+   "name": "Hangar airlock",
+   "deck": 6,
+   "access": "walk",
+   "system": "corridor",
+   "x": [
+    -3,
+    3
+   ],
+   "z": [
+    -27.6,
+    -24.4
+   ],
+   "h": 3.2,
+   "airlock": true
+  },
+  {
+   "id": "hangar",
+   "name": "Hangar",
+   "deck": 6,
+   "access": "walk",
+   "system": "hangar",
+   "x": [
+    -17.5,
+    17.5
+   ],
+   "z": [
+    -24,
+    70
+   ],
+   "h": 23,
+   "vacuum": true,
+   "bayDoors": [
+    {
+     "side": "w",
+     "from": 14,
+     "to": 52,
+     "height": 18
+    },
+    {
+     "side": "e",
+     "from": 14,
+     "to": 52,
+     "height": 18
+    }
+   ]
+  },
+  {
+   "id": "ordnance-p",
+   "name": "Broadside tubes, port, forward",
+   "access": "sealed",
+   "system": "magazine",
+   "x": [
+    -22,
+    -17.9
+   ],
+   "y": [
+    -12,
+    11
+   ],
+   "z": [
+    -24,
+    13.6
+   ]
+  },
+  {
+   "id": "ordnance-s",
+   "name": "Broadside tubes, starboard, forward",
+   "access": "sealed",
+   "system": "magazine",
+   "x": [
+    17.9,
+    22
+   ],
+   "y": [
+    -12,
+    11
+   ],
+   "z": [
+    -24,
+    13.6
+   ]
+  },
+  {
+   "id": "ordnance-p-aft",
+   "name": "Broadside tubes, port, aft",
+   "access": "sealed",
+   "system": "magazine",
+   "x": [
+    -22,
+    -17.9
+   ],
+   "y": [
+    -12,
+    11
+   ],
+   "z": [
+    52.4,
+    88.6
+   ]
+  },
+  {
+   "id": "ordnance-s-aft",
+   "name": "Broadside tubes, starboard, aft",
+   "access": "sealed",
+   "system": "magazine",
+   "x": [
+    17.9,
+    22
+   ],
+   "y": [
+    -12,
+    11
+   ],
+   "z": [
+    52.4,
+    88.6
+   ]
+  },
+  {
+   "id": "aircraft-spares",
+   "name": "Aircraft spares",
+   "access": "sealed",
+   "system": "stores",
+   "x": [
+    -17.5,
+    -0.4
+   ],
+   "y": [
+    -12,
+    -2
+   ],
+   "z": [
+    70.4,
+    88.6
+   ]
+  },
+  {
+   "id": "fighter-ordnance",
+   "name": "Fighter ordnance",
+   "access": "sealed",
+   "system": "magazine",
+   "x": [
+    0,
+    17.5
+   ],
+   "y": [
+    -12,
+    -2
+   ],
+   "z": [
+    70.4,
+    88.6
+   ]
+  },
+  {
+   "id": "fighter-fuel",
+   "name": "Fighter propellant",
+   "access": "sealed",
+   "system": "tanks",
+   "x": [
+    -17.5,
+    17.5
+   ],
+   "y": [
+    -1.6,
+    10
+   ],
+   "z": [
+    70.4,
+    88.6
+   ]
+  },
+  {
+   "id": "tunnel",
+   "name": "Crew tunnel",
+   "deck": 2,
+   "access": "walk",
+   "system": "corridor",
+   "x": [
+    -1.5,
+    1.5
+   ],
+   "z": [
+    -27.6,
+    90.8
+   ],
+   "float": true
+  },
+  {
+   "id": "pilots-ready",
+   "name": "Pilots’ ready room",
+   "deck": 2,
+   "access": "walk",
+   "system": "flight",
+   "x": [
+    1.9,
+    12
+   ],
+   "z": [
+    -24,
+    -12.4
+   ],
+   "fit": "briefing"
+  },
+  {
+   "id": "flight-gear",
+   "name": "Flight gear",
+   "deck": 2,
+   "access": "walk",
+   "system": "flight",
+   "x": [
+    1.9,
+    12
+   ],
+   "z": [
+    -12,
+    -0.3999999999999986
+   ],
+   "fit": "lockers"
+  },
+  {
+   "id": "flight-ops",
+   "name": "Flight operations",
+   "deck": 2,
+   "access": "walk",
+   "system": "flight",
+   "x": [
+    1.9,
+    12
+   ],
+   "z": [
+    0,
+    11.600000000000001
+   ],
+   "fit": "office"
+  },
+  {
+   "id": "flight-control",
+   "name": "Flight control",
+   "deck": 2,
+   "access": "walk",
+   "system": "flight",
+   "x": [
+    1.9,
+    12
+   ],
+   "z": [
+    12,
+    23.6
+   ],
+   "fit": "office"
+  },
+  {
+   "id": "repair-mid",
+   "name": "Midships repair locker",
+   "deck": 2,
+   "access": "walk",
+   "system": "damage",
+   "x": [
+    1.9,
+    12
+   ],
+   "z": [
+    24,
+    35.6
+   ],
+   "fit": "lockers"
+  },
+  {
+   "id": "avionics",
+   "name": "Avionics workshop",
+   "deck": 2,
+   "access": "walk",
+   "system": "repair",
+   "x": [
+    1.9,
+    12
+   ],
+   "z": [
+    36,
+    47.599999999999994
+   ],
+   "fit": "workshop"
+  },
+  {
+   "id": "fan-mid",
+   "name": "Midships fan room",
+   "deck": 2,
+   "access": "walk",
+   "system": "life-support",
+   "x": [
+    1.9,
+    12
+   ],
+   "z": [
+    48,
+    59.599999999999994
+   ],
+   "fit": "machines"
+  },
+  {
+   "id": "aircrew",
+   "name": "Aircrew office",
+   "deck": 2,
+   "access": "walk",
+   "system": "flight",
+   "x": [
+    -14,
+    -1.9
+   ],
+   "z": [
+    -3.6000000000000014,
+    25.6
+   ],
+   "fit": "office"
+  },
+  {
+   "id": "flight-equip",
+   "name": "Flight equipment",
+   "deck": 2,
+   "access": "walk",
+   "system": "flight",
+   "x": [
+    -14,
+    -1.9
+   ],
+   "z": [
+    34.4,
+    63.599999999999994
+   ],
+   "fit": "shelves"
+  },
+  {
+   "id": "keel",
+   "name": "Keel passage",
+   "deck": 7,
+   "access": "walk",
+   "system": "corridor",
+   "x": [
+    -1.5,
+    1.5
+   ],
+   "z": [
+    -27.6,
+    90.8
+   ],
+   "h": 3.2,
+   "float": true
+  },
+  {
+   "id": "barbette-h1d",
+   "name": "Hangar dorsal barbette 1",
+   "access": "sealed",
+   "system": "turret",
+   "x": [
+    -14,
+    -6
+   ],
+   "y": [
+    12.2,
+    16.8
+   ],
+   "z": [
+    -12,
+    -4
+   ]
+  },
+  {
+   "id": "barbette-h1v",
+   "name": "Hangar ventral barbette 1",
+   "access": "sealed",
+   "system": "turret",
+   "x": [
+    6,
+    14
+   ],
+   "y": [
+    -16.8,
+    -12.4
+   ],
+   "z": [
+    -12,
+    -4
+   ]
+  },
+  {
+   "id": "barbette-h2d",
+   "name": "Hangar dorsal barbette 2",
+   "access": "sealed",
+   "system": "turret",
+   "x": [
+    -14,
+    -6
+   ],
+   "y": [
+    12.2,
+    16.8
+   ],
+   "z": [
+    26,
+    34
+   ]
+  },
+  {
+   "id": "barbette-h2v",
+   "name": "Hangar ventral barbette 2",
+   "access": "sealed",
+   "system": "turret",
+   "x": [
+    6,
+    14
+   ],
+   "y": [
+    -16.8,
+    -12.4
+   ],
+   "z": [
+    26,
+    34
+   ]
+  },
+  {
+   "id": "barbette-h3d",
+   "name": "Hangar dorsal barbette 3",
+   "access": "sealed",
+   "system": "turret",
+   "x": [
+    -14,
+    -6
+   ],
+   "y": [
+    12.2,
+    16.8
+   ],
+   "z": [
+    64,
+    72
+   ]
+  },
+  {
+   "id": "barbette-h3v",
+   "name": "Hangar ventral barbette 3",
+   "access": "sealed",
+   "system": "turret",
+   "x": [
+    6,
+    14
+   ],
+   "y": [
+    -16.8,
+    -12.4
+   ],
+   "z": [
+    64,
+    72
+   ]
+  },
+  {
+   "id": "hangar-bottom",
+   "name": "Hangar bottom tanks, port",
+   "access": "sealed",
+   "system": "tanks",
+   "x": [
+    -16,
+    -1.9
+   ],
+   "y": [
+    -16.8,
+    -12.4
+   ],
+   "z": [
+    -27.6,
+    90.6
+   ]
+  },
+  {
+   "id": "hangar-bottom-2",
+   "name": "Hangar bottom tanks, starboard 1",
+   "access": "sealed",
+   "system": "tanks",
+   "x": [
+    1.9,
+    16
+   ],
+   "y": [
+    -16.8,
+    -12.4
+   ],
+   "z": [
+    -27.6,
+    -12.4
+   ]
+  },
+  {
+   "id": "hangar-bottom-3",
+   "name": "Hangar bottom tanks, starboard 2",
+   "access": "sealed",
+   "system": "tanks",
+   "x": [
+    1.9,
+    16
+   ],
+   "y": [
+    -16.8,
+    -12.4
+   ],
+   "z": [
+    -3.5999999999999996,
+    25.6
+   ]
+  },
+  {
+   "id": "hangar-bottom-4",
+   "name": "Hangar bottom tanks, starboard 3",
+   "access": "sealed",
+   "system": "tanks",
+   "x": [
+    1.9,
+    16
+   ],
+   "y": [
+    -16.8,
+    -12.4
+   ],
+   "z": [
+    34.4,
+    63.6
+   ]
+  },
+  {
+   "id": "hangar-bottom-5",
+   "name": "Hangar bottom tanks, starboard 4",
+   "access": "sealed",
+   "system": "tanks",
+   "x": [
+    1.9,
+    16
+   ],
+   "y": [
+    -16.8,
+    -12.4
+   ],
+   "z": [
+    72.4,
+    90.6
+   ]
+  },
+  {
+   "id": "pdc-mag-h",
+   "name": "Point defence magazine, hangar",
+   "access": "sealed",
+   "system": "pdc",
+   "x": [
+    -14,
+    -1.9
+   ],
+   "y": [
+    12.2,
+    16.8
+   ],
+   "z": [
+    -24,
+    -12.4
+   ]
+  },
+  {
+   "id": "eng-passage",
+   "name": "Engineering passage",
+   "deck": 2,
+   "access": "walk",
+   "system": "corridor",
+   "x": [
+    -1.5,
+    1.5
+   ],
+   "z": [
+    91.2,
+    135.6
+   ]
+  },
+  {
+   "id": "cic",
+   "name": "Combat information centre",
+   "deck": 2,
+   "access": "walk",
+   "system": "bridge",
+   "x": [
+    -14,
+    -1.9
+   ],
+   "z": [
+    95,
+    111.6
+   ]
+  },
+  {
+   "id": "damage-control",
+   "name": "Damage control centre",
+   "deck": 2,
+   "access": "walk",
+   "system": "damage",
+   "x": [
+    -14,
+    -1.9
+   ],
+   "z": [
+    112,
+    123.6
+   ]
+  },
+  {
+   "id": "switchboard",
+   "name": "Main switchboard",
+   "deck": 2,
+   "access": "walk",
+   "system": "power",
+   "x": [
+    -14,
+    -1.9
+   ],
+   "z": [
+    124,
+    129.6
+   ],
+   "fit": "machines"
+  },
+  {
+   "id": "dc-store",
+   "name": "Damage control store",
+   "deck": 2,
+   "access": "walk",
+   "system": "damage",
+   "x": [
+    -14,
+    -1.9
+   ],
+   "z": [
+    130,
+    135.6
+   ],
+   "fit": "shelves"
+  },
+  {
+   "id": "flag-plot",
+   "name": "Flag plot",
+   "deck": 2,
+   "access": "walk",
+   "system": "bridge",
+   "x": [
+    1.9,
+    14
+   ],
+   "z": [
+    95,
+    103.6
+   ],
+   "fit": "office"
+  },
+  {
+   "id": "comms",
+   "name": "Communications",
+   "deck": 2,
+   "access": "walk",
+   "system": "bridge",
+   "x": [
+    1.9,
+    14
+   ],
+   "z": [
+    104,
+    111.6
+   ],
+   "fit": "office"
+  },
+  {
+   "id": "eng-control",
+   "name": "Engineering control",
+   "deck": 2,
+   "access": "walk",
+   "system": "engineering",
+   "x": [
+    1.9,
+    14
+   ],
+   "z": [
+    112,
+    127.6
+   ]
+  },
+  {
+   "id": "eng-office",
+   "name": "Engineer’s office",
+   "deck": 2,
+   "access": "walk",
+   "system": "engineering",
+   "x": [
+    1.9,
+    14
+   ],
+   "z": [
+    128,
+    135.6
+   ],
+   "fit": "office"
+  },
+  {
+   "id": "bridge",
+   "name": "Bridge",
+   "deck": 1,
+   "access": "walk",
+   "system": "bridge",
+   "x": [
+    -10,
+    10
+   ],
+   "z": [
+    104.5,
+    116
+   ],
+   "h": 3.5,
+   "windows": [
+    {
+     "side": "w",
+     "from": 105,
+     "to": 115.5,
+     "sill": 0.45,
+     "head": 3.3
+    },
+    {
+     "side": "e",
+     "from": 105,
+     "to": 115.5,
+     "sill": 0.45,
+     "head": 3.3
+    },
+    {
+     "side": "n",
+     "from": -9,
+     "to": 9,
+     "sill": 1,
+     "head": 3.3
+    }
+   ]
+  },
+  {
+   "id": "tower-passage",
+   "name": "Tower passage",
+   "deck": 1,
+   "access": "walk",
+   "system": "corridor",
+   "x": [
+    -1.5,
+    1.5
+   ],
+   "z": [
+    116.4,
+    125.6
+   ]
+  },
+  {
+   "id": "nav-office",
+   "name": "Navigation office",
+   "deck": 1,
+   "access": "walk",
+   "system": "bridge",
+   "x": [
+    -10,
+    -1.9
+   ],
+   "z": [
+    116.4,
+    125.6
+   ],
+   "fit": "office"
+  },
+  {
+   "id": "captains-cabin",
+   "name": "Captain’s cabin",
+   "deck": 1,
+   "access": "walk",
+   "system": "quarters",
+   "x": [
+    1.9,
+    10
+   ],
+   "z": [
+    116.4,
+    125.6
+   ],
+   "fit": "office"
+  },
+  {
+   "id": "keel-aft",
+   "name": "Aft keel lobby",
+   "deck": 7,
+   "access": "walk",
+   "system": "corridor",
+   "x": [
+    -1.5,
+    1.5
+   ],
+   "z": [
+    91.2,
+    95.6
+   ],
+   "h": 3.2,
+   "float": true
+  },
+  {
+   "id": "barbette-sv",
+   "name": "Stern ventral barbette",
+   "access": "sealed",
+   "system": "turret",
+   "x": [
+    -5,
+    5
+   ],
+   "y": [
+    -16.8,
+    -6
+   ],
+   "z": [
+    96,
+    104
+   ]
+  },
+  {
+   "id": "magazine-sv",
+   "name": "Stern ventral magazine",
+   "access": "sealed",
+   "system": "magazine",
+   "x": [
+    -5,
+    5
+   ],
+   "y": [
+    -16.8,
+    -6
+   ],
+   "z": [
+    104.4,
+    109.6
+   ]
+  },
+  {
+   "id": "tanks-aft",
+   "name": "Aft tanks, port",
+   "access": "sealed",
+   "system": "tanks",
+   "x": [
+    -18,
+    -5.4
+   ],
+   "y": [
+    -16.4,
+    -3
+   ],
+   "z": [
+    96,
+    109.6
+   ]
+  },
+  {
+   "id": "tanks-aft-s",
+   "name": "Aft tanks, starboard",
+   "access": "sealed",
+   "system": "tanks",
+   "x": [
+    5.4,
+    18
+   ],
+   "y": [
+    -16.4,
+    -3
+   ],
+   "z": [
+    96,
+    109.6
+   ]
+  },
+  {
+   "id": "drone-bay",
+   "name": "Repair drone bay",
+   "access": "sealed",
+   "system": "repair",
+   "x": [
+    -18,
+    -6.4
+   ],
+   "y": [
+    -2.6,
+    12.2
+   ],
+   "z": [
+    96,
+    109.6
+   ]
+  },
+  {
+   "id": "heatsink-p",
+   "name": "Heat sinks",
+   "access": "sealed",
+   "system": "heat",
+   "x": [
+    -6,
+    6
+   ],
+   "y": [
+    -2.6,
+    12.2
+   ],
+   "z": [
+    96,
+    109.6
+   ]
+  },
+  {
+   "id": "heatsink-s",
+   "name": "Heat sinks, starboard",
+   "access": "sealed",
+   "system": "heat",
+   "x": [
+    6.4,
+    18
+   ],
+   "y": [
+    -2.6,
+    12.2
+   ],
+   "z": [
+    96,
+    109.6
+   ]
+  },
+  {
+   "id": "reactor",
+   "name": "Fusion reactor",
+   "access": "sealed",
+   "system": "reactor",
+   "x": [
+    -12,
+    12
+   ],
+   "y": [
+    -14,
+    8
+   ],
+   "z": [
+    110,
+    126
+   ]
+  },
+  {
+   "id": "power",
+   "name": "Power plant",
+   "access": "sealed",
+   "system": "power",
+   "x": [
+    -22,
+    -12.4
+   ],
+   "y": [
+    -10,
+    8
+   ],
+   "z": [
+    110,
+    126
+   ]
+  },
+  {
+   "id": "life-support",
+   "name": "Life support",
+   "access": "sealed",
+   "system": "life-support",
+   "x": [
+    12.4,
+    22
+   ],
+   "y": [
+    -10,
+    8
+   ],
+   "z": [
+    110,
+    126
+   ]
+  },
+  {
+   "id": "coolant-header",
+   "name": "Coolant header",
+   "access": "sealed",
+   "system": "cooling",
+   "x": [
+    -18,
+    18
+   ],
+   "y": [
+    8.4,
+    12.2
+   ],
+   "z": [
+    110,
+    135.6
+   ]
+  },
+  {
+   "id": "drive",
+   "name": "Main drive machinery",
+   "access": "sealed",
+   "system": "drive",
+   "x": [
+    -20,
+    20
+   ],
+   "y": [
+    -14,
+    8
+   ],
+   "z": [
+    126.4,
+    142.6
+   ]
+  },
+  {
+   "id": "barbette-sd",
+   "name": "Stern dorsal barbette",
+   "access": "sealed",
+   "system": "turret",
+   "x": [
+    -5,
+    5
+   ],
+   "y": [
+    8.4,
+    16.8
+   ],
+   "z": [
+    136,
+    142.6
+   ]
+  },
+  {
+   "id": "sensor-array",
+   "name": "Forward sensor array",
+   "access": "sealed",
+   "system": "sensors",
+   "x": [
+    -10,
+    10
+   ],
+   "y": [
+    3.2,
+    8
+   ],
+   "z": [
+    -128,
+    -114.4
+   ]
+  },
+  {
+   "id": "torpedo-wing-p",
+   "name": "Torpedo room wing stores, port",
+   "access": "sealed",
+   "system": "stores",
+   "x": [
+    -15,
+    -10.4
+   ],
+   "y": [
+    -1.5,
+    3
+   ],
+   "z": [
+    -127,
+    -114.4
+   ]
+  },
+  {
+   "id": "torpedo-wing-s",
+   "name": "Torpedo room wing stores, starboard",
+   "access": "sealed",
+   "system": "stores",
+   "x": [
+    10.4,
+    15
+   ],
+   "y": [
+    -1.5,
+    3
+   ],
+   "z": [
+    -127,
+    -114.4
+   ]
+  },
+  {
+   "id": "sensor-bay",
+   "name": "Sensor equipment bay",
+   "access": "sealed",
+   "system": "sensors",
+   "x": [
+    -10,
+    10
+   ],
+   "y": [
+    7.2,
+    10
+   ],
+   "z": [
+    -112,
+    -96.4
+   ]
+  },
+  {
+   "id": "bow-upper-stores-p",
+   "name": "Bow upper stores, port",
+   "access": "sealed",
+   "system": "stores",
+   "x": [
+    -19,
+    -10.4
+   ],
+   "y": [
+    3,
+    9
+   ],
+   "z": [
+    -112,
+    -72.2
+   ]
+  },
+  {
+   "id": "bow-upper-stores-s",
+   "name": "Bow upper stores, starboard",
+   "access": "sealed",
+   "system": "stores",
+   "x": [
+    10.4,
+    19
+   ],
+   "y": [
+    3,
+    9
+   ],
+   "z": [
+    -112,
+    -72.2
+   ]
+  },
+  {
+   "id": "bow-upper-aft-p",
+   "name": "Bow upper machinery, port",
+   "access": "sealed",
+   "system": "aux",
+   "x": [
+    -10,
+    -1.9
+   ],
+   "y": [
+    3,
+    6.8
+   ],
+   "z": [
+    -88,
+    -72.2
+   ]
+  },
+  {
+   "id": "bow-upper-aft-s",
+   "name": "Bow upper machinery, starboard",
+   "access": "sealed",
+   "system": "aux",
+   "x": [
+    1.9,
+    10
+   ],
+   "y": [
+    3,
+    6.8
+   ],
+   "z": [
+    -88,
+    -72.2
+   ]
+  },
+  {
+   "id": "bow-bilge",
+   "name": "Bow lower tanks",
+   "access": "sealed",
+   "system": "tanks",
+   "x": [
+    -12,
+    12
+   ],
+   "y": [
+    -10.6,
+    -7
+   ],
+   "z": [
+    -112,
+    -96.4
+   ]
+  },
+  {
+   "id": "bow-lower-wing-p",
+   "name": "Bow lower stores, port",
+   "access": "sealed",
+   "system": "stores",
+   "x": [
+    -17,
+    -10.4
+   ],
+   "y": [
+    -6.5,
+    -2
+   ],
+   "z": [
+    -112,
+    -102.4
+   ]
+  },
+  {
+   "id": "bow-lower-wing-s",
+   "name": "Bow lower stores, starboard",
+   "access": "sealed",
+   "system": "stores",
+   "x": [
+    10.4,
+    17
+   ],
+   "y": [
+    -6.5,
+    -2
+   ],
+   "z": [
+    -112,
+    -102.4
+   ]
+  },
+  {
+   "id": "bow-lower-aft-p",
+   "name": "Bow lower machinery, port",
+   "access": "sealed",
+   "system": "aux",
+   "x": [
+    -10,
+    -1.9
+   ],
+   "y": [
+    -6.5,
+    -2.7
+   ],
+   "z": [
+    -88,
+    -72.2
+   ]
+  },
+  {
+   "id": "bow-lower-aft-s",
+   "name": "Bow lower machinery, starboard",
+   "access": "sealed",
+   "system": "aux",
+   "x": [
+    1.9,
+    10
+   ],
+   "y": [
+    -6.5,
+    -2.7
+   ],
+   "z": [
+    -88,
+    -72.2
+   ]
+  },
+  {
+   "id": "ventral-wing-p",
+   "name": "Bow ventral turret wing, port",
+   "access": "sealed",
+   "system": "tanks",
+   "x": [
+    -10,
+    -1.9
+   ],
+   "y": [
+    -6.5,
+    -2.7
+   ],
+   "z": [
+    -100,
+    -88.4
+   ]
+  },
+  {
+   "id": "hangar-roof",
+   "name": "Hangar roof girders",
+   "access": "sealed",
+   "system": "aux",
+   "x": [
+    -21,
+    21
+   ],
+   "y": [
+    11.4,
+    12.1
+   ],
+   "z": [
+    -24,
+    88.6
+   ]
+  },
+  {
+   "id": "bay-housing-p",
+   "name": "Bay door housing, port",
+   "access": "sealed",
+   "system": "aux",
+   "x": [
+    -22,
+    -17.9
+   ],
+   "y": [
+    6.4,
+    11
+   ],
+   "z": [
+    14,
+    52
+   ]
+  },
+  {
+   "id": "bay-housing-s",
+   "name": "Bay door housing, starboard",
+   "access": "sealed",
+   "system": "aux",
+   "x": [
+    17.9,
+    22
+   ],
+   "y": [
+    6.4,
+    11
+   ],
+   "z": [
+    14,
+    52
+   ]
+  },
+  {
+   "id": "hangar-fwd-tanks-p",
+   "name": "Forward hangar bulkhead tanks, port",
+   "access": "sealed",
+   "system": "tanks",
+   "x": [
+    -20,
+    -3.4
+   ],
+   "y": [
+    -12,
+    12.8
+   ],
+   "z": [
+    -27.6,
+    -24.4
+   ]
+  },
+  {
+   "id": "hangar-fwd-tanks-s",
+   "name": "Forward hangar bulkhead tanks, starboard",
+   "access": "sealed",
+   "system": "tanks",
+   "x": [
+    3.4,
+    20
+   ],
+   "y": [
+    -12,
+    12.8
+   ],
+   "z": [
+    -27.6,
+    -24.4
+   ]
+  },
+  {
+   "id": "hangar-aft-tanks-p",
+   "name": "Aft hangar bulkhead tanks, port",
+   "access": "sealed",
+   "system": "tanks",
+   "x": [
+    -20,
+    -1.9
+   ],
+   "y": [
+    -12,
+    12.8
+   ],
+   "z": [
+    88.8,
+    90.6
+   ]
+  },
+  {
+   "id": "hangar-aft-tanks-s",
+   "name": "Aft hangar bulkhead tanks, starboard",
+   "access": "sealed",
+   "system": "tanks",
+   "x": [
+    1.9,
+    20
+   ],
+   "y": [
+    -12,
+    12.8
+   ],
+   "z": [
+    88.8,
+    90.6
+   ]
+  },
+  {
+   "id": "tunnel-air-p",
+   "name": "Tunnel deck air trunking, port",
+   "access": "sealed",
+   "system": "life-support",
+   "x": [
+    -17,
+    -14.4
+   ],
+   "y": [
+    13,
+    16.8
+   ],
+   "z": [
+    -24,
+    88.6
+   ]
+  },
+  {
+   "id": "tunnel-air-s",
+   "name": "Tunnel deck air trunking, starboard",
+   "access": "sealed",
+   "system": "life-support",
+   "x": [
+    12.4,
+    17
+   ],
+   "y": [
+    13,
+    16.8
+   ],
+   "z": [
+    -24,
+    88.6
+   ]
+  },
+  {
+   "id": "hangar-bilge-p",
+   "name": "Hangar bilge tanks, port",
+   "access": "sealed",
+   "system": "tanks",
+   "x": [
+    -19,
+    -16.4
+   ],
+   "y": [
+    -15,
+    -12.4
+   ],
+   "z": [
+    -27.6,
+    90.6
+   ]
+  },
+  {
+   "id": "hangar-bilge-s",
+   "name": "Hangar bilge tanks, starboard",
+   "access": "sealed",
+   "system": "tanks",
+   "x": [
+    16.4,
+    19
+   ],
+   "y": [
+    -15,
+    -12.4
+   ],
+   "z": [
+    -27.6,
+    90.6
+   ]
+  },
+  {
+   "id": "hoist-h1d",
+   "name": "Hangar dorsal turret 1 hoist",
+   "access": "sealed",
+   "system": "turret",
+   "x": [
+    -5.6,
+    -1.9
+   ],
+   "y": [
+    12.2,
+    16.8
+   ],
+   "z": [
+    -12,
+    -4
+   ]
+  },
+  {
+   "id": "hoist-h2d",
+   "name": "Hangar dorsal turret 2 hoist",
+   "access": "sealed",
+   "system": "turret",
+   "x": [
+    -5.6,
+    -1.9
+   ],
+   "y": [
+    12.2,
+    16.8
+   ],
+   "z": [
+    26,
+    34
+   ]
+  },
+  {
+   "id": "hoist-h3d",
+   "name": "Hangar dorsal turret 3 hoist",
+   "access": "sealed",
+   "system": "turret",
+   "x": [
+    -5.6,
+    -1.9
+   ],
+   "y": [
+    12.2,
+    16.8
+   ],
+   "z": [
+    64,
+    72
+   ]
+  },
+  {
+   "id": "mid-stores",
+   "name": "Midships stores",
+   "deck": 2,
+   "access": "walk",
+   "system": "stores",
+   "x": [
+    1.9,
+    12
+   ],
+   "z": [
+    60,
+    71.6
+   ],
+   "fit": "shelves"
+  },
+  {
+   "id": "heads-mid",
+   "name": "Midships washroom",
+   "deck": 2,
+   "access": "walk",
+   "system": "water",
+   "x": [
+    1.9,
+    12
+   ],
+   "z": [
+    72,
+    88.4
+   ],
+   "fit": "washroom"
+  },
+  {
+   "id": "aircrew-rest",
+   "name": "Aircrew rest room",
+   "deck": 2,
+   "access": "walk",
+   "system": "welfare",
+   "x": [
+    -14,
+    -1.9
+   ],
+   "z": [
+    72.4,
+    88.4
+   ],
+   "fit": "tables"
+  },
+  {
+   "id": "stern-fwd-tanks-p",
+   "name": "Forward stern tanks, port",
+   "access": "sealed",
+   "system": "tanks",
+   "x": [
+    -18,
+    -1.9
+   ],
+   "y": [
+    -15,
+    12.6
+   ],
+   "z": [
+    91.4,
+    95.6
+   ]
+  },
+  {
+   "id": "stern-fwd-tanks-s",
+   "name": "Forward stern tanks, starboard",
+   "access": "sealed",
+   "system": "tanks",
+   "x": [
+    1.9,
+    18
+   ],
+   "y": [
+    -15,
+    12.6
+   ],
+   "z": [
+    91.4,
+    95.6
+   ]
+  },
+  {
+   "id": "eng-air-p",
+   "name": "Engineering air trunking, port",
+   "access": "sealed",
+   "system": "life-support",
+   "x": [
+    -18.6,
+    -14.4
+   ],
+   "y": [
+    13,
+    16.6
+   ],
+   "z": [
+    91.2,
+    135.6
+   ]
+  },
+  {
+   "id": "eng-air-s",
+   "name": "Engineering air trunking, starboard",
+   "access": "sealed",
+   "system": "life-support",
+   "x": [
+    14.4,
+    18.6
+   ],
+   "y": [
+    13,
+    16.6
+   ],
+   "z": [
+    91.2,
+    135.6
+   ]
+  },
+  {
+   "id": "radiator-root-p",
+   "name": "Radiator roots, port",
+   "access": "sealed",
+   "system": "heat",
+   "x": [
+    -18.8,
+    -5.4
+   ],
+   "y": [
+    8.4,
+    16.4
+   ],
+   "z": [
+    136,
+    142.6
+   ]
+  },
+  {
+   "id": "radiator-root-s",
+   "name": "Radiator roots, starboard",
+   "access": "sealed",
+   "system": "heat",
+   "x": [
+    5.4,
+    18.8
+   ],
+   "y": [
+    8.4,
+    16.4
+   ],
+   "z": [
+    136,
+    142.6
+   ]
+  },
+  {
+   "id": "reactor-shield",
+   "name": "Reactor shield tanks",
+   "access": "sealed",
+   "system": "tanks",
+   "x": [
+    -12,
+    12
+   ],
+   "y": [
+    -16.6,
+    -14.4
+   ],
+   "z": [
+    110,
+    126
+   ]
+  },
+  {
+   "id": "plant-bilge-p",
+   "name": "Plant bilge tanks, port",
+   "access": "sealed",
+   "system": "tanks",
+   "x": [
+    -18.8,
+    -12.4
+   ],
+   "y": [
+    -16.6,
+    -10.4
+   ],
+   "z": [
+    110,
+    126
+   ]
+  },
+  {
+   "id": "plant-bilge-s",
+   "name": "Plant bilge tanks, starboard",
+   "access": "sealed",
+   "system": "tanks",
+   "x": [
+    12.4,
+    18.8
+   ],
+   "y": [
+    -16.6,
+    -10.4
+   ],
+   "z": [
+    110,
+    126
+   ]
+  },
+  {
+   "id": "drive-bilge",
+   "name": "Drive bilge tanks",
+   "access": "sealed",
+   "system": "tanks",
+   "x": [
+    -18,
+    18
+   ],
+   "y": [
+    -16.6,
+    -14.4
+   ],
+   "z": [
+    126.4,
+    142.6
+   ]
+  },
+  {
+   "id": "stern-wing-p",
+   "name": "Stern wing stores, port",
+   "access": "sealed",
+   "system": "stores",
+   "x": [
+    -22,
+    -18.4
+   ],
+   "y": [
+    -2.6,
+    12.2
+   ],
+   "z": [
+    96,
+    109.6
+   ]
+  },
+  {
+   "id": "stern-wing-s",
+   "name": "Stern wing stores, starboard",
+   "access": "sealed",
+   "system": "stores",
+   "x": [
+    18.4,
+    22
+   ],
+   "y": [
+    -2.6,
+    12.2
+   ],
+   "z": [
+    96,
+    109.6
+   ]
+  },
+  {
+   "id": "coolant-wing-p",
+   "name": "Coolant wing, port",
+   "access": "sealed",
+   "system": "cooling",
+   "x": [
+    -22,
+    -18.4
+   ],
+   "y": [
+    8.4,
+    12.2
+   ],
+   "z": [
+    110,
+    135.6
+   ]
+  },
+  {
+   "id": "coolant-wing-s",
+   "name": "Coolant wing, starboard",
+   "access": "sealed",
+   "system": "cooling",
+   "x": [
+    18.4,
+    22
+   ],
+   "y": [
+    8.4,
+    12.2
+   ],
+   "z": [
+    110,
+    135.6
+   ]
+  }
+ ],
+ "doors": [
+  {
+   "between": [
+    "bow-passage",
+    "torpedo-room"
+   ],
+   "at": 0,
+   "w": 1.4
+  },
+  {
+   "between": [
+    "spine",
+    "bow-passage"
+   ],
+   "at": 0,
+   "w": 1.6
+  },
+  {
+   "between": [
+    "bow-passage",
+    "sensor-proc"
+   ],
+   "at": -108.2,
+   "w": 1.4
+  },
+  {
+   "between": [
+    "bow-passage",
+    "repair-fwd"
+   ],
+   "at": -108.2,
+   "w": 1.4
+  },
+  {
+   "between": [
+    "bow-passage",
+    "security"
+   ],
+   "at": -96.2,
+   "w": 1.4
+  },
+  {
+   "between": [
+    "bow-passage",
+    "fan-fwd"
+   ],
+   "at": -96.2,
+   "w": 1.4
+  },
+  {
+   "between": [
+    "bow-upper",
+    "sensor-ops"
+   ],
+   "at": -106.2,
+   "w": 1.4
+  },
+  {
+   "between": [
+    "bow-upper",
+    "armoury"
+   ],
+   "at": -106.2,
+   "w": 1.4
+  },
+  {
+   "between": [
+    "bow-upper",
+    "dorsal-access"
+   ],
+   "at": -94.2,
+   "w": 1.4
+  },
+  {
+   "between": [
+    "bow-upper",
+    "brig"
+   ],
+   "at": -94.2,
+   "w": 1.4
+  },
+  {
+   "between": [
+    "bow-lower",
+    "ventral-access"
+   ],
+   "at": -94.2,
+   "w": 1.4
+  },
+  {
+   "between": [
+    "bow-lower",
+    "ordnance-shop"
+   ],
+   "at": -106.2,
+   "w": 1.4
+  },
+  {
+   "between": [
+    "bow-lower",
+    "cold-stores"
+   ],
+   "at": -106.2,
+   "w": 1.4
+  },
+  {
+   "between": [
+    "fwd-trunk",
+    "spine"
+   ],
+   "at": 0,
+   "w": 1.6
+  },
+  {
+   "between": [
+    "hangar-lock",
+    "hangar"
+   ],
+   "at": 0,
+   "w": 2.4
+  },
+  {
+   "between": [
+    "eng-passage",
+    "tunnel"
+   ],
+   "at": 0,
+   "w": 1.6
+  },
+  {
+   "between": [
+    "tunnel",
+    "pilots-ready"
+   ],
+   "at": -18.2,
+   "w": 1.4
+  },
+  {
+   "between": [
+    "tunnel",
+    "flight-gear"
+   ],
+   "at": -6.2,
+   "w": 1.4
+  },
+  {
+   "between": [
+    "tunnel",
+    "flight-ops"
+   ],
+   "at": 5.8,
+   "w": 1.4
+  },
+  {
+   "between": [
+    "tunnel",
+    "flight-control"
+   ],
+   "at": 17.8,
+   "w": 1.4
+  },
+  {
+   "between": [
+    "tunnel",
+    "repair-mid"
+   ],
+   "at": 29.8,
+   "w": 1.4
+  },
+  {
+   "between": [
+    "tunnel",
+    "avionics"
+   ],
+   "at": 41.8,
+   "w": 1.4
+  },
+  {
+   "between": [
+    "tunnel",
+    "fan-mid"
+   ],
+   "at": 53.8,
+   "w": 1.4
+  },
+  {
+   "between": [
+    "tunnel",
+    "aircrew"
+   ],
+   "at": 11,
+   "w": 1.4
+  },
+  {
+   "between": [
+    "tunnel",
+    "flight-equip"
+   ],
+   "at": 49,
+   "w": 1.4
+  },
+  {
+   "between": [
+    "keel-aft",
+    "keel"
+   ],
+   "at": 0,
+   "w": 1.6
+  },
+  {
+   "between": [
+    "eng-passage",
+    "cic"
+   ],
+   "at": 103.3,
+   "w": 1.4
+  },
+  {
+   "between": [
+    "eng-passage",
+    "damage-control"
+   ],
+   "at": 117.8,
+   "w": 1.4
+  },
+  {
+   "between": [
+    "eng-passage",
+    "switchboard"
+   ],
+   "at": 126.8,
+   "w": 1.4
+  },
+  {
+   "between": [
+    "eng-passage",
+    "dc-store"
+   ],
+   "at": 132.8,
+   "w": 1.4
+  },
+  {
+   "between": [
+    "eng-passage",
+    "flag-plot"
+   ],
+   "at": 99.3,
+   "w": 1.4
+  },
+  {
+   "between": [
+    "eng-passage",
+    "comms"
+   ],
+   "at": 107.8,
+   "w": 1.4
+  },
+  {
+   "between": [
+    "eng-passage",
+    "eng-control"
+   ],
+   "at": 119.8,
+   "w": 1.4
+  },
+  {
+   "between": [
+    "eng-passage",
+    "eng-office"
+   ],
+   "at": 131.8,
+   "w": 1.4
+  },
+  {
+   "between": [
+    "tower-passage",
+    "bridge"
+   ],
+   "at": 0,
+   "w": 1.4
+  },
+  {
+   "between": [
+    "tower-passage",
+    "nav-office"
+   ],
+   "at": 121,
+   "w": 1.4
+  },
+  {
+   "between": [
+    "tower-passage",
+    "captains-cabin"
+   ],
+   "at": 121,
+   "w": 1.4
+  },
+  {
+   "between": [
+    "tunnel",
+    "mid-stores"
+   ],
+   "at": 65.8,
+   "w": 1.4
+  },
+  {
+   "between": [
+    "tunnel",
+    "heads-mid"
+   ],
+   "at": 80.2,
+   "w": 1.4
+  },
+  {
+   "between": [
+    "tunnel",
+    "aircrew-rest"
+   ],
+   "at": 80.4,
+   "w": 1.4
+  }
+ ],
+ "ladders": [
+  {
+   "id": "ladder-bow-up",
+   "a": {
+    "deck": 4,
+    "at": [
+     0,
+     -82
+    ],
+    "yaw": 0
+   },
+   "b": {
+    "deck": 3,
+    "at": [
+     0,
+     -82
+    ],
+    "yaw": 0
+   }
+  },
+  {
+   "id": "ladder-bow-down",
+   "a": {
+    "deck": 4,
+    "at": [
+     0,
+     -84
+    ],
+    "yaw": 0
+   },
+   "b": {
+    "deck": 5,
+    "at": [
+     0,
+     -84
+    ],
+    "yaw": 0
+   }
+  },
+  {
+   "id": "ladder-fwd-trunk",
+   "a": {
+    "deck": 4,
+    "at": [
+     0,
+     -26
+    ],
+    "yaw": 0
+   },
+   "b": {
+    "deck": 2,
+    "at": [
+     0,
+     -26
+    ],
+    "yaw": 0
+   }
+  },
+  {
+   "id": "ladder-hangar-lock",
+   "a": {
+    "deck": 4,
+    "at": [
+     0,
+     -27
+    ],
+    "yaw": 0
+   },
+   "b": {
+    "deck": 6,
+    "at": [
+     0,
+     -27
+    ],
+    "yaw": 0
+   }
+  },
+  {
+   "id": "ladder-keel-fwd",
+   "a": {
+    "deck": 4,
+    "at": [
+     0,
+     -25
+    ],
+    "yaw": 0
+   },
+   "b": {
+    "deck": 7,
+    "at": [
+     0,
+     -26
+    ],
+    "yaw": 0
+   }
+  },
+  {
+   "id": "ladder-aft",
+   "a": {
+    "deck": 7,
+    "at": [
+     0,
+     93.5
+    ],
+    "yaw": 0
+   },
+   "b": {
+    "deck": 2,
+    "at": [
+     0,
+     93
+    ],
+    "yaw": 0
+   }
+  },
+  {
+   "id": "ladder-tower",
+   "a": {
+    "deck": 2,
+    "at": [
+     0,
+     121
+    ],
+    "yaw": 0
+   },
+   "b": {
+    "deck": 1,
+    "at": [
+     0,
+     121
+    ],
+    "yaw": 0
+   }
+  }
+ ]
+}

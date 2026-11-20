@@ -1,4 +1,4 @@
-# Builds the spin-drum carrier's outside from its layout, ships/carrier.layout.json (made by tools/carrier-v2.mjs):
+# Builds the spin-drum carrier's outside from its layout, ships/carrier/ (made by tools/carrier-v2.mjs):
 # the hull lofted from the layout's sections (bow, the fixed armoured sleeve round the drums, the hangar, the stern;
 # the sleeve an open tube, so the drums, the spine and the struts that hold it show through its ends: drum.structure),
 # the bridge tower, the launch doors cut through both sides of the hangar, and the fittings at the layout's mounts:
@@ -20,7 +20,7 @@ import bmesh
 from mathutils import Matrix
 
 ROOT = os.path.dirname(os.path.dirname(HERE))
-L = json.load(open(os.path.join(ROOT, 'ships', 'carrier.layout.json')))
+L = K.load_layout(os.path.join(ROOT, 'ships', 'carrier'))
 args = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else []
 blend = args[args.index('--blend') + 1] if '--blend' in args else None
 OUT = os.path.join(ROOT, 'assets', 'carrier', 'hull.glb')

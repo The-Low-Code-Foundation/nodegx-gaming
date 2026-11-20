@@ -45,7 +45,7 @@ export class Voices {
     return files.length ? files : null;
   }
 
-  /** `speaker` (an id in ships/carrier.voices.json: an officer, a leading hand, or `ship`) says `text`.
+  /** `speaker` (an id in ships/carrier/voices.json: an officer, a leading hand, or `ship`) says `text`.
    *  `pitch` / `rate` are for the browser's speech when there is no clip. `clipOnly`: say nothing without one. */
   say(speaker, text, { delay = 0, pitch = 1, rate = 1, clipOnly = false } = {}) {
     if (!this.on || !text) return;

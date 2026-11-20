@@ -1,5 +1,5 @@
 {
-  "about": "The carrier's design, from the ship designer (design/ship-designer.html: Copy JSON). Sections run bow to stern; SHIP-DESIGN.md says what it means. This is the design, not the game's layout: ships/carrier.layout.json is what the game plays.",
+  "about": "The carrier's design, from the ship designer (design/ship-designer.html: Copy JSON). Sections run bow to stern; SHIP-DESIGN.md says what it means. This is the design, not the game's layout: ships/carrier/ is what the game plays.",
   "name": "Twin-drum carrier",
   "version": 2,
   "ship": {

@@ -1,0 +1,616 @@
+{
+ "fighters": [
+  {
+   "at": [
+    -9,
+    17.166666666666668
+   ],
+   "yaw": 1.5708,
+   "side": "port",
+   "boarding": {
+    "from": "tunnel",
+    "at": [
+     0,
+     17.166666666666668
+    ]
+   }
+  },
+  {
+   "at": [
+    -9,
+    23.5
+   ],
+   "yaw": 1.5708,
+   "side": "port",
+   "boarding": {
+    "from": "tunnel",
+    "at": [
+     0,
+     23.5
+    ]
+   }
+  },
+  {
+   "at": [
+    -9,
+    29.833333333333336
+   ],
+   "yaw": 1.5708,
+   "side": "port",
+   "boarding": {
+    "from": "tunnel",
+    "at": [
+     0,
+     29.833333333333336
+    ]
+   }
+  },
+  {
+   "at": [
+    -9,
+    36.16666666666667
+   ],
+   "yaw": 1.5708,
+   "side": "port",
+   "boarding": {
+    "from": "tunnel",
+    "at": [
+     0,
+     36.16666666666667
+    ]
+   }
+  },
+  {
+   "at": [
+    -9,
+    42.5
+   ],
+   "yaw": 1.5708,
+   "side": "port",
+   "boarding": {
+    "from": "tunnel",
+    "at": [
+     0,
+     42.5
+    ]
+   }
+  },
+  {
+   "at": [
+    -9,
+    48.83333333333333
+   ],
+   "yaw": 1.5708,
+   "side": "port",
+   "boarding": {
+    "from": "tunnel",
+    "at": [
+     0,
+     48.83333333333333
+    ]
+   }
+  },
+  {
+   "at": [
+    9,
+    17.166666666666668
+   ],
+   "yaw": -1.5708,
+   "side": "starboard",
+   "boarding": {
+    "from": "tunnel",
+    "at": [
+     0,
+     17.166666666666668
+    ]
+   }
+  },
+  {
+   "at": [
+    9,
+    23.5
+   ],
+   "yaw": -1.5708,
+   "side": "starboard",
+   "boarding": {
+    "from": "tunnel",
+    "at": [
+     0,
+     23.5
+    ]
+   }
+  },
+  {
+   "at": [
+    9,
+    29.833333333333336
+   ],
+   "yaw": -1.5708,
+   "side": "starboard",
+   "boarding": {
+    "from": "tunnel",
+    "at": [
+     0,
+     29.833333333333336
+    ]
+   }
+  },
+  {
+   "at": [
+    9,
+    36.16666666666667
+   ],
+   "yaw": -1.5708,
+   "side": "starboard",
+   "boarding": {
+    "from": "tunnel",
+    "at": [
+     0,
+     36.16666666666667
+    ]
+   }
+  },
+  {
+   "at": [
+    9,
+    42.5
+   ],
+   "yaw": -1.5708,
+   "side": "starboard",
+   "boarding": {
+    "from": "tunnel",
+    "at": [
+     0,
+     42.5
+    ]
+   }
+  },
+  {
+   "at": [
+    9,
+    48.83333333333333
+   ],
+   "yaw": -1.5708,
+   "side": "starboard",
+   "boarding": {
+    "from": "tunnel",
+    "at": [
+     0,
+     48.83333333333333
+    ]
+   }
+  }
+ ],
+ "fighter": {
+  "about": "One fighter, flown (src/carrier/fighter.mjs): the same thruster physics as the carrier, in the fighter's own frame. Built for vacuum (tools/blender/fighter_build.py): a crew capsule, two propellant tanks, radiators that fold up instead of wings; `size` is her box without the radiators, which weigh little. 12 t; the main drive gives about 3 g, the manoeuvring clusters about 1 g sideways and a 180° turn in about 2 s. `thrusters` places the Blender model's thruster quads and the main drive's force; how she actually flies (the nozzles that push, the tanks, the attitude hold) is `flight`. `landing.lane`: how far out the approach lane's rings run; `ring` their radius; `catch` how close to the gate (m along, m off the line sideways and up) and how slow (m/s) flight control catches a fighter you fly in yourself.",
+  "mass": 12000,
+  "size": [
+   3.6,
+   2.2,
+   10
+  ],
+  "g": {
+   "about": "What g does to the pilot (src/carrier/gload.mjs). Shift with W is hard burn: the drive's push rises to `boost` times its rating over `spool` seconds, burning propellant to match. Past `tolerate` g the pilot's strain builds at `onset` a second for every g over (times `juiceCut` while the couch's `juice` lasts, seconds of it, topped up on the pad); at 1 she blacks out until it falls back under 0.45; under `tolerate` it falls at `recover` a second.",
+   "boost": 2.7,
+   "spool": 1.2,
+   "tolerate": 4.2,
+   "onset": 0.07,
+   "juiceCut": 0.3,
+   "recover": 0.22,
+   "juice": 60
+  },
+  "com": [
+   0,
+   0,
+   0
+  ],
+  "thrusters": {
+   "main": [
+    {
+     "at": [
+      0,
+      0,
+      3.9
+     ],
+     "r": 0.75,
+     "force": 360000
+    }
+   ],
+   "rcsForce": 30000,
+   "rcs": [
+    {
+     "at": [
+      -1.15,
+      0.5,
+      -3.4
+     ]
+    },
+    {
+     "at": [
+      1.15,
+      0.5,
+      -3.4
+     ]
+    },
+    {
+     "at": [
+      -1.15,
+      -0.5,
+      -3.4
+     ]
+    },
+    {
+     "at": [
+      1.15,
+      -0.5,
+      -3.4
+     ]
+    },
+    {
+     "at": [
+      -1.15,
+      0.5,
+      3.4
+     ]
+    },
+    {
+     "at": [
+      1.15,
+      0.5,
+      3.4
+     ]
+    },
+    {
+     "at": [
+      -1.15,
+      -0.5,
+      3.4
+     ]
+    },
+    {
+     "at": [
+      1.15,
+      -0.5,
+      3.4
+     ]
+    }
+   ]
+  },
+  "flight": {
+   "about": "How she flies (src/carrier/flight.mjs), as signed off in the Fighter Sound Lab: Newton only, no drag, no top speed, no drift kill. `hold`: the drive lights at `rampFrom` of full power and ramps at `rampRate` a second while W is held; the aim may lead the nose by `lead` rad; `sens` rad a mouse pixel; `keyRate` / `rollRate` the turn the arrows and Z C ask for (rad/s); `wmax` the hold's cruise turn rate per axis (pitch, yaw, roll); `minPop` the smallest pop as a fraction of a second of full jets; `gap` the beat between pops. `inertia` (kg m²) and `com` in her model's frame. `blocks`: the four jet blocks (bow and stern at the height of the centre of mass, so a slide is a pure slide and a yaw a pure yaw), `pan` for the sound. `nozzles`: [id, block, the way the gas goes, `force` kind, metres out from the block]. `alloc`: per command (slide right, rise, back (retro), pitch up, yaw left, roll left) the nozzles each way. `opposed`: pairs that would cancel, so neither opens. `tank` kg and `isp` s: 3 t of torch-drive propellant and 1.2 t of cold gas (about 250 m/s of sliding). `nozzle`: the drive's mouth.",
+   "hold": {
+    "rampFrom": 0.3,
+    "rampRate": 0.45,
+    "lead": 0.6,
+    "sens": 0.0024,
+    "keyRate": 0.8,
+    "rollRate": 1.2,
+    "wmax": [
+     1.4,
+     1.1,
+     2
+    ],
+    "minPop": 0.03,
+    "gap": 0.06
+   },
+   "inertia": [
+    116000,
+    146000,
+    42000
+   ],
+   "com": [
+    0,
+    0.2,
+    -0.35
+   ],
+   "nozzle": [
+    0,
+    0,
+    4.5
+   ],
+   "tank": {
+    "main": 3000,
+    "rcs": 1200
+   },
+   "isp": {
+    "main": 2000,
+    "rcs": 300
+   },
+   "force": {
+    "rcs": 30000,
+    "tip": 18000
+   },
+   "blocks": [
+    {
+     "name": "bow",
+     "at": [
+      0,
+      0.2,
+      -4
+     ],
+     "pan": 0
+    },
+    {
+     "name": "stern",
+     "at": [
+      0,
+      0.2,
+      3.3
+     ],
+     "pan": 0
+    },
+    {
+     "name": "port wing",
+     "at": [
+      -2.9,
+      0.1,
+      1.7
+     ],
+     "pan": -0.85
+    },
+    {
+     "name": "starboard wing",
+     "at": [
+      2.9,
+      0.1,
+      1.7
+     ],
+     "pan": 0.85
+    }
+   ],
+   "nozzles": [
+    [
+     "B_up",
+     0,
+     [
+      0,
+      1,
+      0
+     ],
+     "rcs",
+     0.45
+    ],
+    [
+     "B_dn",
+     0,
+     [
+      0,
+      -1,
+      0
+     ],
+     "rcs",
+     0.45
+    ],
+    [
+     "B_l",
+     0,
+     [
+      -1,
+      0,
+      0
+     ],
+     "rcs",
+     0.5
+    ],
+    [
+     "B_r",
+     0,
+     [
+      1,
+      0,
+      0
+     ],
+     "rcs",
+     0.5
+    ],
+    [
+     "B_fwd",
+     0,
+     [
+      0,
+      0,
+      -1
+     ],
+     "rcs",
+     1
+    ],
+    [
+     "S_up",
+     1,
+     [
+      0,
+      1,
+      0
+     ],
+     "rcs",
+     0.8
+    ],
+    [
+     "S_dn",
+     1,
+     [
+      0,
+      -1,
+      0
+     ],
+     "rcs",
+     0.8
+    ],
+    [
+     "S_l",
+     1,
+     [
+      -1,
+      0,
+      0
+     ],
+     "rcs",
+     1
+    ],
+    [
+     "S_r",
+     1,
+     [
+      1,
+      0,
+      0
+     ],
+     "rcs",
+     1
+    ],
+    [
+     "L_up",
+     2,
+     [
+      0,
+      1,
+      0
+     ],
+     "tip",
+     0.3
+    ],
+    [
+     "L_dn",
+     2,
+     [
+      0,
+      -1,
+      0
+     ],
+     "tip",
+     0.3
+    ],
+    [
+     "R_up",
+     3,
+     [
+      0,
+      1,
+      0
+     ],
+     "tip",
+     0.3
+    ],
+    [
+     "R_dn",
+     3,
+     [
+      0,
+      -1,
+      0
+     ],
+     "tip",
+     0.3
+    ]
+   ],
+   "alloc": [
+    [
+     [
+      "B_l",
+      "S_l"
+     ],
+     [
+      "B_r",
+      "S_r"
+     ]
+    ],
+    [
+     [
+      "B_dn",
+      "S_dn"
+     ],
+     [
+      "B_up",
+      "S_up"
+     ]
+    ],
+    [
+     [
+      "B_fwd"
+     ],
+     []
+    ],
+    [
+     [
+      "B_dn",
+      "S_up"
+     ],
+     [
+      "B_up",
+      "S_dn"
+     ]
+    ],
+    [
+     [
+      "B_r",
+      "S_l"
+     ],
+     [
+      "B_l",
+      "S_r"
+     ]
+    ],
+    [
+     [
+      "R_dn",
+      "L_up"
+     ],
+     [
+      "R_up",
+      "L_dn"
+     ]
+    ]
+   ],
+   "opposed": [
+    [
+     "B_l",
+     "B_r"
+    ],
+    [
+     "B_up",
+     "B_dn"
+    ],
+    [
+     "S_l",
+     "S_r"
+    ],
+    [
+     "S_up",
+     "S_dn"
+    ],
+    [
+     "L_up",
+     "L_dn"
+    ],
+    [
+     "R_up",
+     "R_dn"
+    ]
+   ]
+  },
+  "launch": {
+   "lift": 1.8,
+   "accel": 8,
+   "clear": 35.5,
+   "wings": 25.5
+  },
+  "landing": {
+   "range": 450,
+   "speed": 30,
+   "gate": [
+    51.5,
+    -8
+   ],
+   "lane": 400,
+   "ring": 7,
+   "catch": {
+    "along": 12,
+    "off": [
+     4.5,
+     3.5
+    ],
+    "speed": 15
+   }
+  }
+ }
+}

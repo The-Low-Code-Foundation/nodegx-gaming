@@ -1,0 +1,515 @@
+{
+ "weapons": {
+  "about": "The carrier's guns, her point defence and her torpedoes, and the raider that attacks her (src/carrier/weapons.mjs). There are no shields: what keeps a ship alive is armour (`integrity.armour`), point defence, and not being where the shot is aimed. `turrets`: each heavy turret is a `mount` (its id, also the name of its gunhouse in hull.glb, and `<id>-guns` its barrels), fed from its `magazine` compartment up its `barbette`; `from` is the hatch you man it from (deck, spot, the way you face when you leave). `gun`, for every turret: `shell` muzzle speed m/s, `reload` seconds per barrel, `crewReload` the same for a turret its crew fires, `train` and `elevate` the fastest it turns (degrees a second), `elevation` its limits (degrees, toward the side the turret stands on), `rack` rounds in the ready rack, `stock` rounds in the magazine, `hoist` seconds to send one round up, `spread` the aim error of a shot (radians), `crewSpread` how far off a crew lays the guns, `range` metres a shell flies, `damage` what one does to the raider's hull, `fouled` metres of line of fire checked against the hull, `heat` what one shot puts into the ship's heat sinks (0 to 1 of them). `pdc`: the point defence cannons, rotary guns on the layout's `pdc` mounts, run by the fire-control computer: each one takes the nearest torpedo (or, with none, the raider inside `raiderRange`) that is within `range` and `arc` degrees of where the mount faces, leads it (for its acceleration too), slews at `slew` degrees a second and fires `rate` tracers a second (each tracer stands for a burst of rounds) at `speed` m/s, off by `spread` radians; a tracer passing within `radius` metres of a torpedo kills it, and one that meets the raider does `damage`. `stock` is the tracers each mount's magazine holds (its `magazine` in the mounts), `heat` what each tracer puts into the sinks. A mount is as healthy as the compartment it is fixed to. `torpedo`: every torpedo, either side's: `accel` m/s² for `burn` seconds, launched at `push` m/s, gone after `life` seconds; `jink` m/s² of random weave once it is within `terminal` metres (what makes point defence miss); `fuse` metres from its target it goes off. Into the carrier it does `pen`, `damage` and `hole` as a shell does (integrity.mjs), never stopped by the armour; into the raider, `raiderDamage`. `tubes`: the carrier's own torpedo tubes, fired by the CIC at a raider between `range` metres: `salvo` at a time, `every` seconds, from `magazine` while it holds `stock`, out of the hull at `at` (ship frame) along `dir`. `raider`: its `hull` (armour and all), `speed` (m/s past the carrier) and `accel`, `jink` (m/s² of evasive weave, changing every second or two: what makes a long shot miss), `standoff` (the range of its passes, metres), `passes`, `size` (half-axes of the ellipsoid shells hit), its `gun` (`shell` m/s, seconds `every` between shots, `spread`, `range`), its `torpedo` launches (a `salvo` every `every` seconds while the carrier is between `range` metres, `stock` in all), its own point defence `pdc` against the carrier's torpedoes (`range`, `rate`, `spread`, `speed`), and its `flak` at a fighter within `range`: a shot `every` so many seconds at `shell` m/s, aimed where she will be if she flies on as she is, off by up to `spread` radians, doing `damage` if it passes within `radius` metres of her. `target`: the gunnery drill's sled, towed `tow` metres astern of a tug on `passes` straight passes `standoff` metres off at `speed`; `size` is the ellipsoid a shell must pass through to score, `clear` how far off the tug is gone. It has no hull to lose: hits are counted. `fighter`: the fighter's twin cannon: `shell` m/s on top of her own velocity, seconds `every` between rounds, `spread`, `range` metres a round flies, `rounds` in the drum (refilled on the pad), the `damage` one round does to a raider (or a torpedo, within `radius`), and her own `hull` (mended on the pad; at nothing she is dead in space and flight control brings her in). `railgun`: the broadside railguns (their own `about`). `broadside`: the torpedo broadside (its own `about`).",
+  "turrets": [
+   {
+    "mount": "turret-dorsal",
+    "name": "Bow dorsal turret",
+    "barbette": "dorsal-barbette",
+    "magazine": "magazine",
+    "from": {
+     "deck": 3,
+     "at": [
+      3,
+      -92
+     ],
+     "yaw": 1.5708,
+     "label": "Up the hoist trunk to the bow dorsal turret"
+    }
+   },
+   {
+    "mount": "turret-ventral",
+    "name": "Bow ventral turret",
+    "barbette": "ventral-barbette",
+    "magazine": "magazine-fwd",
+    "from": {
+     "deck": 5,
+     "at": [
+      3,
+      -92
+     ],
+     "yaw": 1.5708,
+     "label": "Down to the bow ventral turret"
+    }
+   },
+   {
+    "mount": "turret-h1d",
+    "name": "Hangar dorsal turret 1",
+    "barbette": "barbette-h1d",
+    "magazine": "barbette-h1d",
+    "from": {
+     "deck": 2,
+     "at": [
+      -1.2,
+      -8
+     ],
+     "yaw": -1.5708,
+     "label": "Up to hangar dorsal turret 1"
+    }
+   },
+   {
+    "mount": "turret-h1v",
+    "name": "Hangar ventral turret 1",
+    "barbette": "barbette-h1v",
+    "magazine": "barbette-h1v",
+    "from": {
+     "deck": 7,
+     "at": [
+      1.2,
+      -8
+     ],
+     "yaw": 1.5708,
+     "label": "Across to hangar ventral turret 1"
+    }
+   },
+   {
+    "mount": "turret-h2d",
+    "name": "Hangar dorsal turret 2",
+    "barbette": "barbette-h2d",
+    "magazine": "barbette-h2d",
+    "from": {
+     "deck": 2,
+     "at": [
+      -1.2,
+      30
+     ],
+     "yaw": -1.5708,
+     "label": "Up to hangar dorsal turret 2"
+    }
+   },
+   {
+    "mount": "turret-h2v",
+    "name": "Hangar ventral turret 2",
+    "barbette": "barbette-h2v",
+    "magazine": "barbette-h2v",
+    "from": {
+     "deck": 7,
+     "at": [
+      1.2,
+      30
+     ],
+     "yaw": 1.5708,
+     "label": "Across to hangar ventral turret 2"
+    }
+   },
+   {
+    "mount": "turret-h3d",
+    "name": "Hangar dorsal turret 3",
+    "barbette": "barbette-h3d",
+    "magazine": "barbette-h3d",
+    "from": {
+     "deck": 2,
+     "at": [
+      -1.2,
+      68
+     ],
+     "yaw": -1.5708,
+     "label": "Up to hangar dorsal turret 3"
+    }
+   },
+   {
+    "mount": "turret-h3v",
+    "name": "Hangar ventral turret 3",
+    "barbette": "barbette-h3v",
+    "magazine": "barbette-h3v",
+    "from": {
+     "deck": 7,
+     "at": [
+      1.2,
+      68
+     ],
+     "yaw": 1.5708,
+     "label": "Across to hangar ventral turret 3"
+    }
+   },
+   {
+    "mount": "turret-stern-d",
+    "name": "Stern dorsal turret",
+    "barbette": "barbette-sd",
+    "magazine": "barbette-sd",
+    "from": {
+     "deck": 2,
+     "at": [
+      0,
+      135
+     ],
+     "yaw": 3.14159,
+     "label": "Up to the stern dorsal turret"
+    }
+   },
+   {
+    "mount": "turret-stern-v",
+    "name": "Stern ventral turret",
+    "barbette": "barbette-sv",
+    "magazine": "magazine-sv",
+    "from": {
+     "deck": 7,
+     "at": [
+      0,
+      95
+     ],
+     "yaw": 3.14159,
+     "label": "Down to the stern ventral turret"
+    }
+   }
+  ],
+  "gun": {
+   "shell": 1400,
+   "reload": 1.6,
+   "crewReload": 4.2,
+   "train": 28,
+   "elevate": 20,
+   "elevation": [
+    -6,
+    82
+   ],
+   "rack": 24,
+   "stock": 260,
+   "hoist": 2.5,
+   "spread": 0.0012,
+   "crewSpread": 0.02,
+   "range": 4200,
+   "damage": [
+    26,
+    40
+   ],
+   "fouled": 320,
+   "heat": 0.004,
+   "shellMass": 1000,
+   "barrels": 3,
+   "calibreNote": "14 m barrels; muzzle speed 5300 m/s in the design (the game's gun.shell is still tuned for play)."
+  },
+  "pdc": {
+   "range": 3000,
+   "raiderRange": 1400,
+   "arc": 100,
+   "slew": 160,
+   "rate": 26,
+   "speed": 1100,
+   "spread": 0.004,
+   "radius": 4,
+   "damage": 0.04,
+   "stock": 2400,
+   "heat": 0.00008
+  },
+  "torpedo": {
+   "accel": 220,
+   "burn": 26,
+   "push": 30,
+   "life": 40,
+   "jink": 70,
+   "terminal": 1600,
+   "settle": 500,
+   "fuse": 7,
+   "pen": [
+    30,
+    55
+   ],
+   "damage": [
+    70,
+    110
+   ],
+   "hole": [
+    0.6,
+    1.4
+   ],
+   "raiderDamage": [
+    60,
+    90
+   ]
+  },
+  "tubes": {
+   "magazine": "missile-mag",
+   "stock": 24,
+   "salvo": 2,
+   "first": 25,
+   "every": 22,
+   "range": [
+    1200,
+    9000
+   ],
+   "at": [
+    [
+     -6,
+     2.5,
+     -142
+    ],
+    [
+     -6,
+     -2.5,
+     -142
+    ],
+    [
+     -2,
+     0,
+     -142
+    ],
+    [
+     6,
+     2.5,
+     -142
+    ],
+    [
+     6,
+     -2.5,
+     -142
+    ],
+    [
+     2,
+     0,
+     -142
+    ]
+   ],
+   "dir": [
+    0,
+    0,
+    -1
+   ]
+  },
+  "raider": {
+   "hull": 940,
+   "speed": 150,
+   "accel": 38,
+   "jink": 24,
+   "standoff": [
+    480,
+    760
+   ],
+   "passes": 2,
+   "size": [
+    12,
+    8,
+    46
+   ],
+   "gun": {
+    "shell": 900,
+    "every": [
+     2.8,
+     4.2
+    ],
+    "spread": 0.004,
+    "range": 1500
+   },
+   "torpedo": {
+    "salvo": 2,
+    "every": 18,
+    "range": [
+     1800,
+     6000
+    ],
+    "stock": 6
+   },
+   "pdc": {
+    "range": 1600,
+    "rate": 20,
+    "spread": 0.006,
+    "speed": 1000
+   },
+   "flak": {
+    "range": 1300,
+    "every": [
+     0.9,
+     1.6
+    ],
+    "shell": 700,
+    "spread": 0.012,
+    "damage": [
+     14,
+     22
+    ],
+    "radius": 4
+   }
+  },
+  "target": {
+   "speed": 90,
+   "accel": 30,
+   "standoff": [
+    520,
+    640
+   ],
+   "passes": 3,
+   "tow": 260,
+   "size": [
+    9,
+    9,
+    9
+   ],
+   "clear": 2600
+  },
+  "fighter": {
+   "shell": 1100,
+   "every": 0.11,
+   "spread": 0.004,
+   "range": 1800,
+   "rounds": 600,
+   "damage": [
+    2,
+    4
+   ],
+   "radius": 3,
+   "hull": 100
+  },
+  "railgun": {
+   "speed": 9000,
+   "spread": 0.0004,
+   "charge": 8,
+   "heat": 0.06,
+   "damage": [
+    140,
+    190
+   ],
+   "range": 40000,
+   "stock": 20,
+   "about": "Two fixed railguns, one a side, firing out of the hangar walls along the beam: `port` and `starboard` each have a `muzzle` (ship frame), the `dir` it fires and the `room` it stands in (below 20% health it cannot fire). Each has its own capacitors (`charge` seconds to fill, on main power only) and `stock` slugs. A slug of `slug` kg leaves at `speed` m/s on top of her velocity, off by `spread`; it does `damage` to the raider and is gone after `range` m; each shot puts `heat` into the sinks, and its kick pushes the ship (weapons.mjs `recoil`). The guns cannot train: the helm turns her (and rolls her) until the line of one side runs through where the raider will be, and fires (Q). A side bears when its slug would pass inside `window` of the raider's hit ellipsoid (1 is its skin); with nobody at the helm the CIC fires a side that bears, which a raider passing above or below her beam never does.",
+   "slug": 2000,
+   "window": 0.85,
+   "port": {
+    "room": "ordnance-p",
+    "dir": [
+     -1,
+     0,
+     0
+    ],
+    "muzzle": [
+     -24.1,
+     0,
+     -2.4
+    ]
+   },
+   "starboard": {
+    "room": "ordnance-s",
+    "dir": [
+     1,
+     0,
+     0
+    ],
+    "muzzle": [
+     24.1,
+     0,
+     -2.4
+    ]
+   }
+  },
+  "broadside": {
+   "about": "The hangar walls' torpedo tubes, launched cold sideways: `per` a side, each side fed from its two ordnance rooms (a side whose magazines are both below 20% health cannot fire). `stock` torpedoes a side; `salvo` per firing; `reload` seconds between a side's salvos; `first` seconds into a raid before the first (the CIC's solution); `arc` degrees off the beam the raider must be within, and `range` [min, max] m; `push` m/s out of the tube and `cold` seconds before the motor lights. The CIC fires the side that bears; with you at the helm, a click does.",
+   "per": 8,
+   "stock": 16,
+   "salvo": 4,
+   "reload": 30,
+   "first": 20,
+   "arc": 50,
+   "range": [
+    300,
+    9000
+   ],
+   "push": 14,
+   "cold": 2,
+   "port": {
+    "magazines": [
+     "ordnance-p",
+     "ordnance-p-aft"
+    ],
+    "dir": [
+     -1,
+     0,
+     0
+    ],
+    "at": [
+     [
+      -23.5,
+      -2,
+      -18
+     ],
+     [
+      -23.5,
+      -2,
+      -8
+     ],
+     [
+      -23.5,
+      -2,
+      2
+     ],
+     [
+      -23.5,
+      -2,
+      10
+     ],
+     [
+      -23.5,
+      -2,
+      58
+     ],
+     [
+      -23.5,
+      -2,
+      66
+     ],
+     [
+      -23.5,
+      -2,
+      74
+     ],
+     [
+      -23.5,
+      -2,
+      82
+     ]
+    ]
+   },
+   "starboard": {
+    "magazines": [
+     "ordnance-s",
+     "ordnance-s-aft"
+    ],
+    "dir": [
+     1,
+     0,
+     0
+    ],
+    "at": [
+     [
+      23.5,
+      -2,
+      -18
+     ],
+     [
+      23.5,
+      -2,
+      -8
+     ],
+     [
+      23.5,
+      -2,
+      2
+     ],
+     [
+      23.5,
+      -2,
+      10
+     ],
+     [
+      23.5,
+      -2,
+      58
+     ],
+     [
+      23.5,
+      -2,
+      66
+     ],
+     [
+      23.5,
+      -2,
+      74
+     ],
+     [
+      23.5,
+      -2,
+      82
+     ]
+    ]
+   }
+  }
+ }
+}

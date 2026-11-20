@@ -1,0 +1,217 @@
+{
+ "stations": [
+  {
+   "room": "bridge",
+   "at": [
+    -4,
+    109
+   ],
+   "yaw": 0,
+   "pose": "sitChair",
+   "dept": "command",
+   "post": "Helmsman",
+   "watch": "on"
+  },
+  {
+   "room": "bridge",
+   "at": [
+    4,
+    109
+   ],
+   "yaw": 0,
+   "pose": "sitChair",
+   "dept": "command",
+   "post": "Sensor watch",
+   "watch": "on"
+  },
+  {
+   "room": "bridge",
+   "at": [
+    -1,
+    115.5
+   ],
+   "yaw": 0,
+   "pose": "idle",
+   "dept": "command",
+   "post": "Quartermaster of the watch",
+   "watch": "on"
+  },
+  {
+   "room": "cic",
+   "at": [
+    -8,
+    103
+   ],
+   "yaw": 1.5708,
+   "pose": "workTable",
+   "dept": "command",
+   "post": "Plotter, CIC",
+   "watch": "on"
+  },
+  {
+   "room": "hangar",
+   "at": [
+    -1.2,
+    22
+   ],
+   "yaw": 0,
+   "pose": "walk",
+   "dept": "flight",
+   "post": "Hangar sentry",
+   "watch": "on",
+   "route": [
+    [
+     -1.2,
+     -20
+    ],
+    [
+     -1.2,
+     66
+    ]
+   ]
+  },
+  {
+   "room": "hangar",
+   "at": [
+    -5.6,
+    20.33
+   ],
+   "yaw": 3.14159,
+   "pose": "workTable",
+   "dept": "flight",
+   "post": "Deck crew",
+   "watch": "on"
+  },
+  {
+   "room": "hangar",
+   "at": [
+    5.6,
+    33
+   ],
+   "yaw": 0,
+   "pose": "workTable",
+   "dept": "flight",
+   "post": "Deck crew",
+   "watch": "on"
+  },
+  {
+   "room": "hangar",
+   "at": [
+    -15,
+    11
+   ],
+   "yaw": 0,
+   "pose": "lookAround",
+   "dept": "flight",
+   "post": "Deck crew, launch lanes",
+   "watch": "on"
+  },
+  {
+   "room": "flight-control",
+   "at": [
+    7,
+    18
+   ],
+   "yaw": -1.5708,
+   "pose": "workTable",
+   "dept": "flight",
+   "post": "Flight control",
+   "watch": "on"
+  },
+  {
+   "room": "eng-control",
+   "at": [
+    3.95,
+    124.5
+   ],
+   "yaw": 3.14159,
+   "pose": "workTable",
+   "dept": "engineering",
+   "post": "Engineer of the watch",
+   "watch": "on"
+  },
+  {
+   "room": "eng-control",
+   "at": [
+    11.95,
+    124.5
+   ],
+   "yaw": 3.14159,
+   "pose": "workTable",
+   "dept": "engineering",
+   "post": "Reactor operator",
+   "watch": "on"
+  },
+  {
+   "room": "damage-control",
+   "at": [
+    -8,
+    117
+   ],
+   "yaw": 1.5708,
+   "pose": "workTable",
+   "dept": "crew",
+   "post": "Damage control centre",
+   "watch": "on"
+  },
+  {
+   "room": "torpedo-room",
+   "at": [
+    4,
+    -122
+   ],
+   "yaw": 3.14159,
+   "pose": "workTable",
+   "dept": "crew",
+   "post": "Torpedo watch",
+   "watch": "on"
+  },
+  {
+   "room": "tunnel",
+   "at": [
+    0,
+    -8
+   ],
+   "yaw": 0,
+   "pose": "walk",
+   "dept": "crew",
+   "post": "Rounds",
+   "watch": "on",
+   "route": [
+    [
+     0,
+     -22
+    ],
+    [
+     0,
+     87
+    ]
+   ]
+  }
+ ],
+ "routes": {
+  "about": "Wayfinding (src/carrier/wayfinding.mjs): each route is a coloured line painted along the floor of every passage, with arrows, that turns off through the door on the way to `to`. The overhead signs and the deck plans use the same colours.",
+  "lines": [
+   {
+    "name": "Bridge",
+    "to": "bridge",
+    "color": "#58b0ff"
+   },
+   {
+    "name": "Hangar tunnel",
+    "to": "tunnel",
+    "color": "#3fe0d0"
+   },
+   {
+    "name": "Engineering",
+    "to": "eng-control",
+    "color": "#ff9a30"
+   },
+   {
+    "name": "Drums",
+    "to": "spine",
+    "color": "#c08cff"
+   }
+  ]
+ }
+}

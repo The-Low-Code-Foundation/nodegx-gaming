@@ -1,6 +1,6 @@
 // How much of the carrier's hull the layout accounts for, and where the empty space is.
 //
-//   node tools/carrier-space.mjs                                # from this folder: ships/carrier.layout.json
+//   node tools/carrier-space.mjs                                # from this folder: the ship in ships/carrier/
 //   node tools/carrier-space.mjs archive/carrier-v1/carrier-v1.layout.json   # the first carrier (archived)
 //
 // It fills the hull (the `hull.main` and `hull.island` lofts) with 1 m cells and marks each one that falls in a
@@ -9,10 +9,12 @@
 // `~` a spin drum (its rooms are in `drum` and turn, so they are counted apart), blank outside the hull. Bow on the
 // left. Use it after adding compartments: a warship has no empty space to spare.
 
-import { readFileSync } from 'node:fs';
+import { readFileSync, statSync } from 'node:fs';
+import { loadLayout } from '../src/core/ship.mjs';
 
-const file = process.argv[2] ?? 'ships/carrier.layout.json';
-const L = JSON.parse(readFileSync(new URL('../' + file, import.meta.url)));
+// A ship's folder (ships/carrier) or a layout in one file (the archived first carrier's).
+const file = new URL('../' + (process.argv[2] ?? 'ships/carrier'), import.meta.url).pathname.replace(/\/$/, '');
+const L = statSync(file).isDirectory() ? await loadLayout(file, async (p) => JSON.parse(readFileSync(p))) : JSON.parse(readFileSync(file));
 const lofts = [L.hull.main, L.hull.island].filter(Boolean);
 const floorOf = Object.fromEntries(L.decks.map((d) => [d.id, d.floor]));
 const boxes = L.compartments.map((c) => {

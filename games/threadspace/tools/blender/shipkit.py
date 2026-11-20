@@ -15,9 +15,21 @@
 #   K.cut(target, cutter)                         boolean difference, applied, cutter deleted
 #   K.join(objs, name)                            one object
 #   K.export(path)                                every object to a GLB
-import bpy, bmesh, math, os, random
+import bpy, bmesh, math, os, random, json
 from mathutils import Vector, Matrix
 
+
+
+def load_layout(folder):
+    """A ship's layout, joined from the files its folder's index.json names (as src/core/ship.mjs loadLayout does)."""
+    index = json.load(open(os.path.join(folder, 'index.json')))
+    L = {}
+    for f in index['layout']:
+        for k, v in json.load(open(os.path.join(folder, f + '.json'))).items():
+            if k in L:
+                raise ValueError(f'{folder}: "{k}" is in two of the layout\'s files')
+            L[k] = v
+    return L
 
 def reset():
     bpy.ops.wm.read_factory_settings(use_empty=True)

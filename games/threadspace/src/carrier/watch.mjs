@@ -1,4 +1,4 @@
-// The ship's routine, from `ships/carrier.watches.json`: the ship's clock, the watches and the three watch sections
+// The ship's routine, from `ships/carrier/watches.json`: the ship's clock, the watches and the three watch sections
 // that keep them in turn, the bell every half hour, the watch bill on its board outside the ship's office, your bunk
 // (turn in, and you are shaken for your next watch), the muster of your section at the change of its watch, and night.
 //

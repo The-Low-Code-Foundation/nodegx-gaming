@@ -156,7 +156,7 @@ The main drive gives her 0.14 g toward the bow, so everything aboard feels pushe
      gunner: your turret; and so on). Late, and you are adrift in the book, as at a muster.
 
    **Done**, with these changes from the plan:
-   - `src/carrier/hands.mjs` `Hands` runs the drums' off-watch hands, from `drum` in `ships/carrier.watches.json`.
+   - `src/carrier/hands.mjs` `Hands` runs the drums' off-watch hands, from `drum` in `ships/carrier/watches.json`.
      That entry gives each kind of room its numbers by the hour (`uses`), the ring corridor's walkers (`ring`), the change
      (`change`) and action stations (`stations`).
      - **The budget:** `max: 12` hands drawn at once, nearest rooms first. A reserve is kept back for the ring walkers and,
@@ -192,7 +192,7 @@ The main drive gives her 0.14 g toward the bow, so everything aboard feels pushe
      - the card's countdown, then adrift and closed up, on both ships;
      - the mess at 101 kPa while the bridge vented.
    - **To record** (until then the browser speaks them):
-     - condition one's two new calls, now in `ship` in `ships/carrier.voices.json` (`node tools/voices.mjs --list`
+     - condition one's two new calls, now in `ship` in `ships/carrier/voices.json` (`node tools/voices.mjs --list`
        shows them unrecorded);
      - the stations' `closed` and `adrift` lines. They name the station (`{at}`), so `tools/voices.mjs` doesn't derive
        them yet. That is five ranks across three places and two lines, for the officers `dc`, `guns`, `flight` and

@@ -1,4 +1,4 @@
-# Builds the carrier's fighter, outside and in, from the layout's `fighter` entry (ships/carrier.layout.json).
+# Builds the carrier's fighter, outside and in, from the layout's `fighter` entry (ships/carrier/fighter.json).
 #
 # She is designed for vacuum, not air, so nothing on her is there to fly through an atmosphere. What a one-person
 # attack craft has to carry decides her shape:
@@ -37,7 +37,7 @@ import bpy, bmesh
 from mathutils import Vector, Matrix
 
 ROOT = os.path.dirname(os.path.dirname(HERE))
-F = json.load(open(os.path.join(ROOT, 'ships', 'carrier.layout.json')))['fighter']
+F = json.load(open(os.path.join(ROOT, 'ships', 'carrier', 'fighter.json')))['fighter']
 args = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else []
 blend = args[args.index('--blend') + 1] if '--blend' in args else None
 OUT = os.path.join(ROOT, 'assets', 'carrier', 'fighter.glb')

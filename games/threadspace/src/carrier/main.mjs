@@ -48,6 +48,7 @@ import { Bus } from '../core/events.mjs';
 import { View } from './render.mjs';
 import { Drive } from './drive.mjs';
 import { Doors } from './doors.mjs';
+import { loadLayout, fetchJson } from '../core/ship.mjs';
 import { WalkSeat } from './seats/walk.mjs';
 import { HelmSeat } from './seats/helm.mjs';
 import { FighterSeat } from './seats/fighter.mjs';
@@ -57,10 +58,12 @@ import { CutawaySeat } from './seats/cutaway.mjs';
 // The spin-drum carrier (design/CARRIER-REBUILD.md). The first carrier (400 m, three decks, gravity only while her
 // drive burns) is archived in archive/carrier-v1/, with how to bring it back; the code paths for a layout without drums
 // or with a railgun are still here.
-const L = await (await fetch('ships/carrier.layout.json')).json();
-// The ship's career and routine (the rooms and the spots in them are hers).
-const K = await (await fetch('ships/carrier.career.json')).json(); // your first week aboard (career.mjs)
-const W = await (await fetch('ships/carrier.watches.json')).json(); // the ship's routine: clock, watches, muster (watch.mjs)
+// A ship is a folder (src/core/ship.mjs): her layout in parts, joined here, and beside it her career and routine (the
+// rooms and the spots in them are hers).
+const SHIP = 'ships/carrier';
+const L = await loadLayout(SHIP, fetchJson);
+const K = await fetchJson(`${SHIP}/career.json`); // your first week aboard (career.mjs)
+const W = await fetchJson(`${SHIP}/watches.json`); // the ship's routine: clock, watches, muster (watch.mjs)
 const q = new URLSearchParams(location.search);
 if (L.weapons.railgun && !L.weapons.railgun.port) {
   // A ship with a railgun along her keel (the archived first carrier) aims it by turning the whole ship.

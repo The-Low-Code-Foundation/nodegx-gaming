@@ -1,7 +1,7 @@
 # The first carrier (archived)
 
 The carrier ThreadSpace's carrier prototype started with: 400 m long, three decks, a railgun down her keel, four
-fighters, and gravity only while her drive burns. The spin-drum carrier (`ships/carrier.*.json`) replaced her and is
+fighters, and gravity only while her drive burns. The spin-drum carrier (`ships/carrier/`) replaced her and is
 what `carrier.html` plays. She is kept here, out of the game, for now.
 
 | File | What it is |
@@ -16,13 +16,16 @@ fired from the helm in place of a broadside, and the career saves under `Career.
 
 ## Bringing her back
 
-1. Move the three JSON files back to `ships/` and `hull-v1.glb` to `assets/carrier/`. Point `tools/carrier-v2.mjs`,
-   `tools/voices.mjs` and `carrier_build.py` back at those paths.
+1. Make her a ship folder like today's: `ships/carrier-v1/` with an `index.json` (copy `ships/carrier/index.json`;
+   her layout has no `drum`, so leave that file out of `layout`), her layout cut into those files with
+   `splitLayout` (`src/core/ship.mjs`), and `career.json` and `watches.json` beside them; `hull-v1.glb` back to
+   `assets/carrier/`. Point `tools/carrier-v2.mjs`, `tools/voices.mjs` and `carrier_build.py` at the folder
+   (`carrier_build.py` with `shipkit.load_layout`).
 2. In `src/carrier/main.mjs`, choose the ship from the address again, so that `carrier.html?ship=v1` plays her:
-   - `const SHIP = new URLSearchParams(location.search).get('ship') === 'v1' ? 'carrier-v1' : 'carrier';`
-   - fetch `ships/${SHIP}.layout.json`, `.career.json` and `.watches.json`;
-   - `loadHull(C, SHIP === 'carrier' ? undefined : 'assets/carrier/hull-v1.glb')`;
-   - before `new Career`: ``if (SHIP !== 'carrier') Career.key = `threadspace.${SHIP}.career`;`` (both careers have
+   - `const SHIP = new URLSearchParams(location.search).get('ship') === 'v1' ? 'ships/carrier-v1' : 'ships/carrier';`
+   - `const SHIP = …` already names the folder: load `ships/${SHIP}` instead of `ships/carrier`;
+   - `loadHull(C, SHIP === 'ships/carrier' ? undefined : 'assets/carrier/hull-v1.glb')`;
+   - before `new Career`: ``if (SHIP !== 'ships/carrier') Career.key = 'threadspace.carrier-v1.career';`` (both careers have
      28 steps, so they must not share a save);
    - give her her own start-screen text in `#c-about`.
 

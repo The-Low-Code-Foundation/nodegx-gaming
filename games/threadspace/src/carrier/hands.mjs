@@ -1,4 +1,4 @@
-// The off-watch hands in the drums (the spin-drum carrier), from the routine's `drum` entry (ships/carrier.watches.json):
+// The off-watch hands in the drums (the spin-drum carrier), from the routine's `drum` entry (ships/carrier/watches.json):
 // people eating in the messes at meal hours, cooking in the galley, training in the gym, at the workshop benches, in the
 // wardrooms, a few awake in the berths, and some walking the ring corridor. At the change of watch they wait at the
 // spoke lifts and ride with you; at action stations they go up the spokes and the drum empties.

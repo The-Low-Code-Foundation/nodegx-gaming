@@ -11,13 +11,13 @@ Everything else is original to the NodeGX project (The Low Code Foundation), GPL
 
 - The main game's ships, stations, rooms, people and rocks are built from code (three.js primitives).
 - The carrier's hull (`assets/carrier/hull.glb`) is built by our own Blender script, `tools/blender/carrier_v2_build.py`,
-  from `ships/carrier.layout.json` (the archived first carrier's by `archive/carrier-v1/carrier_build.py`); no third-party model is in it. The fighters and their cockpits
+  from `ships/carrier/` (the archived first carrier's by `archive/carrier-v1/carrier_build.py`); no third-party model is in it. The fighters and their cockpits
   (`assets/carrier/fighter.glb`) are built the same way, by `tools/blender/fighter_build.py`.
 - `src/carrier/mocap.mjs` and `src/carrier/wardrobe.mjs` are copied from the Life Sim game in this repository (same
   project, same licence).
 - Every sound effect is synthesised at run time with the Web Audio API (`src/sfx.mjs`, `src/carrier/flight-audio.mjs`).
 - The carrier's spoken lines (`assets/voice/*.mp3`) were generated for this project with Google's Gemini text-to-speech
-  (`gemini-3.8-flash-tts`, voices designed from the text descriptions in `ships/carrier.voices.json`) by
+  (`gemini-3.8-flash-tts`, voices designed from the text descriptions in `ships/carrier/voices.json`) by
   `tools/voices.mjs`, from lines written for this game. Google's
   terms give the output to the person who generated it; we license the clips with the rest of the game. They carry
   Google's inaudible SynthID watermark, which marks them as AI-generated. No real person's voice was cloned or used.

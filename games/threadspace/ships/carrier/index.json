@@ -1,0 +1,15 @@
+{
+  "about": "The spin-drum carrier. Her layout is split into the files named in `layout` (each holds the top-level entries listed), joined at load in this order (src/core/ship.mjs `loadLayout`, tools/blender/shipkit.py `load_layout`). tools/carrier-v2.mjs writes them from design/carrier-v2.design.json: do not edit them by hand. Beside them, the ship's career (career.json), routine (watches.json) and cast (voices.json), which are written by hand.",
+  "layout": {
+    "ship": ["about", "name", "version", "length", "mass", "com", "sections", "hull", "helm", "spawn", "thrusters"],
+    "decks": ["decks", "compartments", "doors", "ladders"],
+    "drum": ["drum"],
+    "mounts": ["mounts"],
+    "fighter": ["fighters", "fighter"],
+    "stations": ["stations", "routes"],
+    "damage": ["damage"],
+    "weapons": ["weapons"],
+    "integrity": ["integrity"],
+    "plant": ["plant"]
+  }
+}

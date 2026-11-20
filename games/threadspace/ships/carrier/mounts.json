@@ -1,0 +1,316 @@
+{
+ "mounts": [
+  {
+   "id": "turret-dorsal",
+   "kind": "turret",
+   "at": [
+    0,
+    12.6,
+    -92
+   ],
+   "up": [
+    0,
+    1,
+    0
+   ]
+  },
+  {
+   "id": "turret-ventral",
+   "kind": "turret",
+   "at": [
+    0,
+    -12.6,
+    -92
+   ],
+   "up": [
+    0,
+    -1,
+    0
+   ]
+  },
+  {
+   "id": "turret-h1d",
+   "kind": "turret",
+   "at": [
+    -10,
+    18,
+    -8
+   ],
+   "up": [
+    0,
+    1,
+    0
+   ]
+  },
+  {
+   "id": "turret-h1v",
+   "kind": "turret",
+   "at": [
+    10,
+    -18,
+    -8
+   ],
+   "up": [
+    0,
+    -1,
+    0
+   ]
+  },
+  {
+   "id": "turret-h2d",
+   "kind": "turret",
+   "at": [
+    -10,
+    18,
+    30
+   ],
+   "up": [
+    0,
+    1,
+    0
+   ]
+  },
+  {
+   "id": "turret-h2v",
+   "kind": "turret",
+   "at": [
+    10,
+    -18,
+    30
+   ],
+   "up": [
+    0,
+    -1,
+    0
+   ]
+  },
+  {
+   "id": "turret-h3d",
+   "kind": "turret",
+   "at": [
+    -10,
+    18,
+    68
+   ],
+   "up": [
+    0,
+    1,
+    0
+   ]
+  },
+  {
+   "id": "turret-h3v",
+   "kind": "turret",
+   "at": [
+    10,
+    -18,
+    68
+   ],
+   "up": [
+    0,
+    -1,
+    0
+   ]
+  },
+  {
+   "id": "turret-stern-d",
+   "kind": "turret",
+   "at": [
+    0,
+    18,
+    137
+   ],
+   "up": [
+    0,
+    1,
+    0
+   ]
+  },
+  {
+   "id": "turret-stern-v",
+   "kind": "turret",
+   "at": [
+    0,
+    -18,
+    100
+   ],
+   "up": [
+    0,
+    -1,
+    0
+   ]
+  },
+  {
+   "id": "pdc-bow-pf",
+   "kind": "pdc",
+   "at": [
+    -19.5,
+    0,
+    -122
+   ],
+   "up": [
+    -1,
+    0,
+    0
+   ],
+   "magazine": "pdc-mag-p"
+  },
+  {
+   "id": "pdc-bow-sf",
+   "kind": "pdc",
+   "at": [
+    19.5,
+    0,
+    -122
+   ],
+   "up": [
+    1,
+    0,
+    0
+   ],
+   "magazine": "pdc-mag-s"
+  },
+  {
+   "id": "pdc-h-pa",
+   "kind": "pdc",
+   "at": [
+    -23.5,
+    -13,
+    81
+   ],
+   "up": [
+    -1,
+    0,
+    0
+   ],
+   "magazine": "pdc-mag-h"
+  },
+  {
+   "id": "pdc-h-sa",
+   "kind": "pdc",
+   "at": [
+    23.5,
+    -13,
+    81
+   ],
+   "up": [
+    1,
+    0,
+    0
+   ],
+   "magazine": "pdc-mag-h"
+  },
+  {
+   "id": "pdc-h-d",
+   "kind": "pdc",
+   "at": [
+    10,
+    18,
+    12
+   ],
+   "up": [
+    0,
+    1,
+    0
+   ],
+   "magazine": "pdc-mag-h"
+  },
+  {
+   "id": "pdc-h-v",
+   "kind": "pdc",
+   "at": [
+    -10,
+    -18,
+    48
+   ],
+   "up": [
+    0,
+    -1,
+    0
+   ],
+   "magazine": "pdc-mag-h"
+  },
+  {
+   "id": "pdc-s-pf",
+   "kind": "pdc",
+   "at": [
+    -25,
+    8,
+    101
+   ],
+   "up": [
+    -1,
+    0,
+    0
+   ],
+   "magazine": "magazine-sv"
+  },
+  {
+   "id": "pdc-s-sf",
+   "kind": "pdc",
+   "at": [
+    25,
+    8,
+    101
+   ],
+   "up": [
+    1,
+    0,
+    0
+   ],
+   "magazine": "magazine-sv"
+  },
+  {
+   "id": "radiator-port",
+   "kind": "radiator",
+   "x": [
+    -60,
+    -25
+   ],
+   "y": 0,
+   "z": [
+    93,
+    141
+   ]
+  },
+  {
+   "id": "radiator-stbd",
+   "kind": "radiator",
+   "x": [
+    25,
+    60
+   ],
+   "y": 0,
+   "z": [
+    93,
+    141
+   ]
+  },
+  {
+   "id": "bay-door",
+   "kind": "bay-door",
+   "x": -23.5,
+   "y": [
+    -12,
+    6
+   ],
+   "z": [
+    14,
+    52
+   ]
+  },
+  {
+   "id": "bay-door-s",
+   "kind": "bay-door",
+   "x": 23.5,
+   "y": [
+    -12,
+    6
+   ],
+   "z": [
+    14,
+    52
+   ]
+  }
+ ]
+}

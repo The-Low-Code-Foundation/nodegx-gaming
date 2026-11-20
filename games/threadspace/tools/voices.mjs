@@ -2,13 +2,13 @@
 //
 //   GEMINI_API_KEY=... node tools/voices.mjs              # from this folder: record what is missing or changed
 //   node tools/voices.mjs --list                          # every line, and which have a clip (no key needed)
-//   GEMINI_API_KEY=... node tools/voices.mjs --only dc    # one speaker (any id in ships/carrier.voices.json)
+//   GEMINI_API_KEY=... node tools/voices.mjs --only dc    # one speaker (any id in ships/carrier/voices.json)
 //   GEMINI_API_KEY=... node tools/voices.mjs --limit 10   # at most 10 requests this run
 //   node tools/voices.mjs --prune                         # delete clips for lines the game no longer says
 //   GEMINI_API_KEY=... node tools/voices.mjs --design     # make the saved voices that are missing (see below)
 //   GEMINI_API_KEY=... node tools/voices.mjs --sample <dir>   # one audition line per speaker, as mp3s in <dir>
 //
-// Each speaker is a voice designed from a description (`design` in ships/carrier.voices.json) and saved in the Google
+// Each speaker is a voice designed from a description (`design` in ships/carrier/voices.json) and saved in the Google
 // project behind the key (Gemini's Voices API, POST /v1beta/voices); its id is written back as `voiceId`. Every line
 // is then spoken in that saved voice (the Interactions API), with the speaker's short `style` as the acting note.
 // Saved voices belong to one Google project and expire a year after their last use: with another key, or after a long
@@ -18,9 +18,9 @@
 // The game never calls Gemini: it plays these files, and a line with no clip is spoken by the browser's own speech
 // (src/carrier/voice.mjs). So the key is only needed here, and only in the environment; never write it into a file.
 //
-// Every line the game can say with fixed words is worked out from the data (both carriers': ships/carrier.* and the
-// first one's, ships/carrier-v1.*): the officers' orders in ships/carrier.career.json, the leading hand and the pipes in ships/carrier.watches.json, and the ship's calls listed
-// in ships/carrier.voices.json (which also holds who speaks in which voice). Lines with a place or a frame number in
+// Every line the game can say with fixed words is worked out from the data (both carriers': ships/carrier/ and the
+// first one's, archive/carrier-v1/): the officers' orders in career.json, the leading hand and the pipes in watches.json, and the ship's calls listed
+// in voices.json (which also holds who speaks in which voice). Lines with a place or a frame number in
 // them (a fire's call-out, a hull breach) are not recorded; the browser speaks those.
 //
 // The index (assets/voice/index.json) keeps, per line, the hash of what it was recorded from (model, saved voice,
@@ -33,12 +33,14 @@
 
 import { readFileSync, writeFileSync, mkdirSync, existsSync, unlinkSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { loadLayout } from '../src/core/ship.mjs';
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 
 const here = (p) => new URL(`../${p}`, import.meta.url);
 const json = (p) => JSON.parse(readFileSync(here(p)));
-const V = json('ships/carrier.voices.json');
+const V = json('ships/carrier/voices.json');
 const OUT = here('assets/voice/');
 const INDEX = here('assets/voice/index.json');
 
@@ -56,12 +58,11 @@ const add = (speaker, text) => {
   if (!lines.some((l) => l.speaker === speaker && l.text === text)) lines.push({ speaker, text });
 };
 
-// Both carriers' lines: today's (ships/carrier.*) and the first one's (archived: archive/carrier-v1/), so --prune keeps
-// the first carrier's clips for when it comes back. Lines both say are recorded once.
-for (const dir of ['ships/carrier', 'archive/carrier-v1/carrier-v1']) {
-const K = json(`${dir}.career.json`);
-const W = json(`${dir}.watches.json`);
-const L = json(`${dir}.layout.json`);
+// Both carriers' lines: today's (ships/carrier/) and the first one's (archived: archive/carrier-v1/, a file each), so
+// --prune keeps the first carrier's clips for when it comes back. Lines both say are recorded once.
+const today = { K: json('ships/carrier/career.json'), W: json('ships/carrier/watches.json'), L: await loadLayout(fileURLToPath(here('ships/carrier')), async (p) => JSON.parse(readFileSync(p))) };
+const first = { K: json('archive/carrier-v1/carrier-v1.career.json'), W: json('archive/carrier-v1/carrier-v1.watches.json'), L: json('archive/carrier-v1/carrier-v1.layout.json') };
+for (const { K, W, L } of [today, first]) {
 
 // The officers: what each says when you report, and when you come back too soon.
 for (const st of K.steps) if (st.do === 'talk') add(st.who, st.say);
@@ -201,7 +202,7 @@ async function call(path, body) {
   throw new Error('gave up after 6 tries');
 }
 
-/** Makes the saved voice for `id` from its description; writes its id into ships/carrier.voices.json. Returns its
+/** Makes the saved voice for `id` from its description; writes its id into ships/carrier/voices.json. Returns its
  *  preview (WAV bytes). */
 async function design(id) {
   const S = V.speakers[id];
@@ -210,7 +211,7 @@ async function design(id) {
     voice: { model: V.model, type: 'prompted', display_name: `ThreadSpace carrier: ${id}`, gender: S.gender, language_code: S.language, prompted: { input: S.design } },
   });
   S.voiceId = j.id;
-  writeFileSync(here('ships/carrier.voices.json'), JSON.stringify(V, null, 2) + '\n');
+  writeFileSync(here('ships/carrier/voices.json'), JSON.stringify(V, null, 2) + '\n');
   return j.sample_audio?.data ? Buffer.from(j.sample_audio.data, 'base64') : null;
 }
 

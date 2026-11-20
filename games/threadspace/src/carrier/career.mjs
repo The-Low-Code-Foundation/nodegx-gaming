@@ -1,4 +1,4 @@
-// The career: your first week aboard as the most junior hand on the ship, from `ships/carrier.career.json`. Officers
+// The career: your first week aboard as the most junior hand on the ship, from `ships/carrier/career.json`. Officers
 // stand at their posts (`people`) and give you orders (`steps`), one at a time: report to someone, find a room, put out
 // a drill fire, mend a drill fault, man a turret, hit a towed target and then a raider yourself, fly a fighter home down the lane, turn the
 // ship at the helm. Each order done can promote you (`rank`) and open a part of the ship to you (`unlock`): the turret

@@ -1,0 +1,87 @@
+{
+ "damage": {
+  "about": "Damage control jobs (src/carrier/damage.mjs). When a hit hurts a room (see `integrity.jobs`), something goes wrong there: the ship's speakers call it out with its place (deck, frame, side) and you go and deal with it. `first` and `between` are the seconds before the first job and between jobs. `kits` is what you carry: `lockers` puts it in cabinets along every passage, `rooms` in a rack just inside those rooms. Each kind needs its `kit`, `work` seconds of holding E, and maybe `isolate` (at a room in `switchboards` first). A fire grows every `grows` seconds and is lost at size `lost`; an electrical fault left live becomes `becomes` after `after` seconds; a leak is lost after `lost` seconds. `rooms` limits where a kind can happen (`passages` for the corridors).",
+  "first": 45,
+  "between": [
+   75,
+   150
+  ],
+  "kits": {
+   "extinguisher": {
+    "name": "an extinguisher",
+    "label": "Extinguisher",
+    "agent": 16,
+    "lockers": "FIRE EXT",
+    "kept": "the red FIRE EXT cabinets in the passages",
+    "color": "#c8302a"
+   },
+   "patch": {
+    "name": "a patch kit",
+    "label": "Patch kit",
+    "lockers": "DC LOCKER",
+    "kept": "the yellow DC LOCKERs in the passages",
+    "color": "#d8b030",
+    "rooms": [
+     "repair-fwd",
+     "repair-mid",
+     "dc-store",
+     "machine-shop"
+    ]
+   },
+   "toolkit": {
+    "name": "a tool kit",
+    "label": "Tool kit",
+    "color": "#3a7ad0",
+    "rooms": [
+     "elec-shop",
+     "dc-store"
+    ]
+   },
+   "suit": {
+    "name": "a vac suit",
+    "label": "Vac suit",
+    "lockers": "VAC SUITS",
+    "kept": "the grey VAC SUITS lockers in the passages",
+    "color": "#9aa4b0",
+    "rooms": [
+     "damage-control",
+     "flight-gear",
+     "pilots-ready"
+    ],
+    "worn": true
+   }
+  },
+  "switchboards": [
+   "switchboard"
+  ],
+  "kinds": {
+   "fire": {
+    "name": "Fire",
+    "call": "Fire, fire, fire.",
+    "kit": "extinguisher",
+    "work": 4,
+    "grows": 45,
+    "lost": 4,
+    "rooms": "rooms"
+   },
+   "electrical": {
+    "name": "Electrical fault",
+    "call": "Electrical fault.",
+    "kit": "toolkit",
+    "work": 6,
+    "isolate": true,
+    "becomes": "fire",
+    "after": 150,
+    "rooms": "rooms"
+   },
+   "leak": {
+    "name": "Coolant leak",
+    "call": "Coolant leak.",
+    "kit": "patch",
+    "work": 5,
+    "lost": 180,
+    "rooms": "passages"
+   }
+  }
+ }
+}

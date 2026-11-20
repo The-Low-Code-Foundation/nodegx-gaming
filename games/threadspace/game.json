@@ -7,7 +7,7 @@
   "play": "index.html",
   "readiness": "B",
   "readinessNote": "Plays end to end: a 10–15 minute campaign loop and seeded drop-in missions. Sectors, goods, upgrades, crew and mission offers are data tables in src/data.mjs, but each mission kind's rules and every drop-in template live in code (game.mjs, mission.mjs).",
-  "buildYourOwn": "New sectors, stations, goods, crew to hire, upgrades and mission offers (src/data.mjs); new mission kinds and drop-in templates (code); the Kestrel's shape and rooms through the in-game shipyard; the carrier prototype's career and watch bill (ships/carrier.career.json, carrier.watches.json) and its layout (tools/carrier-v2.mjs).",
+  "buildYourOwn": "New sectors, stations, goods, crew to hire, upgrades and mission offers (src/data.mjs); new mission kinds and drop-in templates (code); the Kestrel's shape and rooms through the in-game shipyard; the carrier prototype's career and watch bill (ships/carrier/career.json, carrier.watches.json) and its layout (tools/carrier-v2.mjs).",
   "controls": "Keyboard and mouse",
   "devices": ["desktop"],
   "languages": ["en"],

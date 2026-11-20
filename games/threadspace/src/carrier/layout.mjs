@@ -1,4 +1,4 @@
-// The carrier, built from its layout (ships/carrier.layout.json): the hull, the walkable decks, the sealed machinery
+// The carrier, built from its layout (ships/carrier/): the hull, the walkable decks, the sealed machinery
 // spaces, the outside fittings (drive bells, thruster clusters, turrets, radiators) and the cutaway overlay. Everything
 // is placed in the ship's own frame (`frame`), whose origin is the layout's origin; `obj` (the frame's parent) sits at
 // the centre of mass, so the physics turns the ship about the right point.
