@@ -1,6 +1,9 @@
-// Copied unchanged from the Life Sim game (games/life-sim/src/wardrobe.mjs): the carrier's crew use its clothes
-// recolouring (crew.mjs dresses each person in a department's uniform colours). Outfit and hair borrowing come along
-// unused. Keep the two copies in step by hand if either changes.
+// Copied from the Life Sim game (games/life-sim/src/wardrobe.mjs): the carrier's crew use its outfit borrowing and
+// clothes recolouring (crew.mjs dresses each person in a soldier's clothes, recoloured as the duty suit or the
+// uniform). Hair borrowing comes along unused. One addition here, not in Life Sim's: a lender marked `plain`
+// (`mesh.userData.plain` on its body) has its clothes taken by body region rather than by colour (a camouflage print
+// looks like skin to the colour test), and their print flattened out (`wFlat`), leaving folds and seams to the normal
+// map. Keep the two copies otherwise in step by hand if either changes.
 // Customising a realistic (Rocketbox) person without touching their face: body weight and height, hair colour and
 // style, clothes colours, and whole outfits borrowed from another person.
 //
@@ -26,7 +29,7 @@ export function uniformsOf(material) {
   if (!u)
     UNIFORMS.set(material, (u = {
       wInset: { value: 0 }, wFillSkin: { value: new THREE.Color() }, wAxisAt: { value: new THREE.Vector3() }, wAxis: { value: new THREE.Vector3(0, 0, 1) }, wNeckK: { value: 1 },
-      wMask: { value: BLANK }, wAll: { value: 0 }, wCut: { value: 0 }, wOn: { value: new THREE.Vector3() }, wLum: { value: new THREE.Vector3(1, 1, 1) },
+      wMask: { value: BLANK }, wAll: { value: 0 }, wCut: { value: 0 }, wFlat: { value: 0 }, wOn: { value: new THREE.Vector3() }, wLum: { value: new THREE.Vector3(1, 1, 1) },
       wCol0: { value: new THREE.Color() }, wCol1: { value: new THREE.Color() }, wCol2: { value: new THREE.Color() }, wSkin: { value: new THREE.Color(1, 1, 1) }
     }));
   return u;
@@ -58,7 +61,7 @@ transformed = wAxisAt + wAlong + ( wRel - wAlong ) * mix( 1.0, wNeckK, wNeckW.y 
 transformed -= normal * wInset;
 #endif`);
   shader.fragmentShader = shader.fragmentShader
-    .replace('#include <common>', '#include <common>\nuniform sampler2D wMask;\nuniform float wAll, wCut;\nuniform vec3 wOn, wLum, wCol0, wCol1, wCol2, wSkin, wFillSkin;\n#ifdef W_FILL\nvarying vec4 vFill;\n#endif')
+    .replace('#include <common>', '#include <common>\nuniform sampler2D wMask;\nuniform float wAll, wCut, wFlat;\nuniform vec3 wOn, wLum, wCol0, wCol1, wCol2, wSkin, wFillSkin;\n#ifdef W_FILL\nvarying vec4 vFill;\n#endif')
     .replace(
       '#include <map_fragment>',
       `#include <map_fragment>
@@ -75,9 +78,9 @@ transformed -= normal * wInset;
   c = mix( c, fill / max( 1e-3, dot( vFill, vec4( 1.0 ) ) ), wm.r );
 #else
   c = mix( c, c * wSkin, wm.a );
-  c = mix( c, wCol0 * pow( clamp( l / wLum.x, 0.0, 3.0 ), 0.8 ), wm.r * wOn.x );
-  c = mix( c, wCol1 * pow( clamp( l / wLum.y, 0.0, 3.0 ), 0.8 ), wm.g * wOn.y );
-  c = mix( c, wCol2 * pow( clamp( l / wLum.z, 0.0, 3.0 ), 0.8 ), wm.b * wOn.z );
+  c = mix( c, wCol0 * pow( clamp( mix( l, wLum.x, wFlat ) / wLum.x, 0.0, 3.0 ), 0.8 ), wm.r * wOn.x );
+  c = mix( c, wCol1 * pow( clamp( mix( l, wLum.y, wFlat ) / wLum.y, 0.0, 3.0 ), 0.8 ), wm.g * wOn.y );
+  c = mix( c, wCol2 * pow( clamp( mix( l, wLum.z, wFlat ) / wLum.z, 0.0, 3.0 ), 0.8 ), wm.b * wOn.z );
 #endif
   diffuseColor.rgb = c;
 }
@@ -391,6 +394,7 @@ function analyseBody(mesh) {
   const hands = [];
   for (let i = 0; i < n; i++) if (region[i] === REGION.hands) hands.push(i);
   const skin = medianLab(lab, hands) ?? [70, 12, 18];
+  if (mesh.userData.plain) return plainBody(mesh, bones, px, S, skin, hands);
   // label: 0 skin, 1–3 a fabric (channel + 1), 4 left as it is, 255 not part of the body
   const label = new Uint8Array(n).fill(255);
   const byRegion = new Map();
@@ -451,6 +455,65 @@ function analyseBody(mesh) {
     return { channel: ch, name, mean, lum: lum(mean), share: members[ch].length / covered };
   }).filter((f) => f.share >= 0.015);
   return { kind: 'body', mask: maskTexture(mask, S), labels: voted, size: S, fabrics, skin: meanLinear(px, hands), skinLab: skin, covered };
+}
+
+// A `plain` lender's clothes (a soldier's: long sleeves, trousers, boots, gloves): every texel of the top is the top,
+// the hips and the legs the trousers, the feet and the hands (gloved) the boots and gloves. No colour test: a
+// camouflage print fools it. Grown a few texels past each island's edge, or the print shows along the UV seams.
+// Which fabric is decided per piece of the lender's clothes (a connected island of triangles), not per triangle, so
+// every seam between fabrics is a seam of the clothes: a piece with a calf in it is trousers, one with the spine a
+// jacket, one with a hand a glove, one mostly foot a boot; a piece hanging only from the pelvis and thighs (a hem, a waistband) goes by its
+// middle's height, above the belt (`PLAIN_BELT` of the way from the pelvis to the neck) the top, below it the trousers.
+const PLAIN_BELT = 0;
+function plainBody(mesh, bones, px, S, skinLab, hands) {
+  const geo = mesh.geometry, idx = geo.index.array, pos = geo.attributes.position, at = bindFrame(mesh), T = idx.length / 3;
+  const pelvis = at.Bip01_Pelvis, up = at.Bip01_Neck.clone().sub(pelvis), belt = PLAIN_BELT * up.length();
+  up.normalize();
+  const parent = Int32Array.from({ length: pos.count }, (_, i) => i);
+  const find = (i) => (parent[i] === i ? i : (parent[i] = find(parent[i])));
+  for (let t = 0; t < idx.length; t += 3) (parent[find(idx[t + 1])] = find(idx[t])), (parent[find(idx[t + 2])] = find(idx[t]));
+  const P = new THREE.Vector3(), piece = new Map();
+  for (let t = 0; t < T; t++) {
+    const k = find(idx[t * 3]), r = piece.get(k) ?? piece.set(k, { foot: 0, calf: 0, spine: 0, hand: 0, h: 0, n: 0 }).get(k), b = side(bones[t]);
+    if (/^Foot|^Toe/.test(b)) r.foot++;
+    else if (/^Calf/.test(b)) r.calf++;
+    else if (/^Spine|^Clavicle|^Neck|^UpperArm/.test(b)) r.spine++;
+    else if (/^Hand|^Finger/.test(b)) r.hand++;
+    for (let v = 0; v < 3; v++) r.h += P.fromBufferAttribute(pos, idx[t * 3 + v]).applyMatrix4(mesh.bindMatrix).sub(pelvis).dot(up) / 3;
+    r.n++;
+  }
+  const regionOfPiece = (r) => (r.foot > r.calf ? REGION.feet : r.calf ? REGION.legs : r.spine ? REGION.top : r.hand ? REGION.hands : r.h / r.n > belt ? REGION.top : REGION.legs);
+  const region = rasterise(S, geo, (t) => {
+    const r = regionOf(bones[t]);
+    const pr = regionOfPiece(piece.get(find(idx[t * 3])));
+    return r === REGION.top && pr !== REGION.hands ? r : pr;
+  }, [1, 2, 3, 4]);
+  const n = S * S, labels = new Uint8Array(n).fill(255);
+  const CH = { [REGION.top]: 0, [REGION.hips]: 1, [REGION.legs]: 1, [REGION.feet]: 2, [REGION.hands]: 2 };
+  for (let i = 0; i < n; i++) if (region[i]) labels[i] = CH[region[i]] + 1;
+  for (let pass = 0; pass < 4; pass++) {
+    const was = labels.slice();
+    for (let y = 0; y < S; y++)
+      for (let x = 0; x < S; x++) {
+        const i = y * S + x;
+        if (was[i] !== 255) continue;
+        const l = (x > 0 && was[i - 1] !== 255 && was[i - 1]) || (x < S - 1 && was[i + 1] !== 255 && was[i + 1]) || (y > 0 && was[i - S] !== 255 && was[i - S]) || (y < S - 1 && was[i + S] !== 255 && was[i + S]);
+        if (l) labels[i] = l;
+      }
+  }
+  const mask = new Uint8Array(n * 4), members = [[], [], []];
+  let covered = 0;
+  for (let i = 0; i < n; i++) {
+    if (labels[i] === 255) continue;
+    const ch = labels[i] - 1;
+    mask[i * 4 + ch] = 255;
+    if (region[i]) covered++, members[ch].push(i);
+  }
+  const fabrics = FABRICS.map(([name], ch) => {
+    const mean = meanLinear(px, members[ch]);
+    return { channel: ch, name, mean, lum: lum(mean), share: members[ch].length / covered };
+  }).filter((f) => f.share >= 0.015);
+  return { kind: 'body', plain: true, mask: maskTexture(mask, S), labels, size: S, fabrics, skin: meanLinear(px, hands), skinLab, covered };
 }
 
 // The head: hair is whatever looks more like the top of the skull than like the cheeks. Eyes, teeth, tongue and lips
@@ -965,6 +1028,7 @@ export async function dress(body, look, donorOf) {
   const info = analyse(GRAFT_SOURCE.get(clothes) ?? clothes);
   const u = uniformsOf(clothes.material);
   u.wMask.value = info.mask;
+  u.wFlat.value = info.plain ? 0.85 : 0; // a lender's print flattened out (above)
   for (let ch = 0; ch < 3; ch++) {
     const f = info.fabrics.find((x) => x.channel === ch), colour = look.outfit?.colours?.[ch];
     u.wOn.value.setComponent(ch, f && colour ? 1 : 0);

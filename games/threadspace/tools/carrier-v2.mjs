@@ -525,6 +525,9 @@ damage.switchboards = ['switchboard'];
 damage.kits.patch.rooms = ['repair-fwd', 'repair-mid', 'dc-store', 'machine-shop'];
 damage.kits.toolkit.rooms = ['elec-shop', 'dc-store'];
 damage.kits.suit.rooms = ['damage-control', 'flight-gear', 'pilots-ready'];
+// Outside the drums everyone wears the duty suit (crew.mjs `OUTFITS.duty`; ROADMAP phase 5), so the hull's suit lockers
+// hold fresh air bottles for it (integrity.mjs `don`), and the suits themselves hang in the lockers at the drums' lifts.
+Object.assign(damage.kits.suit, { name: 'fresh suit bottles', label: 'Suit bottles', lockers: 'SUIT AIR', kept: 'the grey SUIT AIR lockers in the passages' });
 const integrity = structuredClone(v1.integrity);
 // Condition one leaves the drums pressurised (design/CARRIER-POLISH.md, decision 2): behind the sleeve, the gap and the
 // water belt, their off-watch hands go up the spokes, and the sick bay and damage control stay, suited, helmets open.
@@ -533,6 +536,7 @@ integrity.condition.drums = false;
 integrity.armour.structure = { stop: 0.7, pen: 3 };
 integrity.about = integrity.about.replace('(a torpedo is never stopped).', '(a torpedo is never stopped). `armour.structure`: the same for the open drum section\'s exposed structure (the spine, the hub rings, the spokes and the end struts, `drum.structure`), reached through the sleeve\'s open ends.');
 integrity.about = integrity.about.replace('Everyone suits up first.', 'Everyone suits up first. `drums`: false keeps the drums\' rooms and ring corridors pressurised (only the fixed hull is pumped down).');
+integrity.about = integrity.about.replace('`suit`: a vac suit (the `suit` kit, worn, not carried) holds', '`suit`: the duty suit everyone wears outside the drums (changed into at the lockers by each drum\'s lift; the `suit` kit is its fresh bottles) holds');
 const plant = structuredClone(v1.plant);
 plant.propellant.tanks = ['tanks-aft', 'tanks-aft-s', 'hangar-bottom', 'hangar-bottom-2', 'hangar-bottom-3', 'hangar-bottom-4', 'hangar-bottom-5'];
 

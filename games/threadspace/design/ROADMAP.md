@@ -258,6 +258,25 @@ Left for the phases that design their formats: `content/announcements/` (phase 3
   Rocketbox military people (`games/lab-rat/assets/people/`, check their licence). The suit is a recolour of a
   Rocketbox body plus hard parts on the bones (collar, chest pack, boots, gloves, folded helmet), built in Blender.
 - **The heavy suit** stays, for EVA and long hangar work only.
+
+  **Built (phase 5's first session):** the outfits, and changing. The four outfits are one base: Rocketbox's two
+  soldiers (`assets/people/Military_*.glb`, MIT, slimmed from Lab Rat's copies by `tools/slim-person.py`), whose clothes
+  (long sleeves, trousers, boots, gloves) the wardrobe borrows onto each of the six people and recolours (`crew.mjs`
+  `OUTFITS`; the wardrobe takes a `plain` lender's clothes per piece of the mesh and flattens its camouflage). The duty
+  suit is dark slate with a collar ring banded in the department's colour, the hood and visor rolled behind the neck,
+  and a chest flash; its harness and pockets are the soldier's own, which read as a suit's harness. The off-duty
+  uniform is a jacket in the department's colour over dark trousers. The heavy suit is the same clothes in white under
+  the old helmet and pack. `outfits.html` shows them side by side. Who wears what follows the room (`outfitFor`): duty
+  suits in the fixed hull, uniforms in the drums, heavy suits in the hangar; in the drums anyone waiting at a lift,
+  riding it or just off it is in a duty suit. You come aboard in yours; the lockers beside each drum lift's doors
+  change you (`suitLockers`, `ship.change()`), the lift won't take you up out of it, turning in takes it off, and a
+  career picked up again wakes you out of it. The VAC SUITS lockers are SUIT AIR lockers now (fresh bottles), and the
+  career's suit order is fresh bottles and a seal check (same step count, so saves carry over).
+  Not done: a pipe at action stations that sends the drums' hands to the lockers first (they go up the spokes as
+  before, already suited at the lifts), the crew changing in sight at the lockers, the player's own body (first person
+  shows none), and Lieutenant Varga's changed order and the brace call recorded (both show as subtitles until
+  `tools/voices.mjs --only guns` and `--only ai` are run). The captain's condition-one call still says "don vac suits",
+  left as recorded: true for anyone coming up from the drums.
 - **[8] Gangways, not tubes.** The hangar is airless and, outside the drums, weightless. A gangway from the hangar
   airlock along the pads: a lattice with handrails and a tether line, visor down. You pull yourself along it to your
   fighter and into her seat, and the deck crew are there in heavy suits. This closes the open hangar item from the rebuild.

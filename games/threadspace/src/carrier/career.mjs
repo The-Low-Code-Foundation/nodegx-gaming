@@ -12,7 +12,7 @@
 // Free roam (`free()`) is everything open from the start, as the prototype was before.
 
 import * as THREE from 'three';
-import { crewMember } from './crew.mjs';
+import { crewMember, outfitFor } from './crew.mjs';
 import { floatIn, floatStep } from './floating.mjs';
 import { frameOf, sideOf } from './wayfinding.mjs';
 import { fmt as fmtTime } from './watch.mjs';
@@ -67,7 +67,7 @@ export class Career {
       who.chevron.position.set(p.at[0], I.floorY + 2.2, p.at[1]);
       who.chevron.visible = false;
       I.group.add(who.chevron);
-      crewMember(crewCount + k, p.dept)
+      crewMember(crewCount + k, p.dept, { outfit: outfitFor(room) }) // the duty suit, or in a drum the uniform
         .then((m) => {
           m.root.position.set(p.at[0], I.floorY, p.at[1]);
           m.root.rotation.y = p.yaw ?? 0;
@@ -127,6 +127,7 @@ export class Career {
     }
     const r = this.C.rooms.get(this.K.resume.room), at = this.K.resume.at;
     this.tell(null, this.K.resume.say, 8);
+    if (this.ship && r?.drum) (this.ship.suit = false), (this.ship.helmet = false); // you wake in your bunk, out of your suit
     return { deck: r.deck, x: at ? at[0] : (r.x[0] + r.x[1]) / 2, z: at ? at[1] : (r.z[0] + r.z[1]) / 2, yaw: this.K.resume.yaw ?? 0, seg: r.seg };
   }
 
@@ -169,6 +170,7 @@ export class Career {
     if (!st) return;
     if (st.do === 'land') this.s.seen = this.fighter.lastLanding;
     if (st.do === 'rounds') this.s.seen = new Set();
+    if (st.do === 'suit') this.s.donned = this.ship?.donned ?? 0;
   }
 
   /** The step in hand is done: its words, its rank and its unlocks, then the next. */
@@ -321,7 +323,8 @@ export class Career {
         if (!s.job && s.t > 1.5) s.job = this.dc.raise(st.kind, st.room);
         break;
       case 'suit':
-        if (this.ship.suit) this.complete();
+        // Fresh bottles and a seal check (integrity.mjs `don`, a SUIT AIR locker), or into your suit at a drum's lift.
+        if (this.ship.donned > s.donned) this.complete();
         break;
       case 'man':
         if (mode === 'gun') this.complete();
@@ -434,7 +437,7 @@ export class Career {
       case 'drill':
         return this.s?.job ? null : room(st.room); // once it is called, damage control's own red marker has it
       case 'suit':
-        return this.ship.suit ? null : room('damage-control');
+        return room('damage-control');
       case 'man':
       case 'shoot':
       case 'raid': {

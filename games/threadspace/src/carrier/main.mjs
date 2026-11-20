@@ -121,9 +121,12 @@ const hooks = {
   helm: () => (career.allows('helm') ? setMode('helm') : career.refuse('helm')),
   bay: () => doors.setBay(doors.want ? 0 : 1),
   fighter: (i) => (career.allows('fighters') ? fadeThen(() => fighterSeat.board(i)) : career.refuse('fighters')),
-  // A vac suit is put on, not carried (integrity.mjs `don`); the rest are kits you carry to a job (damage.mjs).
+  // Suit bottles go into your suit, not your hands (integrity.mjs `don`); the rest are kits you carry to a job (damage.mjs).
   kit: (k) => (L.damage.kits[k]?.worn ? ship.don() : dc.take(k)),
-  drum: (kind, a) => walk.drum(kind, a)
+  drum: (kind, a) => walk.drum(kind, a),
+  // The lockers by each drum's lift (drum.mjs `suitLockers`): into or out of your duty suit.
+  change: () => ship.change(),
+  suited: () => ship.suit
 };
 
 const C = buildCarrier(L, hooks);

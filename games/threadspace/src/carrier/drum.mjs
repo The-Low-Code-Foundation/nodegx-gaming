@@ -402,6 +402,7 @@ function spokeFoot(C, I, hid, did, seg) {
   const sign = C.atlas.plane(1.8, 0.26, (cg, pw, ph) => drawSign(cg, pw, ph, 'LIFT · ▲ HUB', '#ffb347'), 180);
   I.group.add(at(sign, lift.x, y + 2.6, z1 + 0.05, 0, 0, 0));
   I.use(`lift-${hid}${did}${seg}`, 'Take the lift up to the hub', landing.x, landing.z, () => C.hooks.drum?.('up', { half: hid, deck: did, seg }), { r: 2.2 });
+  suitLockers(C, I, x0, z0);
   // The ladder: up through the deckhead from the outer deck, down through the deck from the inner one.
   const other = D.decks.find((d) => d.id !== did), up = other.floorR < D.decks.find((d) => d.id === did).floorR;
   const lg = new THREE.Group(), rail = mat('#c9a43a');
@@ -423,6 +424,28 @@ function spokeFoot(C, I, hid, did, seg) {
   (C.drumLids ??= new Map()).set(key, [...(C.drumLids.get(key) ?? []), entry]);
   I.use(`dladder-${hid}${did}${seg}`, `${up ? 'Climb up' : 'Climb down'} to the ${other.name.toLowerCase()}`, ladder.x, ladder.z,
     () => C.hooks.drum?.('ladder', { half: hid, deck: other.id, seg }), { r: 2 });
+}
+
+/** The duty suits' lockers beside a lift's doors, on the fore wall between the corridor's extinguisher and the fore
+ *  room's doorway: outside the drums everyone wears the duty suit, and this is where you change into it and out of it
+ *  (integrity.mjs `change`; the lift won't take you up out of it, seats/walk.mjs `drum`). `xr` is the lift's left
+ *  edge, `z0` the fore wall. */
+function suitLockers(C, I, xr, z0) {
+  const y = I.floorY, n = 3, w = 0.55, d = 0.45, h = 2.0, x1 = Math.min(xr - 0.35, -0.85), cx = x1 - (n * w) / 2;
+  const body = mat('#56606c'), seam = mat('#23272c'), vent = mat('#1a1d21'), tag = mat('#c9b48a');
+  for (let k = 0; k < n; k++) {
+    const x = x1 - w / 2 - k * w;
+    I.group.add(at(box(w - 0.02, h, d, body), x, y + h / 2, z0 + d / 2));
+    I.group.add(at(box(0.012, h - 0.06, 0.012, seam), x + w / 2 - 0.01, y + h / 2, z0 + d + 0.004)); // between the doors
+    for (let v = 0; v < 4; v++) I.group.add(at(box(w - 0.18, 0.018, 0.01, vent), x, y + 1.62 + v * 0.05, z0 + d + 0.004));
+    I.group.add(at(box(0.03, 0.22, 0.03, seam), x + w / 2 - 0.08, y + 1.05, z0 + d + 0.015)); // the handle
+    I.group.add(at(box(0.16, 0.06, 0.006, tag), x, y + 1.42, z0 + d + 0.004)); // a name card
+  }
+  I.collider(x1 - n * w, y, z0, x1, y + h, z0 + d);
+  const sign = C.atlas.plane(1.5, 0.24, (cg, pw, ph) => drawSign(cg, pw, ph, 'DUTY SUITS', '#9ab8d8'), 180);
+  I.group.add(at(sign, cx, y + h + 0.2, z0 + d - 0.05, 0, 0, 0));
+  const u = I.use(`suits-${I.half}${I.did}${I.seg}`, '', cx, z0 + d + 0.6, () => C.hooks.change?.(), { r: 1.4 });
+  Object.defineProperty(u, 'label', { get: () => (C.hooks.suited?.() ? 'Change out of your duty suit into the off-duty uniform' : 'Change into your duty suit') });
 }
 
 /** Shows the segments within `n` of `seg` on that half's deck (building any not built yet) and hides the rest.

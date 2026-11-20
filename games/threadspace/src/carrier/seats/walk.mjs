@@ -48,8 +48,14 @@ export class WalkSeat {
     this.startClimb(l, end);
   }
 
-  /** The drums (drum.mjs): a lift down a spoke from the spine, back up to the hub, the ladder between the decks. */
+  /** The drums (drum.mjs): a lift down a spoke from the spine, back up to the hub (in your duty suit), the ladder
+   *  between the decks. */
   drum(kind, a) {
+    // Out of the drum only in your duty suit: the lockers are beside the lift doors (drum.mjs `suitLockers`).
+    if (kind === 'up' && !this.hubNow && !this.G.ship.suit) {
+      this.G.sfx.cue('clunk', { vol: 0.3 });
+      return this.G.dc.say(null, "Not up to the hub in your off-duty uniform: outside the drums it's the duty suit. The lockers are beside the lift doors.", 0, 6);
+    }
     if (kind === 'ladder') this.startDrumClimb(a);
     else if (kind === 'catch') this.startSwing('catch', hubRing(this.G.C, a.half));
     else if (this.hubNow) this.startRide(kind, a); // from the hub ring you step into the car

@@ -38,10 +38,10 @@
     ]
    },
    "suit": {
-    "name": "a vac suit",
-    "label": "Vac suit",
-    "lockers": "VAC SUITS",
-    "kept": "the grey VAC SUITS lockers in the passages",
+    "name": "fresh suit bottles",
+    "label": "Suit bottles",
+    "lockers": "SUIT AIR",
+    "kept": "the grey SUIT AIR lockers in the passages",
     "color": "#9aa4b0",
     "rooms": [
      "damage-control",

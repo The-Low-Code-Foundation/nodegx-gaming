@@ -6,7 +6,8 @@
 // Only the segments round you are populated (drum.mjs `drumWindow` shows four either side; `max` caps how many are drawn), and a room changes only out
 // of your sight: never while you stand in it, nor while you can see into it through its doorway. Each room's people
 // are dealt from its id and the half hour, so a room looks the same when you come back. The cast is the six people in
-// assets/people (crew.mjs), in their department's uniform; their skinned meshes are drawn whether you look at them or
+// assets/people (crew.mjs), in the off-duty uniform with their department's colour, but at the lifts, where they wear
+// the duty suit they change into at the lockers beside the doors; their skinned meshes are drawn whether you look at them or
 // not, so `max` keeps the number drawn at once small.
 
 import * as THREE from 'three';
@@ -325,7 +326,7 @@ export class Hands {
       for (let i = at; i < K.waiting; i++) {
         const g = this.liftSpot(I.half, I.seg);
         if (this.seenAt(I, room, g.x, g.z) || this.figs.size >= this.D.max) break;
-        const f = this.spawn(I, room, { x: g.x, z: g.z, yaw: 0, pose: 'idle', k: Math.floor(Math.random() * 6), dept: pick(Math.random, ['crew', 'engineering', 'flight']) }, 'wait');
+        const f = this.spawn(I, room, { x: g.x, z: g.z, yaw: 0, pose: 'idle', k: Math.floor(Math.random() * 6), dept: pick(Math.random, ['crew', 'engineering', 'flight']), outfit: 'duty' }, 'wait');
         f.goal = g;
       }
     }
@@ -347,7 +348,7 @@ export class Hands {
       for (let i = 0; i < off && this.figs.size < this.D.max; i++) {
         const dir = Math.random() < 0.5 ? -1 : 1, room = ringId(I.half, I.did);
         const h = C.L.drum.halves.find((x) => x.id === I.half), cz = (h.corridor[0] + h.corridor[1]) / 2;
-        const f = this.spawn(I, room, { x: s.lift.x - 0.5 + i, z: s.landing.z, yaw: dir > 0 ? -Math.PI / 2 : Math.PI / 2, pose: 'walk', k: Math.floor(Math.random() * 6), dept: 'crew' }, 'ring');
+        const f = this.spawn(I, room, { x: s.lift.x - 0.5 + i, z: s.landing.z, yaw: dir > 0 ? -Math.PI / 2 : Math.PI / 2, pose: 'walk', k: Math.floor(Math.random() * 6), dept: 'crew', outfit: 'duty' }, 'ring');
         f.goal = { seg: I.seg + dir * 6, x: 0, z: cz + dir * 0.6 };
       }
     }
@@ -363,7 +364,7 @@ export class Hands {
       const f = { I: ride.I, seg: ride.I.seg, room: ringId(ride.I.half, ride.I.did), kind: 'ride', m: null };
       this.figs.add(f);
       ride.riders.push(f);
-      this.get(Math.floor(Math.random() * 6), pick(Math.random, ['crew', 'engineering', 'flight'])).then((m) => {
+      this.get(Math.floor(Math.random() * 6), pick(Math.random, ['crew', 'engineering', 'flight']), 'duty').then((m) => {
         if (!this.figs.has(f) || !ride.car.parent) return this.release(m);
         f.m = m;
         m.root.position.set(i ? 0.6 : -0.6, 0, -0.35);
@@ -450,7 +451,7 @@ export class Hands {
   spawn(I, room, s, kind) {
     const f = { I, seg: I.seg, room, kind, m: null, hurry: 1 };
     this.figs.add(f);
-    this.get(s.k, s.dept).then((m) => {
+    this.get(s.k, s.dept, s.outfit).then((m) => {
       if (!this.figs.has(f)) return this.release(m);
       f.m = m;
       m.root.position.set(s.x, f.I.floorY, s.z);
@@ -475,11 +476,12 @@ export class Hands {
     if (st) st.figs = st.figs.filter((g) => g !== f);
   }
 
-  /** A crew member from the pool (the same person in the same uniform), or a new one. */
-  get(k, dept) {
-    const i = this.pool.findIndex((m) => m.k === k && m.dept === dept);
+  /** A crew member from the pool (the same person in the same clothes), or a new one. `outfit`: the off-duty uniform
+   *  in the drums, the duty suit for anyone at a lift (they change at the lockers beside its doors). */
+  get(k, dept, outfit = 'uniform') {
+    const i = this.pool.findIndex((m) => m.k === k && m.dept === dept && m.outfit === outfit);
     if (i >= 0) return Promise.resolve(this.pool.splice(i, 1)[0]);
-    return crewMember(k, dept).then((m) => {
+    return crewMember(k, dept, { outfit }).then((m) => {
       m.k = k;
       if (this.C.clipPlanes) m.root.traverse((o) => o.material && [o.material].flat().forEach((x) => (x.clippingPlanes = this.C.clipPlanes)));
       return m;

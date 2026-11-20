@@ -30,11 +30,15 @@
 // Armour: a belt round her stops some shells outright (a scar on the plating, no hole); the rest come through it with
 // less left in them. A torpedo is never stopped: it goes off inside.
 //
-// Condition one: at action stations the ship sets condition one. Everyone puts on a vac suit (the grey VAC SUITS
-// lockers, `suit`), and once the warning has run the air in the crew spaces is pumped down into the tanks, so a hit
-// cannot blow a room out, a shell cannot start a fire, and a hole is only a hole. After the stand-down the air comes
-// back. With your helmet on you breathe your suit's air (`suitAir`), not the room's; the helmet closes by itself when
-// the room's air is thin and opens again when it is good.
+// Your duty suit: outside the drums everyone wears a fitted pressure suit as working uniform (crew.mjs `OUTFITS`), its
+// hood and visor rolled down behind the neck. You change into it and out of it at the lockers by each drum's lift
+// (`change()`), and the lift will not take you up to the hub out of it. The grey SUIT AIR lockers in the passages give
+// fresh bottles (`don()`). With the visor shut you breathe the suit's air (`suitAir`), not the room's; it shuts by
+// itself when the room's air is thin or falling fast, or the ship vents, and opens again when the air is good.
+//
+// Condition one: at action stations the ship sets condition one. Anyone in the drums suits up at the lift on the way
+// up, and once the warning has run the air in the crew spaces is pumped down into the tanks, so a hit cannot blow a
+// room out, a shell cannot start a fire, and a hole is only a hole. After the stand-down the air comes back.
 //
 // Fires, electrical faults and coolant leaks (damage.mjs's jobs) now come from hits: a hit that does real damage to a
 // walkable room can start one there. And an attack is what makes hits: every few minutes a raider makes a firing pass
@@ -135,9 +139,11 @@ export class Integrity {
     this.shake = 0;
     this.hypoxia = 0;
     this.rescuing = false;
-    // Condition one, and your vac suit: worn or not, the helmet closed or not, the seconds of air in it.
+    // Condition one, and your duty suit: worn or not (you come aboard in it), the visor shut or not (`helmet`), the
+    // seconds of air in its bottles, and how many times you have drawn fresh ones (`donned`: the career's seal check).
     this.cond = null; // { t: when set, venting, secured }
-    this.suit = false;
+    this.suit = true;
+    this.donned = 0;
     this.helmet = false;
     this.suitAir = this.N.suit?.air ?? 1800;
     this.status = null; // () → [[name, 0..1, note]]: rows other systems add to the status board (main.mjs)
@@ -280,7 +286,7 @@ export class Integrity {
     if (!link.open && lock.air > 1) {
       if (!this.suit) {
         this.sfx?.cue('clunk', { vol: 0.3 });
-        this.dc?.say(null, "The airlock won't cycle without a vac suit on: the hangar is airless. Suits are in the VAC SUITS lockers.");
+        this.dc?.say(null, "The airlock won't cycle out of a suit: the hangar is airless. Duty suits are in the lockers by each drum's lift.");
         return;
       }
       link.cyc = 'out';
@@ -827,8 +833,9 @@ export class Integrity {
     this.cond = { t: this.time, venting: false, secured: null };
     this.C.bus?.emit('condition', { on: true });
     this.C.bus?.emit('call', { id: K.drums === false ? 'condition-one-hull' : 'condition-one', warn: String(K.warn) });
-    if (K.drums === false) this.dc?.say(null, `Condition one: put on a vac suit (VAC SUITS lockers). The fixed hull vents in ${K.warn} s; the drums keep their air.`, 0, 7);
-    else this.dc?.say(null, `Condition one: put on a vac suit (VAC SUITS lockers). The ship vents in ${K.warn} s.`, 0, 7);
+    const dress = this.suit ? 'your visor shuts by itself' : 'change into your duty suit at the lockers by the lift';
+    if (K.drums === false) this.dc?.say(null, `Condition one: ${dress}. The fixed hull vents in ${K.warn} s; the drums keep their air.`, 0, 7);
+    else this.dc?.say(null, `Condition one: ${dress}. The ship vents in ${K.warn} s.`, 0, 7);
     this.events.push({ t: this.time + K.warn, fn: () => {
       if (!this.cond || this.cond.secured) return;
       this.cond.venting = true;
@@ -838,13 +845,30 @@ export class Integrity {
     } });
   }
 
-  /** You put on a vac suit (from a VAC SUITS locker): a full suit of air. */
+  /** Fresh bottles for your suit (a SUIT AIR locker), and a seal check: a full suit of air. Out of your suit, you put
+   *  it on (the career's start and the debug console; aboard, `change()` at a drum's lift). */
   don() {
     const had = this.suit;
     this.suit = true;
     this.suitAir = this.N.suit?.air ?? 1800;
+    this.donned++;
     this.sfx?.cue('clunk', { vol: 0.5 });
-    this.dc?.say(null, had ? 'You swap your air bottles for full ones.' : 'You pull on a vac suit. The helmet closes by itself when the air goes thin.', 0, 5);
+    this.dc?.say(null, had ? 'You swap your bottles for full ones and check your seals: collar, cuffs, visor. All tight.' : 'You pull on your duty suit. The visor shuts by itself when the air goes thin.', 0, 5);
+  }
+
+  /** At the lockers by a drum's lift: into your duty suit (with full bottles), or out of it into the off-duty uniform. */
+  change() {
+    this.sfx?.cue('clunk', { vol: 0.4 });
+    if (this.suit) {
+      this.suit = false;
+      this.helmet = false;
+      this.dc?.say(null, 'You hang up your duty suit and change into the off-duty uniform.', 0, 4);
+      return;
+    }
+    this.suit = true;
+    this.suitAir = this.N.suit?.air ?? 1800;
+    this.donned++;
+    this.dc?.say(null, 'You get into your duty suit: fresh bottles, seals checked, the hood and visor rolled at your neck.', 0, 5);
   }
 
   /** One shell of a pass: its tracer in to where it will strike, then the strike. */
@@ -1190,7 +1214,7 @@ export class Integrity {
       if (this.helmet) {
         const was = this.suitAir;
         this.suitAir = Math.max(0, this.suitAir - dt);
-        if (U && was > U.low && this.suitAir <= U.low) this.dc?.say(null, 'Suit air low. Change your bottles at a VAC SUITS locker.', 0, 6);
+        if (U && was > U.low && this.suitAir <= U.low) this.dc?.say(null, 'Suit air low. Fresh bottles at a SUIT AIR locker.', 0, 6);
       }
     } else this.helmet = false;
     const sealed = this.helmet && this.suitAir > 0;
@@ -1212,7 +1236,7 @@ export class Integrity {
         const mmss = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
         let html = `<b>${Math.round(amb)} kPa</b> ${word}${trend}`;
         if (this.helmet) html = `<b>SUIT ${mmss(this.suitAir)}</b> helmet closed · amb ${Math.round(amb)} kPa${trend}`;
-        else if (this.cond && !this.suit) html += ' · <b>no suit: get one</b>';
+        else if (this.cond && !this.suit) html += ' · <b>no suit: change at the lift</b>';
         if (html !== this.gaugeHtml) (this.gauge.innerHTML = html), (this.gaugeHtml = html);
         this.gauge.classList.toggle('bad', (p < A.unsafe) || (this.helmet && this.suitAir < (U?.low ?? 240)) || (!!this.cond && !this.suit));
       }
@@ -1261,7 +1285,8 @@ export class Integrity {
       this.suit = true;
       this.helmet = true;
       this.suitAir = this.N.suit?.air ?? 1800;
-      this.dc?.say(null, 'You blacked out. A damage control party found you and got a suit on you.', 0, 7);
+      if (!this.suit) this.dc?.say(null, 'You blacked out. A damage control party found you and got a suit on you.', 0, 7);
+      else this.dc?.say(null, 'You blacked out. A damage control party found you, shut your visor and changed your bottles.', 0, 7);
       this.hooks.rescue?.(n?.c ?? this.C.rooms.get(to), () => {
         this.hypoxia = 0;
         this.rescuing = false;

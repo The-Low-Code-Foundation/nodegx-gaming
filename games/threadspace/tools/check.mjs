@@ -40,7 +40,7 @@ const ROOT = fileURLToPath(new URL('..', import.meta.url)).replace(/\/$/, '');
 
 // What the code knows. Keep these in step with it: the steps career.mjs `check()` runs, what `unlock` and `refuse`
 // may name (career.mjs `allows()`), the seats an action station may be (`stations.ranks.*.seat`), the uniforms
-// (crew.mjs `UNIFORMS`, less the suit) and the poses (crew.mjs `CLIPS`).
+// (crew.mjs `DEPTS`) and the poses (crew.mjs `CLIPS`).
 const STEPS = ['talk', 'go', 'read', 'sleep', 'muster', 'rounds', 'drill', 'suit', 'man', 'shoot', 'raid', 'board', 'launch', 'land', 'helm', 'turn', 'transit'];
 const UNLOCKS = ['guns', 'raids', 'fighters', 'helm'];
 const SEATS = ['gun', 'fighter', 'helm'];

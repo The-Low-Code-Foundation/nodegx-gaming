@@ -369,13 +369,16 @@ export class Routine {
     return null;
   }
 
-  /** Asleep until you are shaken, `shake` minutes before your section's next watch. */
+  /** Asleep until you are shaken, `shake` minutes before your section's next watch. You wake in the off-duty uniform:
+   *  your duty suit is in the lockers by the lift. */
   sleep() {
     const x = this.nextOwn();
     this.setTime(x.start - this.you.shake * 60);
     // The posts change while you sleep: put everyone where the new time wants them, out of sight or not.
     for (const p of this.posts) this.man(p, null);
     this.tell(this.mine.leader, this.fill(this.W.pipes.shake, x), 9);
+    // You turned in out of your duty suit: it is in the lockers by the lift (drum.mjs `suitLockers`).
+    if (this.ship?.suit) (this.ship.suit = false), (this.ship.helmet = false);
     return x;
   }
 
