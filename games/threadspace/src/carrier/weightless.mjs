@@ -439,7 +439,9 @@ export class Floater {
     const I = walker.interior, keys = f.keys, was = this.was;
     const down = (k) => keys.has(k), pressed = (k) => keys.has(k) && !was.has(k), released = (k) => !keys.has(k) && was.has(k);
     const shift = down('ShiftLeft') || down('ShiftRight');
-    if ((this.held || this.strapped) && ((this.held ?? this.strapped).I !== I || walker.pos.distanceTo(this.last) > 2)) this.reset(); // moved by something else
+    // Moved by something else (a fade, another deck): let go. A hold keeps its deck on its rail (`held.h.I`), a strap on itself.
+    const on = this.held ? this.held.h.I : this.strapped?.I;
+    if (on && (on !== I || walker.pos.distanceTo(this.last) > 2)) this.reset();
     this.ignoreT = Math.max(0, this.ignoreT - dt);
     // In a brace strap: held to the wall, whatever the drive or a hit does. E (its use) lets you go.
     if (this.strapped) {
@@ -549,6 +551,8 @@ export class Floater {
     }
     if (this.puffing && !this.puffT) (this.puffT = 0.25), this.G.sfx?.cue('hiss', { dur: 0.3, vol: 0.25 });
     this.puffT = Math.max(0, (this.puffT ?? 0) - dt);
+    // Puffing (and half a second after), you are going somewhere: a hold you drift past slowly is not taken for you.
+    this.puffed = this.puffing ? 0.5 : Math.max(0, (this.puffed ?? 0) - dt);
     const hit = this.move(walker, v.x * dt, v.y * dt, v.z * dt);
     const speed = v.length();
     if (hit.any) {
@@ -558,7 +562,7 @@ export class Floater {
       this.injure(into);
     }
     // A slow drift past a hold, or a stop against a wall by one: you take it.
-    if (n && (speed < HOLD.slow || (hit.any && speed < 1.5))) this.grab(walker, n, speed);
+    if (n && !this.puffed && (speed < HOLD.slow || (hit.any && speed < 1.5))) this.grab(walker, n, speed);
   }
 
   /** Moves your eye by (dx, dy, dz) in the deck's frame: the walls stop you on x and z (at your eye's height), the deck

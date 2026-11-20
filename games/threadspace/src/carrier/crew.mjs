@@ -11,6 +11,7 @@ import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 import { makeDressable, dress } from './wardrobe.mjs';
 import { loadMocap, fitMocap, byKey, genderOf } from './mocap.mjs';
 import { at } from '../util.mjs';
+import { rigOf, floatClips, FLOATING, floatIn, floatStep, HC } from './floating.mjs';
 
 /** Uniform colours per department: [top, trousers, shoes]. The top says the department. */
 export const UNIFORMS = {
@@ -50,8 +51,9 @@ async function template(name) {
     outer.add(inner);
     const gender = genderOf(name);
     stand(outer, inner, nodes, HEIGHTS[gender] + (name.length % 3) * 0.03);
+    const rig = rigOf(outer, nodes); // the rest pose, for the weightless clips (floating.mjs)
     const clips = fitMocap(await loadMocap(gender, CLIPS), nodes, inner.scale.x);
-    return { outer, clips, used: false };
+    return { outer, clips, rig, fclips: null, used: false };
   })();
   templates.set(name, p);
   return p;
@@ -97,25 +99,38 @@ export async function crewMember(nameOrIndex, dept = 'crew', { suit: suited = fa
   await dress({ outer }, { outfit: { from: null, colours: suited ? UNIFORMS.suit : UNIFORMS[dept] ?? UNIFORMS.crew }, hair: { style: null } }, null);
   if (suited) suit(outer, dept);
   const root = new THREE.Group();
+  // root (yaw, feet on the deck) → lean (the body's attitude, turning about its middle, weightless: floating.mjs) → turn.
+  const lean = new THREE.Group();
+  lean.position.y = HC;
   const turn = new THREE.Group();
   turn.rotation.y = Math.PI; // the body faces +z; a crew member faces -z
+  turn.position.y = -HC;
   turn.add(outer);
-  root.add(turn);
+  lean.add(turn);
+  root.add(lean);
   root.userData.live = true;
   const mixer = new THREE.AnimationMixer(outer);
   let current = null;
+  const floats = () => (T.fclips ??= floatClips(T.rig, T.clips));
   const m = {
-    name, dept, root, mixer, clips: T.clips,
+    name, dept, root, lean, mixer, clips: T.clips, rig: T.rig, float: false, pose: null,
+    /** Stands (or, weightless, holds) them in `pose`: one of the captured clips' names (crew.mjs `CLIPS`), which in a
+     *  weightless room becomes its `FLOATING` clip. */
     play(pose, fade = 0.4) {
-      const clip = T.clips[pose] ?? T.clips.idle;
+      m.pose = pose;
+      m.clip(m.float ? FLOATING[pose] ?? pose : pose, fade, true);
+    },
+    /** Plays clip `name` (captured or weightless). `fresh`: from a random point, so a room does not breathe in step. */
+    clip(name, fade = 0.4, fresh = false) {
+      const clip = T.clips[name] ?? floats()[name] ?? T.clips.idle;
       const a = mixer.clipAction(clip);
       if (current === a) return;
       a.reset().fadeIn(fade).play();
       current?.fadeOut(fade);
       current = a;
-      // Different people at different points in the same clip, so a room does not breathe in step.
-      a.time = Math.random() * clip.duration;
+      if (fresh) a.time = Math.random() * clip.duration;
     },
+    mixerTime: () => current?.time ?? 0,
     speed: () => (T.clips.walk?.userData?.speed ?? 1.3) * (m.hurry ?? 1),
     /** Stops every clip, so the next `play` starts afresh (a crew member taken off a deck and used again). */
     stop() {
@@ -184,6 +199,7 @@ export function placeCrew(C, s, k) {
     I.group.add(m.root);
     if (C.clipPlanes) m.root.traverse((o) => o.material && [o.material].flat().forEach((x) => (x.clippingPlanes = C.clipPlanes)));
     m.deck = room.deck;
+    floatIn(m, room); // a weightless room (floating.mjs)
     m.route = s.route ? s.route.map(([x, z]) => new THREE.Vector3(x, I.floorY, z)) : null;
     m.leg = 1;
     m.play(m.route ? 'walk' : s.pose);
@@ -205,6 +221,10 @@ export function tickCrew(crew, dt, visibleDeck) {
   for (const m of crew) {
     if (!visibleDeck(m.deck)) continue;
     m.update(dt);
+    if (m.float) {
+      floatStep(m, dt); // weightless: their own way of getting about (floating.mjs)
+      continue;
+    }
     if (!m.route) continue;
     const goal = m.route[m.leg];
     const to = goal.clone().sub(m.root.position);

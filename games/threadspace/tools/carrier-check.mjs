@@ -220,6 +220,9 @@ const scenarios = {
     const hold = (code, secs) => (K.add(code), run_(c, secs), K.delete(code));
     out.holds = [...c.C.decks.values()].reduce((n, I) => n + (I.holds?.length ?? 0), 0);
     c.place(4, 0, -50, -Math.PI / 2); // the spine, facing starboard
+    run_(c, 0.2);
+    out.start = at(); // the deck handle under you, taken
+    F.reset(); // let go, and puff toward the starboard rail
     hold('KeyW', 1);
     out.puffed = at();
     out.caught = { t: run_(c, 5, () => F.held), ...at() };

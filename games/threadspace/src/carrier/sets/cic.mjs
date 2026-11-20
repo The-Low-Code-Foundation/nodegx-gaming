@@ -4,6 +4,8 @@ import * as THREE from 'three';
 import { box, at, glow } from '../../util.mjs';
 import { P, G, couch, desk, place } from './parts.mjs';
 import { poster, wallScreen } from './paper.mjs';
+import { gimbal } from '../floating.mjs';
+import { bake } from '../../decor.mjs';
 
 export function cic(C, I, c) {
   const [x1, x2] = c.x, [z1, z2] = c.z, y = I.floorY;
@@ -47,9 +49,9 @@ export function cic(C, I, c) {
   (C.anim ??= []).push((dt) => (holo.rotation.y += dt * 0.15));
   // Consoles round the walls with couches, clear of the doors and the plotter's place.
   place(I, desk(2.0, '#58b0ff', ['radar', 'target']), x1 + 0.5, z1 + 2.2, { ry: Math.PI / 2 });
-  place(I, couch(P.pad, { low: true }), x1 + 1.45, z1 + 2.2, { ry: Math.PI / 2 });
+  gimbal(C, place(I, couch(P.pad, { low: true }), x1 + 1.45, z1 + 2.2, { ry: Math.PI / 2 }), bake); // they swing to face the bow for a burn
   place(I, desk(2.0, '#58b0ff', ['nav', 'status']), x1 + 0.5, z2 - 2.2, { ry: Math.PI / 2 });
-  place(I, couch(P.pad, { low: true }), x1 + 1.45, z2 - 2.2, { ry: Math.PI / 2 });
+  gimbal(C, place(I, couch(P.pad, { low: true }), x1 + 1.45, z2 - 2.2, { ry: Math.PI / 2 }), bake);
   place(I, desk(1.8, '#ff6a50', ['target', 'status']), x2 - 0.5, z1 + 2.6, { ry: -Math.PI / 2 });
   place(I, desk(1.8, '#ffb347', ['status', 'radar']), x2 - 0.5, z2 - 2.0, { ry: -Math.PI / 2 });
   // The forward bulkhead: the tactical picture, beside the door.

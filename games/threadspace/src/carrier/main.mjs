@@ -28,6 +28,7 @@ import { Rigid, Thrusters, Helm, thrustersFromLayout, buildThrusterMeshes, updat
 import { Cutaway } from './cutaway.mjs';
 import { CarrierHud, KEYS } from './hud.mjs';
 import { tickCrew } from './crew.mjs';
+import { crewBrace, crewJolt } from './floating.mjs';
 import { Hands } from './hands.mjs';
 import { Fighter } from './fighter.mjs';
 import { loadFighterModel, swapFighters } from './fighter-model.mjs';
@@ -182,6 +183,9 @@ const guns = new Weapons(C, world, {
   }
 });
 // A fighter shot dead in space: flight control takes her, from wherever she is, and brings her in.
+// The weightless crew brace at the call and take a hit's kick (floating.mjs).
+C.bus.on('brace', (e) => crewBrace(e.on));
+C.bus.on('jolt', crewJolt);
 C.bus.on('fighter-down', () => {
   doors.setBay(1);
   fighter.land();
@@ -336,6 +340,7 @@ function frame() {
  *  the ship's systems step, the doors, the guns, then what is drawn, the seat's camera, the sound, the routine, the
  *  lights and the render. */
 const ambLast = {}; // where you were last frame: your boots in the suit's room tone (ambience.mjs)
+const _lurch = new THREE.Vector3();
 function tick(dt) {
   time += dt;
   avgDt += (dt - avgDt) * 0.05;
@@ -396,6 +401,7 @@ function tick(dt) {
 
   // The main drive's push, what it does to you, and the seat's camera and HUD.
   const push = drive.frame(dt);
+  C.push = push; // the gimballed couches swing round for a burn (floating.mjs `gimbal`)
   walk.feel(push, dt);
   seats[mode].frame(dt, drive);
   walker.floater.tick(dt, mode); // an injury healing, and the brace countdown (weightless.mjs)
@@ -406,6 +412,16 @@ function tick(dt) {
     camera.position.y += (Math.random() - 0.5) * s * 0.12;
     camera.rotateZ((Math.random() - 0.5) * s * 0.02);
   }
+  // A torpedo hit's lurch (integrity.mjs `impact`): the room jumps along the blast and rings back, so the view jumps
+  // the other way. Loose and weightless, the Floater throws you for real as well (weightless.mjs `jolt`).
+  const lurch = ship.lurch;
+  if (lurch && (lurch.t += dt) < 1.2) {
+    if (mode === 'walk' || mode === 'gun' || bridgeView) {
+      const k = lurch.size * 0.28 * Math.exp(-lurch.t * 3.5) * Math.cos(lurch.t * 14);
+      camera.position.addScaledVector(_lurch.copy(lurch.dir).transformDirection(C.frame.matrixWorld), -k);
+      camera.rotateX(k * 0.12);
+    }
+  } else if (lurch) ship.lurch = null;
   // A hit on your fighter throws you about in the seat.
   if (mode === 'fighter' && guns.jolt > 0.01) {
     camera.rotateZ((Math.random() - 0.5) * guns.jolt * 0.05);

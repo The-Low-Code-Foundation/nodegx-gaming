@@ -13,6 +13,7 @@
 
 import * as THREE from 'three';
 import { crewMember } from './crew.mjs';
+import { floatIn, floatStep } from './floating.mjs';
 import { frameOf, sideOf } from './wayfinding.mjs';
 import { fmt as fmtTime } from './watch.mjs';
 import { drumToShip } from './drum.mjs';
@@ -73,6 +74,7 @@ export class Career {
           I.group.add(m.root);
           if (this.C.clipPlanes) m.root.traverse((o) => o.material && [o.material].flat().forEach((x) => (x.clippingPlanes = this.C.clipPlanes)));
           m.deck = room.deck;
+          floatIn(m, room);
           m.play(p.pose ?? 'idle');
           who.m = m;
         })
@@ -82,7 +84,7 @@ export class Career {
 
   /** The officers' clips play where they are being drawn (`drawn(person)`). */
   tickPeople(dt, drawn) {
-    for (const p of this.people.values()) if (p.m && drawn(p)) p.m.update(dt);
+    for (const p of this.people.values()) if (p.m && drawn(p)) p.m.update(dt), p.m.float && floatStep(p.m, dt);
   }
 
   // --- starting, saving ---

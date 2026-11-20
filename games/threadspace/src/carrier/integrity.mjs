@@ -650,7 +650,12 @@ export class Integrity {
     this.fx.push({ mesh: f, t: 0, life: 0.6, kind: 'flash' });
     const you = this.you ?? new THREE.Vector3();
     const d = you.distanceTo(p);
-    this.shake = Math.max(this.shake, 1.6 / (1 + d / 25));
+    // A torpedo's warhead is felt the length of her: a hard shake anywhere aboard, and the structure lurching along
+    // the blast (`lurch`, its direction in the ship's frame, played on the camera by main.mjs). A shell is felt near.
+    if (kind === 'kick') {
+      this.shake = Math.max(this.shake, 0.9 + 1.6 / (1 + d / 60));
+      this.lurch = { dir: dir.clone().normalize(), size: 1 / (1 + d / 120), t: 0 };
+    } else this.shake = Math.max(this.shake, 1.6 / (1 + d / 25));
     this.sfx?.play('boom', Math.min(1000, 120 + d * 3), 40);
     this.C.bus?.emit('jolt', { at: p.clone(), dir: dir.clone().normalize(), kind });
   }

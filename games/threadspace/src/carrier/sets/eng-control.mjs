@@ -4,6 +4,8 @@ import { box, at, mat, glow } from '../../util.mjs';
 import { P, G, rod, couch, desk, locker, place } from './parts.mjs';
 import { MONO, text, poster, mark } from './paper.mjs';
 import { pipeMat } from './structure.mjs';
+import { gimbal } from '../floating.mjs';
+import { bake } from '../../decor.mjs';
 
 export function engControl(C, I, c, open = { n: [], s: [], w: [], e: [] }) {
   const [x1, x2] = c.x, [z1, z2] = c.z, y = I.floorY, h = c.h ?? 3;
@@ -20,7 +22,7 @@ export function engControl(C, I, c, open = { n: [], s: [], w: [], e: [] }) {
   place(I, box(3.2, 0.2, 2.4, P.dark), cx, Z(139.3), 0, { y: 0.1 });
   I.group.add(at(box(3.2, 0.02, 0.05, glow('#ffb347', 0.7)), cx, y + 0.2, Z(140.5)));
   place(I, desk(2.4, '#ffb347', ['status', 'reactor']), cx, Z(140.0), Math.PI, { y: 0.2 });
-  place(I, couch(mat('#5a4a30')), cx, Z(139.0), Math.PI, { y: 0.2 });
+  gimbal(C, place(I, couch(mat('#5a4a30')), cx, Z(139.0), Math.PI, { y: 0.2 }), bake); // swings to face the bow for a burn
   // The mimic board down the port bulkhead: the plant as a diagram, lit.
   const mimic = C.atlas.plane(9, 1.7, (g, pw, ph) => {
     g.fillStyle = '#0c1014';

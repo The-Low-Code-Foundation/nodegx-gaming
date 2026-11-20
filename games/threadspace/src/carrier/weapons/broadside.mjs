@@ -181,6 +181,11 @@ export const broadsideParts = {
     this.sfx?.play('boom', this.ear ? Math.min(900, this.ear.distanceTo(t.pos) * 0.5) : 600, 14);
     this.log.push({ t: this.time, kill: t.side, by });
     if (t.side === 'theirs' && by === 'you') this.dc?.say(null, 'You shot down a torpedo.', 0, 3);
+    else if (t.side === 'theirs') {
+      // Killed close in, its flash and bang look like a hit: say it was not one. Far out, nobody aboard would notice.
+      const d = Math.round(t.pos.distanceTo(this.C.obj.position));
+      if (d < 1500) this.dc?.say(null, `Point defence killed the torpedo ${d} m out. No hit.`, 0, 3);
+    }
   },
 
   /** The first torpedo of `side` whose path this frame passes within `r` of the segment a→b (world). Each torpedo is

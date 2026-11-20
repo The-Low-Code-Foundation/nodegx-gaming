@@ -233,6 +233,18 @@ Left for the phases that design their formats: `content/announcements/` (phase 3
   so they are keyed in Blender on the Rocketbox rig (Lab Rat's `tools/blender/rocketbox_anim.py` already does this).
   Crew routes through weightless spaces follow the rails, off the floor.
 
+  **Built, 21 November 2026** (`src/carrier/floating.mjs`), keyed in code on the Biped rather than in Blender, so a
+  pose is a few numbers to tune in the browser. Everyone in a `float` room is weightless: at a console or a post their
+  feet are in a foot rail, knees a little bent, over Rocketbox's own upper body (working, talking, looking round:
+  `railWork`, `railTalk`, `railLook`) or with the arms floating up in front (`railIdle`); adrift, the neutral body
+  posture (`nbp`); on the move, laid head first along the way off the deck, hand over hand, in surges with each pull
+  (`floatMove`: the tunnel's rounds, the muster coming in and going); in a couch, as before. At a brace call everyone
+  braces (`railBrace` hunched with fists on the console, `floatBrace` tucked at the nearest wall, a traveller stopping
+  to get there); a hit jerks them along the blast and they swing back. The CIC's and engineering's gimballed couches
+  swing round to face the bow while the drive burns (`gimbal`). Not done: a push-off and catch at each end of a leg
+  (they turn on the spot), strapping into the brace straps (they hold on instead), the hangar's suited crews (phase 5),
+  and the crew's routes following the rails exactly rather than the route's straight line.
+
 ## Phase 5. Suits, uniforms and the hangar (two sessions, art heavy) [7, 8]
 
 - **The duty suit is what you wear.** Outside the drums everyone wears a fitted pressure suit as working uniform:
