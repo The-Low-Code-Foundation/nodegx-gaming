@@ -10,8 +10,8 @@
 Everything else is original to the NodeGX project (The Low Code Foundation), GPL-3.0:
 
 - The main game's ships, stations, rooms, people and rocks are built from code (three.js primitives).
-- The carrier's hull (`assets/carrier/hull.glb`) is built by our own Blender script, `tools/blender/carrier_build.py`,
-  from `ships/carrier.layout.json`; no third-party model is in it. The fighters and their cockpits
+- The carrier's hull (`assets/carrier/hull.glb`) is built by our own Blender script, `tools/blender/carrier_v2_build.py`,
+  from `ships/carrier.layout.json` (the archived first carrier's by `archive/carrier-v1/carrier_build.py`); no third-party model is in it. The fighters and their cockpits
   (`assets/carrier/fighter.glb`) are built the same way, by `tools/blender/fighter_build.py`.
 - `src/carrier/mocap.mjs` and `src/carrier/wardrobe.mjs` are copied from the Life Sim game in this repository (same
   project, same licence).

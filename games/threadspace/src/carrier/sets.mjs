@@ -278,7 +278,9 @@ const LOOK = {
   work: { wall: 'bare', floor: 'tread', tint: '#9a9686', deck: '#5b5850', ceil: '#6e6b62', trim: '#2e2b26', lamp: '#ffd9a0', k: 1.0, cove: null },
   welfare: { wall: 'panel', floor: 'nonskid', tint: '#8f98a6', deck: '#3f5060', ceil: '#727a85', trim: '#262b33', lamp: '#ffe6c4', k: 1.0, cove: '#c08040' },
   hangar: { wall: 'bare', floor: 'tread', tint: '#868e98', deck: '#4a4f56', ceil: '#5d636b', trim: '#26292e', lamp: '#e8eef8', k: 1.4, cove: null, fill: 0.8, sun: 0.9 },
-  corridor: { wall: 'panel', floor: 'plate', tint: '#8d96a3', deck: '#5f666f', ceil: '#7a818b', trim: '#2b3038', lamp: '#ffe6c4', k: 1.0, cove: null }
+  corridor: { wall: 'panel', floor: 'plate', tint: '#8d96a3', deck: '#5f666f', ceil: '#7a818b', trim: '#2b3038', lamp: '#ffe6c4', k: 1.0, cove: null },
+  // A drum's ring corridor: you see a long way up the curve, past the lamps the light pool can light, so more fill.
+  ring: { wall: 'panel', floor: 'plate', tint: '#8d96a3', deck: '#5f666f', ceil: '#7a818b', trim: '#2b3038', lamp: '#ffe6c4', k: 1.0, cove: null, fill: 0.62 }
 };
 const BY_SYSTEM = {
   bridge: 'command', sensors: 'command', flight: 'command', quarters: 'quarters', mess: 'mess', medical: 'medical',
@@ -292,7 +294,7 @@ const ROOM = {
 };
 
 /** The name of a room's look (a key of LOOK), and the look itself. */
-export const lookKey = (c) => ROOM[c.id] ?? BY_SYSTEM[c.system] ?? 'corridor';
+export const lookKey = (c) => ROOM[c.id] ?? (c.drum && c.system === 'corridor' ? 'ring' : BY_SYSTEM[c.system]) ?? 'corridor';
 export const lookOf = (c) => LOOK[lookKey(c)];
 
 const surfCache = new Map();
@@ -471,10 +473,12 @@ function messTable(len, n, { stoolMat = P.steel, top = P.tableTop } = {}) {
   g.add(at(box(len, 0.04, 0.03, P.stainlessDk), 0, 0.775, 0.44), at(box(len, 0.04, 0.03, P.stainlessDk), 0, 0.775, -0.44)); // the fiddle
   g.add(at(box(len - 0.3, 0.06, 0.4, P.table), 0, 0.68, 0));
   for (const s of [-1, 1]) g.add(at(cyl(0.06, 0.08, 0.7, P.dark, 8), s * (len / 2 - 0.5), 0.35, 0), at(box(0.5, 0.03, 0.5, P.dark), s * (len / 2 - 0.5), 0.015, 0));
+  g.userData.spots = []; // where someone sits (hands.mjs): each stool, facing the table
   for (const side of [-1, 1]) for (let i = 0; i < n; i++) {
     const x = -len / 2 + (len * (i + 0.5)) / n;
     g.add(at(cyl(0.035, 0.035, 0.44, P.dark, 6), x, 0.22, side * 0.72));
     g.add(at(cyl(0.19, 0.19, 0.06, stoolMat, 12), x, 0.46, side * 0.72));
+    g.userData.spots.push({ x, z: side * 0.72, yaw: side > 0 ? 0 : Math.PI, pose: 'sitChair' });
   }
   // what is on it: a cruet, a stack of trays, mugs
   g.add(at(box(0.22, 0.12, 0.12, P.dark), 0, 0.83, 0));
@@ -1184,6 +1188,9 @@ function engControl(C, I, c, open = { n: [], s: [], w: [], e: [] }) {
 export function dressHangar(C, I, c) {
   const [x1, x2] = c.x, [z1, z2] = c.z, y = I.floorY, h = c.h ?? 12;
   const yellow = mat('#d8a530'), deckPaint = mat('#c8ccd0');
+  // Where the starboard wall is a bay door (the spin-drum carrier's hangar has one each side): nothing on it there.
+  const doorE = (c.bayDoors ?? []).filter((d) => d.side === 'e');
+  const onWall = (z, pad = 1) => !doorE.some((d) => z > d.from - pad && z < d.to + pad);
   // Painted boxes round each parking spot, and a walkway along the inboard wall.
   for (const f of C.L.fighters) {
     const [fx, fz] = f.at;
@@ -1203,11 +1210,32 @@ export function dressHangar(C, I, c) {
   const bz = 12;
   I.group.add(at(box(x2 - x1 - 1, 0.8, 0.7, mat('#c8a030')), (x1 + x2) / 2, y + h - 1.2, bz));
   I.group.add(at(box(1.4, 0.6, 1.2, P.dark), x1 + 14, y + h - 1.8, bz), at(cyl(0.02, 0.02, 4, P.black, 4), x1 + 14, y + h - 4.1, bz), at(box(0.4, 0.5, 0.3, yellow), x1 + 14, y + h - 6.2, bz));
-  // A catwalk along the inboard wall at the height of the second deck, with its rail.
+  // A catwalk along the inboard wall at the height of the second deck, with its rail; broken where the wall is a bay
+  // door. Each length is reached by rungs up the wall at its ends, through a gap in its floor, and walked
+  // (`C.catwalks`: main.mjs climbs the rungs and keeps you on it).
   const cw = 1.4, cy = 6.2;
-  I.group.add(at(box(cw, 0.08, z2 - z1 - 2, P.steel), x2 - cw / 2, y + cy, (z1 + z2) / 2));
-  for (const e of [0.5, 1.05]) I.group.add(at(box(0.04, 0.04, z2 - z1 - 2, yellow), x2 - cw, y + cy + e, (z1 + z2) / 2));
-  for (let z = z1 + 1; z < z2 - 1; z += 2) I.group.add(at(box(0.04, 1.05, 0.04, P.steel), x2 - cw, y + cy + 0.53, z), at(box(cw, 0.06, 0.06, P.steel), x2 - cw / 2, y + cy - 0.15, z));
+  const runs = [];
+  for (let z = z1 + 1, from = null; z <= z2 - 1; z += 0.5) {
+    const ok = onWall(z) && z < z2 - 1;
+    if (ok && from === null) from = z;
+    if (!ok && from !== null) (runs.push([from, z - 0.5]), (from = null));
+  }
+  for (const [a, b] of runs) {
+    if (b - a < 4) continue;
+    const L = b - a, m = (a + b) / 2;
+    I.group.add(at(box(cw, 0.08, L, P.steel), x2 - cw / 2, y + cy, m));
+    for (const e of [0.5, 1.05]) I.group.add(at(box(0.04, 0.04, L, yellow), x2 - cw, y + cy + e, m));
+    for (let z = a; z <= b; z += 2) I.group.add(at(box(0.04, 1.05, 0.04, P.steel), x2 - cw, y + cy + 0.53, z), at(box(cw, 0.06, 0.06, P.steel), x2 - cw / 2, y + cy - 0.15, z));
+    (C.catwalks ??= []).push({ deck: c.deck, wall: x2, x: [x2 - cw, x2], z: [a, b], y: y + cy, rungs: [a + 0.6, b - 0.6] });
+    for (const z of [a + 0.6, b - 0.6]) {
+      // Rungs: grab bars up the wall from the deck to the catwalk, on stand-offs.
+      for (let yy = 0.4; yy < cy + 1.2; yy += 0.4) I.group.add(at(box(0.08, 0.05, 0.6, yellow), x2 - 0.2, y + yy, z));
+      for (const dz of [-0.32, 0.32]) I.group.add(at(box(0.16, cy + 1.2, 0.05, P.steel), x2 - 0.1, y + (cy + 1.2) / 2, z + dz));
+    }
+  }
+  if (c.vacuum) {
+    zeroG(C, I, c, { yellow });
+  } else {
   // Along the inboard wall below it: tool chests, a fuel hose reel, a weapons trolley, a tow tractor.
   for (const z of [-32.5, -23.5, 21.5, 30.5]) {
     place(I, G(at(box(1.2, 1.0, 0.6, P.red), 0, 0.5, 0), ...[0.25, 0.45, 0.65, 0.85].map((yy) => at(box(1.1, 0.01, 0.01, P.black), 0, yy, 0.305)), at(box(1.2, 0.5, 0.5, P.red), 0, 1.25, -0.05)), x2 - 0.9, z, -Math.PI / 2);
@@ -1221,16 +1249,69 @@ export function dressHangar(C, I, c) {
   const tug = G(at(box(1.6, 0.7, 2.4, yellow), 0, 0.6, 0), at(box(1.2, 0.5, 0.8, P.dark), 0, 1.2, 0.6), at(box(1.3, 0.04, 0.9, P.black), 0, 1.45, 0.6));
   for (const [a, b] of [[-0.8, -0.8], [0.8, -0.8], [-0.8, 0.8], [0.8, 0.8]]) tug.add(at(cyl(0.3, 0.3, 0.25, P.black, 12), a, 0.3, b, 0, 0, Math.PI / 2));
   place(I, tug, x2 - 6, 22, { ry: 0.3 });
+  }
   // The words on the walls.
-  poster(C, I, 'hangar', 16, 3.2, x2 - 0.56, 9.4, 18, -Math.PI / 2);
+  poster(C, I, 'hangar', 16, 3.2, x2 - 0.56, 9.4, onWall(18, 9) ? 18 : (z1 + (doorE[0]?.from ?? z2)) / 2, -Math.PI / 2);
   poster(C, I, 'clear', 9, 0.7, (x1 + x2) / 2 - 6, 9.8, z1 + 0.16, 0);
   poster(C, I, 'fod', 1.4, 0.9, x2 - 0.15, 1.7, -6.5, -Math.PI / 2);
   poster(C, I, 'burn', 0.8, 1.1, x2 - 0.15, 1.7, 5.2, -Math.PI / 2);
   // The hangar's frames: deep ribs up both long walls and across the deckhead.
   for (let z = z1 + 4; z < z2; z += 8) {
-    I.group.add(at(box(0.5, h, 0.6, I.s.trim), x2 - 0.25, y + h / 2, z));
+    if (onWall(z)) I.group.add(at(box(0.5, h, 0.6, I.s.trim), x2 - 0.25, y + h / 2, z));
     I.group.add(at(box(x2 - x1, 0.7, 0.5, I.s.trim), (x1 + x2) / 2, y + h - 0.35, z));
   }
+}
+
+/** The airless hangar dressed for no weight and no air (the spin-drum carrier's): everything loose is held down.
+ *  Crates under cargo nets strapped to the tie-downs, at both ends; a tool chest clamped to the deck beside each pad, its
+ *  tools tethered; handrail lines on posts down both sides of the centre walkway, open at each pad, with tether coils
+ *  hung on them; and handholds along the bulkheads. */
+function zeroG(C, I, c, { yellow }) {
+  const [x1, x2] = c.x, [z1, z2] = c.z, y = I.floorY;
+  const net = mat('#2a2d22'), strap = mat('#c8a030'), clamp = mat('#e0b030'), tether = mat('#ff7a30');
+  const pads = C.L.fighters.map((f) => f.at[1]);
+  const padZ = [...new Set(pads)].sort((a, b) => a - b);
+  // Crates under a net: a stack of three, the net's cords across the top and down the sides, four straps to the deck.
+  const netted = (x, z, ry) => {
+    const g = new THREE.Group(), W = 4.6, D = 2.2, H = 3.2;
+    g.add(at(box(2.2, 1.6, 2.2, mat('#5c6650')), -1.15, 0.8, 0), at(box(2.2, 1.6, 2.2, mat('#6a6248')), 1.15, 0.8, 0), at(box(2.0, 1.5, 2.0, mat('#4f5a62')), 0, 2.35, 0));
+    for (let u = -W / 2; u <= W / 2 + 0.01; u += 0.46) g.add(at(box(0.03, 0.03, D + 0.06, net), u, H + 0.02, 0), at(box(0.03, H, 0.03, net), u, H / 2, D / 2 + 0.03), at(box(0.03, H, 0.03, net), u, H / 2, -D / 2 - 0.03));
+    for (let v = 0.3; v < H; v += 0.46) for (const zz of [D / 2 + 0.03, -D / 2 - 0.03]) g.add(at(box(W, 0.03, 0.03, net), 0, v, zz));
+    for (let w = -D / 2; w <= D / 2 + 0.01; w += 0.46) g.add(at(box(W, 0.03, 0.03, net), 0, H + 0.02, w));
+    for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) g.add(at(box(0.06, 0.02, 1.2, strap), sx * (W / 2 + 0.4), 0.02, sz * (D / 2 + 0.5)), at(box(0.06, H * 0.9, 0.06, strap), sx * (W / 2 + 0.02), H * 0.45, sz * (D / 2 + 0.03)));
+    place(I, g, x, z, ry);
+  };
+  for (const s of [-1, 1]) {
+    netted(s * 12.5, z1 + 6, 0);
+    if (z2 - (padZ.at(-1) ?? z2) > 10) netted(s * 12.5, z2 - 6, 0);
+  }
+  // A tool chest clamped to the deck by each pad, toward the walkway, a tool on a tether from it to a deck ring.
+  const chest = () => {
+    const g = G(at(box(1.2, 1.0, 0.6, P.red), 0, 0.5, 0), ...[0.25, 0.45, 0.65, 0.85].map((yy) => at(box(1.1, 0.01, 0.01, P.black), 0, yy, 0.305)));
+    for (const sx of [-0.62, 0.62]) g.add(at(box(0.08, 0.3, 0.7, clamp), sx, 0.15, 0), at(box(0.2, 0.04, 0.8, clamp), sx, 0.02, 0));
+    g.add(at(cyl(0.012, 0.012, 1.3, tether, 4), 0.3, 0.55, 0.85, Math.PI / 2 - 0.3, 0, 0), at(box(0.25, 0.06, 0.08, P.steel), 0.3, 0.1, 1.45));
+    return g;
+  };
+  for (const f of C.L.fighters) {
+    const s = Math.sign(f.at[0]) || 1;
+    place(I, chest(), s * 4.2, f.at[1] + 5.4, s > 0 ? -Math.PI / 2 : Math.PI / 2);
+  }
+  // Handrail lines down both sides of the centre walkway, open at each pad so the crews can cross.
+  const rx = 2.8, rail = (a, b, x) => {
+    if (b - a < 1) return;
+    I.group.add(at(box(0.05, 0.05, b - a, yellow), x, y + 1.0, (a + b) / 2));
+    for (let z = a; z <= b + 0.01; z += Math.max(1, (b - a) / Math.ceil((b - a) / 3))) I.group.add(at(box(0.06, 1.0, 0.06, P.steel), x, y + 0.5, z));
+  };
+  const gaps = padZ.map((z) => [z - 4.2, z + 4.2]);
+  for (const x of [-rx, rx]) {
+    let from = z1 + 2;
+    for (const [a, b] of gaps) (rail(from, a, x), (from = b));
+    rail(from, z2 - 2, x);
+    // A coiled tether hung on the rail every other pad.
+    padZ.forEach((z, k) => k % 2 || I.group.add(at(new THREE.Mesh(new THREE.TorusGeometry(0.18, 0.025, 4, 14), tether), x, y + 0.82, z + 6, 0, Math.PI / 2, 0)));
+  }
+  // Handholds along the forward and after bulkheads, at hand height (clear of the airlock's door in the middle).
+  for (const z of [z1 + 0.15, z2 - 0.15]) for (let x = x1 + 1; x < x2 - 1; x += 1.5) if (Math.abs(x) > 3.4) I.group.add(at(box(0.5, 0.05, 0.08, yellow), x, y + 1.3, z));
 }
 
 /** One set per room id. Each takes (C, I, c, hooks, open) like layout.mjs `furnish`. */
@@ -1278,6 +1359,7 @@ function drumMess(C, I, c) {
   const ctr = G(at(box(W, 0.9, 0.65, P.stainlessDk), 0, 0.45, 0), at(box(W + 0.1, 0.05, 0.7, P.stainless), 0, 0.925, 0), at(box(W, 0.04, 0.3, P.stainless), 0, 1.45, -0.18));
   for (let i = 0; i < 5; i++) ctr.add(at(box(0.5, 0.06, 0.4, P.chrome), -W / 2 + 0.8 + i * ((W - 1.6) / 4), 0.97, 0));
   ctr.add(at(cyl(0.2, 0.2, 0.55, P.chrome, 12), W / 2 - 0.4, 1.23, -0.05));
+  ctr.userData.spots = [-1.2, 1.0].map((x) => ({ x, z: 0.75, yaw: 0, pose: 'workTable' })); // at the servery
   place(I, ctr, 0, Z(0.4), { ry: R(0) });
   for (const v of [2.9, 5.5]) for (const x of [-2.25, 2.25]) place(I, messTable(3.0, 2), x, Z(v), { ry: R(0) });
   const bar = G(at(box(1.8, 0.92, 0.6, P.stainlessDk), 0, 0.46, 0), at(box(1.9, 0.05, 0.65, P.stainless), 0, 0.945, 0));
@@ -1301,13 +1383,16 @@ function drumGalley(C, I, c) {
   line.add(at(box(1.0, 1.1, 0.8, P.stainless), 0, 1.5, -0.02), at(box(0.7, 0.5, 0.02, P.black), 0, 1.55, 0.39), at(box(0.12, 0.05, 0.02, glow('#39d27a')), 0.38, 1.9, 0.39));
   line.add(at(cyl(0.42, 0.36, 0.55, P.stainless, 14), 1.4, 1.2, 0), at(box(0.8, 0.02, 0.6, P.stainlessDk), 2.5, 0.97, 0));
   line.add(at(box(W, 0.5, 1.1, P.stainless), 0, 2.45, 0.1), at(box(W - 0.2, 0.02, 0.9, mat('#5d646c')), 0, 2.19, 0.15));
+  line.userData.spots = [-2.2, -0.1, 2.0].map((x) => ({ x, z: 0.85, yaw: 0, pose: 'workTable' })); // at the hobs, the oven, the boiler
   place(I, line, 0, Z(0.5), { ry: R(0), collide: true });
   const len = D - 4.2;
   const prep = G(at(box(len, 0.9, 0.7, P.stainlessDk), 0, 0.45, 0), at(box(len, 0.05, 0.75, P.stainless), 0, 0.925, 0), at(box(len, 0.04, 0.4, P.stainless), 0, 1.75, -0.15));
   for (const x of [-1.0, -0.2]) prep.add(at(box(0.6, 0.03, 0.45, P.black), x, 0.94, 0.05), at(box(0.04, 0.3, 0.04, P.chrome), x, 1.1, -0.25));
   for (let i = 0; i < 4; i++) prep.add(at(cyl(0.13 + (i % 3) * 0.04, 0.13 + (i % 3) * 0.04, 0.18 + (i % 2) * 0.12, P.chrome, 10), -len / 2 + 0.5 + i * 0.9, 1.9, -0.15));
+  prep.userData.spots = [-0.6].map((x) => ({ x, z: 0.75, yaw: 0, pose: 'workTable' }));
   place(I, prep, x1 + 0.4, Z(1.6 + len / 2), { ry: R(Math.PI / 2) });
   const island = G(at(box(2.2, 0.9, 0.9, P.stainlessDk), 0, 0.45, 0), at(box(2.3, 0.06, 1.0, mat('#8a6a48')), 0, 0.93, 0));
+  island.userData.spots = [{ x: 0.3, z: 0.85, yaw: 0, pose: 'workTable' }];
   place(I, island, 1.0, Z(4.2), { ry: R(0) });
   for (const x of [x1 + 0.5, x2 - 0.5]) {
     const fr = G(at(box(0.9, 2.1, 0.75, P.stainless), 0, 1.05, 0), at(box(0.01, 2.0, 0.01, P.black), 0, 1.05, 0.38), at(box(0.03, 0.4, 0.04, P.chrome), 0, 1.2, 0.4));
@@ -1335,7 +1420,9 @@ function drumMedbay(C, I, c) {
   I.group.add(at(G(at(cyl(0.02, 0.02, 0.6, P.steel, 6), 0, -0.3, 0), at(cyl(0.45, 0.3, 0.14, P.white, 18), 0, -0.65, 0), at(cyl(0.38, 0.38, 0.01, glow('#f4f8ff'), 18), 0, -0.725, 0)), tx, y + (c.h ?? 3), tz));
   for (let i = 0; i < 3; i++) place(I, G(at(box(1.0, 2.0, 0.45, P.white), 0, 1.0, 0), at(box(0.9, 0.9, 0.01, mat('#bfd8e0')), 0, 1.5, 0.23)), x1 + 0.28, Z(3.4 + i * 1.05), { ry: R(Math.PI / 2) });
   place(I, G(at(box(0.6, 1.0, 0.5, P.red), 0, 0.55, 0), at(box(0.4, 0.25, 0.3, P.dark), 0, 1.18, 0)), x2 - 0.4, Z(2.6), { ry: R(-Math.PI / 2) });
-  place(I, desk(1.6, '#3ac0b0', ['status', 'text']), -2.4, Z(D - 1.6), { ry: R(Math.PI) });
+  const md = desk(1.6, '#3ac0b0', ['status', 'text']);
+  md.userData.spots = [{ x: 0, z: 0.8, yaw: 0, pose: 'workTable' }]; // the medic at the desk
+  place(I, md, -2.4, Z(D - 1.6), { ry: R(Math.PI) });
   poster(C, I, 'cross', 0.9, 0.9, 1.6, 2.0, Z(0.12), R(0));
   poster(C, I, 'triage', 0.7, 0.9, x2 - 0.12, 1.7, Z(5.6), R(-Math.PI / 2));
 }

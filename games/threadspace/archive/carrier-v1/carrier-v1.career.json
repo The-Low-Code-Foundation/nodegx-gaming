@@ -1,6 +1,7 @@
 {
   "about": {
     "what": "Your first week aboard, as the most junior hand on the ship: the orders you are given, by whom, and the rank each one earns. career.mjs runs it, one step at a time, in order.",
+    "stations": "Action stations, by your rank (career.mjs `closeUp`): when the ship goes to action stations (outside a `raid` order, which says where to go itself) the duty card says `say`, with `at` filled in from your rank's line in `ranks`: a `room` to stand in, or a `seat` (`gun`, `fighter` or `helm`; the helm also counts the bridge). Not closed up within `close` seconds and your name goes in the book, as at a muster: `who` (an officer's id) says `adrift`. `closed` is said when you get there.",
     "start": "Where a new hand comes aboard (deck, [x, z] in metres in the ship's frame, yaw), the rank they start at, and the first thing they are told. A career picked up again starts in `resume` (your bunk).",
     "people": "The officers who give the orders. Each stands at `at` in `room` (deck from the room), facing `yaw`, in the `pose` and `dept` uniform of crew.mjs. `voice` is the browser speech's pitch and rate for them.",
     "steps": "`do` is what the step waits for: talk (use `who`), go (stand in `room`), drill (a damage control job of `kind` in `room`, put out or mended), suit (put on a vac suit from a VAC SUITS locker), man (sit in a turret), shoot (a gunnery drill: a tug tows a target sled down the side `from`, once you are in a turret; you must hit the sled `hits` times; nothing shoots back), raid (a raider `from` a side, `wait` seconds after you are in a turret; you must hit it `hits` times yourself), board / launch (a fighter), land (back aboard; `manual` means down the lane, not handed over), helm (take it), turn (turn her through `deg` and stop her turning), transit (at the helm the navigator lays in a waypoint `dist` metres out (15000), `off` degrees off the bow (40); arrive on it inside 2 km at under 20 m/s), read (the watch bill on its board outside the ship's office), sleep (turn in at your bunk, and be called for your watch), muster (stand in your muster room when the roll is called at the change of your watch; adrift, your name goes in the book and you must report there late: `adrift` is what is called, the order, and what is said when you get there), rounds (stand in each of `rooms`, in any order). `order` is the card's line; `say` what is said when the step is done (a talk step: what that person tells you); `start` what is said when it begins; `fail` what is said when it goes wrong (the step runs again). `rank` and `unlock` take effect when the step is done.",
@@ -23,6 +24,17 @@
     "helm": "Nobody takes the helm without the officer of the watch's say-so.",
     "fighters": "The plane captain waves you off: you are not on the flying list.",
     "guns": "The turret's locked. You are not on the gun crews' list yet."
+  },
+  "stations": {
+    "close": 75, "say": "Action stations: close up at {at}.", "closed": "Closed up at {at}. Stay there until the stand down.",
+    "adrift": "You are adrift from your action station. Name in the book. Close up at {at}.",
+    "ranks": {
+      "Apprentice": {"at": "the midships repair locker", "room": "repair-mid", "who": "dc"},
+      "Crewman": {"at": "the midships repair locker", "room": "repair-mid", "who": "dc"},
+      "Gunner": {"at": "the dorsal turret", "seat": "gun", "who": "guns"},
+      "Flight cadet": {"at": "a fighter, in her seat", "seat": "fighter", "who": "flight"},
+      "Helmsman": {"at": "the helm", "seat": "helm", "room": "bridge", "who": "ootw"}
+    }
   },
   "steps": [
     { "do": "talk", "who": "cox", "order": "Report to the coxswain in the ship's office",

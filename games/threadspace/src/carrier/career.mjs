@@ -17,7 +17,7 @@ import { frameOf, sideOf } from './wayfinding.mjs';
 import { fmt as fmtTime } from './watch.mjs';
 import { drumToShip } from './drum.mjs';
 
-const KEY = 'threadspace.carrier.career';
+const KEY = 'threadspace.carrier.career'; // the spin-drum carrier's; another ship's career saves under its own (`Career.key`)
 const ALL = ['guns', 'raids', 'fighters', 'helm'];
 // A step that needs you in a seat, picked up again after a reload, backs up to the step that seats you.
 // (The gunnery steps need no backing up: out of the turret, their card sends you back up into it.)
@@ -88,9 +88,11 @@ export class Career {
 
   /** The saved career, if it was saved against these steps (`K`): a career saved before the steps changed is not
    *  picked up again, as its step number would land on the wrong order. */
+  static key = KEY;
+
   static saved(K) {
     try {
-      const s = JSON.parse(localStorage.getItem(KEY));
+      const s = JSON.parse(localStorage.getItem(Career.key));
       return s && (!K || s.n === K.steps.length) ? s : null;
     } catch {
       return null;
@@ -99,7 +101,7 @@ export class Career {
 
   static forget() {
     try {
-      localStorage.removeItem(KEY);
+      localStorage.removeItem(Career.key);
     } catch {}
   }
 
@@ -134,7 +136,7 @@ export class Career {
 
   save() {
     try {
-      localStorage.setItem(KEY, JSON.stringify({ i: this.i, n: this.K.steps.length, rank: this.rank, unlocked: [...this.unlocked], clock: this.routine?.t, book: this.book ?? 0 }));
+      localStorage.setItem(Career.key, JSON.stringify({ i: this.i, n: this.K.steps.length, rank: this.rank, unlocked: [...this.unlocked], clock: this.routine?.t, book: this.book ?? 0 }));
     } catch {}
   }
 
@@ -225,6 +227,43 @@ export class Career {
     return true;
   }
 
+  /** Action stations (the career's `stations`): the card sends you to your station by rank; get there inside `close`
+   *  seconds, or your name goes in the book, as at a muster. Not during a `raid` order, which says where to go itself. */
+  closeUp(dt, { mode, room }) {
+    const S = this.K.stations, on = !!this.ship?.stations && this.step?.do !== 'raid';
+    if (!S || !on) return void (this.as = null);
+    const line = S.ranks[this.rank] ?? Object.values(S.ranks)[0];
+    const fill = (t) => t.replaceAll('{at}', line.at).replaceAll('{rank}', this.rank);
+    const who = this.K.people.find((p) => p.id === line.who) ?? null;
+    if (!this.as) this.as = { t: 0, line, closed: false, adrift: false };
+    const a = this.as;
+    a.t += dt;
+    const there = line.seat === 'gun' ? mode === 'gun' : line.seat === 'fighter' ? mode === 'fighter' : line.seat === 'helm' ? mode === 'helm' || (mode === 'walk' && room === line.room) : mode === 'walk' && room === line.room;
+    if (there && !a.closed) {
+      a.closed = true;
+      this.sfx?.cue('chime', { vol: 0.4 });
+      this.tell(a.adrift ? who : null, fill(S.closed), 5);
+    } else if (!there && !a.closed && !a.adrift && a.t > S.close) {
+      a.adrift = true;
+      this.book = (this.book ?? 0) + 1;
+      this.sfx?.cue('klaxon', { n: 1, vol: 0.5 });
+      this.tell(who, fill(S.adrift), 9);
+      this.save();
+    }
+  }
+
+  /** Where your action station is, for the card and the markers. */
+  stationTarget() {
+    const line = this.as.line, f = this.L.weapons.turrets?.[0]?.from, b = this.L.fighters?.[0]?.boarding;
+    const at = (id) => {
+      const r = this.C.rooms.get(id);
+      return r && { deck: r.deck, seg: r.seg, x: (r.x[0] + r.x[1]) / 2, z: (r.z[0] + r.z[1]) / 2, room: r };
+    };
+    if (line.seat === 'gun' && f) return { deck: f.deck, x: f.at[0], z: f.at[1], room: null };
+    if (line.seat === 'fighter') return b ? { deck: this.C.rooms.get(b.from).deck, x: b.at[0], z: b.at[1], room: this.C.rooms.get(b.from) } : at('hangar');
+    return at(line.room);
+  }
+
   /** A damage control job ended (damage.mjs `onEnd`). */
   jobEnded(job, ok) {
     if (!this.on || job !== this.s?.job) return;
@@ -242,6 +281,7 @@ export class Career {
     s && (s.t += dt);
     if (this.msg) this.msg.t -= dt;
     if (st && s.t >= 0) this.check(st, s, where, dt);
+    this.closeUp(dt, where);
     this.mark(where);
     this.card(where.mode);
   }
@@ -358,6 +398,7 @@ export class Career {
 
   /** Where the step in hand sends you: { deck, x, z, room } or null. */
   target() {
+    if (this.as && !this.as.closed) return this.stationTarget();
     const st = this.step;
     if (!st) return null;
     const room = (id) => {
@@ -477,7 +518,13 @@ export class Career {
     }
     if (st?.do === 'sleep' && R) prog = R.cantSleep() ?? `Use your bunk: you are called at ${fmtTime(R.nextOwn().start - R.you.shake * 60)}`;
     if (st?.do === 'rounds') prog = `Rounds: ${s.seen.size} of ${st.rooms.length} checked · ${st.rooms.filter((r) => !s.seen.has(r)).map((r) => this.C.rooms.get(r)?.name.toLowerCase()).join(', ')}`;
-    const order = this.done ? 'Your first week is done. Answer the klaxon, man a turret, fly.' : s?.adrift ? st.adrift?.order ?? st.order : st.order;
+    let order = this.done ? 'Your first week is done. Answer the klaxon, man a turret, fly.' : s?.adrift ? st.adrift?.order ?? st.order : st.order;
+    if (this.as) {
+      // Action stations comes before the order in hand.
+      const S = this.K.stations, at = this.as.line.at;
+      order = this.as.closed ? S.closed.replaceAll('{at}', at) : S.say.replaceAll('{at}', at);
+      prog = this.as.closed ? 'Your order resumes at the stand down' : this.as.adrift ? `Adrift: your name is in the book (${this.book})` : `Close up in ${Math.max(0, Math.ceil(S.close - this.as.t))} s`;
+    }
     const msg = this.msg && this.msg.t > 0 ? `<div class="d-msg">${this.msg.who ? `<b>${this.msg.who}:</b> ` : ''}${this.msg.text}</div>` : '';
     const html = `<div class="d-rank">${this.rank}<span>${this.done ? 'first week' : `order ${this.i + 1} of ${this.K.steps.length}`}</span></div>
       ${R ? `<div class="d-watch" style="--c:${R.mine.color}">${R.yourLine()}</div>` : ''}

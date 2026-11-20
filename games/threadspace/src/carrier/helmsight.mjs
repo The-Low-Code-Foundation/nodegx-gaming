@@ -1,9 +1,11 @@
 // The helm's sight: what the helmsman sees drawn over the view from the bridge (or from behind her). Three things, all
 // worked out from the physics, none of it a cheat:
 //
-// - The railgun. It lies along the keel and fires where the ship points, so the sight is a ring dead ahead (the
-//   boresight) and a diamond where the raider will be when a slug gets there (weapons.mjs `railAim`). Turn the whole
-//   ship until the ring sits on the diamond, and click. The bar under it is the capacitors charging.
+// - The railgun (the first carrier). It lies along the keel and fires where the ship points, so the sight is a ring dead
+//   ahead (the boresight) and a diamond where the raider will be when a slug gets there (weapons.mjs `railAim`). Turn
+//   the whole ship until the ring sits on the diamond, and click. The bar under it is the capacitors charging.
+// - The broadside (the spin-drum carrier, which has no railgun): a plot of her from above with each side's arc off the
+//   beam and the raider's bearing (`broadsidePlot`, weapons.mjs `broadsideAim`). Turn her side onto it, and click.
 // - The nav plot (N). A waypoint 15 km off, off the bow, at rest. Getting there is the oldest problem in space
 //   travel: burn toward it, then turn her round and burn the other way to stop. The plot shows the range, how fast you
 //   are closing, and how far it would take to stop: the turn first (a 400 m ship takes the best part of a minute to
@@ -31,6 +33,7 @@ export class HelmSight {
     this.arrivals = 0;
     this.onArrive = null; // the career's hook
     this.aim = {};
+    this.lightDelay = null; // main.mjs: seconds before the main drive would light if asked now
   }
 
   /** N at the helm: lay a waypoint (15 km out, 40° off the bow, at rest), or clear it. */
@@ -92,9 +95,11 @@ export class HelmSight {
       return { x: (v.x * 0.5 + 0.5) * w, y: (-v.y * 0.5 + 0.5) * h };
     };
     const q = this.C.obj.quaternion, pos = this.C.obj.position;
-    // The railgun's boresight: a point 20 km down the keel's line.
-    const bore = project(_a.set(0, 0, -20000).applyQuaternion(q).add(pos));
-    const R = this.guns.railAim(this.aim);
+    // The railgun's boresight: a point 20 km down the keel's line. (No railgun: the broadside plot instead.)
+    const rail = !!this.guns.W.railgun;
+    const bore = rail ? project(_a.set(0, 0, -20000).applyQuaternion(q).add(pos)) : null;
+    const R = rail ? this.guns.railAim(this.aim) : this.guns.broadsideAim(this.aim);
+    if (!rail) this.broadsidePlot(g, w, h, R);
     if (bore) {
       g.strokeStyle = R.ready ? GREEN : AMBER;
       g.beginPath();
@@ -257,6 +262,54 @@ export class HelmSight {
     }
   }
 
+  /** The broadside plot, bottom left: the ship from above (bow up), each side's arc off the beam, green when that side
+   *  is ready, and the raider's bearing as a red dot (hollow when it is above or below her more than the arc allows).
+   *  Turn her until the dot sits in a green arc, and click. */
+  broadsidePlot(g, w, h, R) {
+    const B = this.guns.W.broadside, cx = 150, cy = h - 200, r = 58, arc = (B.arc * Math.PI) / 180;
+    g.fillStyle = 'rgba(0,0,0,0.5)';
+    g.beginPath();
+    g.arc(cx, cy, r + 14, 0, Math.PI * 2);
+    g.fill();
+    for (const s of R.sides) {
+      const mid = s.k === 'port' ? Math.PI : 0; // screen angle of the beam: port to the left
+      g.fillStyle = s.ready ? 'rgba(125,255,176,0.22)' : 'rgba(255,194,74,0.14)';
+      g.strokeStyle = s.ready ? GREEN : AMBER;
+      g.beginPath();
+      g.moveTo(cx, cy);
+      g.arc(cx, cy, r, mid - arc, mid + arc);
+      g.closePath();
+      g.fill();
+      g.stroke();
+      g.fillStyle = !s.fed ? RED : s.ready ? GREEN : AMBER;
+      g.textAlign = s.k === 'port' ? 'right' : 'left';
+      const word = !s.fed ? 'MAG HIT' : s.stock <= 0 ? 'EMPTY' : s.ready ? `READY ${s.stock}` : `RELOAD ${Math.round(s.reload * 100)}%`;
+      g.fillText(word, cx + (s.k === 'port' ? -r - 18 : r + 18), cy + 4);
+    }
+    // The ship: a long box, bow up.
+    g.strokeStyle = TEXT;
+    g.strokeRect(cx - 4, cy - 26, 8, 52);
+    g.beginPath();
+    g.moveTo(cx - 4, cy - 26), g.lineTo(cx, cy - 34), g.lineTo(cx + 4, cy - 26);
+    g.stroke();
+    if (R.dir) {
+      const flat = Math.hypot(R.dir.x, R.dir.z), a = Math.atan2(R.dir.z, R.dir.x); // ship frame: -z is the bow (up)
+      const px = cx + Math.cos(a) * r * 0.82, py = cy + Math.sin(a) * r * 0.82;
+      g.strokeStyle = g.fillStyle = RED;
+      g.beginPath();
+      g.moveTo(cx, cy), g.lineTo(px, py);
+      g.stroke();
+      g.beginPath();
+      g.arc(px, py, 5, 0, Math.PI * 2);
+      if (flat > Math.cos(arc)) g.fill();
+      else g.stroke();
+    }
+    g.textAlign = 'center';
+    g.fillStyle = R.bears ? GREEN : TEXT;
+    g.fillText(R.bears ? `${R.bears.toUpperCase()} BEARS: click to fire` : R.target ? 'Turn her side onto the raider' : 'BROADSIDE', cx, cy + r + 30);
+    g.textAlign = 'left';
+  }
+
   /** The waypoint's numbers, every frame (whether you are at the helm or not): range, closing speed, the distance to
    *  stop, the call, and arriving. */
   navFrame(dt) {
@@ -272,7 +325,9 @@ export class HelmSight {
     const fwd = _c.set(0, 0, -1).applyQuaternion(this.C.obj.quaternion);
     const off = N.closing > 0.5 ? Math.acos(Math.max(-1, Math.min(1, -fwd.dot(to) / N.range))) : 0;
     N.turn = this.turnTime(off);
-    N.stop = N.closing > 0 ? N.closing * N.turn + (N.closing * N.closing) / (2 * a) : 0;
+    // A drive that has been cold a while is called before it lights (main.mjs, the spin-drum carrier): coasting then too.
+    const light = this.lightDelay?.() ?? 0;
+    N.stop = N.closing > 0 ? N.closing * (N.turn + light) + (N.closing * N.closing) / (2 * a) : 0;
     const was = N.call;
     N.call = N.closing > 3 && N.stop > N.range * 1.05 + 500 ? 'over' : N.closing > 3 && N.stop > N.range * 0.92 ? (off < 0.2 ? 'brake' : 'flip') : 'cruise';
     if (N.call === 'flip' && was !== 'flip' && !N.flipCalled) {

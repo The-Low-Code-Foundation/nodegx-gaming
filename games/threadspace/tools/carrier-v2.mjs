@@ -7,7 +7,7 @@
 // designer's own room plan (its `// ==LOGIC==` block, run here), so changing the design and running this again moves
 // them. The weightless hull's rooms (bow, spine, hangar, stern, bridge tower) are written out below, sized from the
 // design's sections. The parts of today's layout that are not about where things are (the fighter, the weapons'
-// numbers, integrity, the plant, damage control) are carried over from the first carrier's, ships/carrier-v1.layout.json.
+// numbers, integrity, the plant, damage control) are carried over from the first carrier's, archive/carrier-v1/carrier-v1.layout.json.
 //
 // Frame: metres, x starboard, y up, -z the bow, as every ship here. The ship's axis (the drums' axis and the spine) is
 // x = 0, y = 0, and the ship runs from z = -length/2 (bow) to +length/2.
@@ -28,7 +28,7 @@ const logic = html.slice(html.indexOf('// ==LOGIC=='), html.indexOf('// ==/LOGIC
 const D = await import('data:text/javascript,' + encodeURIComponent(logic + '\nexport { analyze, drumLayout, USE, capOf };'));
 const design = JSON.parse(readFileSync(here('design/carrier-v2.design.json')));
 const A = D.analyze(design);
-const v1 = JSON.parse(readFileSync(here('ships/carrier-v1.layout.json')));
+const v1 = JSON.parse(readFileSync(here('archive/carrier-v1/carrier-v1.layout.json'))); // archived, but still the source of these numbers
 
 const T = A.T;
 const sec = {}; // each section's z range, by type (drums as drum-a, drum-b)
@@ -66,9 +66,12 @@ const hull = {
     { z: stn.z[0], w: stn.s.w, h: stn.s.h, y: 0 },
     { z: stn.z[1], w: stn.s.w, h: stn.s.h, y: 0 },
   ],
-  // The bridge tower on the stern's back, like a star destroyer's. Inside 18..32 m up.
+  // The bridge tower on the stern's back, like a star destroyer's. Inside 18..32 m up. Its front is a sheer face (the
+  // second and third sections) with the bridge's forward windows in it, over a low nose, so the bridge looks forward
+  // over the hangar's back and through the drum section's open sleeve to the bow.
   island: [
     { z: stn.z[0] + 5, w: 16, h: 6, y: 20, c: 0.2 },
+    { z: stn.z[0] + 12.8, w: 24, h: 8, y: 21, c: 0.2 },
     { z: stn.z[0] + 13, w: 24, h: 16, y: 25, c: 0.2 },
     { z: stn.z[0] + 35, w: 24, h: 16, y: 25, c: 0.2 },
     { z: stn.z[0] + 43, w: 14, h: 8, y: 22, c: 0.2 },
@@ -203,7 +206,7 @@ const sz0 = stn.z[0], sz1 = stn.z[1];
   // The bridge tower (deck 1)
   W('bridge', 'Bridge', 1, 'bridge', [-10, 10], [sz0 + 13.5, sz0 + 25], {
     h: 3.5,
-    windows: [{ side: 'w', from: sz0 + 14, to: sz0 + 24.5, sill: 0.45, head: 3.3 }, { side: 'e', from: sz0 + 14, to: sz0 + 24.5, sill: 0.45, head: 3.3 }],
+    windows: [{ side: 'w', from: sz0 + 14, to: sz0 + 24.5, sill: 0.45, head: 3.3 }, { side: 'e', from: sz0 + 14, to: sz0 + 24.5, sill: 0.45, head: 3.3 }, { side: 'n', from: -9, to: 9, sill: 1.0, head: 3.3 }],
   });
   W('tower-passage', 'Tower passage', 1, 'corridor', [-1.5, 1.5], [sz0 + 25.4, sz0 + 34.6]);
   W('nav-office', 'Navigation office', 1, 'bridge', [-10, -1.9], [sz0 + 25.4, sz0 + 34.6], { fit: 'office' });
@@ -368,6 +371,31 @@ const drum = {
   halves,
   rooms: drumRooms,
 };
+// The open drum section (design/CARRIER-POLISH.md, phase 4½). The sleeve is a tube open at both ends, as the designer
+// draws it, so its exposed structure can be seen through them, and hit: the spine between the bow and the hangar, the
+// hub rings and spokes (turning with their half), and at each end a ring of struts that holds the fixed sleeve to the
+// bow and to the hangar. All heavily armoured (`integrity.armour.structure`). carrier_v2_build.py draws the fixed parts
+// from these numbers, drum.mjs the turning ones, and integrity.mjs `meets()` is what a shell can hit through the ends.
+{
+  const struts = [];
+  const rim = (sleeveR - 1.2) / Math.cos(Math.PI / 8); // on the sleeve's end ring, at the octagon's corners
+  for (const [zEnd, zTo] of [[dA.z[0], bow.z[1] - 16], [dB.z[1], hgr.z[0] + 16]]) {
+    for (let k = 0; k < 8; k++) {
+      const a = ((k + 0.5) * Math.PI) / 4, cx = Math.cos(a), cy = Math.sin(a);
+      let lo = 0, hi = 60; // the body's skin along this angle, at zTo
+      for (let i = 0; i < 30; i++) { const m = (lo + hi) / 2; if (inLoft(hull.main, m * cx, m * cy, zTo, 0.4)) lo = m; else hi = m; }
+      struts.push({ a: [r3(rim * cx), r3(rim * cy), zEnd], b: [r3(lo * cx), r3(lo * cy), zTo], r: 1.1 });
+    }
+  }
+  drum.structure = {
+    about: 'The open drum section\'s exposed structure, all heavily armoured. `sleeve`: the fixed sleeve\'s thickness (its inside surface is r - t) and the heavy rings at its ends and between the halves (`ring`: their radial depth and length). `spine`: the armoured tube round the spine corridor from the bow\'s after bulkhead to the hangar\'s forward one (`z`). `hub`: the hub ring\'s armoured drum (outer radius, length along the ship), turning with its half. `spoke`: each spoke\'s two lift tubes and ladder tube, `w` across and `d` along the ship, from the hub to the drum\'s inner wall. `struts`: from the sleeve\'s end ring (`a`) to the bow or the hangar (`b`), radius `r`.',
+    sleeve: { t: 0.5, ring: { depth: 3.2, len: 2.4 } },
+    spine: { r: drum.hub.spineR + 0.6, z: [bow.z[1] - step, hgr.z[0] + step] },
+    hub: { r: r3(drum.hub.r + 1.9), len: 9 },
+    spoke: { w: 4.2, d: 3.2, tube: 1.1 },
+    struts,
+  };
+}
 
 // ---- mounts ----
 const mounts = [];
@@ -411,16 +439,17 @@ weapons.turrets = [
   { mount: 'turret-stern-v', name: 'Stern ventral turret', barbette: 'barbette-sv', magazine: 'magazine-sv', from: hatch(7, [0, sz0 + 4], 3.14159, 'Down to the stern ventral turret') },
 ];
 // Ten turrets where the first carrier had two: her crews killed v1's raider (hull 320) in about 25 s, inside its first
-// pass. A tougher raider makes a raid last about as long as it did (about a minute, two passes).
-weapons.raider.hull = 800;
+// pass. A tougher raider makes a raid last about as long as it did (about a minute, two passes): 800, then 940 once
+// the broadside fired too (it took about a sixth off a raid from either beam).
+weapons.raider.hull = 940;
 weapons.gun = { ...weapons.gun, shellMass: design.ship.shell, barrels: design.ship.barrels, calibreNote: `${design.ship.barrel} m barrels; muzzle speed ${design.ship.vel} m/s in the design (the game's gun.shell is still tuned for play).` };
 weapons.tubes = { ...weapons.tubes, magazine: 'missile-mag', at: [-1, 1].flatMap((s) => [[s * 6, 2.5, bow.z[0] + 2], [s * 6, -2.5, bow.z[0] + 2], [s * 2, 0, bow.z[0] + 2]]).slice(0, bs.tubes), dir: [0, 0, -1] };
-// The railgun lies along the keel and leaves through the bow, under the torpedo tubes. (The design has no spinal gun,
-// `spinal: false`; the game keeps its railgun at the helm until that is settled.)
-weapons.railgun = { ...weapons.railgun, muzzle: [0, -6.4, bow.z[0] + 1] };
+// No railgun: the design has no spinal gun (`spinal: false`), and the first carrier's keel line runs through the drums'
+// spoke space. At the helm in a fight you fire the broadside instead (design/CARRIER-POLISH.md, decision 1).
+delete weapons.railgun;
 weapons.broadside = {
-  about: 'The hangar walls\' torpedo tubes, launched cold sideways: `per` a side, each side fed from its two ordnance rooms.',
-  per: hgr.s.tubesSide,
+  about: 'The hangar walls\' torpedo tubes, launched cold sideways: `per` a side, each side fed from its two ordnance rooms (a side whose magazines are both below 20% health cannot fire). `stock` torpedoes a side; `salvo` per firing; `reload` seconds between a side\'s salvos; `first` seconds into a raid before the first (the CIC\'s solution); `arc` degrees off the beam the raider must be within, and `range` [min, max] m; `push` m/s out of the tube and `cold` seconds before the motor lights. The CIC fires the side that bears; with you at the helm, a click does.',
+  per: hgr.s.tubesSide, stock: 16, salvo: 4, reload: 30, first: 20, arc: 50, range: [300, 9000], push: 14, cold: 2,
   port: { magazines: ['ordnance-p', 'ordnance-p-aft'], dir: [-1, 0, 0], at: [] },
   starboard: { magazines: ['ordnance-s', 'ordnance-s-aft'], dir: [1, 0, 0], at: [] },
 };
@@ -446,7 +475,12 @@ const stations = [
   st('bridge', [4, sz0 + 18], 0, 'sitChair', 'command', 'Sensor watch', 'on'),
   st('bridge', [-1, sz0 + 24.5], 0, 'idle', 'command', 'Quartermaster of the watch', 'on'),
   st('cic', [-8, sz0 + 12], 1.5708, 'workTable', 'command', 'Plotter, CIC', 'on'),
-  st('hangar', [-4, hz0 + 50], 0, 'walk', 'flight', 'Hangar sentry', 'on', { route: [[-4, hz0 + 10], [-4, hz0 + 90]] }),
+  // The airless hangar's deck crews, suited (crew.mjs puts anyone in a vacuum room in a vac suit): the sentry down the
+  // centre walkway, two at work beside fighters, one on a launch lane by the port bay door.
+  st('hangar', [-1.2, hz0 + 50], 0, 'walk', 'flight', 'Hangar sentry', 'on', { route: [[-1.2, hz0 + 8], [-1.2, hz0 + 94]] }),
+  st('hangar', [-5.6, hz0 + 27.5], 3.14159, 'workTable', 'flight', 'Deck crew', 'on'),
+  st('hangar', [7.5, hz0 + 48.5], 0, 'workTable', 'flight', 'Deck crew', 'on'),
+  st('hangar', [-15, hz0 + 68], -1.5708, 'lookAround', 'flight', 'Deck crew, launch lanes', 'on'),
   st('flight-control', [7, hz0 + 46], -1.5708, 'workTable', 'flight', 'Flight control', 'on'),
   st('eng-control', [3.95, sz0 + 33.5], 3.14159, 'workTable', 'engineering', 'Engineer of the watch', 'on'),
   st('eng-control', [11.95, sz0 + 33.5], 3.14159, 'workTable', 'engineering', 'Reactor operator', 'on'),
@@ -468,6 +502,13 @@ damage.kits.patch.rooms = ['repair-fwd', 'repair-mid', 'dc-store', 'machine-shop
 damage.kits.toolkit.rooms = ['elec-shop', 'dc-store'];
 damage.kits.suit.rooms = ['damage-control', 'flight-gear', 'pilots-ready'];
 const integrity = structuredClone(v1.integrity);
+// Condition one leaves the drums pressurised (design/CARRIER-POLISH.md, decision 2): behind the sleeve, the gap and the
+// water belt, their off-watch hands go up the spokes, and the sick bay and damage control stay, suited, helmets open.
+integrity.condition.drums = false;
+// The open drum section's exposed structure (drum.structure) is heavily armoured: a weak point, but not that weak.
+integrity.armour.structure = { stop: 0.7, pen: 3 };
+integrity.about = integrity.about.replace('(a torpedo is never stopped).', '(a torpedo is never stopped). `armour.structure`: the same for the open drum section\'s exposed structure (the spine, the hub rings, the spokes and the end struts, `drum.structure`), reached through the sleeve\'s open ends.');
+integrity.about = integrity.about.replace('Everyone suits up first.', 'Everyone suits up first. `drums`: false keeps the drums\' rooms and ring corridors pressurised (only the fixed hull is pumped down).');
 const plant = structuredClone(v1.plant);
 plant.propellant.tanks = ['tanks-aft', 'tanks-aft-s', 'hangar-bottom', 'hangar-bottom-2', 'hangar-bottom-3', 'hangar-bottom-4', 'hangar-bottom-5'];
 

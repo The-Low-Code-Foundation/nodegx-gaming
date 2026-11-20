@@ -24,6 +24,12 @@ export class Walker {
     this.vel = new THREE.Vector3();
     this.drift = 0;
     this.kicked = false;
+    // A push along the floor (m/s², in the host's frame; set by the host each frame): a ship's main drive. Walking
+    // with it is quicker and against it slower; floating, it carries you along until you take hold.
+    this.shove = new THREE.Vector3();
+    // How heavy you are (1 at the floor's own weight): walking spinward in a spin drum is heavier, antispinward
+    // lighter (Coriolis), which the step's bob shows.
+    this.heavy = 1;
   }
 
   moveTo(pos, yaw = this.yaw) {
@@ -62,11 +68,16 @@ export class Walker {
     // yaw 0 faces -z; turning left (positive yaw) swings the view toward -x. The view's forward is (-sin, -cos) on the
     // floor and its right is (cos, -sin); a step is fx along right and -fz along forward. (s1 had both sines' signs
     // flipped: right at 0 and 180 degrees, W walked backwards at 90 and sideways between — TS-S3-WALKAXES.)
-    const dx = (fx * cos + fz * sin) * s;
-    const dz = (-fx * sin + fz * cos) * s;
+    let dx = (fx * cos + fz * sin) * s;
+    let dz = (-fx * sin + fz * cos) * s;
+    const a = this.shove.length();
+    if (a > 0.01 && s > 0) {
+      const k = 1 + clamp(((dx * this.shove.x + dz * this.shove.z) / (s * a)) * (a / 9.81) * 1.1, -0.4, 0.4);
+      (dx *= k), (dz *= k);
+    }
     this.slide(dx, 0);
     this.slide(0, dz);
-    this.bob += s * 2.2;
+    this.bob += s * 2.2 * Math.sqrt(this.heavy); // heavier, shorter quicker steps; lighter, longer floatier ones
   }
 
   /** Weightless: hand over hand toward `HAND` m/s along where you face, a kick off to `KICK` m/s on Shift, coasting
@@ -92,6 +103,7 @@ export class Walker {
       const k = Math.min(1, (GRIP * dt) / Math.max(1e-6, _w.length()));
       this.vel.addScaledVector(_w, k);
     } else this.vel.multiplyScalar(Math.max(0, 1 - 0.08 * dt)); // coasting
+    this.vel.addScaledVector(this.shove, dt); // under a drive, nothing holds you but your hands
     this.kicked = shift && !!dir;
     const x = this.pos.x, z = this.pos.z;
     this.slide(this.vel.x * dt, 0);
@@ -130,7 +142,7 @@ export class Walker {
   /** Eye position and look quaternion in the host's frame. */
   eye(target = new THREE.Vector3()) {
     const drift = this.float ? Math.sin(this.drift * 0.7) * 0.05 : 0; // weightless: a slow rise and fall, no step
-    return target.set(this.pos.x, this.pos.y + EYE + Math.sin(this.bob) * 0.03 + drift, this.pos.z);
+    return target.set(this.pos.x, this.pos.y + EYE + Math.sin(this.bob) * 0.03 * Math.sqrt(1 / this.heavy) + drift, this.pos.z);
   }
 
   quat(q = new THREE.Quaternion()) {

@@ -7,7 +7,8 @@
     "you": "Your line on the bill: your `section`, your `part` of ship, where you `muster` (a room, and `at` the spot you are shown), and `shake`, the minutes before your watch you are called when you have turned in (`bunk`: the room and spot of your bunk).",
     "muster": "The muster: `early` minutes before the watch the section falls in (`hands` of them, at `line`, facing `face`; the leading hand at `leader`); at the bell the roll is called; `late` minutes after, they march `out`.",
     "night": "From `from` to `to` the passages are in red lighting (darken ship), and the hands not on watch are turned in.",
-    "pipes": "What is piped and said at the change of watch, at pipe down and at call the hands. {watch} {section} {time} {muster} are filled in."
+    "pipes": "What is piped and said at the change of watch, at pipe down and at call the hands. {watch} {section} {time} {muster} are filled in.",
+    "drum": "Off-watch hands in the drums (hands.mjs), drawn only in the segments round you and placed only out of your sight. `max` is the most drawn at once. `uses` says, per room `use` (a key of `rooms` wins by room id), who is in a room when: the first row whose `hours` [from, to] hold the time gives `n` [fewest, most] (the count is dealt per room and half hour, so a room looks the same when you come back), their `poses` (sitChair takes the stools and chairs the sets give, else they stand) and `depts`. `ring` is the hands walking the ring corridor. `change`: from `before` minutes before a change of watch to `after` minutes after it, hands wait at the spoke lifts (`waiting` of them), and `riders` ride with you if you take a lift then. `stations`: at action stations the drum empties up the spokes: for `empty` seconds hands hurry from the rooms to the lifts and are taken up; after that only the rooms whose use is in `stay` keep anyone."
   },
   "clock": {
     "rate": 30,
@@ -176,5 +177,427 @@
     "shake": "{section}, wakey wakey. You have the {watch} watch. Muster at the {muster} at {time}.",
     "present": "{section}, all present and correct. Fall out to your stations.",
     "adrift": "{section}: one hand adrift from muster. The new apprentice. Name in the book."
+  },
+  "drum": {
+    "max": 12,
+    "uses": {
+      "mess": [
+        {
+          "hours": [
+            "06:30",
+            "08:00"
+          ],
+          "n": [
+            3,
+            5
+          ],
+          "poses": [
+            "sitChair",
+            "sitChair",
+            "talk"
+          ],
+          "depts": [
+            "crew",
+            "crew",
+            "engineering",
+            "flight"
+          ]
+        },
+        {
+          "hours": [
+            "11:30",
+            "13:30"
+          ],
+          "n": [
+            4,
+            6
+          ],
+          "poses": [
+            "sitChair",
+            "sitChair",
+            "talk"
+          ],
+          "depts": [
+            "crew",
+            "crew",
+            "engineering",
+            "flight"
+          ]
+        },
+        {
+          "hours": [
+            "17:30",
+            "19:30"
+          ],
+          "n": [
+            4,
+            6
+          ],
+          "poses": [
+            "sitChair",
+            "sitChair",
+            "talk"
+          ],
+          "depts": [
+            "crew",
+            "crew",
+            "engineering",
+            "flight"
+          ]
+        },
+        {
+          "hours": [
+            "08:00",
+            "23:00"
+          ],
+          "n": [
+            0,
+            2
+          ],
+          "poses": [
+            "sitChair",
+            "talk"
+          ],
+          "depts": [
+            "crew",
+            "engineering"
+          ]
+        }
+      ],
+      "wardroom": [
+        {
+          "hours": [
+            "12:00",
+            "13:30"
+          ],
+          "n": [
+            2,
+            4
+          ],
+          "poses": [
+            "sitChair"
+          ],
+          "depts": [
+            "command",
+            "flight"
+          ]
+        },
+        {
+          "hours": [
+            "18:00",
+            "20:00"
+          ],
+          "n": [
+            2,
+            4
+          ],
+          "poses": [
+            "sitChair",
+            "talk"
+          ],
+          "depts": [
+            "command",
+            "flight"
+          ]
+        },
+        {
+          "hours": [
+            "08:00",
+            "22:00"
+          ],
+          "n": [
+            0,
+            1
+          ],
+          "poses": [
+            "sitChair"
+          ],
+          "depts": [
+            "command"
+          ]
+        }
+      ],
+      "gym": [
+        {
+          "hours": [
+            "06:00",
+            "22:00"
+          ],
+          "n": [
+            1,
+            3
+          ],
+          "poses": [
+            "lookAround",
+            "idle",
+            "talk"
+          ],
+          "depts": [
+            "crew",
+            "flight",
+            "engineering"
+          ]
+        }
+      ],
+      "workshop": [
+        {
+          "hours": [
+            "08:00",
+            "17:00"
+          ],
+          "n": [
+            1,
+            3
+          ],
+          "poses": [
+            "workTable"
+          ],
+          "depts": [
+            "engineering"
+          ]
+        },
+        {
+          "hours": [
+            "17:00",
+            "22:00"
+          ],
+          "n": [
+            0,
+            1
+          ],
+          "poses": [
+            "workTable"
+          ],
+          "depts": [
+            "engineering"
+          ]
+        }
+      ],
+      "berths": [
+        {
+          "hours": [
+            "22:00",
+            "06:00"
+          ],
+          "n": [
+            0,
+            1
+          ],
+          "poses": [
+            "sitChair",
+            "idle"
+          ],
+          "depts": [
+            "crew"
+          ]
+        },
+        {
+          "hours": [
+            "06:00",
+            "22:00"
+          ],
+          "n": [
+            0,
+            2
+          ],
+          "poses": [
+            "sitChair",
+            "talk",
+            "idle"
+          ],
+          "depts": [
+            "crew",
+            "engineering"
+          ]
+        }
+      ],
+      "marines": [
+        {
+          "hours": [
+            "06:00",
+            "22:00"
+          ],
+          "n": [
+            0,
+            2
+          ],
+          "poses": [
+            "sitChair",
+            "talk"
+          ],
+          "depts": [
+            "crew"
+          ]
+        }
+      ],
+      "officers": [
+        {
+          "hours": [
+            "06:00",
+            "22:00"
+          ],
+          "n": [
+            0,
+            1
+          ],
+          "poses": [
+            "sitChair",
+            "idle"
+          ],
+          "depts": [
+            "command"
+          ]
+        }
+      ],
+      "medical": [
+        {
+          "hours": [
+            "00:00",
+            "24:00"
+          ],
+          "n": [
+            1,
+            1
+          ],
+          "poses": [
+            "workTable",
+            "idle"
+          ],
+          "depts": [
+            "crew"
+          ]
+        }
+      ],
+      "ops": [
+        {
+          "hours": [
+            "08:00",
+            "17:00"
+          ],
+          "n": [
+            1,
+            2
+          ],
+          "poses": [
+            "idle",
+            "talk"
+          ],
+          "depts": [
+            "command"
+          ]
+        }
+      ],
+      "flight": [
+        {
+          "hours": [
+            "08:00",
+            "20:00"
+          ],
+          "n": [
+            0,
+            2
+          ],
+          "poses": [
+            "idle",
+            "talk"
+          ],
+          "depts": [
+            "flight"
+          ]
+        }
+      ],
+      "hydro": [
+        {
+          "hours": [
+            "08:00",
+            "17:00"
+          ],
+          "n": [
+            0,
+            1
+          ],
+          "poses": [
+            "lookAround",
+            "idle"
+          ],
+          "depts": [
+            "crew"
+          ]
+        }
+      ]
+    },
+    "rooms": {
+      "galley": [
+        {
+          "hours": [
+            "05:00",
+            "20:00"
+          ],
+          "n": [
+            2,
+            3
+          ],
+          "poses": [
+            "workTable"
+          ],
+          "depts": [
+            "crew"
+          ]
+        },
+        {
+          "hours": [
+            "20:00",
+            "05:00"
+          ],
+          "n": [
+            0,
+            1
+          ],
+          "poses": [
+            "workTable"
+          ],
+          "depts": [
+            "crew"
+          ]
+        }
+      ]
+    },
+    "ring": [
+      {
+        "hours": [
+          "06:00",
+          "22:00"
+        ],
+        "n": [
+          1,
+          3
+        ]
+      },
+      {
+        "hours": [
+          "22:00",
+          "06:00"
+        ],
+        "n": [
+          0,
+          1
+        ]
+      }
+    ],
+    "change": {
+      "before": 12,
+      "after": 3,
+      "waiting": 3,
+      "riders": [
+        1,
+        2
+      ]
+    },
+    "stations": {
+      "empty": 60,
+      "stay": [
+        "medical"
+      ]
+    }
   }
 }

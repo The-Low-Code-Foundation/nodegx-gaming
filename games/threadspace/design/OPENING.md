@@ -23,6 +23,16 @@ consoles.
 - The carrier is being rebuilt as the twin-drum design. The arrival needs her outside (phase 2 of the rebuild). The
   dock and the hiring can be grey-boxed against today's `assets/carrier/hull.glb` first and swapped when v2's hull
   lands.
+- **The seam** (noted November 2026, at the end of [`CARRIER-POLISH.md`](CARRIER-POLISH.md)). The first week begins
+  at `start` in `ships/carrier.career.json`: room `tunnel`, at [0, -6], rank Apprentice, and `start.say` (the shuttle
+  has docked under the hangar roof and you have come up her boarding tube into the crew tunnel). The hiring ends you on
+  that spot and calls `career.begin(true)` (`career.mjs`); `start.say` then becomes a line that follows on from the
+  hiring. The first order (report to the coxswain, in the after drum, inner deck) stays as it is.
+  - Saves are per ship (`Career.key`). A save made against a different number of steps is not picked up, so dock
+    steps added to the career file throw away old saves; a separate `ships/dock.career.json` does not.
+  - The first week ends at Helmsman (the transit step), and when every step is done everything is unlocked. Nothing
+    comes after it yet: task 7's first command is where a chapter three goes.
+  - v2's hull has landed, so the arrival need not be grey-boxed on v1's.
 - Animations between seats in the main game run on `src/sequence.mjs` (tracks over a span of seconds, a skip that
   lands in the same place as watching). The arrival and the hiring are built the same way.
 - The officers already have recorded voices (`ships/carrier.voices.json`, `tools/voices.mjs`). New lines for the dock

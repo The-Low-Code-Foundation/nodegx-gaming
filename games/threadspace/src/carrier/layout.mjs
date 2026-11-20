@@ -102,12 +102,24 @@ function buildHull(C) {
   const hullMat = metal('#9aa3ad', { metalness: 0.4 });
   const islandMat = metal('#868f99', { metalness: 0.4 });
   C.hullMat = hullMat;
-  for (const [sections, m] of [[C.L.hull.main, hullMat], [C.L.hull.island, islandMat]]) {
-    const mesh = loft(sections, m, { uv: 12 }); // not on the game's SHELL_LAYER: from inside, its back faces are culled anyway
-    mesh.userData.hull = true;
-    C.frame.add(mesh);
-    C.hull.push(mesh);
-  }
+  const add = (mesh) => ((mesh.userData.hull = true), C.frame.add(mesh), C.hull.push(mesh));
+  // Not on the game's SHELL_LAYER: from inside, its back faces are culled anyway.
+  const D = C.L.drum;
+  if (D?.sleeve) {
+    // The spin-drum carrier: the drum section is an open tube (as hull.glb draws it), so the bow and the stern are lofts
+    // of their own, capped, and the sleeve between them is a band, outside and in, with its ends as flat rings.
+    const S = C.L.hull.main, z0 = D.halves[0].z[0], z1 = D.halves[D.halves.length - 1].z[1];
+    const mid = S.filter((s) => s.z >= z0 - 0.05 && s.z <= z1 + 0.05);
+    add(loft(S.filter((s) => s.z < z0 - 0.05), hullMat, { uv: 12 }));
+    add(loft(S.filter((s) => s.z > z1 + 0.05), hullMat, { uv: 12 }));
+    const t = D.structure?.sleeve?.t ?? D.sleeve.armour ?? 0.5;
+    const inset = (s) => ({ ...s, w: s.w - 2 * t, h: s.h - 2 * t });
+    const inMat = metal('#6f7882', { metalness: 0.4 });
+    add(loft(mid, hullMat, { uv: 12, ends: [false, false] }));
+    add(turnFaces(loft(mid.map(inset), inMat, { uv: 12, ends: [false, false] }), null));
+    for (const [sec, out] of [[mid[0], -1], [mid[mid.length - 1], 1]]) add(turnFaces(loft([sec, inset(sec)], hullMat, { uv: 12, ends: [false, false] }), out));
+  } else add(loft(C.L.hull.main, hullMat, { uv: 12 }));
+  add(loft(C.L.hull.island, islandMat, { uv: 12 }));
   // Armour belts and seams: dark bands round the hull every 40 m, so its length reads. Each sits on the flat sides and
   // the flat top of the section where it falls.
   const belt = mat('#59616b');
@@ -121,6 +133,24 @@ function buildHull(C) {
     for (const s of [-1, 1]) C.outside.add(at(box(0.6, h - 2 * c - 1, 1.2, belt), s * (w / 2 + 0.2), y, z));
     C.outside.add(at(box((w - 2 * c) * 0.8, 0.6, 1.2, belt), 0, y + h / 2 + 0.2, z));
   }
+}
+
+/** Turns a loft's faces round where they face the wrong way: `out` ±1 for a flat ring facing ∓z… ±z (its first face
+ *  is checked), or null to turn every face (a tube seen from inside). */
+function turnFaces(mesh, out) {
+  const g = mesh.geometry, p = g.attributes.position, uv = g.attributes.uv;
+  if (out !== null) {
+    const a = new THREE.Vector3().fromBufferAttribute(p, 0), b = new THREE.Vector3().fromBufferAttribute(p, 1), c = new THREE.Vector3().fromBufferAttribute(p, 2);
+    if (b.sub(a).cross(c.sub(a)).z * out >= 0) return mesh;
+  }
+  for (let i = 0; i < p.count; i += 3) for (const A of [p, uv]) for (let k = 0; k < A.itemSize; k++) {
+    const v = A.array[(i + 1) * A.itemSize + k];
+    A.array[(i + 1) * A.itemSize + k] = A.array[(i + 2) * A.itemSize + k];
+    A.array[(i + 2) * A.itemSize + k] = v;
+  }
+  p.needsUpdate = uv.needsUpdate = true;
+  g.computeVertexNormals();
+  return mesh;
 }
 
 // --- the decks -----------------------------------------------------------------------------------------------------
@@ -394,7 +424,11 @@ export function fit(I, c, open, color) {
       break;
     }
     case 'workshop': {
-      backRow(0.8, 2.4, () => G(at(box(2.2, 0.9, 0.8, mat('#4a5058')), 0, 0.45, 0), at(box(2.2, 0.05, 0.8, mat('#6a5a40')), 0, 0.92, 0), at(box(2.0, 1.0, 0.05, mat('#2e3440')), 0, 1.6, -0.38), at(box(0.3, 0.25, 0.3, mat('#a83a2c')), -0.6, 1.07, 0)));
+      backRow(0.8, 2.4, () => {
+        const b = G(at(box(2.2, 0.9, 0.8, mat('#4a5058')), 0, 0.45, 0), at(box(2.2, 0.05, 0.8, mat('#6a5a40')), 0, 0.92, 0), at(box(2.0, 1.0, 0.05, mat('#2e3440')), 0, 1.6, -0.38), at(box(0.3, 0.25, 0.3, mat('#a83a2c')), -0.6, 1.07, 0));
+        b.userData.spots = [{ x: 0.2, z: 0.8, yaw: 0, pose: 'workTable' }]; // a hand at the bench (hands.mjs)
+        return b;
+      });
       // Machine tools down the middle: a lathe, a mill, a press.
       for (let u = 2.5, k = 0; u < U - 2; u += 3.2, k++) {
         const v = (2 + V - 1) / 2;
@@ -506,8 +540,10 @@ function hangar(C, I, c, hooks) {
     I.group.add(w);
     C.fighters.push(w);
     I.collider(Math.min(f.at[0] + out * 3, f.at[0] - out * 6), I.floorY, f.at[1] - 3.8, Math.max(f.at[0] + out * 3, f.at[0] - out * 6), I.floorY + 3, f.at[1] + 3.8);
-    // Her ladder, on her port side: E climbs in (main.mjs, fighter.mjs).
-    I.use(`fighter-${i}`, 'Climb into the fighter', f.at[0] + 1, f.at[1] - 4.6, () => hooks.fighter?.(i), { r: 2.8 });
+    // Her ladder, on her port side: E climbs in (main.mjs, fighter.mjs). In an airless, weightless hangar it is a frame
+    // of grab bars you pull yourself up, not a ladder you climb.
+    if (c.vacuum) I.group.add(grabFrame(f.at[0] + 1, I.floorY, f.at[1] - 4.0));
+    I.use(`fighter-${i}`, c.vacuum ? 'Pull yourself up into the cockpit' : 'Climb into the fighter', f.at[0] + 1, f.at[1] - 4.6, () => hooks.fighter?.(i), { r: 2.8 });
   });
   // Crates and a fuel cart along the inboard wall, gantries overhead.
   // Crates and a fuel cart along a wall with no door in it, gantries overhead.
@@ -524,6 +560,18 @@ function hangar(C, I, c, hooks) {
     return I.door(k ? `bay-${k}` : 'bay', door, new THREE.Vector3(0, d.height - 0.4, 0));
   });
   C.bayDoor = slabs.length === 1 ? slabs[0] : { set: (k) => slabs.forEach((d) => d.set(k)) };
+}
+
+/** A fighter's boarding frame in a weightless hangar: two uprights with grab bars between them up to the cockpit's sill,
+ *  a hoop at the top leaning in toward her, on a base plate clamped to the deck. */
+function grabFrame(x, y, z) {
+  const g = new THREE.Group(), bar = mat('#d8a530'), post = mat('#8a929c');
+  for (const s of [-0.4, 0.4]) g.add(at(box(0.07, 2.6, 0.07, post), s, 1.3, 0));
+  for (let h = 0.45; h < 2.5; h += 0.4) g.add(at(box(0.8, 0.045, 0.045, bar), 0, h, 0));
+  g.add(at(box(0.9, 0.06, 0.06, bar), 0, 2.62, 0.25), ...[-0.4, 0.4].map((s) => at(box(0.06, 0.06, 0.5, post), s, 2.6, 0.25)));
+  g.add(at(box(1.1, 0.05, 0.6, hazardMat()), 0, 0.025, 0));
+  g.position.set(x, y, z);
+  return g;
 }
 
 function ladder(C, I, l, end, hooks) {
@@ -923,7 +971,7 @@ function floorOverlay(C, c, floor) {
   C.labels.push({ c, at: new THREE.Vector3((x1 + x2) / 2, floor + 1.5, (z1 + z2) / 2), y0: floor, y1: floor + (c.h ?? H) });
 }
 
-/** Puts on the Blender hull (assets/carrier/hull.glb, from tools/blender/carrier_build.py) in place of the lofted one
+/** Puts on the Blender hull (assets/carrier/hull.glb, from tools/blender/carrier_v2_build.py) in place of the lofted one
  *  and the code-built fittings. Without the file the ship keeps her code-built outside: nothing else changes. */
 export async function loadHull(C, url = 'assets/carrier/hull.glb') {
   let gltf;

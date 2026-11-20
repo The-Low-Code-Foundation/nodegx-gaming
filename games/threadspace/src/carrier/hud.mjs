@@ -6,9 +6,11 @@ import { ASSIST } from './newton.mjs';
 import { SYSTEMS } from './layout.mjs';
 
 const DEG = 180 / Math.PI;
-const KEYS = {
+/** The keys line per seat. The helm's click is the broadside on the spin-drum carrier; main.mjs makes it the railgun on
+ *  the first carrier. */
+export const KEYS = {
   walk: '<b>walk</b> W A S D · <b>run</b> Shift · <b>look</b> mouse · <b>use</b> E · <b>watch bill</b> B · <b>cutaway</b> Tab',
-  helm: '<b>thrust</b> W S · <b>slide</b> A D · <b>rise / sink</b> R F · <b>pitch / yaw</b> mouse or arrows · <b>roll</b> Z C · <b>flight assist</b> Space · <b>all stop</b> hold X · <b>railgun</b> click · <b>radiators</b> G · <b>nav plot</b> N · <b>view</b> V · <b>stand up</b> E · <b>cutaway</b> Tab',
+  helm: '<b>thrust</b> W S · <b>slide</b> A D · <b>rise / sink</b> R F · <b>pitch / yaw</b> mouse or arrows · <b>roll</b> Z C · <b>flight assist</b> Space · <b>all stop</b> hold X · <b>broadside</b> click · <b>radiators</b> G · <b>nav plot</b> N · <b>view</b> V · <b>stand up</b> E · <b>cutaway</b> Tab',
   pad: '<b>launch</b> hold W (once the bay is open) · <b>climb out</b> E · <b>view</b> V · <b>cutaway</b> Tab',
   fighter: '<b>burn</b> hold W (Shift: hard burn) · <b>retro jet</b> S · <b>slide</b> A D · <b>rise / sink</b> R F · <b>aim</b> mouse (M: stick) or arrows · <b>roll</b> Z C · <b>guns</b> hold click · <b>hold</b> Space · <b>stop</b> flip onto ⊗ and burn · <b>view</b> V · <b>land</b> fly down the lane, or E near the bay · <b>cutaway</b> Tab',
   gun: '<b>lay the guns</b> mouse or arrows · <b>fire</b> hold click · <b>sight</b> Z or wheel · <b>leave</b> E · <b>cutaway</b> Tab',

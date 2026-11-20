@@ -6,6 +6,9 @@
 // the hangar, quietest in the quarters. The drive burning brings the rumble up; on emergency power the hum and the air
 // stop; and it all goes with the air: in a room pumped down to vacuum you hear nothing of the ship but what comes
 // through your boots.
+//
+// With your helmet closed (the airless hangar, condition one) the room tone is your suit: its fans, your own breathing
+// in the helmet, and your boots through the deck as you walk (`suit`).
 
 import { lookKey } from './sets.mjs';
 
@@ -79,14 +82,29 @@ export class Ambience {
       o.connect(g).connect(humLp);
       o.start();
     }
-    for (const g of [this.air, this.rumble, this.hum]) g.gain.value = 0;
+    // The suit: its fans (a steady low whirr) and your breathing (noise shaped like breath, in and out, each frame).
+    this.fans = C.createGain();
+    noise().connect(filt('bandpass', 260, 1.4)).connect(filt('lowpass', 700)).connect(this.fans).connect(this.out);
+    const whirr = C.createOscillator();
+    whirr.frequency.value = 118;
+    const whirrK = C.createGain();
+    whirrK.gain.value = 0.15;
+    whirr.connect(whirrK).connect(this.fans);
+    whirr.start();
+    this.breath = C.createGain();
+    this.breathF = filt('bandpass', 1100, 0.9);
+    noise().connect(this.breathF).connect(filt('highpass', 300)).connect(this.breath).connect(this.out);
+    this.cycle = Math.random() * 4;
+    this.stride = 0;
+    for (const g of [this.air, this.rumble, this.hum, this.fans, this.breath]) g.gain.value = 0;
   }
 
   /** Each frame. `room` is a compartment (or null), `air` its pressure (0 to 1 of normal), `power` the lighting bus,
    *  `drive` the main drive's throttle (0 to 1), `inside` whether you are aboard at all (not in a fighter). */
-  frame(dt, { room, air = 1, power = true, drive = 0, inside = true }) {
+  frame(dt, { room, air = 1, power = true, drive = 0, inside = true, suit = false, moved = 0 }) {
     if (!this.on) return;
     const C = this.C, t = C.currentTime;
+    this.suitFrame(dt, suit && inside, moved);
     const p = (room && (ROOMS[room.id] ?? PROFILE[lookKey(room)])) ?? PROFILE.corridor;
     const k = inside ? Math.max(0, Math.min(1, air)) ** 1.5 : 0;
     const set = (g, v) => g.gain.setTargetAtTime(v, t, 0.6);
@@ -99,6 +117,40 @@ export class Ambience {
       this.next = 7 + Math.random() * 18;
       this.creak(p.rumble * (0.3 + 0.7 * k));
     }
+  }
+
+  /** Your suit, while the helmet is closed (`on`): the fans; a breath every 4 s or so, in through the nose and out
+   *  longer (faster when you hurry); and a boot through the deck every 0.75 m you walk (`moved`, metres this frame). */
+  suitFrame(dt, on, moved) {
+    const t = this.C.currentTime;
+    this.fans.gain.setTargetAtTime(on ? 0.05 : 0, t, 0.4);
+    if (!on) {
+      this.breath.gain.setTargetAtTime(0, t, 0.2);
+      return;
+    }
+    const pace = moved / Math.max(dt, 1e-3) > 2.5 ? 1.6 : 1; // running: quicker breaths
+    this.cycle = (this.cycle + dt * pace) % 4.2;
+    const c = this.cycle, inhale = c < 1.4, exhale = c >= 1.6 && c < 3.6;
+    const level = inhale ? Math.sin((c / 1.4) * Math.PI) * 0.05 : exhale ? Math.sin(((c - 1.6) / 2) * Math.PI) * 0.07 : 0;
+    this.breath.gain.setTargetAtTime(level, t, 0.08);
+    this.breathF.frequency.setTargetAtTime(inhale ? 1500 : 900, t, 0.2);
+    if ((this.stride += moved) > 0.75) {
+      this.stride = 0;
+      this.boot();
+    }
+  }
+
+  /** One boot on the deck, heard through the suit: a dull thud. */
+  boot() {
+    const C = this.C, t = C.currentTime, g = C.createGain(), o = C.createOscillator();
+    o.frequency.setValueAtTime(95 + Math.random() * 20, t);
+    o.frequency.exponentialRampToValueAtTime(45, t + 0.12);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.35, t + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
+    o.connect(g).connect(this.out);
+    o.start(t);
+    o.stop(t + 0.2);
   }
 
   /** The hull working: a low groan that bends in pitch, or a single tick of metal. */

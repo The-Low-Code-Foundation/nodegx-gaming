@@ -89,6 +89,15 @@ function section(list, z) {
   return null;
 }
 
+/** The distance from point `p` to the segment a–b (arrays [x, y, z]). */
+const _Z = new THREE.Vector3(0, 0, 1);
+
+function segDist(p, a, b) {
+  const dx = b[0] - a[0], dy = b[1] - a[1], dz = b[2] - a[2];
+  const t = Math.max(0, Math.min(1, ((p.x - a[0]) * dx + (p.y - a[1]) * dy + (p.z - a[2]) * dz) / (dx * dx + dy * dy + dz * dz)));
+  return Math.hypot(p.x - a[0] - dx * t, p.y - a[1] - dy * t, p.z - a[2] - dz * t);
+}
+
 export class Integrity {
   /** `dc`: the damage control (jobs, kit, the speakers). `thrusters`: the carrier's thruster list (newton.mjs).
    *  `auto`: attacks come by themselves. `hooks.rescue(room)`: carry the player into that room. `hooks.raid(from)`: send
@@ -345,6 +354,41 @@ export class Integrity {
     return false;
   }
 
+  /** What a shell flying in from outside meets at `p` (ship frame), or null. Outside the drum section, the hull
+   *  (`'hull'`). The drum section is an open tube (`drum.structure`): there it meets the sleeve and its end rings
+   *  (`'sleeve'`), a drum (`'drum'`), or the exposed structure through the open ends (`'spine'`, `'hub'`, `'spoke'`,
+   *  `'strut'`; `half` says which drum's hub or spoke), so a shell can fly in at an end and on past the spokes. */
+  meets(p) {
+    const D = this.L.drum, ST = D?.structure;
+    if (!ST) return this.inHull(p) ? { part: 'hull' } : null;
+    for (const s of ST.struts) if (segDist(p, s.a, s.b) <= s.r + 0.2) return { part: 'strut' };
+    const z0 = D.halves[0].z[0], z1 = D.halves[D.halves.length - 1].z[1], ring = ST.sleeve.ring;
+    const R = D.sleeve.r, ax = Math.abs(p.x), ay = Math.abs(p.y);
+    const flat = Math.max(ax, ay, (ax + ay) / Math.SQRT2); // the octagon's own radius: its flats at R
+    const inRing = (p.z >= z0 - ring.len && p.z < z0) || (p.z > z1 && p.z <= z1 + ring.len);
+    if (inRing && flat >= R - ring.depth + 0.8 && flat <= R + 0.8) return { part: 'sleeve' };
+    if (p.z < z0 || p.z > z1) return this.inHull(p) ? { part: 'hull' } : null;
+    if (flat <= R && flat >= R - ST.sleeve.t) return { part: 'sleeve' };
+    if (flat > R) return null;
+    const r = Math.hypot(p.x, p.y);
+    if (r >= D.innerR && r <= D.belt.to) return { part: 'drum' };
+    if (r <= ST.spine.r && p.z >= ST.spine.z[0] && p.z <= ST.spine.z[1]) return { part: 'spine' };
+    const step = (2 * Math.PI) / D.sides;
+    for (const h of D.halves) {
+      const zc = (h.corridor[0] + h.corridor[1]) / 2;
+      if (Math.abs(p.z - zc) > ST.hub.len / 2) continue;
+      if (r <= ST.hub.r) return { part: 'hub', half: h.id };
+      if (Math.abs(p.z - zc) > ST.spoke.d / 2 || r > D.innerR) continue;
+      const hv = this.C.drums?.halves.find((x) => x.id === h.id);
+      for (const k of D.spokes.segments) {
+        const a = -((hv?.node.rotation.z ?? 0) + k * step), c = Math.cos(a), sn = Math.sin(a);
+        const x = p.x * c - p.y * sn, y = p.x * sn + p.y * c; // in the spoke's frame: it runs down -y
+        if (Math.abs(x) <= ST.spoke.w / 2 && -y >= ST.hub.r) return { part: 'spoke', half: h.id };
+      }
+    }
+    return null;
+  }
+
   compartmentAt(p) {
     for (const n of this.nodes.values()) if (n.b && inside(n.b, p)) return n;
     const d = this.C.drumAt?.(p); // in a spinning drum (drum.mjs)
@@ -460,6 +504,8 @@ export class Integrity {
     n.holes.push(h);
     if (to) to.holes.push(h);
     this.holes.push(h);
+    // In a drum: where it is in its segment's own frame (`h.drum`), drawn there once that segment is built (holeFrame).
+    if (n.drum) this.drumHole(h, n);
     // In a walkable room you see it: a ragged black hole in the plating, glowing at its edge for a while.
     if (n.c.access === 'walk' && n.b) this.holeLook(h, n);
     else if (to?.c.access === 'walk' && to.b) this.holeLook(h, to, true);
@@ -476,8 +522,36 @@ export class Integrity {
     return h;
   }
 
+  /** A hole in a drum room or ring corridor, placed in its segment: which segment (a room's own; for a ring corridor,
+   *  the one the point is in), the point and the face it came through in that segment's frame (`face()` on the room's
+   *  box there), so it is drawn on the wall, floor or deckhead the shell came through and turns with the drum. */
+  drumHole(h, n) {
+    const D = this.L.drum, hv = this.C.drums?.halves.find((x) => x.id === n.c.half);
+    if (!D || !hv) return;
+    const S = D.sides, step = (2 * Math.PI) / S, did = n.c.deck.split('-')[2], dk = D.decks.find((d) => d.id === did);
+    const rot = hv.node.rotation.z, toHalf = (v) => v.clone().applyAxisAngle(_Z, -rot);
+    const p = toHalf(h.at), dir = toHalf(h.normal);
+    const seg = n.c.seg ?? (((Math.round((Math.atan2(p.y, p.x) + Math.PI / 2) / step)) % S) + S) % S;
+    const q = p.applyAxisAngle(_Z, -seg * step), d = dir.applyAxisAngle(_Z, -seg * step);
+    const hw = dk.floorR * Math.tan(Math.PI / S), y0 = -dk.floorR;
+    const half = D.halves.find((x) => x.id === n.c.half);
+    const b = n.c.seg != null ? { x: n.c.x, y: [y0, y0 + (n.c.h ?? dk.h)], z: n.c.z } : { x: [-hw, hw], y: [y0, y0 + dk.h], z: half.corridor };
+    const f = this.face(b, q, d);
+    h.drum = { hid: n.c.half, did, seg, key: `${n.c.half}|${did}|${seg}`, b, at: f.at, normal: f.n, hw };
+  }
+
+  /** Where a hole is in the ship's frame now: a drum hole turns with its half. */
+  holeNow(h, out = new THREE.Vector3()) {
+    if (!h.spin) return out.copy(h.at);
+    const r = h.spin.hv.node.rotation.z, c = Math.cos(r), s = Math.sin(r);
+    return out.set(h.spin.x * c - h.spin.y * s, h.spin.x * s + h.spin.y * c, h.at.z);
+  }
+
+  /** The hole's look in `n`: a fixed-hull room's (on its deck, `n.b`), or a drum hole's in its built segment. */
   holeLook(h, n, far = false) {
-    const I = this.C.decks.get(n.c.deck);
+    const seg = h.drum ? this.C.drums.built.get(h.drum.key) : null;
+    const I = seg ? seg.I : this.C.decks.get(n.c.deck);
+    const box = seg ? h.drum.b : n.b, hat = seg ? h.drum.at : h.at, hn = seg ? h.drum.normal : h.normal;
     const r = Math.sqrt(h.area / Math.PI);
     const g = new THREE.Group();
     g.userData.live = true;
@@ -502,15 +576,15 @@ export class Integrity {
     g.add(scorch, rim, black);
     // Facing into the room, just proud of the wall (walls are 0.2 thick on their line), the floor or the ceiling. A
     // hole from the compartment next door is on this room's own facing wall, across the gap between them.
-    const into = far ? h.normal.clone().negate() : h.normal.clone();
-    const b = n.b;
-    const on = new THREE.Vector3(clamp(h.at.x, b.x[0] + r, b.x[1] - r), clamp(h.at.y, b.y[0] + r, b.y[1] - r), clamp(h.at.z, b.z[0] + r, b.z[1] - r));
+    const into = far ? hn.clone().negate() : hn.clone();
+    const b = box;
+    const on = new THREE.Vector3(clamp(hat.x, b.x[0] + r, b.x[1] - r), clamp(hat.y, b.y[0] + r, b.y[1] - r), clamp(hat.z, b.z[0] + r, b.z[1] - r));
     for (const k of ['x', 'y', 'z']) if (into[k]) on[k] = into[k] > 0 ? b[k][0] : b[k][1];
     g.position.copy(on).addScaledVector(into, 0.13);
     g.lookAt(g.position.clone().add(into));
     this.setClip(HOLE, PATCH, SCORCH, rimMat, MIST);
     I.group.add(g);
-    h.look = { g, rimMat, I, r, into };
+    h.look = { g, rimMat, I, r, into, b };
     // The mist: air and loose dust streaming to the hole.
     const N = 70;
     const geo = new THREE.BufferGeometry();
@@ -543,15 +617,20 @@ export class Integrity {
     h.sealed = true;
     h.by = by;
     h.mark.material = MARK_SEALED;
-    if (h.look) {
-      const { g, r } = h.look;
-      g.add(at(new THREE.Mesh(new THREE.CircleGeometry(r * 1.7, 16), PATCH), 0, 0, 0.01));
-      h.look.mist.visible = false;
-      h.look.rimMat.opacity = 0;
-    }
+    this.patchLook(h);
     const where = h.n.c.access === 'walk' ? h.n : h.to?.c.access === 'walk' ? h.to : h.n;
     this.dc?.say(null, by === 'you' ? `Hole patched in the ${where.c.name.toLowerCase()}.` : `Drones have sealed the hole in the ${where.c.name.toLowerCase()}.`, 0, 4);
     this.sfx?.cue('clunk', { vol: 0.4 });
+  }
+
+  /** A sealed hole's patch over its look (if it has one yet: a drum hole's is drawn when its segment is built). */
+  patchLook(h) {
+    if (!h.look || h.look.patched) return;
+    const { g, r } = h.look;
+    g.add(at(new THREE.Mesh(new THREE.CircleGeometry(r * 1.7, 16), PATCH), 0, 0, 0.01));
+    h.look.mist.visible = false;
+    h.look.rimMat.opacity = 0;
+    h.look.patched = true;
   }
 
   /** The flash where it struck, the bang and the shake you feel aboard. */
@@ -643,9 +722,13 @@ export class Integrity {
     const S = this.N.shell, r = this.rand, AR = this.N.armour;
     const ax = Math.abs(dir.x) >= Math.abs(dir.y) ? 'x' : 'y';
     const from = ax === 'x' ? (dir.x > 0 ? 'port' : 'starboard') : dir.y > 0 ? 'below' : 'above';
-    // The armour belt: a gun shell is stopped by it some of the time, and loses some of its reach when it is not.
-    if (opts.shell && AR && r() < AR.stop) return this.glance(entry, dir);
-    const pen = opts.pen ?? S.pen[0] + r() * (S.pen[1] - S.pen[0]) - (opts.shell && AR ? AR.pen : 0);
+    // The armour belt: a gun shell is stopped by it some of the time, and loses some of its reach when it is not. The
+    // open drum section's exposed structure (`opts.part`, from `meets()`) has its own, heavier armour.
+    const exposed = ['spine', 'hub', 'spoke', 'strut'].includes(opts.part?.part);
+    const ar = exposed ? AR?.structure ?? AR : AR;
+    if (opts.shell && ar && r() < ar.stop) return this.glance(entry, dir, exposed ? opts.part : null);
+    if (exposed && opts.part.part !== 'spine') return this.structureHit(entry, dir, opts);
+    const pen = opts.pen ?? S.pen[0] + r() * (S.pen[1] - S.pen[0]) - (opts.shell && ar ? ar.pen : 0);
     if (opts.torpedo) {
       const z = entry.z;
       this.dc?.say(`Torpedo hit. Frame ${frameOf(this.L, z)}, ${sideOf(entry.x)}.`, `Torpedo hit: frame ${frameOf(this.L, z)}, ${sideOf(entry.x)}.`, 200, 6);
@@ -658,15 +741,38 @@ export class Integrity {
     });
   }
 
-  /** A shell the armour stopped: a flash and a bang on the plating, a scar, no hole. */
-  glance(entry, dir) {
+  /** A shell that got through the armour of a hub ring, a spoke or a strut. A hub or a spoke is holed into its drum's
+   *  inner ring corridor (the lifts open onto it), and hurts it; a strut is open structure, so it is only hurt metal. */
+  structureHit(entry, dir, opts) {
+    const S = this.N.shell, r = this.rand, part = opts.part;
+    this.impact(entry, dir);
+    const res = { from: null, entry, stop: entry, path: [], burst: null, part: part.part };
+    this.log.push(res);
+    const D = this.L.drum, inner = D.decks[D.decks.length - 1].id;
+    const n = part.half ? this.nodes.get(`ring-${part.half}-${inner}`) : null;
+    if (n) {
+      const hole = (opts.hole ?? S.hole[0] + r() * (S.hole[1] - S.hole[0])) * 0.6;
+      this.makeHole(n, null, entry, dir.clone(), hole);
+      this.hurt(n, (opts.damage ?? S.damage[0] + r() * (S.damage[1] - S.damage[0])) * 0.5);
+      res.path.push(n);
+    }
+    const half = part.half && D.halves.find((h) => h.id === part.half)?.name.toLowerCase();
+    const what = { hub: `the ${half}'s hub ring`, spoke: `a spoke of the ${half}`, strut: 'a sleeve strut' }[part.part];
+    this.dc?.say(`Hit on ${what}. ${n ? 'The ring corridor is venting.' : 'Structure damaged, no breach.'}`, `Hit: ${what}.${n ? ' Ring corridor venting.' : ''}`, 300, 5);
+    return res;
+  }
+
+  /** A shell the armour stopped: a flash and a bang on the plating, a scar, no hole. `part`: on the open drum
+   *  section's exposed structure (`meets()`), not the belt. */
+  glance(entry, dir, part = null) {
     this.impact(entry, dir);
     this.shake *= 0.6;
-    const res = { from: null, entry, stop: entry, path: [], burst: null, glance: true };
+    const res = { from: null, entry, stop: entry, path: [], burst: null, glance: true, part: part?.part };
     this.log.push(res);
     if (!this.glanceCalled || this.time - this.glanceCalled > 10) {
       this.glanceCalled = this.time;
-      this.dc?.say(null, `Hit on the armour belt, frame ${frameOf(this.L, entry.z)}. No breach.`, 0, 4);
+      const on = part ? { spine: 'the spine', hub: 'a hub ring', spoke: 'a spoke', strut: 'a sleeve strut' }[part.part] + '\'s armour' : 'the armour belt';
+      this.dc?.say(null, `Hit on ${on}, frame ${frameOf(this.L, entry.z)}. No breach.`, 0, 4);
     }
     return res;
   }
@@ -688,12 +794,14 @@ export class Integrity {
     const K = this.N.condition;
     if (!K || this.cond) return;
     this.cond = { t: this.time, venting: false, secured: null };
-    this.dc?.say(`Set condition one throughout the ship. All hands, don vac suits. Venting in ${K.warn} seconds.`, `Condition one: put on a vac suit (VAC SUITS lockers). The ship vents in ${K.warn} s.`, 1800, 7);
+    if (K.drums === false) this.dc?.say(`Set condition one throughout the ship. All hands, don vac suits. Venting the fixed hull in ${K.warn} seconds. The drums stay pressurised.`, `Condition one: put on a vac suit (VAC SUITS lockers). The fixed hull vents in ${K.warn} s; the drums keep their air.`, 1800, 7);
+    else this.dc?.say(`Set condition one throughout the ship. All hands, don vac suits. Venting in ${K.warn} seconds.`, `Condition one: put on a vac suit (VAC SUITS lockers). The ship vents in ${K.warn} s.`, 1800, 7);
     this.events.push({ t: this.time + K.warn, fn: () => {
       if (!this.cond || this.cond.secured) return;
       this.cond.venting = true;
       this.sfx?.cue('klaxon', { n: 2 });
-      this.dc?.say('Venting the ship. Helmets on.', 'Venting: the crew spaces are being pumped down.', 0, 5);
+      if (K.drums === false) this.dc?.say('Venting the fixed hull. Helmets on.', 'Venting: the fixed hull\'s crew spaces are being pumped down.', 0, 5);
+      else this.dc?.say('Venting the ship. Helmets on.', 'Venting: the crew spaces are being pumped down.', 0, 5);
     } });
   }
 
@@ -752,8 +860,8 @@ export class Integrity {
     const A = this.N.air;
     const k = this.N.hole.flow;
     for (const n of this.nodes.values()) n.drain = null;
-    const drainTo = (n, rate, x, z) => {
-      if (!n.drain || rate > n.drain.rate) n.drain = { rate, x, z };
+    const drainTo = (n, rate, x, z, hole = null) => {
+      if (!n.drain || rate > n.drain.rate) n.drain = { rate, x, z, hole };
     };
     // Holes: to space, or between two compartments.
     for (const hole of this.holes) {
@@ -763,8 +871,8 @@ export class Integrity {
       if (!b) {
         const lost = a.air * (1 - Math.exp((-g * h) / a.vol));
         a.air -= lost;
-        drainTo(a, lost / h / Math.max(1, a.air), hole.at.x, hole.at.z);
-      } else this.share(a, b, g, h, hole.at.x, hole.at.z, drainTo);
+        drainTo(a, lost / h / Math.max(1, a.air), hole.at.x, hole.at.z, hole);
+      } else this.share(a, b, g, h, hole.at.x, hole.at.z, drainTo, hole);
     }
     // Doors and hatches, as far open as they are.
     for (const l of this.links) {
@@ -776,7 +884,8 @@ export class Integrity {
     // Condition one: the crew spaces are pumped down into the tanks, and nothing is put back until it is secured.
     const K = this.N.condition, cond = this.cond;
     if (cond?.venting) {
-      for (const n of this.nodes.values()) if (n.c.access === 'walk' && n.air > K.to) n.air = Math.max(K.to, n.air - K.pump * h * (this.power ? 1 : 0.5));
+      // `condition.drums: false` (the spin-drum carrier): the drums stay pressurised; only the fixed hull is pumped down.
+      for (const n of this.nodes.values()) if (n.c.access === 'walk' && n.air > K.to && !(n.drum && K.drums === false)) n.air = Math.max(K.to, n.air - K.pump * h * (this.power ? 1 : 0.5));
       return;
     }
     // Life support tops up any compartment that is no longer open to space; the supply to a breached zone is cut. After
@@ -812,7 +921,7 @@ export class Integrity {
   }
 
   /** Air flowing between two compartments through an opening of conductance `g` (m³/s), without overshooting. */
-  share(a, b, g, h, x, z, drainTo) {
+  share(a, b, g, h, x, z, drainTo, hole = null) {
     const dp = a.air - b.air;
     if (Math.abs(dp) < 1e-3) return;
     const eq = dp / (1 / a.vol + 1 / b.vol); // the amount that would even them out
@@ -821,7 +930,7 @@ export class Integrity {
     a.air -= n / a.vol;
     b.air += n / b.vol;
     const from = n > 0 ? a : b;
-    if (from.air > 0.1) drainTo(from, Math.abs(n) / from.vol / from.air / h, x, z);
+    if (from.air > 0.1) drainTo(from, Math.abs(n) / from.vol / from.air / h, x, z, hole);
   }
 
   doors(dt) {
@@ -875,7 +984,8 @@ export class Integrity {
       const wait = this.holes.filter((h) => !h.sealed && !h.drone && (!h.to || D.inside)).sort((a, b) => (a.to ? 1 : 0) - (b.to ? 1 : 0));
       for (const h of wait.slice(0, free)) {
         const from = new THREE.Vector3((bay.b.x[0] + bay.b.x[1]) / 2, bay.b.y[0] + 1, (bay.b.z[0] + bay.b.z[1]) / 2);
-        const to = h.at.clone().addScaledVector(h.normal, h.to ? 0.5 : -1.5);
+        // A drum hole turns: the drone makes for where it is now, and follows it (below).
+        const to = h.spin ? this.holeNow(h) : h.at.clone().addScaledVector(h.normal, h.to ? 0.5 : -1.5);
         const dist = from.distanceTo(to);
         const mesh = at(new THREE.Mesh(new THREE.OctahedronGeometry(1.4), MARK_DRONE), from.x, from.y, from.z);
         mesh.renderOrder = 7;
@@ -889,6 +999,12 @@ export class Integrity {
       if (d.done) continue;
       d.t += dt;
       const k = Math.min(1, d.t / d.fly);
+      if (d.h.spin) {
+        this.holeNow(d.h, d.to); // just outside it, radially
+        const k = 1 + 1.5 / Math.max(1, Math.hypot(d.to.x, d.to.y));
+        d.to.x *= k;
+        d.to.y *= k;
+      }
       d.mesh.position.lerpVectors(d.from, d.to, k);
       if (d.h.sealed) (d.done = true), d.mesh.removeFromParent();
       else if (d.t >= d.fly + d.work) {
@@ -941,6 +1057,10 @@ export class Integrity {
     const near = mode === 'walk' ? walker.nearestUse() : null;
     for (const h of this.holes) {
       h.t += dt;
+      if (!h.look && h.drum && h.n.c.access === 'walk' && this.C.drums.built.has(h.drum.key)) {
+        this.holeLook(h, h.n);
+        if (h.sealed) this.patchLook(h);
+      }
       if (!h.look) continue;
       const L = h.look;
       // Hot metal cooling: yellow-orange to a dull red, then gone.
@@ -963,7 +1083,7 @@ export class Integrity {
       L.mist.visible = venting && L.I.group.visible;
       if (!L.mist.visible) continue;
       const pos = L.mist.geometry.attributes.position;
-      const b = room.b, hp = L.g.position;
+      const b = L.b, hp = L.g.position;
       const strength = clamp(room.air / this.N.air.nominal, 0.15, 1);
       for (let i = 0; i < L.seeds.length; i++) {
         const s = L.seeds[i];
@@ -1009,7 +1129,11 @@ export class Integrity {
     this.here = n;
     if (n?.drain && !this.rescuing) {
       // The wind: up to `wind` m/s toward where the air is going, as strong as it is going fast.
-      const dx = n.drain.x - walker.pos.x, dz = n.drain.z - walker.pos.z;
+      // In a drum the hole is in its segment's frame: along the ring, as many segments round as it is from yours.
+      const dh = inDrum ? n.drain.hole?.drum : null, S = this.L.drum?.sides;
+      const wrap = dh ? ((((dh.seg - I.seg) % S) + S + S / 2) % S) - S / 2 : 0;
+      const tx = dh ? dh.at.x + wrap * 2 * dh.hw : n.drain.x, tz = dh ? dh.at.z : n.drain.z;
+      const dx = tx - walker.pos.x, dz = tz - walker.pos.z;
       const d = Math.hypot(dx, dz);
       const v = Math.min(A.wind, n.drain.rate * 60) * clamp(n.air / A.nominal, 0, 1);
       if (d > 0.6 && v > 0.05) {
@@ -1022,7 +1146,8 @@ export class Integrity {
     const amb = n ? n.air : A.nominal;
     const U = this.N.suit;
     if (this.suit) {
-      const want = amb < A.unsafe + 15 || !!this.cond?.venting || (n?.rate ?? 0) < -A.falling * 3;
+      const kept = n?.drum && this.N.condition?.drums === false; // a drum kept pressurised: helmets open, as the sick bay's
+      const want = amb < A.unsafe + 15 || (!!this.cond?.venting && !kept) || (n?.rate ?? 0) < -A.falling * 3;
       if (want !== this.helmet && (want || amb > A.nominal - 6)) {
         this.helmet = want;
         this.sfx?.cue(want ? 'servo' : 'hiss', { dur: 0.6, vol: 0.4 });
@@ -1120,11 +1245,7 @@ export class Integrity {
     if (!this.C.overlay.visible) return;
     const A = this.N.air;
     const blink = (this.time * 2.5) % 1 < 0.6;
-    for (const h of this.holes) {
-      if (!h.spin) continue;
-      const r = h.spin.hv.node.rotation.z, c = Math.cos(r), s = Math.sin(r);
-      h.mark.position.set(h.spin.x * c - h.spin.y * s, h.spin.x * s + h.spin.y * c, h.at.z);
-    }
+    for (const h of this.holes) if (h.spin) this.holeNow(h, h.mark.position);
     for (const n of this.nodes.values()) {
       const venting = n.holes.some((h) => !h.sealed);
       if (!n.tint) continue; // a drum node: the cutaway shows the drum's own blocks

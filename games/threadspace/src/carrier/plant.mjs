@@ -7,7 +7,7 @@
 // sinks are, 0 to 1. The radiators shed more the hotter the sinks are, as much as they are spread and unhurt. They are
 // also the most fragile thing on her, so at action stations she folds them into their housings (`foldAtStations`) and
 // the sinks start to fill: a fight is on a clock. G at the helm spreads or folds them by hand. At `limit` the point
-// defence and the railgun hold their fire and the main drive is held back until she has cooled.
+// defence (and v1's railgun) hold their fire and the main drive is held back until she has cooled.
 //
 // Reaction mass. The main drive throws propellant out of the back at `isp` seconds; when it is gone, she coasts. It
 // lives in the tank compartments (`tanks`), so a hole in one of them is a leak to space.
@@ -135,7 +135,9 @@ export class Plant {
     this.hot = this.heat >= H.limit || (this.hot && this.heat > H.limit - 0.08);
     if (this.hot && !wasHot) {
       this.sfx?.cue('klaxon', { n: 2 });
-      this.dc?.say('Heat sinks full. Point defence and railgun holding fire. Main drive restricted.', 'Heat sinks full: point defence and railgun hold fire, the drive is held back.', 0, 7);
+      // v2 has no railgun (its broadside launches cold and makes no heat), so its call names the point defence only.
+      if (this.C.L.weapons?.railgun) this.dc?.say('Heat sinks full. Point defence and railgun holding fire. Main drive restricted.', 'Heat sinks full: point defence and railgun hold fire, the drive is held back.', 0, 7);
+      else this.dc?.say('Heat sinks full. Point defence holding fire. Main drive restricted.', 'Heat sinks full: point defence holds fire, the drive is held back.', 0, 7);
     } else if (wasHot && !this.hot) this.dc?.say(null, 'Heat back under the limit: weapons free.', 0, 4);
     // Reaction mass: what the drive burned, and what leaks out of a holed tank.
     const isp = this.P.propellant.isp;

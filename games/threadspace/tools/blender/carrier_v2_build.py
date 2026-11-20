@@ -1,5 +1,6 @@
 # Builds the spin-drum carrier's outside from its layout, ships/carrier.layout.json (made by tools/carrier-v2.mjs):
-# the hull lofted from the layout's sections (bow, the fixed armoured sleeve round the drums, the hangar, the stern),
+# the hull lofted from the layout's sections (bow, the fixed armoured sleeve round the drums, the hangar, the stern;
+# the sleeve an open tube, so the drums, the spine and the struts that hold it show through its ends: drum.structure),
 # the bridge tower, the launch doors cut through both sides of the hangar, and the fittings at the layout's mounts:
 # turrets (gunhouse and guns as their own objects, as carrier_build.py makes them, so the game trains them), point
 # defence sponsons, the radiators (hinged, their own objects), the drive bells, the manoeuvring clusters, armour belts,
@@ -9,7 +10,7 @@
 #   blender -b --factory-startup --python tools/blender/carrier_v2_build.py -- --blend /tmp/carrier-v2.blend
 #
 # Output: assets/carrier/hull.glb, which carrier.html loads (and falls back to its lofted hull without).
-# The first carrier (?ship=v1) is carrier_build.py → hull-v1.glb.
+# The first carrier, archived, is archive/carrier-v1/carrier_build.py → hull-v1.glb there.
 import sys, os, json, math, random
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -82,7 +83,12 @@ def keep_main(c):
 
 
 # --- the hull --------------------------------------------------------------------------------------------------------
-hull = K.loft('hull', secs, [M['hull'], M['hullB'], M['hullC']], panel=8, relief=0.5, seed=7, keep=keep_main)
+# Three lofts: the bow (capped aft: its after bulkhead), the sleeve round the drums (an open tube), and the hangar and
+# stern (capped forward). They are joined into one object, `hull`, at the end of this section. The launch doors are cut
+# into the hangar's loft first.
+fore_secs, sleeve_secs, aft_secs = secs[:3], secs[3:5], secs[5:]
+assert sleeve_secs[0]['w'] > 100 and sleeve_secs[1]['w'] > 100, 'the sleeve is the 4th and 5th hull section'
+hull = K.loft('hull', aft_secs, [M['hull'], M['hullB'], M['hullC']], panel=8, relief=0.5, seed=7, keep=keep_main)
 # The launch doors: a real opening through each side of the hangar, as deep as the side, to the hangar's own wall.
 wall = {'w': hangar['x'][0], 'e': hangar['x'][1]}
 for b in bays:
@@ -117,6 +123,75 @@ bm.to_mesh(hull.data)
 bm.free()
 print(f'bays: removed {len(back)} faces across the backs of the openings')
 
+ST = L['drum']['structure']
+hull_parts = [hull, K.loft('hull-bow', fore_secs, [M['hull'], M['hullB'], M['hullC']], panel=8, relief=0.5, seed=5, keep=keep_main)]
+# The sleeve: its plated outside, and its inside (the same loft `t` in, faces turned inward), open at both ends.
+hull_parts.append(K.loft('sleeve-out', sleeve_secs, [M['sleeve'], M['hullB'], M['hull']], panel=8, relief=0.5, seed=11, caps=False))
+t = ST['sleeve']['t']
+inner_secs = [dict(s, w=s['w'] - 2 * t, h=s['h'] - 2 * t) for s in sleeve_secs]
+sl_in = K.loft('sleeve-in', inner_secs, [M['trim']], panel=8, relief=0, caps=False)
+bm = bmesh.new()
+bm.from_mesh(sl_in.data)
+bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])
+if sum(f.normal.dot(f.calc_center_median().normalized()) for f in bm.faces) > 0:  # outward: turn them in
+    bmesh.ops.reverse_faces(bm, faces=bm.faces[:])
+bm.to_mesh(sl_in.data)
+bm.free()
+hull_parts.append(sl_in)
+
+
+def oct_band(name, z0, z1, w_out, w_in, mat, c=0.586):
+    """A thick octagonal ring (a sleeve's frame or end ring): flats `w_out` and `w_in` across, from z0 to z1."""
+    bm = bmesh.new()
+    counts = [2] * 8
+    rings = [[bm.verts.new(K.B(*p)) for p in K._ring({'z': z, 'w': w, 'h': w, 'c': c}, counts)] for z, w in ((z0, w_out), (z1, w_out), (z1, w_in), (z0, w_in))]
+    n = len(rings[0])
+    for i in range(4):
+        A, Bb = rings[i], rings[(i + 1) % 4]
+        for j in range(n):
+            bm.faces.new((A[j], A[(j + 1) % n], Bb[(j + 1) % n], Bb[j]))
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])
+    return K._object(bm, name, [mat])
+
+
+# The end rings: heavy, standing just off each end of the sleeve and lapping the drums' edge, where the struts meet it;
+# frames round the inside every few metres, clear of the drums' belt.
+R0 = sleeve_secs[0]['w'] / 2
+rg = ST['sleeve']['ring']
+for z0, z1 in ((sleeve_secs[0]['z'] - rg['len'], sleeve_secs[0]['z']), (sleeve_secs[1]['z'], sleeve_secs[1]['z'] + rg['len'])):
+    hull_parts.append(oct_band('sleeve-end', z0, z1, 2 * (R0 + 0.8), 2 * (R0 - rg['depth'] + 0.8), M['armour']))
+belt_r = L['drum']['belt']['to']
+for i in range(1, 8):
+    for h in L['drum']['halves']:
+        z = h['z'][0] + (h['z'][1] - h['z'][0]) * i / 8
+        hull_parts.append(oct_band('sleeve-frame', z - 0.3, z + 0.3, 2 * (R0 - t + 0.05), 2 * (belt_r + 0.9), M['belt']))
+__import__('bpy').context.view_layer.update()  # the bay cutters were deleted: refresh the view layer's list first
+hull = K.join(hull_parts, 'hull')
+
+# The exposed structure inside the open section, fixed to the hull: the armoured spine (in three lengths, round the hub
+# rings, which turn and are the game's: drum.mjs), its collars at the bulkheads, and the struts from the end rings.
+sp = ST['spine']
+hubs = sorted((sum(h['corridor']) / 2 for h in L['drum']['halves']))
+struct = []
+cuts = [sp['z'][0]] + [z for zc in hubs for z in (zc - ST['hub']['len'] / 2 - 0.3, zc + ST['hub']['len'] / 2 + 0.3)] + [sp['z'][1]]
+for z0, z1 in zip(cuts[::2], cuts[1::2]):
+    struct.append(K.cyl('spine', (0, 0, z0), (0, 0, z1), sp['r'], sp['r'], M['armour'], 16))
+    z = z0 + 1.5
+    while z < z1 - 1:
+        struct.append(K.cyl('spine-band', (0, 0, z - 0.4), (0, 0, z + 0.4), sp['r'] + 0.35, sp['r'] + 0.35, M['belt'], 16))
+        z += 4
+for z0, z1 in ((cuts[0], cuts[0] + 2.2), (cuts[-1] - 2.2, cuts[-1])):
+    struct.append(K.cyl('spine-collar', (0, 0, z0), (0, 0, z1), sp['r'] + 1.6, sp['r'] + 1.6, M['armour'], 16))
+for s_ in ST['struts']:
+    a, b = s_['a'], s_['b']
+    struct.append(K.cyl('strut', a, b, s_['r'], s_['r'], M['armour'], 12))
+    for p, q in ((a, b), (b, a)):
+        d = [(q[k] - p[k]) for k in range(3)]
+        l = math.sqrt(sum(v * v for v in d))
+        e = [p[k] + d[k] / l * 1.4 for k in range(3)]
+        struct.append(K.cyl('strut-foot', p, e, s_['r'] * 1.7, s_['r'] * 1.3, M['belt'], 12))
+hull = K.join([hull] + struct, 'hull')
+
 island = K.loft('island', L['hull']['island'], [M['island'], M['hullB']], panel=6, relief=0.35, seed=3)
 
 parts = []
@@ -130,7 +205,7 @@ for z in range(-180, int(secs[-1]['z']), 40):
     band = [dict(z=z - 0.7, w=s['w'] + 0.8, h=s['h'] + 0.8, y=s['y'], c=s['c']), dict(z=z + 0.7, w=s['w'] + 0.8, h=s['h'] + 0.8, y=s['y'], c=s['c'])]
     parts.append(K.loft(f'belt{z}', band, [M['belt']], panel=100, relief=0, caps=False))
 da, db = SEC['drum-a'], SEC['drum-b']
-for z in (da['z'][0] + 1.2, da['z'][1], db['z'][1] - 1.2):
+for z in (da['z'][1],):  # between the halves (the ends have their own heavy rings, above)
     w = da['w'] + 1.6
     band = [dict(z=z - 1.2, w=w, h=w, y=0, c=0.586), dict(z=z + 1.2, w=w, h=w, y=0, c=0.586)]
     parts.append(K.loft(f'sleeve-ring{int(z)}', band, [M['belt']], panel=100, relief=0, caps=False))
@@ -153,7 +228,20 @@ bridge = next(c for c in L['compartments'] if c['id'] == 'bridge')
 floor = next(d['floor'] for d in L['decks'] if d['id'] == bridge['deck'])
 isl = L['hull']['island']
 skin = max(s['w'] for s in isl) / 2 + 0.06
+# The forward windows sit in the tower's sheer front face, just proud of where it starts: the section before the first
+# full-height one.
+full = max(x['h'] for x in isl)
+front = isl[next(i for i, x in enumerate(isl) if x['h'] == full) - 1]['z'] - 0.06
 for w in bridge.get('windows', []):
+    if w['side'] == 'n':
+        wy = (floor + w['sill'], floor + w['head'])
+        xm, xl = (w['from'] + w['to']) / 2, w['to'] - w['from']
+        parts.append(K.plane('bridge-glass', (xm, sum(wy) / 2, front), (xl, wy[1] - wy[0]), '-z', M['glass']))
+        for i in range(9):
+            parts.append(K.box('mullion', (w['from'] + xl * i / 8, sum(wy) / 2, front - 0.15), (0.25, wy[1] - wy[0], 0.4), M['trim']))
+        parts.append(K.box('shutter-top', (xm, wy[1] + 0.7, front - 0.45), (xl + 2.2, 1.2, 1.0), M['armour'], bevel=0.15))
+        parts.append(K.box('shutter-low', (xm, wy[0] - 0.5, front - 0.45), (xl + 2.2, 0.8, 1.0), M['armour'], bevel=0.15))
+        continue
     s = -1 if w['side'] == 'w' else 1
     wy = (floor + w['sill'], floor + w['head'])
     zm, zl = (w['from'] + w['to']) / 2, w['to'] - w['from']
@@ -164,8 +252,9 @@ for w in bridge.get('windows', []):
     parts.append(K.box('shutter-low', (s * (skin + 0.45), wy[0] - 0.5, zm), (1.0, 0.8, zl + 2.2), M['armour'], bevel=0.15))
 
 # Masts and sensors on the tower; domes along the hangar's back and the bow.
-tz = (isl[1]['z'] + isl[2]['z']) / 2
-ttop = isl[1]['y'] + isl[1]['h'] / 2
+top = [x for x in isl if x['h'] == full]  # the tower's full-height length
+tz = (top[0]['z'] + top[-1]['z']) / 2
+ttop = top[0]['y'] + top[0]['h'] / 2
 parts.append(K.cyl('mast', (0, ttop, tz + 6), (0, ttop + 16, tz + 6), 0.5, 0.25, M['trim'], 8))
 for y, w in ((ttop + 6, 8), (ttop + 11, 5)):
     parts.append(K.box('yard', (0, y, tz + 6), (w, 0.3, 0.3), M['trim']))

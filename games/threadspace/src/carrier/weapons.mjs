@@ -213,6 +213,10 @@ export class Weapons {
     this.tubeT = 6;
     // The railgun: its capacitors (0 to 1) and its slugs.
     this.rail = { charge: 1, stock: this.W.railgun?.stock ?? 0, flash: 0 };
+    // The broadside (the spin-drum carrier): the hangar walls' tubes, each side its own stock and reload (`broadside`).
+    const B = this.W.broadside;
+    this.broad = B ? Object.fromEntries(['port', 'starboard'].map((k) => [k, { side: k, stock: B[k].stock ?? B.stock, t: 0, next: 0 }])) : null;
+    this.helmFires = false; // main.mjs: with you at the helm, the CIC leaves the broadside to you
     this.turrets = this.W.turrets.map((spec) => this.makeTurret(spec)).filter(Boolean);
     this.hatches();
     this.canvas = document.getElementById('c-ghud');
@@ -344,6 +348,7 @@ export class Weapons {
     const obj = corvette();
     setThrust(obj, 1);
     this.tubeT = this.W.tubes?.first ?? 6; // the CIC needs a firing solution before its first salvo
+    for (const b of Object.values(this.broad ?? {})) b.t = Math.max(b.t, this.W.broadside.first ?? 20);
     return this.contact(obj, R, from, this.passes(from, d, passes), {
       label: 'RAIDER', centre: new THREE.Vector3(0, 1, -6), hull: R.hull,
       torpLeft: R.torpedo?.stock ?? 0, torpT: 3 + this.rand() * 3, pdcT: 0, pdcAim: null
@@ -651,9 +656,11 @@ export class Weapons {
           this.flash(this.C.frame.localToWorld(q.clone()), 4, '#ffb070', 0.3);
         }
       }
-      if (this.ship.inHull(q)) {
-        if (s.torpedo) this.ship.arrive(q, _a.subVectors(B, A), this.torpHarm());
-        else this.ship.arrive(q, _a.subVectors(B, A), { shell: true });
+      // What it meets: the hull, or in the drum section's open tube the sleeve, a drum or the exposed structure.
+      const met = this.ship.meets ? this.ship.meets(q) : this.ship.inHull(q) && { part: 'hull' };
+      if (met) {
+        if (s.torpedo) this.ship.arrive(q, _a.subVectors(B, A), { ...this.torpHarm(), part: met });
+        else this.ship.arrive(q, _a.subVectors(B, A), { shell: true, part: met });
         return true;
       }
     }
@@ -743,6 +750,86 @@ export class Weapons {
     this.dc?.say('Tubes one and two, fire. Birds away.', 'The CIC fired a torpedo salvo at the raider.', 0, 4);
   }
 
+  // --- the broadside -------------------------------------------------------------------------------------------------
+
+  /** One side of the broadside as it stands: whether the raider bears on it (within `arc` of the beam, inside
+   *  `range`), its torpedoes, its reload, and whether its magazines can feed it. */
+  broadsideSide(k, R = this.raider) {
+    const B = this.W.broadside, b = this.broad?.[k];
+    if (!B || !b) return null;
+    const mags = B[k].magazines.map((id) => this.ship.node(id)?.health ?? 100);
+    const fed = mags.some((h) => h >= 20);
+    let bears = false, off = null, range = null;
+    if (R && !R.gone && !R.dead && !R.target) {
+      const local = this.C.frame.worldToLocal(_a.copy(R.obj.position)).normalize();
+      off = Math.acos(clamp(local.x * B[k].dir[0], -1, 1)); // radians off this side's beam
+      range = R.obj.position.distanceTo(this.C.obj.position);
+      bears = off < (B.arc * Math.PI) / 180 && range >= B.range[0] && range <= B.range[1];
+    }
+    return { k, stock: b.stock, reload: b.t > 0 ? b.t / B.reload : 0, fed, bears, off, range, ready: b.t <= 0 && b.stock > 0 && fed && this.ship.power };
+  }
+
+  /** What the helm's broadside plot shows (helmsight.mjs): each side, the raider and its bearing in the ship's frame. */
+  broadsideAim(out = {}) {
+    const R = this.raider;
+    out.sides = ['port', 'starboard'].map((k) => this.broadsideSide(k));
+    out.target = null;
+    out.dir = null;
+    out.bears = out.sides.find((s) => s.bears)?.k ?? null;
+    if (!R || R.gone || R.dead || R.target) return out;
+    out.target = R.obj.position;
+    out.label = R.label;
+    out.range = R.obj.position.distanceTo(this.C.obj.position);
+    out.hull = R.hull / R.K.hull;
+    out.dir = (out.d ??= new THREE.Vector3()).copy(R.obj.position);
+    this.C.frame.worldToLocal(out.dir).normalize();
+    return out;
+  }
+
+  /** Fires side `k`'s salvo (or the side that bears): returns why not, or null. From the helm (a click) or the CIC. */
+  broadsideFire(k = null, by = 'helm') {
+    const B = this.W.broadside;
+    if (!B) return 'no broadside';
+    const sides = ['port', 'starboard'].map((x) => this.broadsideSide(x));
+    const s = k ? sides.find((x) => x.k === k) : sides.find((x) => x.bears && x.ready) ?? sides.find((x) => x.bears) ?? sides[0];
+    if (!this.raider || this.raider.gone || this.raider.dead || this.raider.target) return 'no target';
+    if (!s.bears) return s.range > B.range[1] ? 'out of range' : s.range < B.range[0] ? 'too close' : 'nothing bears: turn her side onto the raider';
+    if (!s.fed) return `${s.k} magazines wrecked`;
+    if (s.stock <= 0) return `${s.k} tubes empty`;
+    if (!this.ship.power) return 'no power';
+    if (!s.ready) return `${s.k} tubes reloading`;
+    const b = this.broad[s.k], S = B[s.k], n = Math.min(B.salvo, b.stock);
+    const dir = _d.set(...S.dir).transformDirection(this.C.frame.matrixWorld);
+    for (let i = 0; i < n; i++) {
+      const at = S.at[(b.next + i) % S.at.length];
+      const p = this.C.frame.localToWorld(new THREE.Vector3(at[0] + S.dir[0] * 1.5, at[1], at[2]));
+      // Out cold: pushed clear of the hull, its motor lit `cold` seconds later, well off her side.
+      const t = this.torpedo(p, _b.copy(this.body.vel).addScaledVector(dir, B.push), 'ours');
+      t.t = -(B.cold ?? 2) - i * 0.15;
+      _m.lookAt(p, _c.copy(p).add(dir), Y);
+      t.obj.quaternion.setFromRotationMatrix(_m);
+      this.flash(p, 3, '#d8e8ff', 0.2);
+    }
+    b.next = (b.next + n) % S.at.length;
+    b.stock -= n;
+    b.t = B.reload;
+    this.sfx?.cue('clunk', { vol: 0.6 });
+    const side = s.k === 'port' ? 'Port' : 'Starboard';
+    this.dc?.say(`${side} broadside, fire. ${n} away.`, `${by === 'helm' ? 'You fired' : 'The CIC fired'} the ${s.k} broadside: ${n} torpedoes, out cold.`, 0, 4);
+    return null;
+  }
+
+  /** The broadside's reload, and the CIC firing the side that bears when nobody is at the helm to do it. */
+  broadsideFrame(dt) {
+    if (!this.broad) return;
+    for (const b of Object.values(this.broad)) b.t = Math.max(0, b.t - dt);
+    if (this.helmFires) return;
+    for (const k of ['port', 'starboard']) {
+      const s = this.broadsideSide(k);
+      if (s?.bears && s.ready) return this.broadsideFire(k, 'cic');
+    }
+  }
+
   /** Each torpedo: its guidance (proportional navigation on the line to its target, the rest of its thrust down that
    *  line), the weave in its last stretch, its drive, and what it meets. */
   torpsFrame(dt) {
@@ -757,7 +844,7 @@ export class Weapons {
       if (t.side === 'theirs') (tp = this.C.frame.localToWorld(_a.copy(t.aim))), (tv = this.body.vel);
       else if (raiderLive) (tp = _a.copy(R.obj.position)), (tv = _d.copy(R.v).add(this.body.vel));
       else tp = null;
-      const burning = t.t < T.burn && tp;
+      const burning = t.t >= 0 && t.t < T.burn && tp; // a torpedo launched cold coasts first (t.t < 0)
       t.acc.set(0, 0, 0);
       if (burning) {
         const r = _b.subVectors(tp, t.pos), vr = _c.subVectors(tv, t.vel); // the target's place and velocity, from the torpedo
@@ -1270,6 +1357,7 @@ export class Weapons {
     if (mode === 'gun' && f.wheel) this.zoomStep(f.wheel > 0 ? -1 : 1);
     this.raiderFrame(dt);
     this.tubesFrame(dt);
+    this.broadsideFrame(dt);
     this.torpsFrame(dt);
     this.pdcFrame(dt);
     this.turretsFrame(dt, f, mode);

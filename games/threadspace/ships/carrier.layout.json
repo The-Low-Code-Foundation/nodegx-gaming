@@ -171,6 +171,13 @@
     "c": 0.2
    },
    {
+    "z": 103.8,
+    "w": 24,
+    "h": 8,
+    "y": 21,
+    "c": 0.2
+   },
+   {
     "z": 104,
     "w": 24,
     "h": 16,
@@ -1377,6 +1384,13 @@
      "from": 105,
      "to": 115.5,
      "sill": 0.45,
+     "head": 3.3
+    },
+    {
+     "side": "n",
+     "from": -9,
+     "to": 9,
+     "sill": 1,
      "head": 3.3
     }
    ]
@@ -9783,7 +9797,243 @@
     "h": 3,
     "g": 0.926
    }
-  ]
+  ],
+  "structure": {
+   "about": "The open drum section's exposed structure, all heavily armoured. `sleeve`: the fixed sleeve's thickness (its inside surface is r - t) and the heavy rings at its ends and between the halves (`ring`: their radial depth and length). `spine`: the armoured tube round the spine corridor from the bow's after bulkhead to the hangar's forward one (`z`). `hub`: the hub ring's armoured drum (outer radius, length along the ship), turning with its half. `spoke`: each spoke's two lift tubes and ladder tube, `w` across and `d` along the ship, from the hub to the drum's inner wall. `struts`: from the sleeve's end ring (`a`) to the bow or the hangar (`b`), radius `r`.",
+   "sleeve": {
+    "t": 0.5,
+    "ring": {
+     "depth": 3.2,
+     "len": 2.4
+    }
+   },
+   "spine": {
+    "r": 3.6,
+    "z": [
+     -72.3,
+     -27.7
+    ]
+   },
+   "hub": {
+    "r": 7.9,
+    "len": 9
+   },
+   "spoke": {
+    "w": 4.2,
+    "d": 3.2,
+    "tube": 1.1
+   },
+   "struts": [
+    {
+     "a": [
+      66.8,
+      27.669,
+      -72
+     ],
+     "b": [
+      22.347,
+      9.257,
+      -88
+     ],
+     "r": 1.1
+    },
+    {
+     "a": [
+      27.669,
+      66.8,
+      -72
+     ],
+     "b": [
+      5.045,
+      12.181,
+      -88
+     ],
+     "r": 1.1
+    },
+    {
+     "a": [
+      -27.669,
+      66.8,
+      -72
+     ],
+     "b": [
+      -5.045,
+      12.181,
+      -88
+     ],
+     "r": 1.1
+    },
+    {
+     "a": [
+      -66.8,
+      27.669,
+      -72
+     ],
+     "b": [
+      -22.347,
+      9.257,
+      -88
+     ],
+     "r": 1.1
+    },
+    {
+     "a": [
+      -66.8,
+      -27.669,
+      -72
+     ],
+     "b": [
+      -22.347,
+      -9.257,
+      -88
+     ],
+     "r": 1.1
+    },
+    {
+     "a": [
+      -27.669,
+      -66.8,
+      -72
+     ],
+     "b": [
+      -5.045,
+      -12.181,
+      -88
+     ],
+     "r": 1.1
+    },
+    {
+     "a": [
+      27.669,
+      -66.8,
+      -72
+     ],
+     "b": [
+      5.045,
+      -12.181,
+      -88
+     ],
+     "r": 1.1
+    },
+    {
+     "a": [
+      66.8,
+      -27.669,
+      -72
+     ],
+     "b": [
+      22.347,
+      -9.257,
+      -88
+     ],
+     "r": 1.1
+    },
+    {
+     "a": [
+      66.8,
+      27.669,
+      -28
+     ],
+     "b": [
+      23.1,
+      9.568,
+      -12
+     ],
+     "r": 1.1
+    },
+    {
+     "a": [
+      27.669,
+      66.8,
+      -28
+     ],
+     "b": [
+      7.29,
+      17.6,
+      -12
+     ],
+     "r": 1.1
+    },
+    {
+     "a": [
+      -27.669,
+      66.8,
+      -28
+     ],
+     "b": [
+      -7.29,
+      17.6,
+      -12
+     ],
+     "r": 1.1
+    },
+    {
+     "a": [
+      -66.8,
+      27.669,
+      -28
+     ],
+     "b": [
+      -23.1,
+      9.568,
+      -12
+     ],
+     "r": 1.1
+    },
+    {
+     "a": [
+      -66.8,
+      -27.669,
+      -28
+     ],
+     "b": [
+      -23.1,
+      -9.568,
+      -12
+     ],
+     "r": 1.1
+    },
+    {
+     "a": [
+      -27.669,
+      -66.8,
+      -28
+     ],
+     "b": [
+      -7.29,
+      -17.6,
+      -12
+     ],
+     "r": 1.1
+    },
+    {
+     "a": [
+      27.669,
+      -66.8,
+      -28
+     ],
+     "b": [
+      7.29,
+      -17.6,
+      -12
+     ],
+     "r": 1.1
+    },
+    {
+     "a": [
+      66.8,
+      -27.669,
+      -28
+     ],
+     "b": [
+      23.1,
+      -9.568,
+      -12
+     ],
+     "r": 1.1
+    }
+   ]
+  }
  },
  "helm": {
   "at": [
@@ -11024,7 +11274,7 @@
   {
    "room": "hangar",
    "at": [
-    -4,
+    -1.2,
     22
    ],
    "yaw": 0,
@@ -11034,14 +11284,50 @@
    "watch": "on",
    "route": [
     [
-     -4,
-     -18
+     -1.2,
+     -20
     ],
     [
-     -4,
-     62
+     -1.2,
+     66
     ]
    ]
+  },
+  {
+   "room": "hangar",
+   "at": [
+    -5.6,
+    -0.5
+   ],
+   "yaw": 3.14159,
+   "pose": "workTable",
+   "dept": "flight",
+   "post": "Deck crew",
+   "watch": "on"
+  },
+  {
+   "room": "hangar",
+   "at": [
+    7.5,
+    20.5
+   ],
+   "yaw": 0,
+   "pose": "workTable",
+   "dept": "flight",
+   "post": "Deck crew",
+   "watch": "on"
+  },
+  {
+   "room": "hangar",
+   "at": [
+    -15,
+    40
+   ],
+   "yaw": -1.5708,
+   "pose": "lookAround",
+   "dept": "flight",
+   "post": "Deck crew, launch lanes",
+   "watch": "on"
   },
   {
    "room": "flight-control",
@@ -11504,7 +11790,7 @@
    ]
   },
   "raider": {
-   "hull": 800,
+   "hull": 940,
    "speed": 150,
    "accel": 38,
    "jink": 24,
@@ -11586,26 +11872,20 @@
    "radius": 3,
    "hull": 100
   },
-  "railgun": {
-   "speed": 9000,
-   "spread": 0.0004,
-   "charge": 8,
-   "heat": 0.06,
-   "damage": [
-    140,
-    190
-   ],
-   "range": 40000,
-   "stock": 40,
-   "muzzle": [
-    0,
-    -6.4,
-    -143
-   ]
-  },
   "broadside": {
-   "about": "The hangar walls' torpedo tubes, launched cold sideways: `per` a side, each side fed from its two ordnance rooms.",
+   "about": "The hangar walls' torpedo tubes, launched cold sideways: `per` a side, each side fed from its two ordnance rooms (a side whose magazines are both below 20% health cannot fire). `stock` torpedoes a side; `salvo` per firing; `reload` seconds between a side's salvos; `first` seconds into a raid before the first (the CIC's solution); `arc` degrees off the beam the raider must be within, and `range` [min, max] m; `push` m/s out of the tube and `cold` seconds before the motor lights. The CIC fires the side that bears; with you at the helm, a click does.",
    "per": 8,
+   "stock": 16,
+   "salvo": 4,
+   "reload": 30,
+   "first": 20,
+   "arc": 50,
+   "range": [
+    300,
+    9000
+   ],
+   "push": 14,
+   "cold": 2,
    "port": {
     "magazines": [
      "ordnance-p",
@@ -11715,7 +11995,7 @@
   }
  },
  "integrity": {
-  "about": "What hits do to the ship (src/carrier/integrity.mjs). Every compartment is a volume of air (kPa) with a health. `air`: `nominal` pressure; pressure doors close when either side falls below `doorsShut`, and open by hand only if the two sides are within `openWithin`; below `unsafe` a room shows as without air, below `faint` you black out after `blackout` seconds; `falling` is the kPa a second that counts as losing air; life support puts back `refill` kPa a second; `through` is how freely air passes an open doorway (m/s); `wind` the fastest you are pulled toward a hole. `hole.flow` is how fast air leaves through a hole to space (m/s, about the speed of sound's share in choked flow). `shell`: the ranges a hit is dealt from: `pen` metres through the ship, `damage` health taken, `hole` area in m². `drones` seal holes: `count` of them in the `from` room, `speed` m/s, `seal` seconds for a 0.1 m² hole, `inside` whether they also seal holes between compartments. `patch.work` is the seconds of holding E to patch a hole yourself. Below `power.below` of reactor health the ship is on emergency power. `attack`: seconds to the first and between raids, how many hits in one, the seconds of warning, and the seconds after the last hit before the ship stands down from action stations (all pressure doors are kept shut until then). `jobs`: the chance a damaging hit starts a fire, an electrical fault or a coolant leak, and the health a finished job puts back. `armour`: the belt round her; a gun shell is stopped by it (a scar, no hole) `stop` of the time, and one that gets through has lost `pen` metres (a torpedo is never stopped). `condition`: condition one, set at action stations: `warn` seconds after the call, the air in every walkable compartment is pumped down to `to` kPa at `pump` kPa a second (into the tanks, not lost), so a hit cannot blow a room out or start a fire; after the stand-down it comes back at `repress` kPa a second. Everyone suits up first. `suit`: a vac suit (the `suit` kit, worn, not carried) holds `air` seconds of breathing, warns at `low`, and takes `don` seconds to put on; with your helmet on, the room's air does not matter to you.",
+  "about": "What hits do to the ship (src/carrier/integrity.mjs). Every compartment is a volume of air (kPa) with a health. `air`: `nominal` pressure; pressure doors close when either side falls below `doorsShut`, and open by hand only if the two sides are within `openWithin`; below `unsafe` a room shows as without air, below `faint` you black out after `blackout` seconds; `falling` is the kPa a second that counts as losing air; life support puts back `refill` kPa a second; `through` is how freely air passes an open doorway (m/s); `wind` the fastest you are pulled toward a hole. `hole.flow` is how fast air leaves through a hole to space (m/s, about the speed of sound's share in choked flow). `shell`: the ranges a hit is dealt from: `pen` metres through the ship, `damage` health taken, `hole` area in m². `drones` seal holes: `count` of them in the `from` room, `speed` m/s, `seal` seconds for a 0.1 m² hole, `inside` whether they also seal holes between compartments. `patch.work` is the seconds of holding E to patch a hole yourself. Below `power.below` of reactor health the ship is on emergency power. `attack`: seconds to the first and between raids, how many hits in one, the seconds of warning, and the seconds after the last hit before the ship stands down from action stations (all pressure doors are kept shut until then). `jobs`: the chance a damaging hit starts a fire, an electrical fault or a coolant leak, and the health a finished job puts back. `armour`: the belt round her; a gun shell is stopped by it (a scar, no hole) `stop` of the time, and one that gets through has lost `pen` metres (a torpedo is never stopped). `armour.structure`: the same for the open drum section's exposed structure (the spine, the hub rings, the spokes and the end struts, `drum.structure`), reached through the sleeve's open ends. `condition`: condition one, set at action stations: `warn` seconds after the call, the air in every walkable compartment is pumped down to `to` kPa at `pump` kPa a second (into the tanks, not lost), so a hit cannot blow a room out or start a fire; after the stand-down it comes back at `repress` kPa a second. Everyone suits up first. `drums`: false keeps the drums' rooms and ring corridors pressurised (only the fixed hull is pumped down). `suit`: a vac suit (the `suit` kit, worn, not carried) holds `air` seconds of breathing, warns at `low`, and takes `don` seconds to put on; with your helmet on, the room's air does not matter to you.",
   "air": {
    "nominal": 101,
    "doorsShut": 85,
@@ -11779,13 +12059,18 @@
   },
   "armour": {
    "stop": 0.4,
-   "pen": 6
+   "pen": 6,
+   "structure": {
+    "stop": 0.7,
+    "pen": 3
+   }
   },
   "condition": {
    "warn": 10,
    "pump": 3.5,
    "to": 3,
-   "repress": 2.5
+   "repress": 2.5,
+   "drums": false
   },
   "suit": {
    "air": 1800,

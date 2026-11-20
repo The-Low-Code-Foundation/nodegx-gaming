@@ -1,24 +1,24 @@
-# Builds the first carrier's outside (carrier.html?ship=v1) from the layout it walks: ships/carrier-v1.layout.json. The hull follows the
+# Builds the first carrier's outside from the layout it walks: carrier-v1.layout.json beside this file (archived: see README.md here). The hull follows the
 # layout's loft sections, plated in panels; the port side has a real bay opening over the hangar; the fittings (turrets,
 # point defence sponsons, radiators (each its own object, hinged, so the game folds them), drive bells, manoeuvring-thruster clusters, armour belts, bridge windows, masts
 # and navigation lights) sit at the layout's mounts. The machinery inside stays the game's (layout.mjs) for now.
 #
-#   blender -b --factory-startup --python tools/blender/carrier_build.py            (from the threadspace folder)
-#   blender -b --factory-startup --python tools/blender/carrier_build.py -- --blend /tmp/carrier.blend
+#   blender -b --factory-startup --python archive/carrier-v1/carrier_build.py       (from the threadspace folder)
+#   blender -b --factory-startup --python archive/carrier-v1/carrier_build.py -- --blend /tmp/carrier.blend
 #
-# Output: assets/carrier/hull-v1.glb. The game loads it if it is there and falls back to its own lofted hull if not.
+# Output: hull-v1.glb beside this file. The game loads it if it is there and falls back to its own lofted hull if not.
 # Change the ship's shape in the layout, then run this again.
 import sys, os, json, math, random
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, HERE)
+ROOT = os.path.dirname(os.path.dirname(HERE))
+sys.path.insert(0, os.path.join(ROOT, 'tools', 'blender'))  # shipkit.py
 import shipkit as K
 
-ROOT = os.path.dirname(os.path.dirname(HERE))
-L = json.load(open(os.path.join(ROOT, 'ships', 'carrier-v1.layout.json')))
+L = json.load(open(os.path.join(HERE, 'carrier-v1.layout.json')))
 args = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else []
 blend = args[args.index('--blend') + 1] if '--blend' in args else None
-OUT = os.path.join(ROOT, 'assets', 'carrier', 'hull-v1.glb')
+OUT = os.path.join(HERE, 'hull-v1.glb')
 
 K.reset()
 rnd = random.Random(11)

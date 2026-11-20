@@ -1,7 +1,9 @@
 // The spin drums, as the cutaway shows them (the layout's `drum`, from tools/carrier-v2.mjs): each half a group that
 // turns about the ship's axis, the two halves opposite ways, holding its rooms (coloured by what they are for, as in
 // the ship designer), its ring corridors, the belt of water tanks and stores outside them, the drum's inner wall, the
-// spokes up to the hub ring, and its end walls. The fixed armoured sleeve round them is the hull itself.
+// spokes up to the hub ring, and its end walls. The fixed armoured sleeve round them is the hull itself, open at both
+// ends, so from outside each half is drawn as it would be seen through them (`drumOutside()`): its end walls, inner
+// wall and belt, the spokes' lift tubes and the armoured hub ring, turning with it.
 //
 // Each room sits in its own segment's frame: segment k is turned 2πk/sides about z from straight down, and in that
 // frame the room is a box with its floor at y = -floorR. Seen from outside (the cutaway), they are blocks, one
@@ -15,12 +17,14 @@
 // rather than see a jump. Segments are kept once built; only those near you are drawn.
 
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { Interior } from '../interiors.mjs';
 import { room, fit, SYSTEMS } from './layout.mjs';
 import { roomSurfaces, roomLights, dressRoom, drumSet } from './sets.mjs';
 import { drawSign, hazardMat } from '../decor.mjs';
 import { box, at, mat, glow } from '../util.mjs';
 import { drumKits, drumLockers } from './damage.mjs';
+import { hubHatch } from './hub.mjs';
 
 /** The room colours of the ship designer (design/ship-designer.html, USES). */
 export const USE_COLORS = {
@@ -47,7 +51,8 @@ export function buildDrums(C) {
     group.add(half);
     const node = new THREE.Group(); // the cutaway's blocks
     const segs = new THREE.Group(); // the walkable segments, built as you come near
-    half.add(node, segs);
+    const outside = drumOutside(D, h); // as seen from outside, through the sleeve's open ends
+    half.add(node, segs, outside);
     const zc = (h.z[0] + h.z[1]) / 2, len = h.z[1] - h.z[0];
     // The rooms
     const rooms = D.rooms.filter((r) => r.half === h.id);
@@ -100,12 +105,74 @@ export function buildDrums(C) {
     hub.rotation.x = Math.PI / 2;
     hub.position.z = zCorr;
     node.add(hub);
-    halves.push({ id: h.id, node: half, blocks: node, segs, spec: h, dir: h.dir, omega: (h.rpm * 2 * Math.PI) / 60 });
+    halves.push({ id: h.id, node: half, blocks: node, segs, outside, spec: h, dir: h.dir, omega: (h.rpm * 2 * Math.PI) / 60 });
   }
   C.drums = { group, halves, built: new Map(), shown: [] };
   places(C);
   spineLifts(C);
   return C.drums;
+}
+
+/** One half as seen from outside, through the sleeve's open ends (`D.structure`): the end walls with a ring of lamps,
+ *  the inner wall and the belt's outside, each spoke's two lift tubes (lit slits, so you see them turning) and ladder
+ *  tube on an armoured web, and the hub ring's armoured drum round the spine. A few merged meshes per half; `main.mjs`
+ *  draws it only when you can see out (`seesOut()`), and never in the cutaway, which has the blocks. */
+function drumOutside(D, h) {
+  const g = new THREE.Group();
+  g.name = `drum-${h.id}-outside`;
+  const ST = D.structure;
+  if (!ST) return g;
+  const S = D.sides, step = (2 * Math.PI) / S, k0 = -Math.PI / 2 + step / 2; // polygon corners between the segments
+  const corner = (r) => r / Math.cos(step / 2); // a flat at r, as the polygon's corner radius
+  const zc = (h.z[0] + h.z[1]) / 2, len = h.z[1] - h.z[0], zCorr = (h.corridor[0] + h.corridor[1]) / 2;
+  const parts = { hull: [], armour: [], dark: [], lamp: [] };
+  const put = (key, geo, m) => parts[key].push(m ? geo.applyMatrix4(m) : geo);
+  const M4 = () => new THREE.Matrix4();
+  const tube = (r, l, n = S, open = true) => new THREE.CylinderGeometry(r, r, l, n, 1, open, k0 + Math.PI / 2).rotateX(Math.PI / 2); // corners as the ring's
+  // The end walls (from the inner wall out to the belt), the inner wall, the belt's outside.
+  for (const z of [h.z[0], h.z[1]]) put('hull', new THREE.RingGeometry(corner(D.innerR), corner(D.belt.to), S, 1, k0), M4().makeTranslation(0, 0, z));
+  put('hull', tube(corner(D.innerR), len), M4().makeTranslation(0, 0, zc));
+  put('dark', tube(corner(D.belt.to), len - 0.1), M4().makeTranslation(0, 0, zc));
+  // A lamp on each end wall in every segment, near the rim, and two at each spoke's foot.
+  for (const z of [h.z[0] - 0.05, h.z[1] + 0.05]) for (let k = 0; k < S; k++) {
+    const r = D.belt.to - 0.9, a = -Math.PI / 2 + k * step;
+    put('lamp', new THREE.BoxGeometry(0.9, 0.35, 0.1), M4().makeRotationZ(a + Math.PI / 2).premultiply(M4().makeTranslation(Math.cos(a) * r, Math.sin(a) * r, z)));
+  }
+  // The spokes: from the hub ring's armour down to the inner wall, in the corridor's z, at their segments.
+  const sp = ST.spoke, r0 = ST.hub.r, r1 = D.innerR, L = r1 - r0, mid = -(r0 + r1) / 2;
+  for (const k of D.spokes.segments) {
+    const R = M4().makeRotationZ(k * step);
+    const at = (x, y, z) => M4().makeTranslation(x, y, z).premultiply(R);
+    for (const x of [-sp.w / 2 + sp.tube, sp.w / 2 - sp.tube]) {
+      put('hull', new THREE.CylinderGeometry(sp.tube, sp.tube, L, 12, 1, true), at(x, mid, zCorr));
+      for (const z of [-sp.tube - 0.01, sp.tube + 0.01]) put('lamp', new THREE.BoxGeometry(0.22, L - 2, 0.04), at(x, mid, zCorr + z));
+      for (let y = r0 + 3; y < r1 - 1; y += 6) put('armour', new THREE.CylinderGeometry(sp.tube + 0.25, sp.tube + 0.25, 0.7, 12), at(x, -y, zCorr));
+    }
+    put('armour', new THREE.BoxGeometry(sp.w - 2 * sp.tube, L, 0.6), at(0, mid, zCorr)); // the web between them
+    put('hull', new THREE.CylinderGeometry(0.75, 0.75, L, 10, 1, true), at(0, mid, zCorr + sp.d / 2 - 0.75)); // the ladder tube
+    put('armour', new THREE.BoxGeometry(sp.w + 1.6, 1.4, sp.d + 1.2), at(0, -(r1 - 0.7), zCorr)); // its foot on the inner wall
+  }
+  // The hub ring's armoured drum, with banded ends; its inside is hub.mjs's.
+  const hz0 = zCorr - ST.hub.len / 2, hz1 = zCorr + ST.hub.len / 2, spineR = D.structure.spine.r + 0.25;
+  put('armour', tube(ST.hub.r, ST.hub.len, 32), M4().makeTranslation(0, 0, zCorr));
+  for (const z of [hz0, hz1]) {
+    put('armour', new THREE.RingGeometry(spineR, ST.hub.r, 32, 1), M4().makeTranslation(0, 0, z));
+    put('dark', tube(ST.hub.r + 0.45, 0.9, 32, false), M4().makeTranslation(0, 0, z + (z < zCorr ? 0.45 : -0.45)));
+  }
+  const look = {
+    hull: new THREE.MeshStandardMaterial({ color: '#8a939d', roughness: 0.6, metalness: 0.2, side: THREE.DoubleSide }),
+    armour: new THREE.MeshStandardMaterial({ color: '#6e7782', roughness: 0.55, metalness: 0.2, side: THREE.DoubleSide }),
+    dark: new THREE.MeshStandardMaterial({ color: '#2f353d', roughness: 0.7, metalness: 0.2, side: THREE.DoubleSide }),
+    lamp: glow('#ffd9a0')
+  };
+  for (const [key, list] of Object.entries(parts)) {
+    if (!list.length) continue;
+    const geo = mergeGeometries(list.map((x) => (x.index ? x.toNonIndexed() : x)).map((x) => (x.deleteAttribute('uv'), x)));
+    const m = new THREE.Mesh(geo, look[key]);
+    m.name = `drum-outside-${key}`;
+    g.add(m);
+  }
+  return g;
 }
 
 /** The drum's rooms, and each deck's ring corridor, as places the rest of the ship can name (`C.rooms`): the career's
@@ -232,7 +299,12 @@ export function segment(C, hid, did, seg) {
   for (const side of ['w', 'e']) open.get(corr.id)[side].push({ a: corr.z[0], b: corr.z[1], kind: 'open' }); // round the ring
   I.s = roomSurfaces(corr);
   room(I, corr, open.get(corr.id));
+  const n0 = I.lights.length;
   roomLights(I, corr);
+  // The ring corridor's lamps win places in the light pool (lights.mjs) over nearer room lamps behind walls, so the
+  // corridor is lit as far up the curve as you can see (about a segment and a half each way, to where the deckhead
+  // cuts the view off).
+  for (const l of I.lights.slice(n0)) l.weight = 0.4;
   for (const r of rooms) {
     const o = open.get(r.id);
     I.s = roomSurfaces(r);
@@ -253,16 +325,56 @@ export function segment(C, hid, did, seg) {
     const m = C.atlas.plane(Math.min(2.6, 0.5 + text.length * 0.095), 0.3, (cg, pw, ph) => drawSign(cg, pw, ph, text, color), 180);
     I.group.add(at(m, cx, I.floorY + 2.7, fore ? corr.z[0] + 0.12 : corr.z[1] - 0.12, 0, fore ? 0 : Math.PI, 0));
   }
+  // Lamp strips along both walls at the deckhead, glowing on their own: up the curve, past the lamps the light pool
+  // lights (lights.mjs), the corridor still reads as lit. Gaps at the doorways' signs.
+  for (const z of [corr.z[0] + 0.17, corr.z[1] - 0.17]) I.group.add(at(box(2 * hw - 0.4, 0.05, 0.06, glow('#cfc3aa', 0.5)), 0, I.floorY + 2.55, z)); // clear of the walls' thickness
   // Where you are round the ring: a plate on the aft wall.
   const plate = `${h.name.toUpperCase()} · ${dk.name.toUpperCase()} · ${String(seg).padStart(2, '0')}`;
   const pm = C.atlas.plane(2.2, 0.26, (cg, pw, ph) => drawSign(cg, pw, ph, plate, '#9aa6b4'), 180);
   I.group.add(at(pm, -2.6, I.floorY + 1.7, corr.z[1] - 0.12, 0, Math.PI, 0));
   drumLockers(C, I, corr, seg); // extinguishers, repair lockers and vac suits along the corridor (damage.mjs)
   if (D.spokes.segments.includes(seg)) spokeFoot(C, I, hid, did, seg);
+  I.spots = collectSpots(I, rooms); // where people sit and work (hands.mjs), read off the sets before they are baked
   I.finish();
   const built = { I, g, key, hid, did, seg };
   C.drums.built.set(key, built);
   return built;
+}
+
+const _sp = new THREE.Vector3(), _sd = new THREE.Vector3(), _inv = new THREE.Matrix4(), _rel = new THREE.Matrix4();
+
+/** The spots the sets marked (`userData.spots` on a prop: a stool, a bench, a desk, each { x, z, yaw, pose } in the
+ *  prop's own frame), in the segment's frame, each with the room it is in: [{ room, x, z, yaw, pose }]. */
+function collectSpots(I, rooms) {
+  const out = [];
+  I.group.updateWorldMatrix(true, true);
+  _inv.copy(I.group.matrixWorld).invert();
+  I.group.traverse((o) => {
+    for (const sp of o.userData.spots ?? []) {
+      _rel.multiplyMatrices(_inv, o.matrixWorld);
+      _sp.set(sp.x, 0, sp.z).applyMatrix4(_rel);
+      _sd.set(-Math.sin(sp.yaw), 0, -Math.cos(sp.yaw)).transformDirection(_rel); // the way they face
+      const r = rooms.find((q) => _sp.x > q.x[0] && _sp.x < q.x[1] && _sp.z > q.z[0] && _sp.z < q.z[1]);
+      if (r) out.push({ room: r.id, x: _sp.x, z: _sp.z, yaw: Math.atan2(-_sd.x, -_sd.z), pose: sp.pose });
+    }
+  });
+  return out;
+}
+
+/** Standing room in drum room `r` of segment Interior `I`: a grid of spots clear of everything that collides, and of
+ *  the doorway (cached on the Interior). Each faces roughly into the room. */
+export function freeSpots(I, r) {
+  I.free ??= new Map();
+  if (I.free.has(r.id)) return I.free.get(r.id);
+  const out = [], fore = r.row !== 'aft', dz = fore ? r.z[1] : r.z[0], cx = (r.x[0] + r.x[1]) / 2, cz = (r.z[0] + r.z[1]) / 2;
+  const y0 = I.floorY + 0.2, y1 = I.floorY + 1.7, clear = 0.45;
+  for (let x = r.x[0] + 0.8; x <= r.x[1] - 0.8; x += 0.9) for (let z = r.z[0] + 0.8; z <= r.z[1] - 0.8; z += 0.9) {
+    if (Math.hypot(x - cx, z - dz) < 2.6) continue; // keep the doorway clear
+    const hit = I.colliders.some((c) => c.max.y > y0 && c.min.y < y1 && x > c.min.x - clear && x < c.max.x + clear && z > c.min.z - clear && z < c.max.z + clear);
+    if (!hit) out.push({ room: r.id, x, z, yaw: Math.atan2(-(cx - x), -(cz - z)), pose: 'idle' });
+  }
+  I.free.set(r.id, out);
+  return out;
 }
 
 /** A spoke's foot in the corridor: the lift's car and doors against the fore wall, the ladder between the decks against
@@ -365,22 +477,15 @@ export function liftShaft(spot, r0, r1) {
   return g;
 }
 
-/** The lifts' call points in the spine, one pair per half (to each deck), at its corridor's z. */
+/** In the spine at each half, a hatch in the floor onto the hub ring turning below (hub.mjs): E catches it. */
 function spineLifts(C) {
   const sp = C.rooms.get('spine'), I = sp && C.decks.get(sp.deck);
   if (!I) return;
   for (const h of C.L.drum.halves) {
-    const z = (h.corridor[0] + h.corridor[1]) / 2;
-    C.L.drum.decks.forEach((dk, i) => {
-      const x = i === 0 ? sp.x[0] + 0.3 : sp.x[1] - 0.3, wall = i === 0 ? sp.x[0] + 0.12 : sp.x[1] - 0.12;
-      I.group.add(at(box(0.06, 2.3, 1.8, mat('#3a4048')), wall, I.floorY + 1.15, z));
-      I.group.add(at(box(0.05, 0.05, 1.8, glow('#ffb347')), wall, I.floorY + 2.35, z));
-      const t = `LIFT · ${h.name.toUpperCase()} · ${dk.name.toUpperCase()}`;
-      const m = C.atlas.plane(Math.min(2.6, 0.5 + t.length * 0.08), 0.26, (cg, pw, ph) => drawSign(cg, pw, ph, t, '#ffb347'), 180);
-      I.group.add(at(m, wall + (i === 0 ? 0.04 : -0.04), I.floorY + 2.6, z, 0, i === 0 ? Math.PI / 2 : -Math.PI / 2, 0));
-      I.use(`spine-lift-${h.id}${dk.id}`, `Take the lift down to the ${h.name.toLowerCase()}, ${dk.name.toLowerCase()}`, x, z,
-        () => C.hooks.drum?.('down', { half: h.id, deck: dk.id }), { r: 1.8 });
-    });
+    const z = (h.corridor[0] + h.corridor[1]) / 2, x = (sp.x[0] + sp.x[1]) / 2;
+    const omega = (h.rpm * 2 * Math.PI) / 60;
+    hubHatch(C, I, x, z, h.dir, omega * (C.L.drum.hub.r + 0.9));
+    I.use(`spine-hub-${h.id}`, `Catch the hub ring: down to the ${h.name.toLowerCase()}`, x, z, () => C.hooks.drum?.('catch', { half: h.id }), { r: 2, y: I.floorY + 0.8 });
   }
 }
 

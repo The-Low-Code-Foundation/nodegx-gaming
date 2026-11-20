@@ -56,12 +56,12 @@ const add = (speaker, text) => {
   if (!lines.some((l) => l.speaker === speaker && l.text === text)) lines.push({ speaker, text });
 };
 
-// Both carriers' lines: today's (ships/carrier.*) and the first one's (ships/carrier-v1.*, carrier.html?ship=v1), so
-// --prune keeps the first carrier's clips. Lines both say are recorded once.
-for (const ship of ['carrier', 'carrier-v1']) {
-const K = json(`ships/${ship}.career.json`);
-const W = json(`ships/${ship}.watches.json`);
-const L = json(`ships/${ship}.layout.json`);
+// Both carriers' lines: today's (ships/carrier.*) and the first one's (archived: archive/carrier-v1/), so --prune keeps
+// the first carrier's clips for when it comes back. Lines both say are recorded once.
+for (const dir of ['ships/carrier', 'archive/carrier-v1/carrier-v1']) {
+const K = json(`${dir}.career.json`);
+const W = json(`${dir}.watches.json`);
+const L = json(`${dir}.layout.json`);
 
 // The officers: what each says when you report, and when you come back too soon.
 for (const st of K.steps) if (st.do === 'talk') add(st.who, st.say);

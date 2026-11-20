@@ -10,13 +10,16 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 import { makeDressable, dress } from './wardrobe.mjs';
 import { loadMocap, fitMocap, byKey, genderOf } from './mocap.mjs';
+import { at } from '../util.mjs';
 
 /** Uniform colours per department: [top, trousers, shoes]. The top says the department. */
 export const UNIFORMS = {
   command: ['#3d4c63', '#262b33', '#141619'],
   flight: ['#7a6c52', '#2c3036', '#141619'],
   engineering: ['#7c4630', '#302d2a', '#141619'],
-  crew: ['#5a6068', '#2a2e34', '#141619']
+  crew: ['#5a6068', '#2a2e34', '#141619'],
+  /** A vac suit, for the airless hangar: the department shows only on the suit's shoulder band (`suit()`). */
+  suit: ['#d6d3ca', '#c6c2b6', '#2a2c30']
 };
 const CLIPS = ['idle', 'walk', 'sitChair', 'workTable', 'talk', 'lookAround'];
 const HEIGHTS = { f: 1.66, m: 1.78 };
@@ -82,14 +85,17 @@ function stand(outer, inner, nodes, height) {
   outer.updateMatrixWorld(true);
 }
 
-/** A crew member: `name` from the cast (or the cast's `i`th), in `dept`'s uniform. `.play(pose)`, `.update(dt)`. */
-export async function crewMember(nameOrIndex, dept = 'crew') {
+/** A crew member: `name` from the cast (or the cast's `i`th), in `dept`'s uniform, or with `{ suit: true }` in a vac
+ *  suit and helmet with the department's colour on a shoulder band. `.play(pose)`, `.update(dt)`. */
+export async function crewMember(nameOrIndex, dept = 'crew', { suit: suited = false } = {}) {
   const list = await cast();
   const name = typeof nameOrIndex === 'number' ? list[nameOrIndex % list.length] : nameOrIndex;
   const T = await template(name);
-  const outer = T.used ? SkeletonUtils.clone(T.outer) : T.outer;
-  T.used = true;
-  await dress({ outer }, { outfit: { from: null, colours: UNIFORMS[dept] ?? UNIFORMS.crew }, hair: { style: null } }, null);
+  // A suited one is always a copy: the helmet hangs on the bones, and a copy of the template would carry it too.
+  const outer = T.used || suited ? SkeletonUtils.clone(T.outer) : T.outer;
+  if (!suited) T.used = true;
+  await dress({ outer }, { outfit: { from: null, colours: suited ? UNIFORMS.suit : UNIFORMS[dept] ?? UNIFORMS.crew }, hair: { style: null } }, null);
+  if (suited) suit(outer, dept);
   const root = new THREE.Group();
   const turn = new THREE.Group();
   turn.rotation.y = Math.PI; // the body faces +z; a crew member faces -z
@@ -110,12 +116,52 @@ export async function crewMember(nameOrIndex, dept = 'crew') {
       // Different people at different points in the same clip, so a room does not breathe in step.
       a.time = Math.random() * clip.duration;
     },
-    speed: () => T.clips.walk?.userData?.speed ?? 1.3,
+    speed: () => (T.clips.walk?.userData?.speed ?? 1.3) * (m.hurry ?? 1),
+    /** Stops every clip, so the next `play` starts afresh (a crew member taken off a deck and used again). */
+    stop() {
+      mixer.stopAllAction();
+      current = null;
+    },
     update(dt) {
       mixer.update(dt);
     }
   };
   return m;
+}
+
+const SUIT = {
+  shell: new THREE.MeshPhongMaterial({ color: '#e4e1d8', shininess: 30, specular: 0x333333 }),
+  visor: new THREE.MeshPhongMaterial({ color: '#1a2230', shininess: 90, specular: 0xaaaaaa, emissive: '#05070a' }),
+  ring: new THREE.MeshPhongMaterial({ color: '#3a3e44', shininess: 20 }),
+  pack: new THREE.MeshPhongMaterial({ color: '#cfcbc0', shininess: 15 }),
+  lamp: new THREE.MeshBasicMaterial({ color: '#ffe6b0', toneMapped: false })
+};
+
+/** A vac suit's hard parts on a dressed person (facing +z in `outer`'s frame, as `stand()` left them): the helmet with
+ *  its visor and neck ring on the head bone, the life-support pack on the upper spine, and a band of `dept`'s colour
+ *  on the pack, so the deck crews' departments still read. Placed from the bones' rest positions. */
+function suit(outer, dept) {
+  outer.updateMatrixWorld(true);
+  const nodes = byKey(outer), head = nodes.get('bip01head'), spine = nodes.get('bip01spine2') ?? nodes.get('bip01spine1');
+  const hang = (bone, obj, offset) => {
+    if (!bone) return;
+    const p = bone.getWorldPosition(new THREE.Vector3()).add(offset);
+    bone.add(obj);
+    obj.position.copy(bone.worldToLocal(p));
+    obj.quaternion.copy(bone.getWorldQuaternion(new THREE.Quaternion()).invert());
+    obj.scale.setScalar(1 / bone.getWorldScale(new THREE.Vector3()).x);
+  };
+  const helmet = new THREE.Group();
+  helmet.add(new THREE.Mesh(new THREE.SphereGeometry(0.165, 16, 12), SUIT.shell));
+  const visor = new THREE.Mesh(new THREE.SphereGeometry(0.168, 16, 10, -0.9 + Math.PI / 2, 1.8, 0.95, 0.85), SUIT.visor);
+  helmet.add(visor);
+  helmet.add(at(new THREE.Mesh(new THREE.TorusGeometry(0.13, 0.03, 6, 16), SUIT.ring), 0, -0.15, 0, Math.PI / 2, 0, 0));
+  helmet.add(at(new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.03, 0.03), SUIT.lamp), 0.12, 0.08, 0.1));
+  hang(head, helmet, new THREE.Vector3(0, 0.08, 0.02));
+  const pack = new THREE.Group();
+  pack.add(new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.48, 0.16), SUIT.pack));
+  pack.add(at(new THREE.Mesh(new THREE.BoxGeometry(0.37, 0.07, 0.17), new THREE.MeshPhongMaterial({ color: UNIFORMS[dept]?.[0] ?? UNIFORMS.crew[0] })), 0, 0.12, 0));
+  hang(spine, pack, new THREE.Vector3(0, 0.02, -0.2));
 }
 
 /** Puts the layout's crew at their posts on the decks (each deck's `Interior` group, so a deck you are not on hides its
@@ -131,7 +177,8 @@ export function boardCrew(C) {
 export function placeCrew(C, s, k) {
   const room = C.rooms.get(s.room);
   const I = C.interiorOf(room, s.seg); // a drum room's is its segment's (drum.mjs)
-  return crewMember(k, s.dept).then((m) => {
+  // In an airless room (the hangar) everyone is in a vac suit.
+  return crewMember(k, s.dept, { suit: s.suit ?? !!room.vacuum }).then((m) => {
     m.root.position.set(s.at[0], I.floorY, s.at[1]);
     m.root.rotation.y = s.yaw ?? 0;
     I.group.add(m.root);
@@ -149,7 +196,7 @@ export function placeCrew(C, s, k) {
 
 /** Takes a crew member off the deck. */
 export function removeCrew(m) {
-  m.mixer.stopAllAction();
+  m.stop();
   m.root.removeFromParent();
 }
 

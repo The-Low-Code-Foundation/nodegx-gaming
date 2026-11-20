@@ -1,7 +1,7 @@
 // How much of the carrier's hull the layout accounts for, and where the empty space is.
 //
 //   node tools/carrier-space.mjs                                # from this folder: ships/carrier.layout.json
-//   node tools/carrier-space.mjs ships/carrier-v1.layout.json   # the first carrier
+//   node tools/carrier-space.mjs archive/carrier-v1/carrier-v1.layout.json   # the first carrier (archived)
 //
 // It fills the hull (the `hull.main` and `hull.island` lofts) with 1 m cells and marks each one that falls in a
 // compartment. A walkable room counts from its floor to 0.8 m over its ceiling (the deckhead and the ducts in it).
