@@ -152,6 +152,7 @@ export class Fighter {
     this.phase = 'launch';
     this.t = 0;
     this.vLocal.set(0, 0, 0);
+    this.C.bus?.emit('launch', { pad: this.index });
   }
 
   /** Whether flight control will take you in now: out, within range of the bay and slow enough relative to her. */
@@ -341,6 +342,7 @@ export class Fighter {
         this.refuelT = REFUEL_T;
         this.audio?.refill();
         this.gl.refill();
+        this.C.bus?.emit('landed', { pad: this.index, manual: !!this.lastLanding?.manual });
       }
     }
     this.gl.frame(dt, fl.acc, this.phase === 'flying');

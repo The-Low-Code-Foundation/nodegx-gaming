@@ -50,6 +50,7 @@ import { Voices } from './voice.mjs';
 import { hubRing, hubPlace, hubBelow, wrap } from './hub.mjs';
 import { box, at, mat } from '../util.mjs';
 import { FrameBudget } from './budget.mjs';
+import { Bus } from '../core/events.mjs';
 
 // The spin-drum carrier (design/CARRIER-REBUILD.md). The first carrier (400 m, three decks, gravity only while her
 // drive burns) is archived in archive/carrier-v1/, with how to bring it back; the code paths for a layout without drums
@@ -158,6 +159,7 @@ function setBay(v) {
 }
 
 const C = buildCarrier(L, hooks);
+C.bus = new Bus(); // what the systems say to each other (src/core/events.mjs)
 scene.add(C.obj);
 const thrusterList = thrustersFromLayout(L);
 buildThrusterMeshes(C.frame, thrusterList);
@@ -208,9 +210,7 @@ const ship = new Integrity(C, {
       setMode('walk');
       goDeck(room.deck, (room.x[0] + room.x[1]) / 2, (room.z[0] + room.z[1]) / 2, walker.yaw, room.seg);
       done();
-    }),
-    // A raid is a raider you can see and fight (weapons.mjs).
-    raid: (from) => guns.raid(from)
+    })
   }
 });
 dc.airOf = (id) => ship.airOf(id);
@@ -219,13 +219,13 @@ dc.airOf = (id) => ship.airOf(id);
 const guns = new Weapons(C, world, {
   ship, body, sfx, dc, seed,
   hooks: {
-    man: (t) => (career.allows('guns') ? fadeThen(() => manTurret(t)) : career.refuse('guns')),
-    // A fighter shot dead in space: flight control takes her, from wherever she is, and brings her in.
-    crippled: () => {
-      setBay(1);
-      fighter.land();
-    }
+    man: (t) => (career.allows('guns') ? fadeThen(() => manTurret(t)) : career.refuse('guns'))
   }
+});
+// A fighter shot dead in space: flight control takes her, from wherever she is, and brings her in.
+C.bus.on('fighter-down', () => {
+  setBay(1);
+  fighter.land();
 });
 // Her heat and her reaction mass (plant.mjs): the guns put heat in, the radiators take it out, the drive burns
 // propellant. The status board in the cutaway shows them with the guns.
@@ -287,10 +287,6 @@ function manTurret(t) {
   guns.man(t);
   setMode('gun');
 }
-dc.onEnd = (job, ok) => {
-  if (ok) ship.mended(job.room.id);
-  career.jobEnded(job, ok);
-};
 
 const walker = new Walker(C.decks.get(deckNow));
 // The hangar catwalk's rungs: up from the floor at each end of a length, and down again from its top.

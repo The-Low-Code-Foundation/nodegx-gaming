@@ -43,6 +43,7 @@ export class Career {
     this.markScale = 1;
     this.marker = marker();
     C.overlay.add(this.marker);
+    C.bus?.on('job-end', ({ job, ok }) => this.jobEnded(job, ok));
     this.people = new Map();
     this.place();
   }
@@ -196,6 +197,7 @@ export class Career {
   /** You used officer `id`. */
   talked(id) {
     const p = this.people.get(id), st = this.step;
+    this.C.bus?.emit('talk', { who: id });
     if (st?.do === 'talk' && st.who === id) {
       this.tell(p, st.say, 6 + st.say.split(' ').length / 3.2);
       this.complete();
@@ -264,7 +266,7 @@ export class Career {
     return at(line.room);
   }
 
-  /** A damage control job ended (damage.mjs `onEnd`). */
+  /** A damage control job ended (damage.mjs says `job-end`). */
   jobEnded(job, ok) {
     if (!this.on || job !== this.s?.job) return;
     this.s.job = null;

@@ -100,8 +100,9 @@ function segDist(p, a, b) {
 
 export class Integrity {
   /** `dc`: the damage control (jobs, kit, the speakers). `thrusters`: the carrier's thruster list (newton.mjs).
-   *  `auto`: attacks come by themselves. `hooks.rescue(room)`: carry the player into that room. `hooks.raid(from)`: send
-   *  a raider in from that side (weapons.mjs); without it an attack is a pass of shells from out of sight. */
+   *  `auto`: attacks come by themselves. `hooks.rescue(room)`: carry the player into that room. An attack says `raid` on
+   *  the bus (src/core/events.mjs) for a raider from that side (weapons.mjs); with nobody to answer it, an attack is a
+   *  pass of shells from out of sight. */
   constructor(C, { dc, sfx, thrusters = [], auto = true, seed = Date.now(), hooks = {} } = {}) {
     this.C = C;
     this.L = C.L;
@@ -109,6 +110,8 @@ export class Integrity {
     this.dc = dc;
     this.sfx = sfx;
     this.hooks = hooks;
+    // A damage control job done mends the room it was in.
+    C.bus?.on('job-end', ({ job, ok }) => ok && this.mended(job.room.id));
     this.auto = auto && !!this.N?.attack;
     this.rand = mulberry(seed % 2147483647);
     this.time = 0;
@@ -473,6 +476,7 @@ export class Integrity {
     this.log.push(res);
     this.impact(entry, dir);
     this.consequences(path, burst);
+    this.C.bus?.emit('hit', { room: res.burst ?? res.path[0] ?? null, from, holed: res.path });
     return res;
   }
 
@@ -504,6 +508,7 @@ export class Integrity {
     n.holes.push(h);
     if (to) to.holes.push(h);
     this.holes.push(h);
+    this.C.bus?.emit('breach', { room: n.c.id, area });
     // In a drum: where it is in its segment's own frame (`h.drum`), drawn there once that segment is built (holeFrame).
     if (n.drum) this.drumHole(h, n);
     // In a walkable room you see it: a ragged black hole in the plating, glowing at its edge for a while.
@@ -693,11 +698,11 @@ export class Integrity {
     for (const l of this.links) (l.open = false), (l.hold = 0);
     this.wait = A.between[0] + this.rand() * (A.between[1] - A.between[0]);
     this.setCondition();
-    if (this.hooks.raid) {
+    if (this.C.bus?.has('raid')) {
       // A raider you can see and fight (weapons.mjs): its own shells make the hits, and it says when the raid is over.
       this.dc?.say(`Action stations, action stations. Raider closing ${side}. Gun crews close up. Close all pressure doors.`, `Action stations: a raider closing ${side}. Gun crews closing up; all pressure doors closing.`, 300, 6);
       this.standAt = Infinity;
-      this.hooks.raid(from);
+      this.C.bus.emit('raid', { from });
       return 0;
     }
     this.dc?.say(`Action stations, action stations. Incoming fire ${side}. Close all pressure doors. Brace, brace, brace.`, `Action stations: incoming fire ${side}. All pressure doors closing.`, 300, 6);
@@ -794,6 +799,7 @@ export class Integrity {
     const K = this.N.condition;
     if (!K || this.cond) return;
     this.cond = { t: this.time, venting: false, secured: null };
+    this.C.bus?.emit('condition', { on: true });
     if (K.drums === false) this.dc?.say(`Set condition one throughout the ship. All hands, don vac suits. Venting the fixed hull in ${K.warn} seconds. The drums stay pressurised.`, `Condition one: put on a vac suit (VAC SUITS lockers). The fixed hull vents in ${K.warn} s; the drums keep their air.`, 1800, 7);
     else this.dc?.say(`Set condition one throughout the ship. All hands, don vac suits. Venting in ${K.warn} seconds.`, `Condition one: put on a vac suit (VAC SUITS lockers). The ship vents in ${K.warn} s.`, 1800, 7);
     this.events.push({ t: this.time + K.warn, fn: () => {
@@ -898,6 +904,7 @@ export class Integrity {
     // Condition one is over once every crew space that is not open to space has its air back.
     if (cond?.secured != null && [...this.nodes.values()].every((n) => n.c.access !== 'walk' || this.breached.has(n) || n.air > A.nominal - 4)) {
       this.cond = null;
+      this.C.bus?.emit('condition', { on: false });
       this.dc?.say('The ship is repressurised. You may open your helmets.', 'The air is back: helmets may come off.', 0, 5);
     }
   }

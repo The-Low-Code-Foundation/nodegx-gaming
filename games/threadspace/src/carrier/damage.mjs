@@ -165,7 +165,6 @@ export class DamageControl {
     this.uses = [];
     this.pending = []; // jobs hits have started while another was on (`queue`)
     this.airOf = null; // (room id) → kPa, from integrity.mjs: a fire in a room that has lost its air goes out
-    this.onEnd = null; // (job, ok) → void
     this.markScale = 1;
     if (!this.D) return;
     // The switchboards' isolating switch and the damage control centre's "Call a drill": uses that show only when they mean something.
@@ -233,6 +232,7 @@ export class DamageControl {
     const deckName = this.C.deckName(room.deck).toLowerCase();
     const call = `${K.call} ${K.name} in ${job.place}. ${deckName[0].toUpperCase() + deckName.slice(1)}, frame ${frameOf(this.L, spot.z)}, ${job.side}.`;
     this.say(call, `${K.call} ${K.name} in ${job.place}.`, kind === 'fire' ? 2600 : 900);
+    this.C.bus?.emit('job', { job });
     return job;
   }
 
@@ -511,7 +511,7 @@ export class DamageControl {
   end(ok, why = '', quiet = false, note = null) {
     const job = this.job;
     if (!job) return;
-    this.onEnd?.(job, ok);
+    this.C.bus?.emit('job-end', { job, ok }); // the integrity mends the room, the career hears how it went
     const fx = job.fx;
     fx.g.removeFromParent();
     if (fx.light) job.I.lights.splice(job.I.lights.indexOf(fx.light), 1);

@@ -3,7 +3,7 @@
 // There are no shields, here or on the raider. What keeps a ship alive is what keeps a real warship alive: armour
 // (integrity.mjs `armour`: a belt that stops some shells outright), point defence, and hitting the other ship first.
 //
-// A raid (integrity.mjs `attack`, through `hooks.raid`) is a ship you can see and fight: a Rook corvette comes in from
+// A raid (integrity.mjs `attack`, which says `raid` on the bus) is a ship you can see and fight: a Rook corvette comes in from
 // one side and makes firing passes down it, bow to stern and back, then breaks off. Everything it does is real in the
 // same sense the damage is:
 //
@@ -181,8 +181,8 @@ function sled(tow) {
 
 export class Weapons {
   /** `ship` the integrity (holes, health, `inHull`), `body` the carrier's rigid body (her world velocity), `hooks.man(t)`
-   *  what the hatch does (main.mjs fades and sits you in turret `t`), `hooks.crippled()` what happens to a fighter
-   *  shot dead in space (main.mjs hands her to flight control). */
+   *  what the hatch does (main.mjs fades and sits you in turret `t`). A raid is sent when the integrity says `raid`;
+   *  a fighter shot dead in space says `fighter-down` (main.mjs hands her to flight control). */
   constructor(C, scene, { ship, body, sfx, dc, hooks = {}, seed = Date.now() } = {}) {
     this.C = C;
     this.L = C.L;
@@ -193,6 +193,7 @@ export class Weapons {
     this.sfx = sfx;
     this.dc = dc;
     this.hooks = hooks;
+    C.bus?.on('raid', ({ from }) => this.raid(from)); // action stations for a raider (integrity.mjs `attack`)
     this.rand = mulberry((seed % 2147483647) + 7);
     this.time = 0;
     this.shells = [];
@@ -522,7 +523,7 @@ export class Weapons {
     if (this.fhull > 0 || this.crippled) return;
     this.crippled = true;
     this.dc?.say('Flight control. You are hit and dead in space. Hands off: we are bringing you in.', 'You are hit and dead in space: flight control is bringing you in.', 0, 8);
-    this.hooks.crippled?.();
+    this.C.bus?.emit('fighter-down');
   }
 
   endRaid(call, text) {
@@ -1232,6 +1233,7 @@ export class Weapons {
     B.ang.y += tau.y / B.I.y;
     B.ang.z += tau.z / B.I.z;
     this.kicked = (this.kicked ?? 0) + j; // the console's tally (tests)
+    this.C.bus?.emit('fire', { at: p, impulse: j });
     this.ship.shake = Math.max(this.ship.shake, Math.min(1, j / 2.8e6) / (1 + d / 25) + j / 1.2e8);
   }
 
