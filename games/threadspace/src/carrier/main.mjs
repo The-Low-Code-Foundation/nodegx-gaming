@@ -398,6 +398,7 @@ function tick(dt) {
   const push = drive.frame(dt);
   walk.feel(push, dt);
   seats[mode].frame(dt, drive);
+  walker.floater.tick(dt, mode); // an injury healing, and the brace countdown (weightless.mjs)
   // A hit shakes you, the harder the nearer it struck (aboard only: from outside you see it instead).
   if (ship.shake > 0.01 && (mode === 'walk' || mode === 'gun' || bridgeView)) {
     const s = ship.shake;

@@ -447,7 +447,7 @@ export class Integrity {
   }
 
   /** The shell arrives: through the ship along its line, holing and hurting what it passes, bursting where it stops. */
-  strike({ from, dir, entry, pen, damage, hole }) {
+  strike({ from, dir, entry, pen, damage, hole, kick = 'shell' }) {
     const path = [];
     let prev = null, last = null;
     const q = new THREE.Vector3();
@@ -476,7 +476,7 @@ export class Integrity {
     }
     const res = { from, entry, stop, path: path.map((n) => n.c.id), burst: burst?.c.id ?? null };
     this.log.push(res);
-    this.impact(entry, dir);
+    this.impact(entry, dir, kick);
     this.consequences(path, burst);
     this.C.bus?.emit('hit', { room: res.burst ?? res.path[0] ?? null, from, holed: res.path });
     return res;
@@ -640,8 +640,10 @@ export class Integrity {
     h.look.patched = true;
   }
 
-  /** The flash where it struck, the bang and the shake you feel aboard. */
-  impact(p, dir) {
+  /** The flash where it struck, the bang and the shake you feel aboard, and the kick through her structure that throws
+   *  whoever is floating loose (`jolt` on the bus: `kind` is 'kick' for a torpedo, 'shell' or 'glance', the sizes in
+   *  the layout's `weapons.brace`; weightless.mjs answers it). */
+  impact(p, dir, kind = 'shell') {
     const f = at(new THREE.Mesh(new THREE.SphereGeometry(1, 12, 8), FLASH.clone()), p.x, p.y, p.z);
     f.userData.uncut = true;
     this.C.frame.add(f);
@@ -650,6 +652,7 @@ export class Integrity {
     const d = you.distanceTo(p);
     this.shake = Math.max(this.shake, 1.6 / (1 + d / 25));
     this.sfx?.play('boom', Math.min(1000, 120 + d * 3), 40);
+    this.C.bus?.emit('jolt', { at: p.clone(), dir: dir.clone().normalize(), kind });
   }
 
   /** A tracer streaking in from far out toward `p`, for `secs`. */
@@ -754,7 +757,8 @@ export class Integrity {
       from, dir: dir.clone().normalize(), entry: entry.clone(),
       pen: Math.max(2, pen),
       damage: opts.damage ?? S.damage[0] + r() * (S.damage[1] - S.damage[0]),
-      hole: opts.hole ?? S.hole[0] + r() * (S.hole[1] - S.hole[0])
+      hole: opts.hole ?? S.hole[0] + r() * (S.hole[1] - S.hole[0]),
+      kick: opts.torpedo ? 'kick' : 'shell'
     });
   }
 
@@ -762,7 +766,7 @@ export class Integrity {
    *  inner ring corridor (the lifts open onto it), and hurts it; a strut is open structure, so it is only hurt metal. */
   structureHit(entry, dir, opts) {
     const S = this.N.shell, r = this.rand, part = opts.part;
-    this.impact(entry, dir);
+    this.impact(entry, dir, opts.torpedo ? 'kick' : 'shell');
     const res = { from: null, entry, stop: entry, path: [], burst: null, part: part.part };
     this.log.push(res);
     const D = this.L.drum, inner = D.decks[D.decks.length - 1].id;
@@ -783,7 +787,7 @@ export class Integrity {
   /** A shell the armour stopped: a flash and a bang on the plating, a scar, no hole. `part`: on the open drum
    *  section's exposed structure (`meets()`), not the belt. */
   glance(entry, dir, part = null) {
-    this.impact(entry, dir);
+    this.impact(entry, dir, 'glance');
     this.shake *= 0.6;
     const res = { from: null, entry, stop: entry, path: [], burst: null, glance: true, part: part?.part };
     this.log.push(res);
@@ -1211,8 +1215,9 @@ export class Integrity {
     if (this.helmetEl) this.helmetEl.hidden = !(mode === 'walk' && this.helmet);
   }
 
-  /** You blacked out: a damage control party carries you to the nearest room with good air. */
-  rescue(n) {
+  /** You blacked out: a damage control party carries you to the nearest room with good air, or to `want` (a room id:
+   *  hurt, to the medical bay, weightless.mjs) if its air is good. */
+  rescue(n, want = null) {
     this.rescuing = true;
     const A = this.N.air;
     // Breadth-first through every way between rooms, doors open or not (they carry you through).
@@ -1231,7 +1236,7 @@ export class Integrity {
       return [...off, ...rings.filter((r) => r.half === c.half && r !== c), C.rooms.get('spine')].filter(Boolean).map((r) => ({ to: r.id }));
     };
     const seen = new Set([n?.c.id]);
-    let q = [n?.c.id], to = null;
+    let q = [n?.c.id], to = want && this.airOf(want) > A.unsafe + 10 ? want : null;
     while (q.length && !to) {
       const next = [];
       for (const id of q) for (const p of [...(ways.get(id) ?? []), ...drumWays(id)]) {

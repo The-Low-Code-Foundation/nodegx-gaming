@@ -15,6 +15,8 @@
 //   hit        integrity.mjs  a shell struck the ship                   { room, from, holed }
 //   breach     integrity.mjs  a hole in the plating                     { room, area }
 //   fire       weapons.mjs    a gun big enough to push her fired        { at, impulse }   (world position, N·s)
+//   jolt       integrity.mjs  a hit kicked her structure                { at, dir, kind }  (ship frame; 'kick', 'shell', 'glance')
+//   brace      weapons.mjs    a torpedo is seconds out, or no longer    { on }
 //   fighter-down weapons.mjs  your fighter is shot dead in space        {}
 //   launch     fighter.mjs    a fighter starts her launch run           { pad }
 //   landed     fighter.mjs    back on her pad, turned round             { pad, manual }

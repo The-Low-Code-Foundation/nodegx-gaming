@@ -463,6 +463,11 @@ weapons.railgun = {
 };
 delete weapons.railgun.muzzle;
 weapons.about = weapons.about.replace(/`railgun`: the spinal gun.*$/, '`railgun`: the broadside railguns (their own `about`). `broadside`: the torpedo broadside (its own `about`).');
+// Brace for impact (design/ROADMAP.md phase 4): the countdown, and what a hit does to the people floating aboard.
+weapons.brace = {
+  about: 'Brace for impact. When one of the raider\'s torpedoes will arrive within `eta` seconds the ship calls brace and counts down (weapons/torpedoes.mjs braceFrame), and the brace straps on the weightless rooms\' walls show "Strap in"; the countdown stays up `hold` s after the last one. A hit kicks the structure: `kick` m/s at the hit for a torpedo (`shell` for a gun shell, `glance` for one the armour stopped), less with distance (`fade` m halves it). Strapped in, you ride it; a hand on a rail holds below `grip` m/s and your feet in a rail below `feet` m/s; anyone else keeps going. Meeting a wall faster than `hurt` m/s hurts, `per` of an injury for each m/s over; a whole one (1) blacks you out (the damage control party picks you up), and it heals at `heal` a minute.',
+  eta: 6, hold: 1.5, kick: 8, shell: 2.5, glance: 1.2, fade: 25, grip: 4.5, feet: 3.5, hurt: 4.2, per: 0.3, heal: 0.15,
+};
 weapons.broadside = {
   about: 'The hangar walls\' torpedo tubes, launched cold sideways: `per` a side, each side fed from its two ordnance rooms (a side whose magazines are both below 20% health cannot fire). `stock` torpedoes a side; `salvo` per firing; `reload` seconds between a side\'s salvos; `first` seconds into a raid before the first (the CIC\'s solution); `arc` degrees off the beam the raider must be within, and `range` [min, max] m; `push` m/s out of the tube and `cold` seconds before the motor lights. The CIC fires the side that bears; with you at the helm, a click does.',
   per: hgr.s.tubesSide, stock: 16, salvo: 4, reload: 30, first: 20, arc: 50, range: [300, 9000], push: 14, cold: 2,

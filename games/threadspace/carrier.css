@@ -65,6 +65,13 @@
 #c-air.bad { border-color: #e0402a; animation: c-air-pulse 0.8s infinite alternate; }
 #c-air.bad b { color: #ff6a50; }
 @keyframes c-air-pulse { to { background: rgba(70, 12, 10, 0.88); } }
+/* Brace for impact (weapons/torpedoes.mjs braceFrame): the countdown to a torpedo's hit, top centre. */
+#c-brace { position: absolute; left: 50%; top: 92px; transform: translateX(-50%); font-family: var(--mono); font-size: 15px; letter-spacing: 0.12em; color: #ffd8c8; background: rgba(70, 12, 10, 0.88); border: 1px solid #e0402a; border-radius: 6px; padding: 6px 16px; pointer-events: none; animation: c-air-pulse 0.4s infinite alternate; white-space: nowrap; }
+#c-brace[hidden] { display: none; }
+#c-brace b { color: #ff6a50; margin-left: 8px; }
+#c-brace small { display: block; font-size: 11px; letter-spacing: 0.04em; color: #e8c0b0; text-align: center; }
+/* Thrown against a wall (weightless.mjs): a red edge that fades, and stays faintly while you are hurt. */
+#c-hurt { position: absolute; inset: 0; pointer-events: none; opacity: 0; background: radial-gradient(ellipse at center, rgba(120, 0, 0, 0) 35%, rgba(150, 10, 0, 0.55) 80%, rgba(90, 0, 0, 0.85) 100%); }
 #c-veil { position: absolute; inset: 0; pointer-events: none; opacity: 0; background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0) 15%, rgba(0, 0, 0, 0.92) 70%, #000 100%); transition: opacity 0.3s; }
 
 

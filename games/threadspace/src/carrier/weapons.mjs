@@ -91,6 +91,7 @@ export class Weapons {
     scene.add(this.roundMesh);
     // Torpedoes in flight, either side's; the carrier's own tubes.
     this.torps = [];
+    this.brace = null; // { eta }: a torpedo is seconds out (braceFrame, weapons/torpedoes.mjs)
     this.tubeStock = this.W.tubes?.stock ?? 0;
     this.tubeT = 6;
     // The railgun: its capacitors (0 to 1) and its slugs; one of each per gun where there is one a side.
@@ -201,6 +202,7 @@ export class Weapons {
     this.tubesFrame(dt);
     this.broadsideFrame(dt);
     this.torpsFrame(dt);
+    this.braceFrame(dt);
     this.pdcFrame(dt);
     this.turretsFrame(dt, f, mode);
     this.cannonFrame(dt);

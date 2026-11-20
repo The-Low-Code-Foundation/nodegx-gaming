@@ -12,6 +12,7 @@
 //   carrier.html?at=fighter&voice=0&crew=0&dc=0&hold=1&seed=7    → run('landing')
 //   carrier.html?at=bridge&voice=0&crew=0&dc=0&hold=1&seed=7     → run('walk')
 //   carrier.html?at=bridge&voice=0&crew=0&dc=0&hold=1&seed=7     → run('float')
+//   carrier.html?at=bridge&voice=0&crew=0&dc=0&hold=1&seed=7     → run('brace')
 //   carrier.html?voice=0&crew=0&dc=0&hold=1&seed=7 (start page)  → run('career')
 //
 // `?hold=1` keeps the page from running frames of its own and `?seed=` seeds every random number (carrier.html,
@@ -256,6 +257,78 @@ const scenarios = {
     return out;
   },
 
+  /** Brace for impact (weapons/torpedoes.mjs braceFrame, weightless.mjs): the brace straps show at action stations;
+   *  strapped in, a hit near you does nothing; holding a rail, a far one leaves you holding and a near one tears you
+   *  off; loose, a near one throws you into the wall and hurts. Last, a torpedo fired at you calls brace and counts
+   *  down, and its hit throws you. */
+  async brace(c) {
+    c.career.free();
+    const w = c.walker, F = w.floater, G = c.G, out = {};
+    const shown = () => w.interior.interactables.filter((u) => u.id === 'brace' && !u.hidden()).length;
+    const at = () => ({ you: v3(w.pos), vel: v3(w.vel), held: F.held?.h.kind ?? null, strapped: !!F.strapped, hurt: r3(F.hurt) });
+    c.place(4, 0, -50, -Math.PI / 2); // the spine
+    run_(c, 0.5);
+    out.quiet = { shown: shown(), brace: !!c.guns.brace };
+    // Strapped in: a torpedo's kick a few metres away moves you not at all.
+    c.ship.stations = true;
+    const b = w.interior.braces.slice().sort((p, q) => p.eye.distanceTo(w.pos) - q.eye.distanceTo(w.pos))[0];
+    c.place(4, b.eye.x - b.n.x * 0.1, b.eye.z - b.n.z * 0.1, 0);
+    w.yaw = Math.atan2(b.n.x, b.n.z);
+    run_(c, 0.2);
+    const u = w.nearestUse();
+    out.offer = u?.id === 'brace' ? u.label : u?.id ?? null;
+    u?.use();
+    run_(c, 0.2);
+    const kick = (dx) => G.C.bus.emit('jolt', { at: w.pos.clone().add({ x: dx, y: 0, z: 0 }), dir: { x: -1, y: 0, z: 0 }, kind: 'kick' });
+    const still = w.pos.clone();
+    kick(4);
+    run_(c, 1);
+    out.strapped = { ...at(), moved: r3(w.pos.distanceTo(still)), label: w.nearestUse()?.label ?? null };
+    w.nearestUse()?.use();
+    run_(c, 0.5);
+    out.unstrapped = at();
+    // Holding a rail: a hit 60 m off leaves you holding; one 3 m off tears you away, into the wall hard enough to black
+    // you out (the damage control party carries you off: a fade, in real time).
+    c.place(4, 0, -50, -Math.PI / 2);
+    c.input.keys.add('KeyW');
+    run_(c, 1);
+    c.input.keys.delete('KeyW');
+    run_(c, 6, () => F.held);
+    out.holding = at();
+    kick(60);
+    run_(c, 0.5);
+    out.farHit = at();
+    kick(-3);
+    let blackout = false;
+    run_(c, 3, () => (blackout = G.fading));
+    out.nearHit = { ...at(), blackout };
+    for (let i = 0; i < 30 && G.fading; i++) await wait(100);
+    out.carried = c.G.walk.roomNow();
+    // Loose in the middle of the spine: thrown into the wall.
+    c.place(4, 0, -50, -Math.PI / 2);
+    run_(c, 0.2);
+    F.hurt = 0;
+    kick(-1.5);
+    out.thrown = { t: run_(c, 4, () => F.hurt > 0), ...at(), blackout: G.fading };
+    c.ship.stations = false;
+    F.hurt = 0;
+    // Last (it holes the spine): a torpedo from 3 km off her starboard beam at the spine, closing at 900 m/s.
+    const calls = [], jolts = [];
+    const off = G.C.bus.on('call', (e) => calls.push(e.id)), offJ = G.C.bus.on('jolt', (e) => jolts.push([e.kind, r3(e.at.distanceTo(w.pos))]));
+    c.place(4, 0, -50, -Math.PI / 2);
+    run_(c, 0.5);
+    const aim = w.pos.clone().setY(w.pos.y + 1.6);
+    const from = c.C.frame.localToWorld(aim.clone().add({ x: 3000, y: 0, z: 0 }));
+    const dir = c.C.frame.localToWorld(aim.clone()).sub(from).normalize();
+    c.guns.torpedo(from, dir.multiplyScalar(900).add(c.guns.body.vel), 'theirs', aim.clone());
+    out.braced = { t: run_(c, 6, () => !!c.guns.brace), eta: r3(c.guns.brace?.eta ?? -1), shown: shown(), calls: [...calls] };
+    let peak = 0;
+    out.ended = { t: run_(c, 10, () => ((peak = Math.max(peak, w.vel.length())), !c.guns.brace)), hits: c.ship.log.length, torps: c.guns.torps.length, thrown: r3(peak), jolts, ...at() };
+    off();
+    offJ();
+    return out;
+  },
+
   /** The career from the start screen: the first orders done by hand, then the gunnery and flying orders. */
   async career(c) {
     const KEY = c.career.constructor.key, before = localStorage.getItem(KEY);
@@ -369,7 +442,7 @@ export async function run(name) {
 }
 
 const PAGES = {
-  raid: 'at=bridge', helm: 'at=helm', landing: 'at=fighter', walk: 'at=bridge', float: 'at=bridge', career: ''
+  raid: 'at=bridge', helm: 'at=helm', landing: 'at=fighter', walk: 'at=bridge', float: 'at=bridge', brace: 'at=bridge', career: ''
 };
 
 /** Every scenario, each in a fresh page of its own (an iframe), from any page of this site: `{ name: { hash, … } }`.

@@ -220,6 +220,15 @@ Left for the phases that design their formats: `content/announcements/` (phase 3
 - **Brace for impact.** When a torpedo is inbound and the point defence isn't going to stop it, the ship counts down.
   Brace straps every few metres along weightless walls; hold E near one to strap in. A hit jolts the ship (`Rigid`, as in
   phase 1); anyone not strapped or holding on keeps going and hits the wall, hurt by the speed. The crew strap in too.
+
+  **Built, 20 November 2026:** an enemy torpedo that will arrive within 6 s calls "Brace, brace, brace" (priority 5,
+  `content/announcements/brace.json`, no clip recorded yet) and counts down on the HUD (`braceFrame`). Brace straps on
+  the walls of every weightless room, about every five metres (522 aboard), offered with E only at action stations or
+  during a brace. Every hit kicks the structure (`jolt` on the bus): 8 m/s at a torpedo's hit, 2.5 for a shell, halved
+  at 25 m. Strapped in, nothing; holding a rail, you keep it below 4.5 m/s (3.5 in a foot rail); loose, you meet the
+  wall, and faster than 4.2 m/s it hurts. Two bad knocks, or one from a torpedo a few metres away, black you out and
+  the damage control party carries you to the sick bay. The numbers are `weapons.brace`. Not done: the crew strapping
+  in (they wait for the floating crew, below), and the recorded clip for the call.
 - **The crew float.** New clips: drifting, hand over hand along a rail, push-off, catch, strapped in. Rocketbox has none,
   so they are keyed in Blender on the Rocketbox rig (Lab Rat's `tools/blender/rocketbox_anim.py` already does this).
   Crew routes through weightless spaces follow the rails, off the floor.

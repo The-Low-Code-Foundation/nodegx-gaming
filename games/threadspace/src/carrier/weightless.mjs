@@ -14,6 +14,13 @@
 // up wherever there is weight (a drum, a hub ring, a walking deck). Drifting slowly past a hold, you take it anyway.
 // Out of gas in air you can still swim, very slowly. You move in three dimensions: up to the deckhead, down to the
 // deck, through a door only below its lintel.
+//
+// Brace for impact: a brace strap on the walls of every weightless room (a padded back and a harness, every five metres
+// or so). At action stations, or when the ship calls brace (a torpedo seconds out: weapons/torpedoes.mjs `braceFrame`),
+// E straps you in; E again lets you go. A hit kicks her structure (`jolt` on the bus, from integrity.mjs `impact`):
+// strapped in, you ride it; holding on, you keep your hold below the layout's `weapons.brace.grip` (`feet` for a foot
+// rail); loose, you keep going while the ship moves under you, and meet a wall. Meeting one faster than `hurt` m/s
+// hurts, and a whole injury blacks you out (integrity.mjs `rescue`: the damage control party picks you up). It heals.
 
 import * as THREE from 'three';
 import { roomAt } from './layout.mjs';
@@ -41,6 +48,10 @@ export const HOLD = {
 const RAIL = mat('#d8a530'); // the airless hangar's rails (sets/hangar.mjs) are this yellow too
 const FOOT = mat('#5b626c');
 const STRIP = glow('#4e6078'); // dim: under the bloom aboard a brighter strip reads as a white line
+const PAD = mat('#3a424c');
+const BRACE_LAMP = glow('#7a4a20'); // the small amber lamp over each brace strap
+// The brace straps' uses ask the Floater (one aboard: yours) whether to show and what to do.
+const BRACE = { floater: null };
 
 /** A cargo net `w` by `h` (in its own x and y, facing +z): cord in a diamond mesh about 12 cm across, see-through
  *  between. One shared material, so every net aboard bakes into one mesh per deck. */
@@ -124,6 +135,22 @@ function runs(a0, b0, gaps, min = 0.5) {
   return out;
 }
 
+/** A brace strap on the wall: `at(u, yy, w)` the point `u` along the wall, `yy` up, `w` out from the wall line; `alongX`
+ *  the wall runs along x. A padded back with a headrest, two shoulder straps and a lap strap with its buckle, and a small
+ *  amber lamp over it. */
+function braceStrap(I, at3, alongX, u, y) {
+  const part = (du, dv, dw, cu, cv, cw, m) => {
+    const q = at3(cu, cv, 0.1 + cw); // out from the wall's face, 0.1 m off its line
+    I.group.add(at(alongX ? box(du, dv, dw, m) : box(dw, dv, du, m), q.x, q.y, q.z));
+  };
+  part(0.56, 1.5, 0.07, u, y + 1.2, 0.035, PAD);
+  part(0.34, 0.24, 0.06, u, y + 1.72, 0.09, PAD);
+  for (const s of [-0.13, 0.13]) part(0.05, 0.7, 0.012, u + s, y + 1.3, 0.077, STRAP);
+  part(0.6, 0.05, 0.012, u, y + 0.95, 0.077, STRAP);
+  part(0.08, 0.07, 0.02, u, y + 0.95, 0.085, FOOT);
+  part(0.14, 0.03, 0.02, u, y + 2.05, 0.02, BRACE_LAMP);
+}
+
 /** The handholds of weightless room `c` on deck `I` (after its furniture, so the handles can find what it holds).
  *  `open`: its walls' doors, windows and bay doors (layout.mjs `buildDeck`). */
 export function dressHolds(C, I, c, open) {
@@ -133,6 +160,7 @@ export function dressHolds(C, I, c, open) {
   // The walls: north and south run along x, west and east along z. Rails in lengths of about two metres, at hand
   // height off the deck and below the deckhead, broken at every opening.
   const walls = [['n', z1, x1, x2, true, 1], ['s', z2, x1, x2, true, -1], ['w', x1, z1, z2, false, 1], ['e', x2, z1, z2, false, -1]];
+  const braces = [];
   for (const [side, line, a0, b0, alongX, inward] of walls) {
     const n = alongX ? V(0, 0, inward) : V(inward, 0, 0);
     const pt = (u, yy) => (alongX ? V(u, yy, line + inward * OFF) : V(line + inward * OFF, yy, u));
@@ -149,7 +177,21 @@ export function dressHolds(C, I, c, open) {
       q[nk] = line + inward * 0.11;
       I.group.add(at(alongX ? box(len, 0.05, 0.03, STRIP) : box(0.03, 0.05, len, STRIP), q.x, q.y, q.z));
     }
-    for (const hy of [1.0, h - 0.5]) for (const [ra, rb] of runs(a0 + 0.4, b0 - 0.4, [...gaps, ...against(y + hy)])) {
+    // The brace straps: one in each free stretch of wall a metre or more long, and one every five metres along a long
+    // one. The lower rail (and an upper one low enough to meet the headrest) breaks for each.
+    const free = runs(a0 + 0.5, b0 - 0.5, [...gaps, ...against(y + 0.6), ...against(y + 1.3), ...against(y + 1.9)], 1);
+    const mine = [];
+    for (const [ra, rb] of free) {
+      const k = Math.max(1, Math.round((rb - ra) / 5));
+      for (let i = 0; i < k; i++) mine.push(ra + ((i + 0.5) * (rb - ra)) / k);
+    }
+    const at3 = (u, yy, w) => (alongX ? V(u, yy, line + inward * w) : V(line + inward * w, yy, u));
+    for (const u of mine) {
+      braceStrap(I, at3, alongX, u, y);
+      braces.push({ room: c.id, I, n: n.clone(), eye: at3(u, y + 1.72, 0.55) });
+    }
+    const strapGaps = mine.map((u) => [u - 0.42, u + 0.42]);
+    for (const hy of [1.0, h - 0.5]) for (const [ra, rb] of runs(a0 + 0.4, b0 - 0.4, [...gaps, ...against(y + hy), ...(hy < 2.2 ? strapGaps : [])])) {
       const k = Math.max(1, Math.round((rb - ra + 0.4) / 2.6)), seg = (rb - ra - (k - 1) * 0.4) / k;
       for (let i = 0; i < k; i++) {
         const u0 = ra + i * (seg + 0.4);
@@ -200,12 +242,23 @@ export function dressHolds(C, I, c, open) {
       if (spot) hold(I, c, V(spot[0], y + 0.07, spot[1] - half), V(spot[0], y + 0.07, spot[1] + half), V(0, 1, 0), 'station');
     }
   }
+  // Each brace strap is a use (after the station handles, so it gets none): shown at action stations or a brace call,
+  // or while you are in it.
+  for (const b of braces) {
+    const u = I.use('brace', 'Strap in', b.eye.x, b.eye.z, () => BRACE.floater?.strap(b), { r: 1.5, y: b.eye.y });
+    Object.defineProperty(u, 'label', { get: () => (BRACE.floater?.strapped === b ? 'Unstrap' : 'Strap in for the hit') });
+    u.hidden = () => !BRACE.floater?.offer(b);
+    u.room = c.id;
+  }
+  (I.braces ??= []).push(...braces);
 }
 
 // --- moving by them -------------------------------------------------------------------------------------------------
 
 const _f = new THREE.Vector3(), _r = new THREE.Vector3(), _d = new THREE.Vector3(), _p = new THREE.Vector3();
-const _e = new THREE.Vector3(), _f2 = new THREE.Vector3();
+const _e = new THREE.Vector3(), _f2 = new THREE.Vector3(), _j = new THREE.Vector3();
+// The layout's `weapons.brace` when it has none (tools/carrier-v2.mjs says what each is).
+const BRACED = { eta: 6, hold: 1.5, kick: 8, shell: 2.5, glance: 1.2, fade: 25, grip: 4.5, feet: 3.5, hurt: 4.2, per: 0.3, heal: 0.15 };
 
 export class Floater {
   /** `G`: the game in hand (main.mjs): `C`, `ship` (the air), `sfx`, and `walk` (the deck you are on). */
@@ -224,14 +277,121 @@ export class Floater {
     this.marker = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 6), new THREE.MeshBasicMaterial({ color: '#ffd77a', toneMapped: false, transparent: true, opacity: 0.85 }));
     this.marker.visible = false;
     this.marker.userData.live = true;
+    // Brace for impact: the strap you are in, how hurt you are (0 to 1: 1 blacks you out), the red flash of a knock.
+    this.strapped = null;
+    this.hurt = 0;
+    this.flash = 0;
+    this.hurtEl = document.getElementById('c-hurt');
+    this.braceEl = document.getElementById('c-brace');
+    this.html = '';
+    BRACE.floater = this;
+    G.C?.bus?.on('jolt', (e) => this.jolt(e));
+  }
+
+  /** The layout's brace numbers. */
+  get B() {
+    return this.G.guns?.W?.brace ?? BRACED;
   }
 
   /** Dropped: a jump to somewhere else (a teleport, a fade, another deck). */
   reset() {
     this.held = null;
+    this.strapped = null;
     this.charge = -1;
     this.near = null;
     this.marker.visible = false;
+  }
+
+  // --- brace for impact ---------------------------------------------------------------------------------------------
+
+  /** Whether brace strap `b` offers itself: while you are in it, or (in none) at action stations or a brace call. */
+  offer(b) {
+    return this.strapped === b || (!this.strapped && !!(this.G.guns?.brace || this.G.ship?.stations));
+  }
+
+  /** E at a brace strap: into it, your back to the wall, facing out; or out of it again, still, by it. */
+  strap(b) {
+    const walker = this.G.walker;
+    if (this.strapped === b) {
+      this.strapped = null;
+      walker.vel.set(0, 0, 0);
+      this.G.sfx?.cue('clunk', { vol: 0.25 });
+      return;
+    }
+    this.held = null;
+    this.charge = -1;
+    this.strapped = b;
+    walker.vel.set(0, 0, 0);
+    walker.yaw = Math.atan2(-b.n.x, -b.n.z);
+    walker.pitch = 0;
+    this.G.sfx?.cue('clunk', { vol: 0.45 });
+  }
+
+  /** A hit's kick through the structure (integrity.mjs `impact`, on the bus): `at` and `dir` in the ship's frame, `kind`
+   *  'kick' (a torpedo), 'shell' or 'glance'. The ship jumps along `dir` and you, unless something holds you, do not:
+   *  aboard, you are thrown against it. */
+  jolt({ at: p, dir, kind }) {
+    const B = this.B, walker = this.G.walker;
+    if (!walker?.float || this.G.mode?.() !== 'walk' || this.G.fading) return;
+    const size = (B[kind] ?? B.shell) / (1 + walker.pos.distanceTo(p) / B.fade);
+    if (size < 0.3) return;
+    if (this.strapped) return void (walker.pitch += Math.min(0.05, size * 0.008));
+    const limit = this.held ? (this.held.foot ? B.feet : B.grip) : 0;
+    if (this.held && size <= limit) {
+      walker.pitch += Math.min(0.08, size * 0.015);
+      this.G.sfx?.cue('clunk', { vol: Math.min(0.6, 0.15 + size * 0.06) });
+      return;
+    }
+    if (this.held) {
+      this.ignore = this.held.h;
+      this.ignoreT = 1;
+      this.held = null;
+      this.charge = -1;
+      this.G.dc?.say(null, 'The hit tore your hold away.', 0, 3);
+    }
+    // Against the kick, and a little off it (the structure rings, it does not move as one), the same for the same hit.
+    const w = Math.sin(p.x * 12.9898 + p.y * 4.1414 + p.z * 78.233) * 43758.5453, r = w - Math.floor(w);
+    _j.copy(dir).multiplyScalar(-size);
+    _j.y += (r - 0.5) * size * 0.5;
+    _j.x += (0.5 - ((r * 7.31) % 1)) * size * 0.3;
+    walker.vel.add(_j);
+    walker.pitch += Math.min(0.15, size * 0.03);
+  }
+
+  /** You met a wall `into` m/s fast: past `hurt`, it hurts; a whole injury blacks you out. */
+  injure(into) {
+    const B = this.B, ship = this.G.ship;
+    if (into <= B.hurt) return;
+    const add = (into - B.hurt) * B.per;
+    this.hurt = Math.min(1.2, this.hurt + add);
+    this.flash = Math.min(1, 0.35 + add * 2.5);
+    if (this.hurt >= 1 && ship && !ship.rescuing) {
+      this.hurt = 0.4; // patched up
+      const sick = [...this.G.C.rooms.values()].find((r) => r.system === 'medical');
+      return ship.rescue(ship.node(this.G.walk?.roomNow?.()), sick?.id ?? null);
+    }
+    this.G.dc?.say(null, into > B.hurt + 2 ? `You hit the bulkhead hard (${into.toFixed(1)} m/s).` : `You hit the bulkhead (${into.toFixed(1)} m/s). That hurt.`, 0, 3);
+  }
+
+  /** Every frame, in every mode (main.mjs): an injury heals, the red edge fades, and the brace countdown. */
+  tick(dt, mode) {
+    const B = this.B;
+    this.hurt = Math.max(0, this.hurt - (B.heal / 60) * dt);
+    this.flash = Math.max(0, this.flash - dt * 1.2);
+    if (this.hurtEl) {
+      const o = mode === 'walk' ? Math.max(this.flash, this.hurt > 0.25 ? (this.hurt - 0.25) * 0.6 : 0) : 0;
+      const t = o > 0.01 ? o.toFixed(2) : '0';
+      if (this.hurtEl.style.opacity !== t) this.hurtEl.style.opacity = t;
+    }
+    const br = this.G.guns?.brace, el = this.braceEl;
+    if (!el) return;
+    const show = !!br && mode !== 'cutaway';
+    el.hidden = !show;
+    if (!show) return;
+    const walker = this.G.walker;
+    const what = mode !== 'walk' ? '' : !walker.float ? 'hold on' : this.strapped ? 'strapped in' : this.held ? 'holding on · strap in if you can (E)' : 'take hold or strap in (E)';
+    const html = `BRACE BRACE BRACE<b>${br.eta > 0 ? `${br.eta.toFixed(1)} s` : 'IMPACT'}</b>${what ? `<small>${what}</small>` : ''}`;
+    if (html !== this.html) (el.innerHTML = html), (this.html = html);
   }
 
   /** Not weightless this frame: the bottle tops up from the ship where there is weight. */
@@ -279,8 +439,18 @@ export class Floater {
     const I = walker.interior, keys = f.keys, was = this.was;
     const down = (k) => keys.has(k), pressed = (k) => keys.has(k) && !was.has(k), released = (k) => !keys.has(k) && was.has(k);
     const shift = down('ShiftLeft') || down('ShiftRight');
-    if (this.held && (this.held.h.I !== I || walker.pos.distanceTo(this.last) > 2)) this.reset(); // moved by something else
+    if ((this.held || this.strapped) && ((this.held ?? this.strapped).I !== I || walker.pos.distanceTo(this.last) > 2)) this.reset(); // moved by something else
     this.ignoreT = Math.max(0, this.ignoreT - dt);
+    // In a brace strap: held to the wall, whatever the drive or a hit does. E (its use) lets you go.
+    if (this.strapped) {
+      walker.vel.set(0, 0, 0);
+      walker.pos.copy(this.strapped.eye).y -= EYE;
+      this.near = null;
+      this.marker.visible = false;
+      this.was = new Set(keys);
+      this.last.copy(walker.pos);
+      return;
+    }
     // Where you look (forward, with the pitch) and your right.
     walker.forward(_f);
     _r.set(Math.cos(walker.yaw), 0, -Math.sin(walker.yaw));
@@ -385,6 +555,7 @@ export class Floater {
       const into = hit.into;
       if (into > 1.2) this.G.sfx?.cue('clunk', { vol: Math.min(1, 0.2 + into * 0.15) });
       if (into > 2.5) walker.pitch += Math.min(0.1, (into - 2.5) * 0.04);
+      this.injure(into);
     }
     // A slow drift past a hold, or a stop against a wall by one: you take it.
     if (n && (speed < HOLD.slow || (hit.any && speed < 1.5))) this.grab(walker, n, speed);
@@ -449,7 +620,9 @@ export class Floater {
 
   /** The line for the top of the screen. */
   status(walker) {
-    const gas = `puffer ${Math.round((100 * this.gas) / HOLD.gas)}%`;
+    const hurt = this.hurt > 0.7 ? ' · badly hurt' : this.hurt > 0.4 ? ' · hurt' : this.hurt > 0.12 ? ' · bruised' : '';
+    const gas = `puffer ${Math.round((100 * this.gas) / HOLD.gas)}%${hurt}`;
+    if (this.strapped) return `weightless · strapped in · ${gas}`;
     if (this.held) return `weightless · ${this.held.foot ? 'feet in a foot rail' : `holding a ${this.held.h.kind === 'rail' ? 'rail' : 'handhold'}`} · ${gas}`;
     const s = walker.vel.length();
     return `weightless · ${s < 0.05 ? 'adrift, still' : `drifting ${s.toFixed(1)} m/s`} · ${gas}`;
@@ -457,6 +630,7 @@ export class Floater {
 
   /** What the prompt says when there is nothing to use (E) near you. */
   prompt() {
+    if (this.strapped) return { key: 'E', label: 'Unstrap' };
     if (this.held) {
       if (this.charge >= 0) return { key: 'W', label: `Let go to push off ${'▮'.repeat(1 + Math.floor(Math.min(1, this.charge / HOLD.charge) * 4)).padEnd(5, '▯')}` };
       return { key: 'W', label: 'Push off where you look (hold for harder, Shift: hard) · A D S along the hold' };

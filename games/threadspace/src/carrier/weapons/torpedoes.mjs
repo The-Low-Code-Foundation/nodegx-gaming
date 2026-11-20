@@ -32,6 +32,32 @@ export const torpedoParts = {
     this.sfx?.play('turbolaser', this.ear ? this.ear.distanceTo(p) * 0.5 : 900);
   },
 
+  /** Brace for impact: the nearest of the raider's torpedoes that will arrive within `brace.eta` seconds (on the line
+   *  it is flying now) starts the call and the countdown, `this.brace = { eta }`, which the HUD shows and the brace
+   *  straps answer to. It ends when no torpedo is that close (it hit, or the point defence got it). */
+  braceFrame(dt) {
+    const B = this.W.brace ?? { eta: 6 };
+    let eta = Infinity;
+    for (const t of this.torps) {
+      if (t.dead || t.side !== 'theirs' || t.t < 0) continue;
+      const r = _a.subVectors(this.C.frame.localToWorld(_b.copy(t.aim)), t.pos);
+      const dist = r.length();
+      const closing = r.dot(_b.subVectors(t.vel, this.body.vel)) / Math.max(1, dist);
+      if (closing > 20) eta = Math.min(eta, dist / closing);
+    }
+    if (eta <= B.eta) {
+      if (!this.brace) {
+        this.C.bus?.emit('call', { id: 'brace' });
+        this.C.bus?.emit('brace', { on: true });
+        this.dc?.say(null, 'Brace, brace, brace: torpedo impact imminent.', 0, 4);
+      }
+      this.brace = { eta, hold: B.hold ?? 1.5 };
+    } else if (this.brace && (this.brace.hold -= dt) <= 0) {
+      this.brace = null;
+      this.C.bus?.emit('brace', { on: false });
+    } else if (this.brace) this.brace.eta = 0;
+  },
+
   /** The carrier's tubes: the CIC fires a salvo at a raider in range, every so often, while the magazine holds. */
   tubesFrame(dt) {
     const U = this.W.tubes, R = this.raider;

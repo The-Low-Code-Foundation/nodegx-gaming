@@ -1,0 +1,15 @@
+{
+  "id": "brace",
+  "about": "An enemy torpedo is seconds out and the point defence has not stopped it (weapons/torpedoes.mjs, braceFrame). Anyone not strapped in or holding on is thrown by the hit.",
+  "who": "ai",
+  "say": [
+    "Brace, brace, brace. Torpedo impact imminent."
+  ],
+  "show": "BRACE, BRACE, BRACE: torpedo impact imminent. Strap in or hold on.",
+  "to": {
+    "all": "tannoy",
+    "flight": "radio"
+  },
+  "priority": 5,
+  "again": 12
+}
