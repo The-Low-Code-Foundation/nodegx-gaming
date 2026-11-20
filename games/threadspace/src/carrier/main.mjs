@@ -197,10 +197,11 @@ function boardFighter(i) {
 // everyone quiet: the speakers keep to alarms, and nobody speaks.
 // The voices (voice.mjs): recorded clips where there are some (assets/voice/), the browser's speech for the rest.
 const voices = new Voices({ on: q.get('voice') !== '0' });
-const dc = new DamageControl(C, { sfx, auto: false, voices });
+const seed = +q.get('seed') || undefined; // ?seed=N: repeatable runs (carrier.html, tools/carrier-check.mjs)
+const dc = new DamageControl(C, { sfx, auto: false, voices, seed });
 const autoRaids = q.get('dc') !== '0';
 const ship = new Integrity(C, {
-  dc, sfx, thrusters: thrusterList, auto: autoRaids,
+  dc, sfx, thrusters: thrusterList, auto: autoRaids, seed,
   hooks: {
     // Blacked out: carried into `room`, coming round on its floor.
     rescue: (room, done) => fadeThen(() => {
@@ -216,7 +217,7 @@ dc.airOf = (id) => ship.airOf(id);
 // The guns, the point defence, the torpedoes, the railgun and the raider (weapons.mjs). The hatches to the turrets sit
 // you in one.
 const guns = new Weapons(C, world, {
-  ship, body, sfx, dc,
+  ship, body, sfx, dc, seed,
   hooks: {
     man: (t) => (career.allows('guns') ? fadeThen(() => manTurret(t)) : career.refuse('guns')),
     // A fighter shot dead in space: flight control takes her, from wherever she is, and brings her in.
@@ -1109,7 +1110,7 @@ window.addEventListener('keydown', wake, { once: true });
 
 window.__carrier = {
   C, L, K, W, crew, routine, hands, body, helm, thrusters, walker, renderer, camera, cut, fighter, dc, ship, guns, plant, helmSight, sfx, approach, cockpit, career, voices,
-  gas, carrierGas, flightAudio, composer, bloom, ABOARD, ambience,
+  gas, carrierGas, flightAudio, composer, bloom, ABOARD, ambience, input,
   mode: () => mode,
   tick: (n = 1, dt = 1 / 60) => {
     for (let i = 0; i < n; i++) tick(dt);
@@ -1161,4 +1162,5 @@ C.exterior.name = 'exterior';
 for (const o of [...C.frame.children]) if (![C.machinery, C.overlay, C.drums?.group, ...[...C.decks.values()].map((I) => I.group)].includes(o)) C.exterior.add(o);
 C.frame.add(C.exterior);
 
-frame();
+// ?hold=1: no frames until a script steps them with `__carrier.tick()` (tools/carrier-check.mjs).
+if (q.get('hold') !== '1') frame();
