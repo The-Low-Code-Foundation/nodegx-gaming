@@ -203,12 +203,20 @@ Left for the phases that design their formats: `content/announcements/` (phase 3
   moves above, in three dimensions (up to the deckhead, through a door only below its lintel). Space takes the hold in
   reach or, with none, brakes on the puffer; adrift, WASD puff (12 m/s of gas, topped up wherever there is weight);
   out of gas, in air, you swim very slowly. Holding, the drive's push doesn't move you; adrift, it carries you aft.
-  `?float=all` makes every room of the fixed hull but the hangar weightless with its holds (about 3,200), as a
-  preview of the next step: their chairs, tables and crew are still the walking ones.
+  (`?float=all` previewed the whole hull; it is the default now, below.)
 - **Every room outside the drums floats** (decision 2): about 47 rooms. No chairs, crash couches facing the bow,
   foot rails at stations, everything netted or strapped, lamps all round not only above, and the stern wall as the
   floor when she burns. Rebuild the sets (bridge, CIC, engineering control) for it first, then the generic fits. Split
   it over two sessions: the movement and the handholds first, then the rooms.
+
+  **Built, 20 November 2026:** every walkable room of the fixed hull floats but the airless hangar (`W()` in
+  `tools/carrier-v2.mjs`). Foot rails at every desk, bench, mess table and the CIC's plot, which your feet take as well
+  as your hands (you stand upright in one); the fits without chairs or stools (offices stood at, briefing rooms of stand
+  bars, sleeping bags strapped to the brig's walls, shelves and crate stacks under cargo nets and straps, workshop tools
+  on lanyards, closed hygiene cubicles); a dim lit strip low on every wall. The sets' acceleration couches stay (the
+  bridge's face the bow; the CIC's and engineering's are gimballed, but they don't yet swing round for a burn). Not
+  done: crew who float (they still stand at their posts, and the crew tunnel's walker walks), couches turning for a
+  burn, and anything special about the stern wall under thrust beyond drifting onto it.
 - **Brace for impact.** When a torpedo is inbound and the point defence isn't going to stop it, the ship counts down.
   Brace straps every few metres along weightless walls; hold E near one to strap in. A hit jolts the ship (`Rigid`, as in
   phase 1); anyone not strapped or holding on keeps going and hits the wall, hurt by the speed. The crew strap in too.

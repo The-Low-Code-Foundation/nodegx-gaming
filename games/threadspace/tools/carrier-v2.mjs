@@ -108,7 +108,9 @@ const floorOf = Object.fromEntries(decks.map((d) => [d.id, d.floor]));
 
 const comps = [];
 /** A walkable room. */
-const W = (id, name, deck, system, x, z, more = {}) => comps.push({ id, name, deck, access: 'walk', system, x, z, ...more });
+// A walkable room of the fixed hull. Outside the drums there is no weight (ROADMAP decision 2): every one is `float`
+// (weightless.mjs), but the airless hangar, which is walked until its gangways come (phase 5).
+const W = (id, name, deck, system, x, z, more = {}) => comps.push({ id, name, deck, access: 'walk', system, x, z, ...(more.vacuum ? {} : { float: true }), ...more });
 /** A sealed compartment (machinery, tanks, magazines). */
 const X = (id, name, system, x, y, z, more = {}) => comps.push({ id, name, access: 'sealed', system, x, y, z, ...more });
 

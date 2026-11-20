@@ -10,7 +10,10 @@ export function cic(C, I, c) {
   const cx = (x1 + x2) / 2, cz = (z1 + z2) / 2;
   // The plot: a dark table with a lit chart in its top, and the picture standing over it (setsFrame turns it).
   const tx = cx + 0.6, tw = 2.6, td = 5.4;
-  place(I, G(at(box(tw, 0.86, td, P.dark), 0, 0.43, 0), at(box(tw + 0.16, 0.06, td + 0.16, P.black), 0, 0.89, 0)), tx, cz);
+  const plot = G(at(box(tw, 0.86, td, P.dark), 0, 0.43, 0), at(box(tw + 0.16, 0.06, td + 0.16, P.black), 0, 0.89, 0));
+  // Weightless, the plotters stand round it, feet under a rail at its foot on every side.
+  plot.userData.foot = [{ x: 0, z: td / 2 + 0.3, w: tw - 0.3 }, { x: 0, z: -td / 2 - 0.3, w: tw - 0.3 }, { x: tw / 2 + 0.3, z: 0, w: td - 0.4, along: 'z' }, { x: -tw / 2 - 0.3, z: 0, w: td - 0.4, along: 'z' }];
+  place(I, plot, tx, cz);
   const chart = C.atlas.plane(tw - 0.2, td - 0.2, (g, pw, ph) => {
     g.fillStyle = '#031018';
     g.fillRect(0, 0, pw, ph);

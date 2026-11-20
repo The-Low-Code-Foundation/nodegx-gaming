@@ -69,6 +69,7 @@
     -128,
     -114.4
    ],
+   "float": true,
    "h": 3.6,
    "fit": "machines"
   },
@@ -103,7 +104,8 @@
    "z": [
     -114,
     -72.2
-   ]
+   ],
+   "float": true
   },
   {
    "id": "sensor-proc",
@@ -119,6 +121,7 @@
     -114,
     -102.4
    ],
+   "float": true,
    "fit": "office"
   },
   {
@@ -135,6 +138,7 @@
     -114,
     -102.4
    ],
+   "float": true,
    "fit": "lockers"
   },
   {
@@ -151,6 +155,7 @@
     -102,
     -90.4
    ],
+   "float": true,
    "fit": "office"
   },
   {
@@ -167,6 +172,7 @@
     -102,
     -90.4
    ],
+   "float": true,
    "fit": "machines"
   },
   {
@@ -254,7 +260,8 @@
    "z": [
     -112,
     -80
-   ]
+   ],
+   "float": true
   },
   {
    "id": "sensor-ops",
@@ -270,6 +277,7 @@
     -112,
     -100.4
    ],
+   "float": true,
    "fit": "office"
   },
   {
@@ -286,6 +294,7 @@
     -112,
     -100.4
    ],
+   "float": true,
    "fit": "lockers"
   },
   {
@@ -301,7 +310,8 @@
    "z": [
     -100,
     -88.4
-   ]
+   ],
+   "float": true
   },
   {
    "id": "brig",
@@ -317,6 +327,7 @@
     -100,
     -88.4
    ],
+   "float": true,
    "fit": "cells"
   },
   {
@@ -332,7 +343,8 @@
    "z": [
     -112,
     -80
-   ]
+   ],
+   "float": true
   },
   {
    "id": "ventral-access",
@@ -347,7 +359,8 @@
    "z": [
     -100,
     -88.4
-   ]
+   ],
+   "float": true
   },
   {
    "id": "ordnance-shop",
@@ -363,6 +376,7 @@
     -112,
     -100.4
    ],
+   "float": true,
    "fit": "workshop"
   },
   {
@@ -379,6 +393,7 @@
     -112,
     -100.4
    ],
+   "float": true,
    "fit": "shelves"
   },
   {
@@ -499,6 +514,7 @@
     -27.6,
     -24.4
    ],
+   "float": true,
    "h": 3.2,
    "airlock": true
   },
@@ -689,6 +705,7 @@
     -24,
     -12.4
    ],
+   "float": true,
    "fit": "briefing"
   },
   {
@@ -705,6 +722,7 @@
     -12,
     -0.3999999999999986
    ],
+   "float": true,
    "fit": "lockers"
   },
   {
@@ -721,6 +739,7 @@
     0,
     11.600000000000001
    ],
+   "float": true,
    "fit": "office"
   },
   {
@@ -737,6 +756,7 @@
     12,
     23.6
    ],
+   "float": true,
    "fit": "office"
   },
   {
@@ -753,6 +773,7 @@
     24,
     35.6
    ],
+   "float": true,
    "fit": "lockers"
   },
   {
@@ -769,6 +790,7 @@
     36,
     47.599999999999994
    ],
+   "float": true,
    "fit": "workshop"
   },
   {
@@ -785,6 +807,7 @@
     48,
     59.599999999999994
    ],
+   "float": true,
    "fit": "machines"
   },
   {
@@ -801,6 +824,7 @@
     -3.6000000000000014,
     25.6
    ],
+   "float": true,
    "fit": "office"
   },
   {
@@ -817,6 +841,7 @@
     34.4,
     63.599999999999994
    ],
+   "float": true,
    "fit": "shelves"
   },
   {
@@ -833,8 +858,8 @@
     -27.6,
     90.8
    ],
-   "h": 3.2,
-   "float": true
+   "float": true,
+   "h": 3.2
   },
   {
    "id": "barbette-h1d",
@@ -1065,7 +1090,8 @@
    "z": [
     91.2,
     135.6
-   ]
+   ],
+   "float": true
   },
   {
    "id": "cic",
@@ -1080,7 +1106,8 @@
    "z": [
     95,
     111.6
-   ]
+   ],
+   "float": true
   },
   {
    "id": "damage-control",
@@ -1095,7 +1122,8 @@
    "z": [
     112,
     123.6
-   ]
+   ],
+   "float": true
   },
   {
    "id": "switchboard",
@@ -1111,6 +1139,7 @@
     124,
     129.6
    ],
+   "float": true,
    "fit": "machines"
   },
   {
@@ -1127,6 +1156,7 @@
     130,
     135.6
    ],
+   "float": true,
    "fit": "shelves"
   },
   {
@@ -1143,6 +1173,7 @@
     95,
     103.6
    ],
+   "float": true,
    "fit": "office"
   },
   {
@@ -1159,6 +1190,7 @@
     104,
     111.6
    ],
+   "float": true,
    "fit": "office"
   },
   {
@@ -1174,7 +1206,8 @@
    "z": [
     112,
     127.6
-   ]
+   ],
+   "float": true
   },
   {
    "id": "eng-office",
@@ -1190,6 +1223,7 @@
     128,
     135.6
    ],
+   "float": true,
    "fit": "office"
   },
   {
@@ -1206,6 +1240,7 @@
     104.5,
     116
    ],
+   "float": true,
    "h": 3.5,
    "windows": [
     {
@@ -1244,7 +1279,8 @@
    "z": [
     116.4,
     125.6
-   ]
+   ],
+   "float": true
   },
   {
    "id": "nav-office",
@@ -1260,6 +1296,7 @@
     116.4,
     125.6
    ],
+   "float": true,
    "fit": "office"
   },
   {
@@ -1276,6 +1313,7 @@
     116.4,
     125.6
    ],
+   "float": true,
    "fit": "office"
   },
   {
@@ -1292,8 +1330,8 @@
     91.2,
     95.6
    ],
-   "h": 3.2,
-   "float": true
+   "float": true,
+   "h": 3.2
   },
   {
    "id": "barbette-sv",
@@ -2047,6 +2085,7 @@
     60,
     71.6
    ],
+   "float": true,
    "fit": "shelves"
   },
   {
@@ -2063,6 +2102,7 @@
     72,
     88.4
    ],
+   "float": true,
    "fit": "washroom"
   },
   {
@@ -2079,6 +2119,7 @@
     72.4,
     88.4
    ],
+   "float": true,
    "fit": "tables"
   },
   {

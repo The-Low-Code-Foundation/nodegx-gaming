@@ -125,9 +125,6 @@ const hooks = {
   drum: (kind, a) => walk.drum(kind, a)
 };
 
-// ?float=all: every room of the fixed hull but the hangar is weightless, with its handholds (ROADMAP phase 4, the
-// rooms still to be rebuilt for it: until then their chairs and tables are where they were).
-if (q.get('float') === 'all') for (const c of L.compartments) if (c.access === 'walk' && typeof c.deck === 'number' && !c.vacuum && !c.bay) c.float = true;
 const C = buildCarrier(L, hooks);
 C.bus = new Bus(); // what the systems say to each other (src/core/events.mjs)
 scene.add(C.obj);

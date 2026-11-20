@@ -39,6 +39,6 @@ export function bridge(C, I, c, hooks) {
     for (let k = 0; k < 3; k++) place(I, locker(0.6), s * (2.6 + k * 0.64), z2 - 0.3, { ry: Math.PI });
     poster(C, I, s < 0 ? 'burn' : 'suit', 0.62, 0.86, s < 0 ? -5.0 : 4.85, 1.55, z2 - 0.12, Math.PI);
   }
-  // Grab rails along the side walls, for when she turns hard.
-  for (const s of [-1, 1]) I.group.add(at(box(0.04, 0.04, 9, P.chrome), s * (x2 - 0.12), y + 1.15, hz + 3));
+  // Grab rails along the side walls, for when she turns hard (weightless, weightless.mjs puts rails on every wall).
+  if (!c.float) for (const s of [-1, 1]) I.group.add(at(box(0.04, 0.04, 9, P.chrome), s * (x2 - 0.12), y + 1.15, hz + 3));
 }

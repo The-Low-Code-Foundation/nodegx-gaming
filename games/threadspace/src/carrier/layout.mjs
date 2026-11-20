@@ -17,7 +17,7 @@ import { dressKits } from './damage.mjs';
 import { roomSurfaces, roomLights, dressRoom, dressHangar, SETS, messTable, desk, lookKey, P as PAL } from './sets.mjs';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { buildDrums } from './drum.mjs';
-import { dressHolds } from './weightless.mjs';
+import { dressHolds, net, strap } from './weightless.mjs';
 
 const H = 3; // room height unless the layout says otherwise
 const GAP = 1.5; // two rooms whose walls are closer than this can share a door
@@ -395,11 +395,14 @@ export function fit(I, c, open, color) {
     g.add(...parts);
     return g;
   };
+  // Weightless (`float`: the fixed hull of the spin-drum carrier, weightless.mjs): no chairs or stools, foot rails
+  // where people work (a part's `userData.foot`), and everything loose netted or strapped down.
+  const W = !!c.float;
   switch (c.fit) {
     case 'tables': {
       const tw = Math.min(U - 3.2, 6);
       for (let v = 3.4; v < V - 2; v += 3.4) {
-        put(messTable(tw, Math.max(2, Math.floor(tw / 1.4)), { top: lookKey(c) === 'quarters' ? PAL.laminate : PAL.tableTop }), U / 2, v, face);
+        put(messTable(tw, Math.max(2, Math.floor(tw / 1.4)), { top: lookKey(c) === 'quarters' ? PAL.laminate : PAL.tableTop, stools: !W }), U / 2, v, face);
       }
       backScreen('status', 2.4, 1.2);
       endRows(0.7, 2.4, () => G(at(box(2.2, 0.95, 0.7, STEEL), 0, 0.47, 0), at(box(2.2, 0.04, 0.7, mat('#2a3442')), 0, 0.96, 0)), 1.6);
@@ -422,6 +425,8 @@ export function fit(I, c, open, color) {
       const n = Math.max(1, Math.floor((U - 1) / 1.2));
       for (let i = 0; i <= n; i++) put(box(0.06, 2.1, 1.3, mat('#b8c0c8')), 0.5 + ((U - 1) * i) / n, V - 0.65, face, { y: 1.05 });
       for (let i = 0; i < n; i++) put(box(1.0, 0.04, 1.2, mat('#3a4a58')), 0.5 + ((U - 1) * (i + 0.5)) / n, V - 0.65, face, { y: 0.02, collide: false });
+      // Weightless, water floats: each stall is a closed cubicle, a door in its front, a foot rail inside.
+      if (W) for (let i = 0; i < n; i++) put(G(at(box(1.08, 2.1, 0.05, mat('#9aa4ae')), 0, 1.05, 0), at(box(0.7, 1.8, 0.01, mat('#c8d0d8')), 0, 1.0, 0.03), at(box(0.04, 0.3, 0.04, PAL.chrome), 0.28, 1.05, 0.06), at(box(0.3, 0.1, 0.01, glow('#39d27a', 0.9)), 0, 1.95, 0.03)), 0.5 + ((U - 1) * (i + 0.5)) / n, V - 1.32, face, { collide: false });
       const [x, z] = P(0.35, (2 + V - 1.5) / 2);
       I.prop(box(0.6, 0.85, Math.max(1, V - 3.6), mat('#c8ced6')), x, z, { y: 0.42, ry: toU });
       break;
@@ -433,17 +438,24 @@ export function fit(I, c, open, color) {
         for (const y of [0.12, 0.85, 1.55, 2.18]) r.add(at(box(1.9, 0.04, 0.6, STEEL), 0, y, 0));
         r.add(at(box(0.8, 0.5, 0.5, CRATE), -0.45, 0.39, 0), at(box(0.7, 0.4, 0.5, mat('#4f5a46')), 0.5, 0.34, 0));
         r.add(at(box(1.2, 0.45, 0.5, CRATE), -0.2, 1.1, 0), at(box(0.6, 0.55, 0.45, mat('#8a6a3a')), 0.4, 1.85, 0), at(box(0.6, 0.4, 0.45, CRATE), -0.5, 1.77, 0));
+        if (W) r.add(at(net(1.86, 2.1), 0, 1.12, 0.31)); // a cargo net across the front, hooked to the uprights
         return r;
       };
       backRow(0.6, 2.0, rack);
       endRows(0.6, 2.0, rack, 1.0);
-      if (V > 7.5 && U > 6) for (let u = 2.2; u < U - 2.2; u += 2.0) put(G(at(box(1.9, 1.6, 1.2, STEEL), 0, 0.8, 0), at(box(1.6, 0.6, 1.0, CRATE), 0, 1.9, 0)), u, (2 + V - 0.6) / 2 + 0.3, face);
+      if (V > 7.5 && U > 6) for (let u = 2.2; u < U - 2.2; u += 2.0) {
+        const stack = G(at(box(1.9, 1.6, 1.2, STEEL), 0, 0.8, 0), at(box(1.6, 0.6, 1.0, CRATE), 0, 1.9, 0));
+        if (W) stack.add(at(strap(1.7), 0, 2.21, 0), at(strap(1.1), 0, 2.21, 0, 0, Math.PI / 2, 0), at(net(1.66, 0.62), 0, 1.9, 0.52)); // strapped to the stand
+        put(stack, u, (2 + V - 0.6) / 2 + 0.3, face);
+      }
       break;
     }
     case 'workshop': {
       backRow(0.8, 2.4, () => {
         const b = G(at(box(2.2, 0.9, 0.8, mat('#4a5058')), 0, 0.45, 0), at(box(2.2, 0.05, 0.8, mat('#6a5a40')), 0, 0.92, 0), at(box(2.0, 1.0, 0.05, mat('#2e3440')), 0, 1.6, -0.38), at(box(0.3, 0.25, 0.3, mat('#a83a2c')), -0.6, 1.07, 0));
         b.userData.spots = [{ x: 0.2, z: 0.8, yaw: 0, pose: 'workTable' }]; // a hand at the bench (hands.mjs)
+        b.userData.foot = [{ x: 0, z: 0.55, w: 1.8 }]; // weightless, a foot rail along its front
+        if (W) for (let k = 0; k < 5; k++) b.add(at(box(0.012, 0.35, 0.012, P_CORD), -0.8 + k * 0.4, 1.12, 0.1 + (k % 2) * 0.15)); // the tools on lanyards
         return b;
       });
       // Machine tools down the middle: a lathe, a mill, a press.
@@ -484,7 +496,8 @@ export function fit(I, c, open, color) {
       for (let i = 0; i < n; i++) {
         const u = (U * (i + 0.5)) / n;
         if (i) put(box(0.08, 2.4, depth, mat('#5d646e')), (U * i) / n, V - depth / 2, face, { y: 1.2 });
-        put(G(at(box(1.9, 0.4, 0.8, BUNK), 0, 0.2, 0), at(box(1.8, 0.1, 0.7, SHEET), 0, 0.45, 0)), u, V - 0.5, face);
+        if (W) put(sleepingBag(), u, V - 0.2, face); // weightless: a bag strapped upright to the back wall
+        else put(G(at(box(1.9, 0.4, 0.8, BUNK), 0, 0.2, 0), at(box(1.8, 0.1, 0.7, SHEET), 0, 0.45, 0)), u, V - 0.5, face);
       }
       put(box(1.4, 0.75, 0.7, TABLE), U - 1.4, 2.6, face, { y: 0.37 });
       break;
@@ -494,6 +507,7 @@ export function fit(I, c, open, color) {
         if (!free(u, v, 1.1, 0.8)) continue;
         const [x, z] = P(u, v);
         I.prop(desk(2.0, color, [['status', 'nav', 'radar'][Math.floor(u + v) % 3], 'text']), x, z, { ry: face });
+        if (W) continue; // weightless, you stand at it, feet under its rail (desk's `foot`)
         const [sx, sz] = P(u, v - 0.9);
         I.seat(sx, sz, face, '#3a4a60', { low: true });
       }
@@ -517,7 +531,9 @@ export function fit(I, c, open, color) {
       const locker = () => G(at(box(0.6, 2.0, 0.55, mat('#4a5a6e')), 0, 1.0, 0), at(box(0.04, 0.3, 0.02, DARK), 0.2, 1.2, 0.28));
       backRow(0.55, 0.64, locker, 0.3);
       endRows(0.55, 0.64, locker, 0.8);
-      put(box(Math.min(3, U - 3), 0.45, 0.4, STEEL), U / 2, Math.max(2.6, (2 + V - 0.55) / 2), face, { y: 0.22 });
+      // The bench down the middle; weightless, nobody sits to suit up: a foot rail to stand in instead.
+      if (W) put(Object.assign(new THREE.Group(), { userData: { foot: [{ x: 0, z: 0, w: Math.min(3, U - 3) }] } }), U / 2, Math.max(2.6, (2 + V - 0.55) / 2), face, { collide: false });
+      else put(box(Math.min(3, U - 3), 0.45, 0.4, STEEL), U / 2, Math.max(2.6, (2 + V - 0.55) / 2), face, { y: 0.22 });
       if (c.system === 'damage') for (let u = 1.2; u < U - 1; u += 2.4) if (free(u, 2.4)) put(at(cyl(0.35, 0.35, 0.3, mat('#a8322c'), 12), 0, 1.4, 0, Math.PI / 2), u, V - 0.85, face, { collide: false });
       break;
     }
@@ -526,11 +542,35 @@ export function fit(I, c, open, color) {
       for (let v = V - 3; v > 2.4; v -= 1.5) for (let u = 1.6; u < U - 1.2; u += 1.1) {
         if (Math.abs(u - U / 2) < 0.7) continue; // an aisle down the middle
         const [x, z] = P(u, v);
-        I.seat(x, z, face, '#3a4a60', { low: true });
+        if (W) I.prop(standBar(), x, z, { ry: face });
+        else I.seat(x, z, face, '#3a4a60', { low: true });
       }
       break;
     }
   }
+}
+
+const P_CORD = mat('#c8a030');
+
+/** Weightless: a sleeping bag strapped upright to a wall, a lamp and a pocket over it. Front +z. */
+function sleepingBag() {
+  const g = new THREE.Group();
+  g.add(at(box(0.8, 2.0, 0.04, mat('#5b626c')), 0, 1.15, -0.06)); // the board it hangs on
+  g.add(at(box(0.66, 1.75, 0.2, mat('#4d6a86')), 0, 1.05, 0.06));
+  g.add(at(box(0.5, 0.3, 0.16, mat('#c9c4b6')), 0, 1.98, 0.06)); // the hood
+  for (const y of [0.55, 1.2, 1.7]) g.add(at(strap(0.74, false), 0, y, 0.17));
+  g.add(at(box(0.16, 0.05, 0.06, glow('#ffe2b0')), 0.3, 2.25, 0));
+  return g;
+}
+
+/** Weightless: where you stand for a briefing, a padded bar at your hips on a post and a foot rail under you. You face
+ *  -z, as in `Interior.seat`. */
+function standBar() {
+  const g = new THREE.Group();
+  g.add(at(cyl(0.035, 0.035, 0.95, mat('#5b626c'), 6), 0, 0.47, -0.25));
+  g.add(at(box(0.75, 0.09, 0.12, mat('#3a4a60')), 0, 0.97, -0.25));
+  g.userData.foot = [{ x: 0, z: 0.05, w: 0.7 }];
+  return g;
 }
 
 function drone() {

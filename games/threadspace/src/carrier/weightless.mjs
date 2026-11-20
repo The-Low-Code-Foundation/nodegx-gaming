@@ -17,7 +17,7 @@
 
 import * as THREE from 'three';
 import { roomAt } from './layout.mjs';
-import { box, at, mat } from '../util.mjs';
+import { box, at, mat, glow } from '../util.mjs';
 
 const EYE = 1.6; // the walker's eye above its `pos` (walk.mjs)
 const R = 0.38; // your body's radius against the walls
@@ -34,10 +34,60 @@ export const HOLD = {
   refill: 4, // s to top the bottle up where there is weight
   swim: [0.1, 0.15], // m/s² and m/s: swimming in air, with no gas
   door: 2.1, // m above the deck: your eye's highest through a door (its lintel is at 2.5)
+  legs: 1.5, // m below your eye your feet reach: a foot rail or a deck handle under you
+  stand: 1.55, // m: your eye over a foot rail you stand in
 };
 
 const RAIL = mat('#d8a530'); // the airless hangar's rails (sets/hangar.mjs) are this yellow too
 const FOOT = mat('#5b626c');
+const STRIP = glow('#4e6078'); // dim: under the bloom aboard a brighter strip reads as a white line
+
+/** A cargo net `w` by `h` (in its own x and y, facing +z): cord in a diamond mesh about 12 cm across, see-through
+ *  between. One shared material, so every net aboard bakes into one mesh per deck. */
+let NET = null;
+export function net(w, h) {
+  if (!NET) {
+    const cv = document.createElement('canvas');
+    cv.width = cv.height = 64;
+    const g = cv.getContext('2d');
+    g.strokeStyle = '#d8d2b8';
+    g.lineWidth = 4;
+    for (const [a, b, c2, d] of [[0, 0, 64, 64], [64, 0, 0, 64], [-32, 32, 32, 96], [32, -32, 96, 32], [32, -32, -32, 32], [96, 32, 32, 96]]) (g.beginPath(), g.moveTo(a, b), g.lineTo(c2, d), g.stroke());
+    g.fillStyle = '#e8e2c8';
+    for (const [x, yy] of [[0, 0], [64, 0], [0, 64], [64, 64], [32, 32]]) g.fillRect(x - 4, yy - 4, 8, 8); // the knots
+    const t = new THREE.CanvasTexture(cv);
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    t.colorSpace = THREE.SRGBColorSpace;
+    NET = new THREE.MeshLambertMaterial({ map: t, alphaTest: 0.5, transparent: false, side: THREE.DoubleSide, color: '#b8b098' });
+  }
+  const geo = new THREE.PlaneGeometry(w, h);
+  const uv = geo.attributes.uv;
+  for (let i = 0; i < uv.count; i++) uv.setXY(i, (uv.getX(i) * w) / 0.24, (uv.getY(i) * h) / 0.24);
+  return new THREE.Mesh(geo, NET);
+}
+
+/** A strap: a webbing band `w` long along x, 5 cm wide, lying flat (`flat`, across a top) or standing (across a
+ *  front facing z). */
+export const strap = (w, flat = true) => (flat ? box(w, 0.012, 0.05, STRAP) : box(w, 0.05, 0.012, STRAP));
+const STRAP = mat('#c8a030');
+
+/** Foot rails a piece of furniture asks for, in its own frame: `mesh.userData.foot = [{ x, z, w, along }]` (a rail
+ *  `w` long along its x, or its z with `along: 'z'`, centred on (x, z)). In a weightless room `dressHolds` builds each one on the deck and makes it a hold: where
+ *  you stand at a desk, a bench or a table, feet hooked under the rail. Elsewhere it is ignored. */
+function footRails(I, c) {
+  const [x1, x2] = c.x, [z1, z2] = c.z;
+  for (const m of I.group.children) {
+    const specs = m.userData.foot;
+    if (!specs || m.userData.footDone || m.position.x < x1 || m.position.x > x2 || m.position.z < z1 || m.position.z > z2) continue;
+    m.userData.footDone = true;
+    const cs = Math.cos(m.rotation.y), sn = Math.sin(m.rotation.y);
+    const to = (lx, lz) => new THREE.Vector3(m.position.x + lx * cs + lz * sn, I.floorY + 0.09, m.position.z - lx * sn + lz * cs);
+    for (const f of specs) {
+      const [a, b] = f.along === 'z' ? [to(f.x, f.z - f.w / 2), to(f.x, f.z + f.w / 2)] : [to(f.x - f.w / 2, f.z), to(f.x + f.w / 2, f.z)];
+      hold(I, c, a, b, new THREE.Vector3(0, 1, 0), 'foot');
+    }
+  }
+}
 
 // --- the holds, built -----------------------------------------------------------------------------------------------
 
@@ -79,6 +129,7 @@ function runs(a0, b0, gaps, min = 0.5) {
 export function dressHolds(C, I, c, open) {
   const y = I.floorY, h = c.h ?? 3, [x1, x2] = c.x, [z1, z2] = c.z, OFF = 0.09;
   const V = (x, yy, z) => new THREE.Vector3(x, yy, z);
+  footRails(I, c);
   // The walls: north and south run along x, west and east along z. Rails in lengths of about two metres, at hand
   // height off the deck and below the deckhead, broken at every opening.
   const walls = [['n', z1, x1, x2, true, 1], ['s', z2, x1, x2, true, -1], ['w', x1, z1, z2, false, 1], ['e', x2, z1, z2, false, -1]];
@@ -91,6 +142,13 @@ export function dressHolds(C, I, c, open) {
     const nk = alongX ? 'z' : 'x', uk = alongX ? 'x' : 'z';
     const against = (yy) => I.colliders.filter((k) => k.max[nk] - k.min[nk] > 0.25 && k.min.y < yy + 0.1 && k.max.y > yy - 0.1 &&
       (inward > 0 ? k.min[nk] < line + 0.35 && k.max[nk] > line : k.max[nk] > line - 0.35 && k.min[nk] < line)).map((k) => [k.min[uk] - 0.2, k.max[uk] + 0.2]);
+    // Lamps all round, not only overhead (with no down, the deck is just another wall): a lit strip low on every wall,
+    // under the lower rail, where nothing stands in front of it.
+    for (const [ra, rb] of runs(a0 + 0.3, b0 - 0.3, [...gaps, ...against(y + 0.3)], 0.6)) {
+      const m = (ra + rb) / 2, len = rb - ra, q = pt(m, y + 0.32);
+      q[nk] = line + inward * 0.11;
+      I.group.add(at(alongX ? box(len, 0.05, 0.03, STRIP) : box(0.03, 0.05, len, STRIP), q.x, q.y, q.z));
+    }
     for (const hy of [1.0, h - 0.5]) for (const [ra, rb] of runs(a0 + 0.4, b0 - 0.4, [...gaps, ...against(y + hy)])) {
       const k = Math.max(1, Math.round((rb - ra + 0.4) / 2.6)), seg = (rb - ra - (k - 1) * 0.4) / k;
       for (let i = 0; i < k; i++) {
@@ -147,7 +205,7 @@ export function dressHolds(C, I, c, open) {
 // --- moving by them -------------------------------------------------------------------------------------------------
 
 const _f = new THREE.Vector3(), _r = new THREE.Vector3(), _d = new THREE.Vector3(), _p = new THREE.Vector3();
-const _e = new THREE.Vector3(), _q = new THREE.Quaternion();
+const _e = new THREE.Vector3(), _f2 = new THREE.Vector3();
 
 export class Floater {
   /** `G`: the game in hand (main.mjs): `C`, `ship` (the air), `sfx`, and `walk` (the deck you are on). */
@@ -184,25 +242,30 @@ export class Floater {
     this.puffing = false;
   }
 
-  /** The nearest hold in reach of `eye`, or null: { h, t, d, p }. */
-  find(I, eye, skip = null, reach = HOLD.reach) {
+  /** The nearest hold in reach, or null: { h, t, d, p, foot }. Your hands reach `reach` from your eye; with `body`
+   *  your feet reach a hold at the deck under you too (a foot rail, a deck handle: `foot`), from as low as `HOLD.legs`
+   *  below your eye. */
+  find(I, eye, skip = null, reach = HOLD.reach, body = false) {
     let best = null;
     for (const h of I.holds ?? []) {
       if (h === skip) continue;
       if (Math.min(h.a.x, h.b.x) - reach > eye.x || Math.max(h.a.x, h.b.x) + reach < eye.x) continue;
       if (Math.min(h.a.z, h.b.z) - reach > eye.z || Math.max(h.a.z, h.b.z) + reach < eye.z) continue;
       _d.subVectors(h.b, h.a);
-      const t = Math.min(1, Math.max(0, _d.dot(_p.subVectors(eye, h.a)) / (h.len * h.len || 1)));
+      // The point of you nearest the hold: your eye, or with `body` anywhere down to your feet.
+      _f2.copy(eye);
+      if (body && h.n.y > 0.5) _f2.y = Math.max(eye.y - HOLD.legs, Math.min(eye.y, (h.a.y + h.b.y) / 2));
+      const t = Math.min(1, Math.max(0, _d.dot(_p.subVectors(_f2, h.a)) / (h.len * h.len || 1)));
       _p.copy(h.a).addScaledVector(_d, t);
-      const d = _p.distanceTo(eye);
-      if (d <= reach && (!best || d < best.d)) best = { h, t, d, p: _p.clone() };
+      const d = _p.distanceTo(_f2), foot = _f2.y < eye.y - 0.8;
+      if (d <= (foot ? 0.6 : reach) && (!best || d < best.d)) best = { h, t, d, p: _p.clone(), foot };
     }
     return best;
   }
 
   grab(walker, n, speed) {
     const eye = walker.eye(_e);
-    this.held = { h: n.h, t: n.t, off: eye.clone().sub(n.p) };
+    this.held = { h: n.h, t: n.t, off: eye.clone().sub(n.p), foot: !!n.foot };
     walker.vel.set(0, 0, 0);
     this.charge = -1;
     this.G.sfx?.cue('clunk', { vol: Math.min(1, 0.12 + speed * 0.12) });
@@ -257,14 +320,18 @@ export class Floater {
             const grip = _e.copy(h.a).lerp(h.b, Math.min(1, Math.max(0, t)));
             H.h = next.h;
             H.t = next.t;
+            H.foot = H.foot && next.h.n.y > 0.5;
             H.off.add(grip.sub(next.p));
           } else H.t = Math.min(1, Math.max(0, t));
         } else H.t = t;
       }
     }
-    // Your eye comes in to within an arm's length of your hand.
-    const L = H.off.length();
-    if (L > 0.7) H.off.multiplyScalar(Math.max(0.7, L - dt * 1.5) / L);
+    // Your eye comes in to within an arm's length of your hand; standing in a foot rail, upright over it.
+    if (H.foot) H.off.lerp(_d.set(0, HOLD.stand, 0), Math.min(1, dt * 3));
+    else {
+      const L = H.off.length();
+      if (L > 0.7) H.off.multiplyScalar(Math.max(0.7, L - dt * 1.5) / L);
+    }
     const grip = _e.copy(H.h.a).lerp(H.h.b, H.t);
     walker.pos.copy(grip).add(H.off).y -= EYE;
     // W: the longer you hold it, the harder you push off when you let go. Shift with it, a hard push at once.
@@ -287,7 +354,7 @@ export class Floater {
     const v = walker.vel, speed0 = v.length();
     v.addScaledVector(walker.shove, dt); // under a drive, nothing holds you but your hands
     const eye = walker.eye(_e);
-    const n = (this.near = this.find(walker.interior, eye, this.ignoreT > 0 ? this.ignore : null));
+    const n = (this.near = this.find(walker.interior, eye, this.ignoreT > 0 ? this.ignore : null, HOLD.reach, true));
     // Space: take the hold in reach; with none, the puffer against your drift.
     if (down('Space') && n) return this.grab(walker, n, speed0);
     let fx = 0, fz = 0;
@@ -383,7 +450,7 @@ export class Floater {
   /** The line for the top of the screen. */
   status(walker) {
     const gas = `puffer ${Math.round((100 * this.gas) / HOLD.gas)}%`;
-    if (this.held) return `weightless · holding a ${this.held.h.kind === 'rail' ? 'rail' : 'handhold'} · ${gas}`;
+    if (this.held) return `weightless · ${this.held.foot ? 'feet in a foot rail' : `holding a ${this.held.h.kind === 'rail' ? 'rail' : 'handhold'}`} · ${gas}`;
     const s = walker.vel.length();
     return `weightless · ${s < 0.05 ? 'adrift, still' : `drifting ${s.toFixed(1)} m/s`} · ${gas}`;
   }
@@ -394,7 +461,7 @@ export class Floater {
       if (this.charge >= 0) return { key: 'W', label: `Let go to push off ${'▮'.repeat(1 + Math.floor(Math.min(1, this.charge / HOLD.charge) * 4)).padEnd(5, '▯')}` };
       return { key: 'W', label: 'Push off where you look (hold for harder, Shift: hard) · A D S along the hold' };
     }
-    if (this.near) return { key: 'Space', label: 'Take hold' };
+    if (this.near) return { key: 'Space', label: this.near.foot ? 'Hook your feet in' : 'Take hold' };
     return this.gas > 0 ? { key: 'Space', label: 'Brake with the suit puffer · WASD puff' } : { key: '', label: 'Puffer empty: drift to a wall or swim (WASD)' };
   }
 }

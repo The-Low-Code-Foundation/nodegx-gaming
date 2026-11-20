@@ -79,6 +79,7 @@ export function desk(w = 2.2, color = '#58b0ff', kinds = ['status', 'nav'], { lo
     g.add(at(screen(k, color, sw, sh), x, sy, -0.29, tilt, 0, 0));
   });
   g.add(at(box(w - 0.1, 0.04, 0.12, P.dark), 0, sy + sh / 2 + 0.08 * (low ? 0.5 : 1), -0.38, tilt, 0, 0));
+  g.userData.foot = [{ x: 0, z: 0.35, w: Math.max(0.6, w - 0.5) }]; // weightless, you stand at it, feet under a rail
   return g;
 }
 
@@ -128,14 +129,21 @@ export function locker(w = 0.6) {
 }
 
 /** A mess table bolted to the deck with stools either side: `n` a side, long along x. `top` is the tabletop's material. */
-export function messTable(len, n, { stoolMat = P.steel, top = P.tableTop } = {}) {
+export function messTable(len, n, { stoolMat = P.steel, top = P.tableTop, stools = true } = {}) {
   const g = new THREE.Group();
   g.add(at(box(len, 0.05, 0.9, top), 0, 0.74, 0));
   g.add(at(box(len, 0.04, 0.03, P.stainlessDk), 0, 0.775, 0.44), at(box(len, 0.04, 0.03, P.stainlessDk), 0, 0.775, -0.44)); // the fiddle
   g.add(at(box(len - 0.3, 0.06, 0.4, P.table), 0, 0.68, 0));
   for (const s of [-1, 1]) g.add(at(cyl(0.06, 0.08, 0.7, P.dark, 8), s * (len / 2 - 0.5), 0.35, 0), at(box(0.5, 0.03, 0.5, P.dark), s * (len / 2 - 0.5), 0.015, 0));
   g.userData.spots = []; // where someone sits (hands.mjs): each stool, facing the table
-  for (const side of [-1, 1]) for (let i = 0; i < n; i++) {
+  if (!stools) {
+    // Weightless (`stools: false`): nobody sits. You stand at it, feet under a rail along its foot each side, and what
+    // is on it is held down: a strap across it, and the food comes in pouches that stick to the top.
+    g.userData.foot = [{ x: 0, z: 0.6, w: len - 0.6 }, { x: 0, z: -0.6, w: len - 0.6 }];
+    for (const side of [-1, 1]) for (let i = 0; i < n; i++) g.userData.spots.push({ x: -len / 2 + (len * (i + 0.5)) / n, z: side * 0.75, yaw: side > 0 ? 0 : Math.PI, pose: 'workTable' });
+    for (let x = -len / 2 + 0.6; x < len / 2 - 0.4; x += 1.4) g.add(at(box(0.05, 0.012, 0.92, P.yellow), x, 0.772, 0));
+    for (let i = 0; i < n; i++) g.add(at(box(0.12, 0.02, 0.18, P.light), -len / 2 + (len * (i + 0.5)) / n, 0.775, 0.25), at(box(0.12, 0.02, 0.18, P.light), -len / 2 + (len * (i + 0.5)) / n + 0.2, 0.775, -0.25));
+  } else for (const side of [-1, 1]) for (let i = 0; i < n; i++) {
     const x = -len / 2 + (len * (i + 0.5)) / n;
     g.add(at(cyl(0.035, 0.035, 0.44, P.dark, 6), x, 0.22, side * 0.72));
     g.add(at(cyl(0.19, 0.19, 0.06, stoolMat, 12), x, 0.46, side * 0.72));
