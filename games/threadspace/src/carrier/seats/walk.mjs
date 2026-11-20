@@ -282,6 +282,7 @@ export class WalkSeat {
     const speed = SPIN ? 2.4 : 1.1; // m/s: hand over hand weightless, or a real climb
     this.climb = { kind: 'fixed', to, t: 0, dur: 0.5 + Math.min(3.5, rise / speed), // a long trunk goes quicker than life: no more than 4 s
       y0, y1, x0: walker.pos.x, z0: walker.pos.z, x: x + Math.sin(yaw) * 0.7, z: z + Math.cos(yaw) * 0.7, yaw, trunk, anchor, lit: { lights: [lamp] }, I1, lids: C.hatchLids?.get(l.id) ?? [] };
+    if (walker.float) this.climb.y0 = walker.pos.y; // weightless, from wherever you were floating by it
     for (const lid of this.climb.lids) lid.want = 1; // the hatches open (layout.mjs `hatches`), and shut behind you
     sfx.cue('clunk', { vol: 0.3 });
   }
@@ -393,9 +394,19 @@ export class WalkSeat {
    *  the catwalk). A ride or a climb goes on whatever seat you are in. */
   move(f, dt) {
     const { C, walker, routine, mode } = this.G, walking = mode() === 'walk';
-    // Weightless rooms (`float` in the layout: the spin-drum carrier's spine, crew tunnel and trunks): hand over hand.
+    // Weightless rooms (`float` in the layout: the spin-drum carrier's spine, crew tunnel and trunks): by the handholds
+    // (weightless.mjs, `walker.floater`).
     if (walking) walker.float = !this.drumNow && !this.hubNow && !this.climb && !!roomAt(C, this.deckNow, walker.pos.x, walker.pos.z)?.float;
     if (walking) walker.frame(f, dt, { canMove: !this.G.fading && !routine.billOpen && !this.ride && !this.swing && !this.climb });
+    if (walking && !walker.float) {
+      walker.floater?.idle(dt); // where there is weight the suit's puffer tops up
+      // Floated into a room with weight (or off a ladder): your feet back on its deck.
+      if (!this.drumNow && !this.hubNow && !this.climb && !this.catwalk && !this.ride && !this.swing) {
+        const fy = C.decks.get(this.deckNow).floorY;
+        if (Math.abs(walker.pos.y - fy) > 1e-3) walker.pos.y += (fy - walker.pos.y) * Math.min(1, dt * 5);
+        else walker.pos.y = fy;
+      }
+    }
     if (walking && this.drumNow && !this.ride && !this.climb) this.drumStep();
     if (this.hubNow) walker.pos.x = wrap(this.hubNow.hub, walker.pos.x);
     if (this.ride) this.rideFrame(dt);
@@ -430,6 +441,7 @@ export class WalkSeat {
       hud.where(this.swing ? (this.swing.kind === 'catch' ? `Catching the ${this.swing.hub.h.name.toLowerCase()}'s hub ring` : 'Pushing off up into the spine') : '');
       hud.use(null);
     } else if (hubNow) {
+      hud.float(false);
       const hub = hubNow.hub, eyeH = walker.eye(_v).y - walker.pos.y;
       drumCamera(camera, hubPlace(hub, walker.pos.x), 0, walker.pos.y, walker.pos.z, eyeH, 0, walker.quat(_q));
       const tilt = Math.min(0.5, Math.atan(push / (hub.g * 9.81)));
@@ -438,6 +450,7 @@ export class WalkSeat {
       const u = fading ? null : walker.nearestUse();
       hud.use(u ?? (fading ? null : { key: 'E', label: 'Push off up through the seal into the spine' }));
     } else if (drumNow) {
+      hud.float(false);
       const { dk, h } = drumDeck(C, drumNow.hid, drumNow.did);
       if (ride) drumCamera(camera, drumNow.g, ride.spot.lift.x, -ride.r, ride.spot.lift.z, 1.6, ride.lean, walker.quat(_q));
       else placeInDrum(C, camera, walker, drumNow);
@@ -467,8 +480,10 @@ export class WalkSeat {
       const r = roomAt(C, this.deckNow, walker.pos.x, walker.pos.z);
       if (climb?.kind === 'rungs') hud.where(`Climbing the rungs ${climb.up ? 'up to the catwalk' : 'down to the hangar floor'}`);
       else if (climb?.kind === 'fixed') hud.where(`Climbing ${climb.y1 > climb.y0 ? 'up' : 'down'} to the ${C.decks.get(climb.to.deck).deck.name.toLowerCase()}${SPIN ? ', hand over hand' : ''}`);
-      else hud.where(`${I.deck.name}${r ? ' · ' + r.name : ''}${this.catwalk ? ', on the catwalk' : ''}${r?.float ? ' · weightless (W pulls you along, Shift kicks off)' : ''} · frame ${frameOf(L, walker.pos.z)}, ${sideOf(walker.pos.x)}${push > 0.3 ? ` · drive burning, ${(push / 9.81).toFixed(2)} g aft${SPIN && r?.float ? ': hold on (W)' : ''}` : ''}`);
-      hud.use(fading || climb ? null : walker.nearestUse());
+      else hud.where(`${I.deck.name}${r ? ' · ' + r.name : ''}${this.catwalk ? ', on the catwalk' : ''}${walker.float && walker.floater ? ' · ' + walker.floater.status(walker) : ''} · frame ${frameOf(L, walker.pos.z)}, ${sideOf(walker.pos.x)}${push > 0.3 ? ` · drive burning, ${(push / 9.81).toFixed(2)} g aft${walker.float && !walker.floater?.held ? ': take hold (Space)' : ''}` : ''}`);
+      hud.float(walker.float);
+      // Weightless, with nothing to use (E) in front of you, the prompt says how to move.
+      hud.use(fading || climb ? null : walker.nearestUse() ?? (walker.float ? walker.floater?.prompt() : null));
       C.decks.get(this.deckNow).tick(dt);
     }
   }

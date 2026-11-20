@@ -11,6 +11,7 @@
 //   carrier.html?at=helm&voice=0&crew=0&dc=0&hold=1&seed=7       → run('helm')
 //   carrier.html?at=fighter&voice=0&crew=0&dc=0&hold=1&seed=7    → run('landing')
 //   carrier.html?at=bridge&voice=0&crew=0&dc=0&hold=1&seed=7     → run('walk')
+//   carrier.html?at=bridge&voice=0&crew=0&dc=0&hold=1&seed=7     → run('float')
 //   carrier.html?voice=0&crew=0&dc=0&hold=1&seed=7 (start page)  → run('career')
 //
 // `?hold=1` keeps the page from running frames of its own and `?seed=` seeds every random number (carrier.html,
@@ -208,6 +209,53 @@ const scenarios = {
     return out;
   },
 
+  /** Weightless in the spine and the crew tunnel (weightless.mjs): puff to a wall and take the rail there, push off
+   *  along it, take the next one, pull along it, a hard push up to the deckhead, a drift aft under the drive, and
+   *  holding on under it. */
+  async float(c) {
+    c.career.free();
+    const w = c.walker, F = w.floater, K = c.input.keys, out = {};
+    const at = () => ({ you: v3(w.pos), vel: v3(w.vel), held: F.held?.h.kind ?? null, gas: r3(F.gas) });
+    const hold = (code, secs) => (K.add(code), run_(c, secs), K.delete(code));
+    out.holds = [...c.C.decks.values()].reduce((n, I) => n + (I.holds?.length ?? 0), 0);
+    c.place(4, 0, -50, -Math.PI / 2); // the spine, facing starboard
+    hold('KeyW', 1);
+    out.puffed = at();
+    out.caught = { t: run_(c, 5, () => F.held), ...at() };
+    w.yaw = 0;
+    w.pitch = 0;
+    hold('KeyW', 1);
+    run_(c, 1 / 30);
+    out.pushed = at();
+    run_(c, 2);
+    out.drifted = at();
+    K.add('Space');
+    out.took = { t: run_(c, 1, () => F.held), ...at() };
+    K.delete('Space');
+    hold('KeyS', 2);
+    out.pulled = at();
+    w.pitch = 1.2;
+    K.add('ShiftLeft');
+    hold('KeyW', 1 / 30);
+    K.delete('ShiftLeft');
+    run_(c, 1.5);
+    out.up = at();
+    // Under the drive: adrift in the crew tunnel you go aft; holding a rail you stay.
+    const feel = c.G.walk.feel.bind(c.G.walk);
+    c.G.walk.feel = (p, dt) => feel(2, dt);
+    c.place(2, 0, 0, 0);
+    run_(c, 2);
+    out.driveAdrift = at();
+    c.place(2, 1, 0, 0);
+    K.add('Space');
+    run_(c, 0.2);
+    K.delete('Space');
+    run_(c, 2);
+    out.driveHeld = at();
+    c.G.walk.feel = feel;
+    return out;
+  },
+
   /** The career from the start screen: the first orders done by hand, then the gunnery and flying orders. */
   async career(c) {
     const KEY = c.career.constructor.key, before = localStorage.getItem(KEY);
@@ -321,7 +369,7 @@ export async function run(name) {
 }
 
 const PAGES = {
-  raid: 'at=bridge', helm: 'at=helm', landing: 'at=fighter', walk: 'at=bridge', career: ''
+  raid: 'at=bridge', helm: 'at=helm', landing: 'at=fighter', walk: 'at=bridge', float: 'at=bridge', career: ''
 };
 
 /** Every scenario, each in a fresh page of its own (an iframe), from any page of this site: `{ name: { hash, … } }`.

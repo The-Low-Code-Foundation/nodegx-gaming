@@ -37,6 +37,7 @@ export class Walker {
     this.yaw = yaw;
     this.pitch = 0;
     this.vel?.set(0, 0, 0);
+    this.floater?.reset();
   }
 
   frame(f, dt, { canMove = true, mouseGain = 0.0022 } = {}) {
@@ -49,7 +50,7 @@ export class Walker {
     if (f.keys.has('ArrowUp')) this.pitch = clamp(this.pitch + dt * 1.2, -1.3, 1.3);
     if (f.keys.has('ArrowDown')) this.pitch = clamp(this.pitch - dt * 1.2, -1.3, 1.3);
     if (!canMove) return;
-    if (this.float) return this.floatFrame(f, dt);
+    if (this.float) return this.floater ? this.floater.frame(this, f, dt) : this.floatFrame(f, dt); // a host's own weightless moves (the carrier's handholds)
     this.vel.set(0, 0, 0);
     let fx = 0, fz = 0;
     if (f.keys.has('KeyW')) fz -= 1;

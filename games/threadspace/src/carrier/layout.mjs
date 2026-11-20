@@ -17,6 +17,7 @@ import { dressKits } from './damage.mjs';
 import { roomSurfaces, roomLights, dressRoom, dressHangar, SETS, messTable, desk, lookKey, P as PAL } from './sets.mjs';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { buildDrums } from './drum.mjs';
+import { dressHolds } from './weightless.mjs';
 
 const H = 3; // room height unless the layout says otherwise
 const GAP = 1.5; // two rooms whose walls are closer than this can share a door
@@ -186,6 +187,7 @@ function buildDeck(C, deck, hooks) {
     roomLights(I, c);
     furnish(C, I, c, hooks, open.get(c.id));
     dressRoom(C, I, c, open.get(c.id));
+    if (c.float) dressHolds(C, I, c, open.get(c.id)); // weightless: handholds on every surface (weightless.mjs)
     floorOverlay(C, c, deck.floor);
   }
   I.s = roomSurfaces({ system: 'corridor' });

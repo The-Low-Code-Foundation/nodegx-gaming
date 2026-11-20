@@ -160,7 +160,7 @@ Left for the phases that design their formats: `content/announcements/` (phase 3
   That is eleven, and covers every call that exists today. Generic crew for conversations come in phase 7.
 - Rewrite the existing lines with the joint-service glossary (decision 3), then record with `tools/voices.mjs`.
 
-**Built, 20 November 2026; not yet recorded** (CLAUDE.md has the details):
+**Built and recorded, 20 November 2026** (CLAUDE.md has the details):
 
 - **The announcer** (`src/core/announcer.mjs`): a system says `C.bus.emit('call', { id, room, … })` and the call's file
   in `content/announcements/` (42 of them) says who speaks it, its words, who it is for and by what channel, its
@@ -183,9 +183,13 @@ Left for the phases that design their formats: `content/announcements/` (phase 3
 - **The words**: `content/glossary.json`, checked by `tools/check.mjs` on every spoken line. General quarters, man your
   battle stations, secure from general quarters, now relieve the watch, reveille, taps, late for muster, on report.
   The ranks in people's names (Coxswain, Leading Hand) are left for the story bible.
-- **Still to do:** design the four new voices (`--design --sample out`), audition them, and record the 227 lines that
-  have no clip (`tools/voices.mjs`, about half an hour at the rate limit, maybe over two days of quota); then
-  `--prune` the old shield and "action stations" clips.
+- **Recorded.** All 286 lines have a clip, and the 14 old ones (the shield lines, "action stations", the old pipes)
+  are pruned. The four new voices were auditioned: the engineer and medical officer took on the first try; the
+  ship's voice was re-directed to a brisk, human pace (Google's preview pace, not slow and mechanical); the captain is
+  a woman, Kenyan, in her early fifties, directed as a serving officer on the broadcast, plain and steady (the
+  urgency in the words, not the delivery), chosen from three takes after two castings came out sad, then hammy.
+  Checked in the browser with the sound off: every call in every one of the 371 rooms the ship can name, with every
+  slot value (10,461 in all), finds its clips, and so do the pipes; a raid's calls play in priority order.
 
 ## Phase 4. Living weightless (three or four sessions) [1, 5, 6, and the brace in 5]
 
@@ -194,6 +198,13 @@ Left for the phases that design their formats: `content/announcements/` (phase 3
   and **push off with W along where you look**, harder the longer you hold; then you drift, unable to change course,
   until you reach the next hold or a wall (a soft stop, a catch). A, S, D pull you along the hold you have. Shift is a
   hard push. The suit's cold-gas puffer is the only way to stop in open space, and it is limited.
+  **Built, 20 November 2026** (`src/carrier/weightless.mjs`): the holds in every `float` room (rails at two heights
+  broken at doors, windows and furniture, handles at doors, across the deck and the deckhead, and by each use), and the
+  moves above, in three dimensions (up to the deckhead, through a door only below its lintel). Space takes the hold in
+  reach or, with none, brakes on the puffer; adrift, WASD puff (12 m/s of gas, topped up wherever there is weight);
+  out of gas, in air, you swim very slowly. Holding, the drive's push doesn't move you; adrift, it carries you aft.
+  `?float=all` makes every room of the fixed hull but the hangar weightless with its holds (about 3,200), as a
+  preview of the next step: their chairs, tables and crew are still the walking ones.
 - **Every room outside the drums floats** (decision 2): about 47 rooms. No chairs, crash couches facing the bow,
   foot rails at stations, everything netted or strapped, lamps all round not only above, and the stern wall as the
   floor when she burns. Rebuild the sets (bridge, CIC, engineering control) for it first, then the generic fits. Split

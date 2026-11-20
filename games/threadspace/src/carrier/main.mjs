@@ -52,6 +52,7 @@ import { loadLayout, fetchJson } from '../core/ship.mjs';
 import { loadPeople, peopleNamed, joinPeople } from '../core/people.mjs';
 import { Announcer, loadCalls, DEPTS } from '../core/announcer.mjs';
 import { WalkSeat } from './seats/walk.mjs';
+import { Floater } from './weightless.mjs';
 import { HelmSeat } from './seats/helm.mjs';
 import { FighterSeat } from './seats/fighter.mjs';
 import { GunSeat } from './seats/gun.mjs';
@@ -124,6 +125,9 @@ const hooks = {
   drum: (kind, a) => walk.drum(kind, a)
 };
 
+// ?float=all: every room of the fixed hull but the hangar is weightless, with its handholds (ROADMAP phase 4, the
+// rooms still to be rebuilt for it: until then their chairs and tables are where they were).
+if (q.get('float') === 'all') for (const c of L.compartments) if (c.access === 'walk' && typeof c.deck === 'number' && !c.vacuum && !c.bay) c.float = true;
 const C = buildCarrier(L, hooks);
 C.bus = new Bus(); // what the systems say to each other (src/core/events.mjs)
 scene.add(C.obj);
@@ -269,6 +273,7 @@ Object.assign(G, {
   hands, doors, drive, deckOf, blenderFighters
 });
 const walk = (G.walk = new WalkSeat(G));
+walker.floater = new Floater(G); // weightless: the handholds, pushing off, drifting, the puffer (weightless.mjs)
 const helmSeat = new HelmSeat(G);
 const fighterSeat = new FighterSeat(G);
 const gunSeat = new GunSeat(G);
