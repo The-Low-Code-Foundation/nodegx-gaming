@@ -104,6 +104,25 @@ three that would otherwise end up wired into `main.mjs`.
 - Done when the career, a raid, a drill and a landing all behave exactly as before (the sims and the scripted
   play-throughs say so).
 
+**First half done, 20 November 2026** (CLAUDE.md has the details):
+
+- **The check came first.** `tools/carrier-check.mjs` plays a raid, the helm (a burn, the radiators, a raid with the
+  railguns), a launch and landing, the ladders, drums and lifts, and all 28 orders of the first week, with every random
+  number seeded (`?seed=N`) and no frames but the script's (`?hold=1`). Two runs agree to the millimetre, so each step
+  below was checked by comparing fingerprints: all five were the same after every step. The drill is covered inside
+  the career (its `shoot` order); the scripts cannot aim, so they see it run its course, not hits.
+- **The event bus** (`src/core/events.mjs`, `C.bus`): `job`, `job-end`, `raid`, `condition`, `hit`, `breach`, `fire`,
+  `fighter-down`, `launch`, `landed`, `talk`. Three callbacks became events (`dc.onEnd`, `hooks.raid`,
+  `hooks.crippled`); the rest are said with nobody listening yet, ready for the announcer (phase 3) and missions
+  (phase 8). Requests that want an answer (`hooks.rescue`, the layout's uses, `routine.onMuster`) stay hooks.
+- **Seats out of `main.mjs`** (`src/carrier/seats/`: walk, helm, fighter, gun, cutaway, each with `key` and `frame`),
+  with `drive.mjs`, `doors.mjs` and `render.mjs` beside them. `main.mjs` went from about 1,160 lines to 470.
+- **`weapons.mjs` and `sets.mjs` split** into `weapons/` (eight files mixed into the class) and `sets/` (fourteen),
+  with the old file left as the front door so nothing that imports them changed.
+
+Still to do in this phase: the layout split into `ships/carrier/`, and the content folders with `tools/check.mjs`.
+The seats are named for the carrier still (`C`, `L`); they take any ship's layout, which decision 1 wants.
+
 ## Phase 3. Announcements and voices (one session) [12]
 
 - **Who hears what.** Every call gets an audience and a channel. Audience: `all`, a zone, a department, flight,
