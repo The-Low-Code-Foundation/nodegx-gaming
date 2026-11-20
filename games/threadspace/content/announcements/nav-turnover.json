@@ -1,0 +1,12 @@
+{
+  "id": "nav-turnover",
+  "about": "Time to flip and burn (helmsight.mjs).",
+  "who": "ship",
+  "say": [
+    "Navigator. Turnover. Flip and burn."
+  ],
+  "to": {
+    "bridge": "headset"
+  },
+  "priority": 3
+}

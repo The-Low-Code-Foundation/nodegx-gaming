@@ -49,6 +49,7 @@ export const torpedoParts = {
       this.flash(p, 4, '#d8e8ff', 0.3);
     }
     this.tubeStock -= Math.min(U.salvo, this.tubeStock);
-    this.dc?.say('Tubes one and two, fire. Birds away.', 'The CIC fired a torpedo salvo at the raider.', 0, 4);
+    this.C.bus?.emit('call', { id: 'torpedoes-away' });
+    this.dc?.say(null, 'The CIC fired a torpedo salvo at the raider.', 0, 4);
   }
 };

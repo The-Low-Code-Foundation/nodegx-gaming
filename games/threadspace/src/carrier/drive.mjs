@@ -28,7 +28,7 @@ export class Drive {
   /** After the helm's frame: the helm asking for the main drive while it is held starts (or calls off) the stand-by. */
   standBy(dt, helm, atHelm) {
     if (this.held && helm.u[2] < -0.05) {
-      if (this.warn === 0) this.dc.say('Stand by for main drive. All hands, take hold.', `Stand by for main drive: lighting in ${WARN} s. In the weightless spaces, take hold.`, 0, 4);
+      if (this.warn === 0) this.dc.C.bus?.emit('call', { id: 'drive-standby' }), this.dc.say(null, `Stand by for main drive: lighting in ${WARN} s. In the weightless spaces, take hold.`, 0, 4);
       this.warn += dt;
       if (atHelm) this.helmSight.say(`MAIN DRIVE LIGHTING · ${Math.max(1, Math.ceil(WARN - this.warn))}`, 0.25);
     } else if (this.held) this.warn = 0; // let go of it before it lit: called off
@@ -49,8 +49,9 @@ export class Drive {
     this.callT -= dt;
     if (push > 0.6 && !this.burning && this.callT <= 0) {
       this.callT = 40;
-      if (this.spin) this.dc.say('Main drive burning. Weightless spaces, hold on.', `Main drive burning: ${(push / 9.81).toFixed(2)} g toward the stern. In the spine and the tunnel you go aft unless you hold on.`, 0, 5);
-      else this.dc.say('Main drive burning. Hold on to something.', `Main drive burning: ${(push / 9.81).toFixed(2)} g toward the stern.`, 0, 4);
+      this.dc.C.bus?.emit('call', { id: this.spin ? 'drive-burning' : 'drive-burning-all' });
+      if (this.spin) this.dc.say(null, `Main drive burning: ${(push / 9.81).toFixed(2)} g toward the stern. In the spine and the tunnel you go aft unless you hold on.`, 0, 5);
+      else this.dc.say(null, `Main drive burning: ${(push / 9.81).toFixed(2)} g toward the stern.`, 0, 4);
     }
     if (push > 0.3 && !this.burning) this.lurch = 1; // lighting: a shove back into the seat
     this.lurch = Math.max(0, this.lurch - dt / 1.6);

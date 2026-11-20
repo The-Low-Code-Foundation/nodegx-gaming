@@ -1,0 +1,13 @@
+{
+  "id": "engineer",
+  "name": "Engineer officer",
+  "dept": "engineering",
+  "cast": {
+    "voiceId": "voice_wtxdmmbowidq",
+    "design": "A brisk, precise woman in her mid-forties with a Singaporean English accent, quick and matter-of-fact.",
+    "gender": "female",
+    "language": "en-SG",
+    "style": "Clipped and practical over the engineering net; reporting numbers, not feelings.",
+    "sample": "Heat warning. Heat sinks at eighty percent. Spread the radiators or ease off the guns."
+  }
+}

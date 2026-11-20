@@ -72,7 +72,8 @@ export const broadsideParts = {
     b.t = B.reload;
     this.sfx?.cue('clunk', { vol: 0.6 });
     const side = s.k === 'port' ? 'Port' : 'Starboard';
-    this.dc?.say(`${side} broadside, fire. ${n} away.`, `${by === 'helm' ? 'You fired' : 'The CIC fired'} the ${s.k} broadside: ${n} torpedoes, out cold.`, 0, 4);
+    this.C.bus?.emit('call', { id: 'broadside', Side: side, n });
+    this.dc?.say(null, `${by === 'helm' ? 'You fired' : 'The CIC fired'} the ${s.k} broadside: ${n} torpedoes, out cold.`, 0, 4);
     return null;
   },
 
@@ -165,7 +166,8 @@ export const broadsideParts = {
     if (onCarrier) return; // integrity.mjs has already taken the hit (and shaken you)
     const D = this.W.torpedo.raiderDamage;
     this.raiderHit(at, D[0] + this.rand() * (D[1] - D[0]));
-    this.dc?.say('Torpedo hit on the raider.', 'One of our torpedoes hit the raider.', 0, 4);
+    this.C.bus?.emit('call', { id: 'torpedo-hit-raider' });
+    this.dc?.say(null, 'One of our torpedoes hit the raider.', 0, 4);
   },
 
   /** A torpedo is shot down (`by` who, for the log and the call) or burns out. */

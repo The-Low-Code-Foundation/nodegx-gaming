@@ -1,0 +1,13 @@
+{
+  "id": "secure-condition",
+  "about": "The raid is over and the ship was vented (integrity.mjs standDown).",
+  "who": "captain",
+  "say": [
+    "Secure from general quarters. Secure from condition one. Repressurising the ship."
+  ],
+  "to": {
+    "all": "tannoy",
+    "flight": "radio"
+  },
+  "priority": 3
+}

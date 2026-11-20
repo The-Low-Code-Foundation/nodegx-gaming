@@ -47,6 +47,7 @@ import { box, at, mat, mulberry, clamp } from '../util.mjs';
 import { hazardMat } from '../decor.mjs';
 import { facing, roomAt } from './layout.mjs';
 import { frameOf, sideOf, portals } from './wayfinding.mjs';
+import { sectionOf, sectionName } from '../core/announcer.mjs';
 
 const DOOR_H = 2.5;
 const SIDES = {
@@ -297,6 +298,7 @@ export class Integrity {
     if (!link.pumping) {
       link.pumping = true;
       this.sfx?.cue('hiss', { dur: 3.5, vol: 0.5 });
+      this.C.bus?.emit('call', { id: 'airlock', how: link.cyc === 'out' ? 'Airlock cycling. Pumping down.' : 'Airlock cycling. Filling.' });
       this.dc?.say(null, link.cyc === 'out' ? 'Airlock: pumping down.' : 'Airlock: filling.', 0, 3);
     }
     const rate = this.N.air.lockRate ?? 25; // kPa a second
@@ -681,8 +683,16 @@ export class Integrity {
     const where = deck ? `${deck[0].toUpperCase() + deck.slice(1)}, frame ${frameOf(this.L, z)}, ${side}.` : `Frame ${frameOf(this.L, z)}.`;
     const what = breached.c.access === 'walk' ? 'Hull breach' : 'Hit';
     const spare = breached.c.drum && /^spare/i.test(breached.c.name); // a drum's unnamed rooms are numbered spares
-    const said = spare ? 'an empty room' : `the ${breached.c.name.toLowerCase()}`, shown = spare ? 'empty room' : breached.c.name;
-    this.dc?.say(`${what} in ${said}. ${where}`, `${what}: ${shown}. ${where}`, 400, 6);
+    const shown = spare ? 'empty room' : breached.c.name;
+    // The ship names a walkable room and its deck; a sealed one (a tank, a magazine) only by the part of the ship.
+    const frame = frameOf(this.L, z), room = breached.c.id;
+    if (breached.c.vacuum) {
+      // Airless already (the hangar): the plating is holed, nobody's air is going.
+    } else if (breached.c.access === 'walk') {
+      this.C.bus?.emit('call', { id: 'hull-breach', room, frame, side });
+      this.C.bus?.emit('call', { id: 'casualty', room, part: sectionName(this.L, sectionOf(this.L, breached.c)) });
+    } else this.C.bus?.emit('call', { id: 'hit', room, frame });
+    this.dc?.say(null, `${what}: ${shown}. ${where}`, 0, 6);
   }
 
   // --- attacks -------------------------------------------------------------------------------------------------------
@@ -692,7 +702,6 @@ export class Integrity {
     const A = this.N.attack;
     from ??= ['port', 'starboard', 'above', 'below'][Math.floor(this.rand() * 4)];
     const n = A.hits[0] + Math.floor(this.rand() * (A.hits[1] - A.hits[0] + 1));
-    this.sfx?.cue('klaxon', { n: 5 });
     const side = { port: 'to port', starboard: 'to starboard', above: 'from above', below: 'from below' }[from];
     this.stations = true;
     for (const l of this.links) (l.open = false), (l.hold = 0);
@@ -700,12 +709,14 @@ export class Integrity {
     this.setCondition();
     if (this.C.bus?.has('raid')) {
       // A raider you can see and fight (weapons.mjs): its own shells make the hits, and it says when the raid is over.
-      this.dc?.say(`Action stations, action stations. Raider closing ${side}. Gun crews close up. Close all pressure doors.`, `Action stations: a raider closing ${side}. Gun crews closing up; all pressure doors closing.`, 300, 6);
+      this.C.bus?.emit('call', { id: 'gq-raider', side });
+      this.dc?.say(null, `General quarters: a raider closing ${side}. Gun crews to their turrets; all pressure doors closing.`, 0, 6);
       this.standAt = Infinity;
       this.C.bus.emit('raid', { from });
       return 0;
     }
-    this.dc?.say(`Action stations, action stations. Incoming fire ${side}. Close all pressure doors. Brace, brace, brace.`, `Action stations: incoming fire ${side}. All pressure doors closing.`, 300, 6);
+    this.C.bus?.emit('call', { id: 'gq-incoming', side });
+    this.dc?.say(null, `General quarters: incoming fire ${side}. All pressure doors closing.`, 0, 6);
     let last = this.time;
     for (let i = 0; i < n; i++) {
       const t = this.time + A.lead + i * (0.8 + this.rand() * 0.9);
@@ -736,7 +747,8 @@ export class Integrity {
     const pen = opts.pen ?? S.pen[0] + r() * (S.pen[1] - S.pen[0]) - (opts.shell && ar ? ar.pen : 0);
     if (opts.torpedo) {
       const z = entry.z;
-      this.dc?.say(`Torpedo hit. Frame ${frameOf(this.L, z)}, ${sideOf(entry.x)}.`, `Torpedo hit: frame ${frameOf(this.L, z)}, ${sideOf(entry.x)}.`, 200, 6);
+      this.C.bus?.emit('call', { id: 'torpedo-hit', z, frame: frameOf(this.L, z), side: sideOf(entry.x) });
+      this.dc?.say(null, `Torpedo hit: frame ${frameOf(this.L, z)}, ${sideOf(entry.x)}.`, 0, 6);
     }
     return this.strike({
       from, dir: dir.clone().normalize(), entry: entry.clone(),
@@ -763,7 +775,8 @@ export class Integrity {
     }
     const half = part.half && D.halves.find((h) => h.id === part.half)?.name.toLowerCase();
     const what = { hub: `the ${half}'s hub ring`, spoke: `a spoke of the ${half}`, strut: 'a sleeve strut' }[part.part];
-    this.dc?.say(`Hit on ${what}. ${n ? 'The ring corridor is venting.' : 'Structure damaged, no breach.'}`, `Hit: ${what}.${n ? ' Ring corridor venting.' : ''}`, 300, 5);
+    this.C.bus?.emit('call', { id: 'structure-hit', room: n?.c.id, what, result: n ? 'The ring corridor is venting.' : 'Structure damaged, no breach.' });
+    this.dc?.say(null, `Hit: ${what}.${n ? ' Ring corridor venting.' : ''}`, 0, 5);
     return res;
   }
 
@@ -789,8 +802,12 @@ export class Integrity {
     if (this.cond) {
       this.cond.secured = this.time;
       this.cond.venting = false;
-      this.dc?.say('Stand down from action stations. Secure from condition one. Repressurising the ship.', 'Stand down: condition one secured, the air is coming back. Keep your helmet on until it is.', 0, 6);
-    } else this.dc?.say('Stand down from action stations.', 'Stand down from action stations.', 0, 4);
+      this.C.bus?.emit('call', { id: 'secure-condition' });
+      this.dc?.say(null, 'Secure from general quarters: condition one secured, the air is coming back. Keep your helmet on until it is.', 0, 6);
+    } else {
+      this.C.bus?.emit('call', { id: 'secure' });
+      this.dc?.say(null, 'Secure from general quarters.', 0, 4);
+    }
   }
 
   /** Condition one: suits on, then (after `condition.warn` seconds) the crew spaces are pumped down. Called with
@@ -800,14 +817,15 @@ export class Integrity {
     if (!K || this.cond) return;
     this.cond = { t: this.time, venting: false, secured: null };
     this.C.bus?.emit('condition', { on: true });
-    if (K.drums === false) this.dc?.say(`Set condition one throughout the ship. All hands, don vac suits. Venting the fixed hull in ${K.warn} seconds. The drums stay pressurised.`, `Condition one: put on a vac suit (VAC SUITS lockers). The fixed hull vents in ${K.warn} s; the drums keep their air.`, 1800, 7);
-    else this.dc?.say(`Set condition one throughout the ship. All hands, don vac suits. Venting in ${K.warn} seconds.`, `Condition one: put on a vac suit (VAC SUITS lockers). The ship vents in ${K.warn} s.`, 1800, 7);
+    this.C.bus?.emit('call', { id: K.drums === false ? 'condition-one-hull' : 'condition-one', warn: String(K.warn) });
+    if (K.drums === false) this.dc?.say(null, `Condition one: put on a vac suit (VAC SUITS lockers). The fixed hull vents in ${K.warn} s; the drums keep their air.`, 0, 7);
+    else this.dc?.say(null, `Condition one: put on a vac suit (VAC SUITS lockers). The ship vents in ${K.warn} s.`, 0, 7);
     this.events.push({ t: this.time + K.warn, fn: () => {
       if (!this.cond || this.cond.secured) return;
       this.cond.venting = true;
-      this.sfx?.cue('klaxon', { n: 2 });
-      if (K.drums === false) this.dc?.say('Venting the fixed hull. Helmets on.', 'Venting: the fixed hull\'s crew spaces are being pumped down.', 0, 5);
-      else this.dc?.say('Venting the ship. Helmets on.', 'Venting: the crew spaces are being pumped down.', 0, 5);
+      this.C.bus?.emit('call', { id: K.drums === false ? 'venting-hull' : 'venting' });
+      if (K.drums === false) this.dc?.say(null, 'Venting: the fixed hull\'s crew spaces are being pumped down.', 0, 5);
+      else this.dc?.say(null, 'Venting: the crew spaces are being pumped down.', 0, 5);
     } });
   }
 
@@ -905,7 +923,8 @@ export class Integrity {
     if (cond?.secured != null && [...this.nodes.values()].every((n) => n.c.access !== 'walk' || this.breached.has(n) || n.air > A.nominal - 4)) {
       this.cond = null;
       this.C.bus?.emit('condition', { on: false });
-      this.dc?.say('The ship is repressurised. You may open your helmets.', 'The air is back: helmets may come off.', 0, 5);
+      this.C.bus?.emit('call', { id: 'repressurised' });
+      this.dc?.say(null, 'The air is back: helmets may come off.', 0, 5);
     }
   }
 

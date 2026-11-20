@@ -50,6 +50,7 @@ import { Drive } from './drive.mjs';
 import { Doors } from './doors.mjs';
 import { loadLayout, fetchJson } from '../core/ship.mjs';
 import { loadPeople, peopleNamed, joinPeople } from '../core/people.mjs';
+import { Announcer, loadCalls, DEPTS } from '../core/announcer.mjs';
 import { WalkSeat } from './seats/walk.mjs';
 import { HelmSeat } from './seats/helm.mjs';
 import { FighterSeat } from './seats/fighter.mjs';
@@ -68,6 +69,11 @@ const W = await fetchJson(`${SHIP}/watches.json`); // the ship's routine: clock,
 // The officers and leading hands are people (content/people/): the ship's files say where they stand, and their own
 // files who they are.
 joinPeople(K, W, await loadPeople(peopleNamed(K, W), fetchJson));
+// The ship's calls (content/announcements/, src/core/announcer.mjs), who speaks for her (voices.json), and the people
+// who speak on her broadcast without standing a post (the captain, the engineer officer, the medical officer).
+const V = await fetchJson(`${SHIP}/voices.json`);
+const CALLS = await loadCalls(fetchJson);
+const callers = await loadPeople([...new Set([...CALLS.values()].map((a) => a.who))].filter((id) => !V.speakers[id]), fetchJson);
 const q = new URLSearchParams(location.search);
 if (L.weapons.railgun && !L.weapons.railgun.port) {
   // A ship with a railgun along her keel (the archived first carrier) aims it by turning the whole ship.
@@ -149,10 +155,10 @@ const cockpit = new Cockpit(document.getElementById('c-fhud'));
 // integrity (integrity.mjs): each compartment's air and health, the raids whose shells hole her, the pressure doors and
 // the repair drones. ?dc=0 means no raids (a drill can still be called from the damage control centre); ?voice=0 keeps
 // everyone quiet: the speakers keep to alarms, and nobody speaks.
-// The voices (voice.mjs): recorded clips where there are some (assets/voice/), the browser's speech for the rest.
+// The voices (voice.mjs): recorded clips (assets/voice/); a line with none is not spoken.
 const voices = new Voices({ on: q.get('voice') !== '0' });
 const seed = +q.get('seed') || undefined; // ?seed=N: repeatable runs (carrier.html, tools/carrier-check.mjs)
-const dc = new DamageControl(C, { sfx, auto: false, voices, seed });
+const dc = new DamageControl(C, { sfx, auto: false, seed });
 const autoRaids = q.get('dc') !== '0';
 const ship = new Integrity(C, {
   dc, sfx, thrusters: thrusterList, auto: autoRaids, seed,
@@ -210,7 +216,6 @@ const routine = new Routine(C, W, { sfx, crew: q.get('crew') !== '0', ship, dc }
 const crew = routine.crew;
 career.routine = routine;
 career.nav = helmSight; // the transit step's waypoint
-routine.voices = voices;
 const sleepEl = document.getElementById('c-sleep');
 routine.tell = (who, text, secs = 6) => (career.on ? career.tell(who, text, secs) : routine.note(who ? `${who.name}: ${text}` : text, secs));
 routine.onTurnIn = (go) => {
@@ -234,6 +239,22 @@ routine.onMuster = (present, leader, line) => career.musterCalled(present, leade
 // The off-watch hands in the drums (hands.mjs): in the rooms by the routine, at the lifts at the change of watch, up
 // the spokes at action stations. Only round you, and only out of your sight.
 const hands = C.drums && W.drum && q.get('crew') !== '0' ? new Hands(C, W.drum, { routine, ship, sfx, camera }) : null;
+
+// The announcer (src/core/announcer.mjs): every call the ship makes, said to whoever it is for, by the tannoy, their
+// headset or the cockpit radio, with a subtitle (#c-sub). Who you are is your rank's nets (free roam: every net) and
+// the seat you are in.
+const speakers = Object.fromEntries([...Object.entries(V.speakers), ...[...callers.values(), ...K.people, ...W.sections.map((s) => s.leader)].map((p) => [p.id, { label: p.name }])]);
+const announcer = new Announcer(C, CALLS, {
+  voices, sfx, speakers, nets: V.nets, el: document.getElementById('c-sub'),
+  airOf: (id) => ship.airOf(id), unsafe: L.integrity.air.unsafe
+});
+const SEAT_NET = { helm: 'bridge', gun: 'gunners', fighter: 'flight' };
+announcer.you = () => {
+  const depts = new Set(career.on ? K.stations?.ranks?.[career.rank]?.depts ?? [] : DEPTS);
+  if (SEAT_NET[mode]) depts.add(SEAT_NET[mode]);
+  const room = mode === 'walk' ? walk.roomNow() : mode === 'helm' ? 'bridge' : null;
+  return { mode, room, sealed: !!ship.helmet, depts };
+};
 
 const walker = new Walker(C.decks.get(L.spawn.deck));
 const input = new Input(canvas);
@@ -402,6 +423,7 @@ function tick(dt) {
   hands?.frame(dt, { mode, drum: walk.drumNow, ride: walk.ride, room: roomNow, x: walker.pos.x, z: walker.pos.z });
   if (mode !== 'walk') routine.closeBill();
   career.frame(dt, { mode, deck: placeNow, seg: walk.drumNow?.seg, room: roomNow });
+  announcer.frame(dt);
   // The clock is kept with the career, now and then as well as at each order.
   if (career.on && (saveT -= dt) <= 0) (saveT = 15), career.save();
   helmSeat.after();
@@ -488,7 +510,7 @@ window.addEventListener('pointerdown', wake, { once: true });
 window.addEventListener('keydown', wake, { once: true });
 
 window.__carrier = {
-  C, L, K, W, crew, routine, hands, body, helm, thrusters, walker, renderer, camera, cut, fighter, dc, ship, guns, plant, helmSight, sfx, approach, cockpit, career, voices,
+  C, L, K, W, crew, routine, hands, body, helm, thrusters, walker, renderer, camera, cut, fighter, dc, ship, guns, plant, helmSight, sfx, approach, cockpit, career, voices, announcer,
   gas, carrierGas, flightAudio, composer, bloom, ABOARD, ambience, input, G, seats, drive, doors,
   mode: () => mode,
   tick: (n = 1, dt = 1 / 60) => {

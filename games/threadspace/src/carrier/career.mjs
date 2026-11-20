@@ -330,7 +330,7 @@ export class Career {
         if (s.phase === 'wait') {
           if (mode !== 'gun' || (T && !T.gone)) s.t = 0;
           else if (s.t > 3) {
-            if (st.start) this.dc.say(st.start, st.start, 0, 7);
+            if (st.start) this.C.bus?.emit('call', { id: 'bridge-line', line: st.start }), this.dc.say(null, st.start, 0, 7);
             s.R = this.guns.drill(st.from);
             s.phase = 'on';
           }
@@ -345,7 +345,7 @@ export class Career {
           const T = this.guns.raider;
           if (mode !== 'gun' || (T?.target && !T.gone)) s.t = 0; // not until the target tug is clear
           else if (s.t > (st.wait ?? 3)) {
-            if (st.start) this.dc.say(st.start, null, 0);
+            if (st.start) this.C.bus?.emit('call', { id: 'bridge-line', line: st.start });
             this.ship.attack(st.from);
             s.R = this.guns.raider;
             s.phase = 'on';
@@ -496,10 +496,10 @@ export class Career {
   // --- what you are told, and the card ---
 
   /** `who` (an officer or a leading hand, or null for the ship) tells you `text`: on the card for `secs`, and spoken
-   *  (`spoken`, when the words said are shorter than the card's). */
+   *  (`spoken`, when the words said are shorter than the card's) if it was recorded. */
   tell(who, text, secs = 6, spoken = text) {
     this.msg = { who: who?.name ?? null, text, t: secs };
-    if (who) this.voices?.say(who.id, spoken, { pitch: who.voice?.pitch ?? 1, rate: who.voice?.rate ?? 1 });
+    if (who) this.voices?.say(who.id, spoken);
   }
 
   card(mode) {

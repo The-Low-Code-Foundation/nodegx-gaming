@@ -1,0 +1,15 @@
+{
+  "id": "heat-warning",
+  "about": "The heat sinks pass 80% (plant.mjs).",
+  "who": "engineer",
+  "say": [
+    "Heat warning. Heat sinks at eighty percent."
+  ],
+  "to": {
+    "bridge": "headset",
+    "engineering": "headset",
+    "gunners": "headset"
+  },
+  "priority": 3,
+  "again": 30
+}

@@ -1,46 +1,57 @@
 {
-  "about": "The ship's broadcast and how every voice aboard is recorded. The officers and leading hands are people, and each one's recorded voice is the `cast` in their own file (content/people/<id>.json); `speakers` here is only `ship`. Each speaker's cast is a voice designed with Gemini TTS from `design` (1-2 sentences: age, gender, timbre, accent; permanent traits only) and saved in the Google project; `voiceId` is that saved voice (`node tools/voices.mjs --design` makes any that are missing, in your own project if you cloned this). `style` is the short acting note sent with every line. tools/voices.mjs works out every fixed line the game can say (the career's orders, the watch pipes, the `ship` calls below) and records the ones not yet in assets/voice/. The game plays a clip when it has one for the exact line and falls back to the browser's own speech when it has not. `ship` is the main broadcast (the bridge, flight control, the damage control speakers); `tannoy` puts it through a speaker. `sample` is the line --sample renders to audition the voice. A crew drawn from all over Earth: cast to the 3D body each one is given (crew.mjs deals the people in turn).",
+  "about": "Who speaks for the ship, and how every voice aboard is recorded. The ship's own calls are in content/announcements/ (one file each: src/core/announcer.mjs); their speakers are the two below, or people. The officers, the leading hands and the officers on the broadcast (the captain, the engineer officer, the medical officer) are people, and each one's recorded voice is the `cast` in their own file (content/people/<id>.json); `speakers` here are the two voices that are not a person: `ai`, the ship's automated system (alarms, fire detection, pressure, the airlocks, hits, torpedo warnings), and `ship`, the bridge's talker (the watch pipes, the navigator, the CIC's fire orders, the bridge talking to a turret). Each speaker's cast is a voice designed with Gemini TTS from `design` (1-2 sentences: age, gender, timbre, accent; permanent traits only) and saved in the Google project; `voiceId` is that saved voice (`node tools/voices.mjs --design` makes any that are missing, in your own project if you cloned this). `style` is the short acting note sent with every line; `label` is the subtitle's name for them; `tannoy` puts their lines through a speaker. `sample` is the line --sample renders to audition the voice. A crew drawn from all over Earth: cast to the 3D body each one is given (crew.mjs deals the people in turn). `nets`: the rooms where a department's net is on the speaker, so standing there you hear what that department hears (the bridge's rooms hear the bridge's calls).",
   "model": "gemini-3.8-flash-tts",
   "speakers": {
     "ship": {
       "voiceId": "voice_av0j47o3r5ps",
+      "label": "Bridge",
       "design": "A clear, even-voiced woman in her thirties with a neutral Canadian accent, the trained cadence of a broadcast announcer.",
       "gender": "female",
       "language": "en-CA",
       "style": "Urgent without panic; every word carries down a steel passage.",
       "tannoy": true,
-      "sample": "Action stations, action stations. Raider closing to starboard. Gun crews close up. Close all pressure doors."
+      "sample": "Now relieve the watch. Blue watch has the first watch."
+    },
+    "ai": {
+      "voiceId": "voice_86u1detsknuf",
+      "label": "Ship",
+      "design": "A smooth, level, ageless woman's voice with no regional accent, perfectly even in pitch and pace, without warmth or hurry, like a well-made automated system.",
+      "gender": "female",
+      "language": "en-US",
+      "style": "A ship's announcer: clear and composed at a natural, brisk speaking pace, human and attentive, never sing-song or robotic.",
+      "tannoy": true,
+      "sample": "Fire, fire, fire. Gym and rec. Forward drum, outer deck. Away the damage control party."
     }
   },
-  "ship": [
-    "Action stations, action stations. Raider closing to port. Gun crews close up. Close all pressure doors.",
-    "Action stations, action stations. Raider closing to starboard. Gun crews close up. Close all pressure doors.",
-    "Action stations, action stations. Raider closing from above. Gun crews close up. Close all pressure doors.",
-    "Action stations, action stations. Raider closing from below. Gun crews close up. Close all pressure doors.",
-    "Action stations, action stations. Incoming fire to port. Close all pressure doors. Brace, brace, brace.",
-    "Action stations, action stations. Incoming fire to starboard. Close all pressure doors. Brace, brace, brace.",
-    "Action stations, action stations. Incoming fire from above. Close all pressure doors. Brace, brace, brace.",
-    "Action stations, action stations. Incoming fire from below. Close all pressure doors. Brace, brace, brace.",
-    "Stand down from action stations.",
-    "Set condition one throughout the ship. All hands, don vac suits. Venting in 10 seconds.",
-    "Venting the ship. Helmets on.",
-    "Set condition one throughout the ship. All hands, don vac suits. Venting the fixed hull in 10 seconds. The drums stay pressurised.",
-    "Venting the fixed hull. Helmets on.",
-    "The ship is repressurised. You may open your helmets.",
-    "Stand down from action stations. Secure from condition one. Repressurising the ship.",
-    "Torpedo launch. Torpedoes inbound. Point defence is tracking.",
-    "Tubes one and two, fire. Birds away.",
-    "Torpedo hit on the raider.",
-    "Heat warning. Heat sinks at eighty percent.",
-    "Heat sinks full. Point defence and railgun holding fire. Main drive restricted.",
-    "Heat sinks full. Point defence holding fire. Main drive restricted.",
-    "Propellant leak. A tank is holed.",
-    "Main drive burning. Hold on to something.",
-    "Navigator. Turnover. Flip and burn.",
-    "The port radiator is badly damaged.",
-    "The starboard radiator is badly damaged.",
-    "The raider is breaking off.",
-    "Splash one. The raider is destroyed. Well done, gunners.",
-    "Flight control. You are hit and dead in space. Hands off: we are bringing you in."
-  ]
+  "nets": {
+    "bridge": [
+      "bridge",
+      "cic",
+      "flag-plot",
+      "nav-office",
+      "tower-passage",
+      "captains-cabin"
+    ],
+    "dc": [
+      "damage-control",
+      "dc-store",
+      "repair-fwd",
+      "repair-mid",
+      "switchboard"
+    ],
+    "engineering": [
+      "eng-control",
+      "eng-office",
+      "eng-passage"
+    ],
+    "flight": [
+      "flight-control",
+      "flight-ops",
+      "pilots-ready",
+      "aircrew"
+    ],
+    "medical": [
+      "medbay"
+    ]
+  }
 }

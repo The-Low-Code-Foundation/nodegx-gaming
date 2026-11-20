@@ -2,10 +2,6 @@
   "id": "dc",
   "name": "Chief Okoro",
   "dept": "crew",
-  "voice": {
-    "pitch": 0.7,
-    "rate": 1.04
-  },
   "cast": {
     "voiceId": "voice_nm8fatgcnafz",
     "design": "A big, deep-voiced Nigerian man in his mid-forties from Lagos, resonant and commanding, with a Lagos Nigerian English accent.",

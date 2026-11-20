@@ -35,7 +35,6 @@ export class Routine {
    *  watch bill read), `onTurnIn(go)` (your bunk used: call `go()` to sleep), `onMuster(present)` (the roll called). */
   constructor(C, W, { sfx, crew = true, ship, dc }) {
     Object.assign(this, { C, L: C.L, W, sfx, ship, dc });
-    this.voices = null; // voice.mjs: set by main.mjs, says the pipes when they were recorded
     this.rate = W.clock.rate;
     this.t = (W.clock.start[0] - 1) * DAY + hm(W.clock.start[1]);
     this.watches = W.watches.map((w) => ({ ...w, a: hm(w.from), b: w.to === '24:00' ? DAY : hm(w.to) }));
@@ -160,7 +159,7 @@ export class Routine {
   /** A pipe over the speakers: the call, and its words on the strip under the clock. */
   pipe(text, secs = 7) {
     this.sfx?.cue('pipe', { vol: 0.8 });
-    this.voices?.say('ship', text, { delay: 1900, clipOnly: true }); // after the call; said only if it was recorded
+    this.C.bus?.emit('call', { id: 'pipe', line: text }); // after the call (content/announcements/pipe.json)
     this.el.pipe.textContent = text;
     this.el.pipe.hidden = false;
     this.pipeT = secs;

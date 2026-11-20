@@ -22,6 +22,7 @@ import * as THREE from 'three';
 
 const _a = new THREE.Vector3(), _b = new THREE.Vector3(), _c = new THREE.Vector3();
 const GREEN = '#7dffb0', AMBER = '#ffc24a', RED = '#ff5a4a', BLUE = '#8fc4ff', TEXT = '#cfe8ff';
+const cap = (s) => s[0] + s.slice(1).toLowerCase(); // TANGO → Tango, as the navigator says it
 const km = (d) => (d < 1000 ? `${Math.round(d)} m` : `${(d / 1000).toFixed(d < 10000 ? 2 : 1)} km`);
 
 export class HelmSight {
@@ -49,7 +50,7 @@ export class HelmSight {
     const names = ['TANGO', 'SIERRA', 'ROMEO', 'KILO', 'VICTOR'];
     this.nav = { at: this.C.obj.position.clone().addScaledVector(dir, dist), name: names[this.arrivals % names.length], t: 0, flipCalled: false };
     this.say(`Waypoint ${this.nav.name} laid in: ${km(dist)}. Burn, flip, and burn to stop on it.`);
-    this.dc?.say(`Navigator. Waypoint ${this.nav.name} laid in.`, null, 0);
+    this.C.bus?.emit('call', { id: 'nav-waypoint', name: cap(this.nav.name) });
   }
 
   say(text, secs = 4) {
@@ -359,12 +360,12 @@ export class HelmSight {
     N.call = N.closing > 3 && N.stop > N.range * 1.05 + 500 ? 'over' : N.closing > 3 && N.stop > N.range * 0.92 ? (off < 0.2 ? 'brake' : 'flip') : 'cruise';
     if (N.call === 'flip' && was !== 'flip' && !N.flipCalled) {
       N.flipCalled = true;
-      this.dc?.say('Navigator. Turnover. Flip and burn.', null, 0);
+      this.C.bus?.emit('call', { id: 'nav-turnover' });
     }
     if (N.range < 2000 && v.length() < 20) {
       this.arrivals++;
       this.say(`On station at ${N.name}: ${km(N.range)} off, ${v.length().toFixed(1)} m/s. Well flown.`, 6);
-      this.dc?.say(`Navigator. On station at waypoint ${N.name}.`, null, 0);
+      this.C.bus?.emit('call', { id: 'nav-on-station', name: cap(N.name) });
       const done = N;
       this.nav = null;
       this.onArrive?.(done);

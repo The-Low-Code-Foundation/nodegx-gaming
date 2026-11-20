@@ -1,0 +1,22 @@
+{
+  "id": "damage-done",
+  "about": "A damage control job is finished (damage.mjs end).",
+  "who": "ai",
+  "say": [
+    "{out}",
+    "{room}"
+  ],
+  "slots": {
+    "out": [
+      "Fire out.",
+      "Fault repaired.",
+      "Leak patched."
+    ]
+  },
+  "to": {
+    "zone": "tannoy",
+    "dc": "headset",
+    "bridge": "headset"
+  },
+  "priority": 2
+}

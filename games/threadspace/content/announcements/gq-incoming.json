@@ -1,0 +1,27 @@
+{
+  "id": "gq-incoming",
+  "about": "Fire coming in from a raider out of sight (integrity.mjs attack, no raider to fight).",
+  "who": "captain",
+  "say": [
+    "General quarters, general quarters. Incoming fire {side}. Close all pressure doors. Brace, brace, brace."
+  ],
+  "slots": {
+    "side": [
+      "to port",
+      "to starboard",
+      "from above",
+      "from below"
+    ]
+  },
+  "to": {
+    "all": "tannoy",
+    "flight": "radio"
+  },
+  "priority": 5,
+  "delay": 0.3,
+  "again": 30,
+  "alarm": {
+    "cue": "klaxon",
+    "n": 5
+  }
+}

@@ -2,10 +2,6 @@
   "id": "shaw",
   "name": "Leading Hand Shaw",
   "dept": "crew",
-  "voice": {
-    "pitch": 1.1,
-    "rate": 1.02
-  },
   "cast": {
     "voiceId": null,
     "design": "A gruff man in his late thirties with a Mumbai Indian English accent, quick and practical.",

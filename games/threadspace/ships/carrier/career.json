@@ -5,7 +5,7 @@
     "people": "The officers who give the orders, by `id`: each is a person in content/people/<id>.json (name, dept, voice, cast: src/core/people.mjs), and here only where they stand on this ship: at `at` in `room` (deck from the room), facing `yaw`, in the `pose` of crew.mjs. Their file says who they are, wherever they serve.",
     "steps": "`do` is what the step waits for: talk (use `who`), go (stand in `room`), drill (a damage control job of `kind` in `room`, put out or mended), suit (put on a vac suit from a VAC SUITS locker), man (sit in a turret), shoot (a gunnery drill: a tug tows a target sled down the side `from`, once you are in a turret; you must hit the sled `hits` times; nothing shoots back), raid (a raider `from` a side, `wait` seconds after you are in a turret; you must hit it `hits` times yourself), board / launch (a fighter), land (back aboard; `manual` means down the lane, not handed over), helm (take it), turn (turn her through `deg` and stop her turning), transit (at the helm the navigator lays in a waypoint `dist` metres out (15000), `off` degrees off the bow (40); arrive on it inside 2 km at under 20 m/s), read (the watch bill on its board outside the ship's office), sleep (turn in at your bunk, and be called for your watch), muster (stand in your muster room when the roll is called at the change of your watch; adrift, your name goes in the book and you must report there late: `adrift` is what is called, the order, and what is said when you get there), rounds (stand in each of `rooms`, in any order). `order` is the card's line; `say` what is said when the step is done (a talk step: what that person tells you); `start` what is said when it begins; `fail` what is said when it goes wrong (the step runs again). `rank` and `unlock` take effect when the step is done.",
     "unlock": "guns (the turret hatches), raids (raiders come by themselves), fighters (climbing into one), helm (taking it). Before they are unlocked, `refuse` says why not.",
-    "stations": "Action stations, by your rank (career.mjs `closeUp`): when the ship goes to action stations (outside a `raid` order, which says where to go itself) the duty card says `say`, with `at` filled in from your rank's line in `ranks`: a `room` to stand in, or a `seat` (`gun`, `fighter` or `helm`; the helm also counts the bridge). Not closed up within `close` seconds and your name goes in the book, as at a muster: `who` (an officer's id) says `adrift`. `closed` is said when you get there."
+    "stations": "Action stations, by your rank (career.mjs `closeUp`): when the ship goes to action stations (outside a `raid` order, which says where to go itself) the duty card says `say`, with `at` filled in from your rank's line in `ranks`: a `room` to stand in, or a `seat` (`gun`, `fighter` or `helm`; the helm also counts the bridge). Not closed up within `close` seconds and your name goes in the book, as at a muster: `who` (an officer's id) says `adrift`. `closed` is said when you get there. `depts` are the nets a rank is on (src/core/announcer.mjs): which of the ship's calls reach you on your headset."
   },
   "start": {
     "rank": "Apprentice",
@@ -99,7 +99,7 @@
       "do": "go",
       "room": "quarters-c",
       "order": "Find your bunk in quarters C",
-      "say": "Your bunk and your locker: that is all the room you get. Blue watch is off. Turn in while you can: your leading hand will shake you for the watch."
+      "say": "Your bunk and your locker: that is all the room you get. Blue watch is off. Turn in while you can: your leading hand will wake you for the watch."
     },
     {
       "do": "sleep",
@@ -111,8 +111,8 @@
       "say": "Apprentice: report to Chief Okoro in damage control.",
       "adrift": {
         "call": "Apprentice! Get yourself here, now.",
-        "order": "You were adrift: report to Leading Hand Lund at the midships repair locker",
-        "say": "Adrift on your first watch. That's in my book, and the coxswain will hear of it. Now report to Chief Okoro in damage control."
+        "order": "You missed muster: report to Leading Hand Lund at the midships repair locker",
+        "say": "Late for muster on your first watch. That goes on report, and the coxswain will hear of it. Now report to Chief Okoro in damage control."
       }
     },
     {
@@ -173,7 +173,7 @@
       "unlock": [
         "guns"
       ],
-      "say": "Before you shoot at anything that shoots back, you shoot at a sled. A tug is streaming a target down our starboard side. First, draw a vac suit from one of the grey VAC SUITS lockers, in the spine, at damage control or in the flight gear room: at action stations this ship sets condition one and pumps the air out of the fixed hull, so a hole cannot blow anyone out with it. The drums keep theirs. Then climb up into the dorsal turret. Lay your sight on the amber diamond, not on the sled: that is where the sled will be when your shell gets there. Three hits."
+      "say": "Before you shoot at anything that shoots back, you shoot at a sled. A tug is streaming a target down our starboard side. First, draw a vac suit from one of the grey VAC SUITS lockers, in the spine, at damage control or in the flight gear room: at general quarters this ship sets condition one and pumps the air out of the fixed hull, so a hole cannot blow anyone out with it. The drums keep theirs. Then climb up into the dorsal turret. Lay your sight on the amber diamond, not on the sled: that is where the sled will be when your shell gets there. Three hits."
     },
     {
       "do": "suit",
@@ -211,7 +211,7 @@
       "unlock": [
         "raids"
       ],
-      "say": "Hits under fire. You're a gunner. From now on, when the klaxon goes, you have a turret. And the flight officer has asked for you: Lieutenant Moss, in the pilots' ready room."
+      "say": "Hits under fire. You're a gunner. From now on, at general quarters, you have a turret. And the flight officer has asked for you: Lieutenant Moss, in the pilots' ready room."
     },
     {
       "do": "talk",
@@ -278,35 +278,56 @@
   ],
   "stations": {
     "close": 75,
-    "say": "Action stations: close up at {at}.",
-    "closed": "Closed up at {at}. Stay there until the stand down.",
-    "adrift": "You are adrift from your action station. Name in the book. Close up at {at}.",
+    "say": "General quarters: man your battle station at {at}.",
+    "closed": "At your battle station: {at}. Stay there until the ship secures from general quarters.",
+    "adrift": "You are not at your battle station. You are on report. Get to {at}.",
     "ranks": {
       "Apprentice": {
         "at": "the midships repair locker",
         "room": "repair-mid",
-        "who": "dc"
+        "who": "dc",
+        "depts": [
+          "dc"
+        ]
       },
       "Crewman": {
         "at": "the midships repair locker",
         "room": "repair-mid",
-        "who": "dc"
+        "who": "dc",
+        "depts": [
+          "dc"
+        ]
       },
       "Gunner": {
         "at": "the dorsal turret",
         "seat": "gun",
-        "who": "guns"
+        "who": "guns",
+        "depts": [
+          "dc",
+          "gunners"
+        ]
       },
       "Flight cadet": {
         "at": "a fighter, in her seat",
         "seat": "fighter",
-        "who": "flight"
+        "who": "flight",
+        "depts": [
+          "dc",
+          "gunners",
+          "flight"
+        ]
       },
       "Helmsman": {
         "at": "the helm",
         "seat": "helm",
         "room": "bridge",
-        "who": "ootw"
+        "who": "ootw",
+        "depts": [
+          "dc",
+          "gunners",
+          "flight",
+          "bridge"
+        ]
       }
     }
   }

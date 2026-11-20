@@ -19,6 +19,8 @@
 //   launch     fighter.mjs    a fighter starts her launch run           { pad }
 //   landed     fighter.mjs    back on her pad, turned round             { pad, manual }
 //   talk       career.mjs     you spoke to one of the officers          { who }
+//   call       everyone       the ship makes a call                     { id, room?, z?, …its slots }
+//                             (content/announcements/<id>.json; src/core/announcer.mjs decides who hears it)
 //
 // Add a name here when you add one, with who says it. Requests that want an answer (`hooks.rescue(room, done)`, the
 // layout's uses, `routine.onMuster` which says whether it spoke) stay as hooks: an event says what happened, it does

@@ -66,7 +66,8 @@ export const railgunParts = {
     if (S.charge < 1) return `${s.k} railgun charging`;
     this.railShot(G[s.k].muzzle, G[s.k].dir, S, by === 'helm');
     const side = s.k === 'port' ? 'Port' : 'Starboard';
-    this.dc?.say(`${side} railgun, fire.`, `${by === 'helm' ? 'You fired' : 'The CIC fired'} the ${s.k} railgun.`, 0, 3);
+    this.C.bus?.emit('call', { id: 'railgun', Side: side });
+    this.dc?.say(null, `${by === 'helm' ? 'You fired' : 'The CIC fired'} the ${s.k} railgun.`, 0, 3);
     return null;
   },
 

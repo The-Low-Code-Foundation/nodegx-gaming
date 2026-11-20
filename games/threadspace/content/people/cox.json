@@ -2,10 +2,6 @@
   "id": "cox",
   "name": "Coxswain Hale",
   "dept": "command",
-  "voice": {
-    "pitch": 0.75,
-    "rate": 0.98
-  },
   "cast": {
     "voiceId": "voice_p5jimz0zc72a",
     "design": "A gravelly, weathered man in his late fifties with a warm Cork Irish accent, low and dry, a smoker's rasp.",

@@ -1,0 +1,24 @@
+{
+  "id": "damage-leak",
+  "about": "A coolant leak is detected (damage.mjs raise).",
+  "who": "ai",
+  "say": [
+    "Coolant leak.",
+    "{room}",
+    "{deck}",
+    "Away the damage control party."
+  ],
+  "show": "{say} Frame {frame}, {side}.",
+  "to": {
+    "zone": "tannoy",
+    "dc": "headset",
+    "bridge": "headset"
+  },
+  "priority": 3,
+  "delay": 0.9,
+  "alarm": {
+    "cue": "chime",
+    "n": 2,
+    "near": true
+  }
+}

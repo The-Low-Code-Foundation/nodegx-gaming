@@ -1,0 +1,13 @@
+{
+  "id": "secure",
+  "about": "The raid is over (integrity.mjs standDown).",
+  "who": "captain",
+  "say": [
+    "Secure from general quarters."
+  ],
+  "to": {
+    "all": "tannoy",
+    "flight": "radio"
+  },
+  "priority": 3
+}

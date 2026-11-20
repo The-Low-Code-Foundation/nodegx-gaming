@@ -1,0 +1,13 @@
+{
+  "id": "torpedoes-inbound",
+  "about": "The raider launched at her (weapons/raid.mjs).",
+  "who": "ai",
+  "say": [
+    "Torpedo launch. Torpedoes inbound. Point defence is tracking."
+  ],
+  "to": {
+    "all": "tannoy",
+    "flight": "radio"
+  },
+  "priority": 4
+}

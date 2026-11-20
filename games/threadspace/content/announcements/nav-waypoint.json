@@ -1,0 +1,21 @@
+{
+  "id": "nav-waypoint",
+  "about": "The navigator lays in a waypoint (helmsight.mjs).",
+  "who": "ship",
+  "say": [
+    "Navigator. Waypoint {name} laid in."
+  ],
+  "slots": {
+    "name": [
+      "Tango",
+      "Sierra",
+      "Romeo",
+      "Kilo",
+      "Victor"
+    ]
+  },
+  "to": {
+    "bridge": "headset"
+  },
+  "priority": 1
+}

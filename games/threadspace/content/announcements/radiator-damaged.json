@@ -1,0 +1,20 @@
+{
+  "id": "radiator-damaged",
+  "about": "A radiator is badly hurt (plant.mjs).",
+  "who": "engineer",
+  "say": [
+    "The {side} radiator is badly damaged."
+  ],
+  "slots": {
+    "side": [
+      "port",
+      "starboard"
+    ]
+  },
+  "to": {
+    "bridge": "headset",
+    "engineering": "headset",
+    "dc": "headset"
+  },
+  "priority": 3
+}

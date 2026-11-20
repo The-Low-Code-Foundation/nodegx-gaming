@@ -1,0 +1,13 @@
+{
+  "id": "drive-standby",
+  "about": "The main drive is held for its stand-by (drive.mjs).",
+  "who": "engineer",
+  "say": [
+    "Stand by for main drive. All hands, take hold."
+  ],
+  "to": {
+    "all": "tannoy"
+  },
+  "priority": 3,
+  "again": 20
+}

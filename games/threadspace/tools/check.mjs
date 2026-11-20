@@ -16,10 +16,16 @@
 //   station names a room or a seat and an officer;
 // - the routine (watches.json): its rooms exist, `first` and `you.section` are sections;
 // - spots: an officer's post, the start, the resume and your bunk stand inside the room they name;
-// - people (content/people/): everyone the career and the routine name has a file, its `id` is its name, its `dept`
-//   is a uniform, it has a browser `voice` and a recorded `cast`; a file nobody names is reported, not a problem;
+// - people (content/people/): everyone the career, the routine and the announcements name has a file, its `id` is
+//   its name, its `dept` is a uniform, it has a recorded `cast`; a file nobody names is reported, not a problem;
 // - the cast: every speaker has a `design`, `gender`, `language` and `style`; every clip in assets/voice/index.json
-//   is by a known speaker (lines nobody says any more are `node tools/voices.mjs --prune`'s, and reported).
+//   is by a known speaker (lines nobody says any more are `node tools/voices.mjs --prune`'s, and reported);
+// - the announcements (content/announcements/): the index lists exactly the files there; each one's `who` speaks,
+//   its `to` names audiences and channels the announcer knows, its slots are the ship's or listed, its `priority` is
+//   1 to 5; every call the code makes (`emit('call', { id: '…' })` in src/) has a file, and a file no code calls is
+//   reported; the `nets` name rooms; the condition-one call has the warning's seconds among its values;
+// - the glossary (content/glossary.json): no spoken line (the career, the pipes, the calls) says a word in `avoid`;
+// - how much is recorded: the lines without a clip are reported (they are shown, not spoken).
 //
 // To check a new kind of content, add a section below that pushes to `problems` (and `notes` for what is only worth
 // knowing), and a line to the list above.
@@ -28,6 +34,7 @@ import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { loadLayout } from '../src/core/ship.mjs';
 import { PEOPLE, peopleNamed } from '../src/core/people.mjs';
+import { CALLS, AUDIENCES, CHANNELS, SHIP_SLOTS, callLines, expand } from '../src/core/announcer.mjs';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url)).replace(/\/$/, '');
 
@@ -152,18 +159,76 @@ export async function check({ root = ROOT, ship = 'carrier' } = {}) {
   for (const u of Object.keys(W.drum?.uses ?? {})) if (!uses.has(u)) problems.push(`watches.drum.uses.${u}: no drum room has that use (${[...uses].join(', ')})`);
   for (const u of W.drum?.stations?.stay ?? []) if (!uses.has(u)) problems.push(`watches.drum.stations.stay: no drum room has use "${u}"`);
 
+  // ---- the announcements ----
+  let calls = new Map();
+  if (!existsSync(path(`${CALLS}/index.json`))) problems.push(`${CALLS}/index.json is missing`);
+  else {
+    const listed = json(`${CALLS}/index.json`).calls;
+    for (const id of listed) {
+      if (!existsSync(path(`${CALLS}/${id}.json`))) problems.push(`${CALLS}/${id}.json is missing (its index.json lists it)`);
+      else calls.set(id, json(`${CALLS}/${id}.json`));
+    }
+    for (const f of readdirSync(path(CALLS)).filter((f) => f.endsWith('.json') && f !== 'index.json')) if (!listed.includes(f.slice(0, -5))) problems.push(`${CALLS}/${f} is not in its index.json`);
+    for (const [id, A] of calls) {
+      const at = `${CALLS}/${id}.json`;
+      if (A.id !== id) problems.push(`${at}: its id is "${A.id}"`);
+      if (!Array.isArray(A.say) || !A.say.length) problems.push(`${at}: no say (its words, as a list of pieces)`);
+      for (const [who, by] of Object.entries(A.to ?? {})) {
+        if (!AUDIENCES.includes(who)) problems.push(`${at}: to "${who}" is not an audience (${AUDIENCES.join(', ')})`);
+        if (!CHANNELS.includes(by)) problems.push(`${at}: to ${who} by "${by}" is not a channel (${CHANNELS.join(', ')})`);
+      }
+      if (!A.to || !Object.keys(A.to).length) problems.push(`${at}: to nobody`);
+      if (!(A.priority >= 1 && A.priority <= 5)) problems.push(`${at}: priority ${A.priority} (1 to 5)`);
+      for (const piece of A.say ?? []) for (const [, k] of piece.matchAll(/\{(\w+)\}/g)) if (!SHIP_SLOTS.includes(k) && !A.slots?.[k]) problems.push(`${at}: slot {${k}} is neither the ship's (${SHIP_SLOTS.join(', ')}) nor in slots`);
+    }
+    // Every call the code makes has a file, and every file is called.
+    const made = new Set();
+    const walkSrc = (d) => {
+      for (const f of readdirSync(path(d), { withFileTypes: true })) {
+        if (f.isDirectory()) walkSrc(`${d}/${f.name}`);
+        else if (f.name.endsWith('.mjs')) for (const m of readFileSync(path(`${d}/${f.name}`), 'utf8').matchAll(/emit\('call', \{ id: (?:'([\w-]+)'|([^,}]+))/g)) {
+          if (m[1]) made.add(m[1]);
+          else for (const q of m[2].matchAll(/'([\w-]+)'/g)) made.add(q[1]); // id: a ? 'x' : 'y'
+        }
+      }
+    };
+    walkSrc('src');
+    // Calls made by a name the code builds (damage-<kind>, an endRaid's id).
+    for (const k of Object.keys(L.damage?.kinds ?? {})) made.add(`damage-${k}`);
+    made.add('raider-off').add('splash');
+    for (const id of made) if (!calls.has(id) && !/^damage-/.test(id)) problems.push(`the code makes the call "${id}", which has no ${CALLS}/${id}.json`);
+    for (const k of Object.keys(L.damage?.kinds ?? {})) if (!calls.has(`damage-${k}`)) problems.push(`damage kind "${k}" has no call: ${CALLS}/damage-${k}.json`);
+    for (const id of calls.keys()) if (!made.has(id)) notes.push(`${CALLS}/${id}.json: no code makes this call`);
+    const warn = L.integrity?.condition?.warn;
+    for (const id of ['condition-one', 'condition-one-hull']) if (warn != null && calls.get(id)?.slots?.warn && !calls.get(id).slots.warn.includes(String(warn))) problems.push(`${CALLS}/${id}.json: integrity.condition.warn is ${warn}, not one of its warn values`);
+    for (const [net, list] of Object.entries(V.nets ?? {})) for (const r of list) room(`voices.json nets.${net}`, r);
+    counts.calls = calls.size;
+  }
+
+  // ---- the glossary ----
+  const G = existsSync(path('content/glossary.json')) ? json('content/glossary.json') : null;
+  const spoken = [];
+  for (const st of K.steps ?? []) for (const k of ['say', 'start', 'fail']) if (st[k]) spoken.push([`career step (${st.do}) ${k}`, st[k]]);
+  for (const st of K.steps ?? []) for (const [k, v] of Object.entries(st.adrift ?? {})) spoken.push([`career muster adrift.${k}`, v]);
+  for (const k of ['say', 'closed', 'adrift']) if (K.stations?.[k]) spoken.push([`career.stations.${k}`, K.stations[k]]);
+  for (const [k, v] of Object.entries(W.pipes ?? {})) spoken.push([`watches.pipes.${k}`, v]);
+  for (const [id, A] of calls) for (const piece of A.say ?? []) for (const t of expand(piece, A.slots)) spoken.push([`${CALLS}/${id}.json`, t]);
+  if (G) {
+    for (const [where, t] of spoken) for (const a of G.avoid ?? []) if (new RegExp(`\\b${a.not.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i').test(t)) problems.push(`${where} says "${a.not}" (the glossary says "${a.say}"): ${t}`);
+  } else problems.push('content/glossary.json is missing');
+
   // ---- people ----
-  const ids = peopleNamed(K, W);
+  const callers = [...new Set([...calls.values()].map((a) => a.who))].filter((id) => !V.speakers?.[id]);
+  const ids = [...new Set([...peopleNamed(K, W), ...callers])];
   const people = new Map();
   for (const id of ids) {
     const f = `${PEOPLE}/${id}.json`;
-    if (!existsSync(path(f))) { problems.push(`${f} is missing (the career or the routine names ${id})`); continue; }
+    if (!existsSync(path(f))) { problems.push(`${f} is missing (the career, the routine or an announcement names ${id})`); continue; }
     const p = json(f);
     people.set(id, p);
     if (p.id !== id) problems.push(`${f}: its id is "${p.id}"`);
     if (typeof p.name !== 'string' || !p.name) problems.push(`${f}: no name`);
     if (!DEPTS.includes(p.dept)) problems.push(`${f}: dept "${p.dept}" is not a uniform (${DEPTS.join(', ')})`);
-    if (typeof p.voice?.pitch !== 'number' || typeof p.voice?.rate !== 'number') problems.push(`${f}: voice needs a pitch and a rate (the browser's speech)`);
     if (!p.cast) problems.push(`${f}: no cast (the recorded voice: tools/voices.mjs)`);
   }
   const files = existsSync(path(PEOPLE)) ? readdirSync(path(PEOPLE)).filter((f) => f.endsWith('.json')) : [];
@@ -172,7 +237,7 @@ export async function check({ root = ROOT, ship = 'carrier' } = {}) {
 
   // ---- the cast ----
   const speakers = { ...Object.fromEntries([...people].map(([id, p]) => [id, p.cast]).filter(([, c]) => c)), ...(V.speakers ?? {}) };
-  if (!V.speakers?.ship) problems.push(`${dir}/voices.json: no speakers.ship (the ship's broadcast)`);
+  for (const k of ['ship', 'ai']) if (!V.speakers?.[k]) problems.push(`${dir}/voices.json: no speakers.${k}`);
   for (const [id, S] of Object.entries(speakers)) for (const k of ['design', 'gender', 'language', 'style']) if (!S?.[k]) problems.push(`speaker ${id}: no ${k} in their cast`);
   for (const id of Object.keys(V.speakers ?? {})) if (people.has(id)) problems.push(`${dir}/voices.json: ${id} is a person; their cast goes in ${PEOPLE}/${id}.json`);
   if (existsSync(path('assets/voice/index.json'))) {
@@ -182,6 +247,11 @@ export async function check({ root = ROOT, ship = 'carrier' } = {}) {
     const v1 = existsSync(path('archive/carrier-v1/carrier-v1.career.json')) ? new Set(json('archive/carrier-v1/carrier-v1.career.json').people.map((p) => p.id)) : new Set();
     for (const s of unknown) (v1.has(s) ? notes : problems).push(`assets/voice/index.json has clips by "${s}", ${v1.has(s) ? "the archived first carrier's" : 'who is not a speaker'}`);
     counts.clips = lines.length;
+    // What is said without a clip is shown, not heard.
+    const have = new Set(lines);
+    const want = callLines(calls, L).map((l) => `${l.speaker}|${l.text}`);
+    const missing = [...new Set(want)].filter((k) => !have.has(k));
+    if (missing.length) notes.push(`${missing.length} of the calls' ${new Set(want).size} pieces have no clip yet (shown as subtitles, not spoken): node tools/voices.mjs --list`);
   }
   return { problems, notes, counts };
 }
@@ -191,7 +261,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   const quiet = process.argv.includes('--quiet');
   const { problems, notes, counts } = await check();
   if (!quiet) {
-    console.log(`Checked ships/carrier: ${counts.rooms} rooms, ${counts.steps} career steps, ${counts.people} people, ${counts.clips ?? 0} recorded clips.`);
+    console.log(`Checked ships/carrier: ${counts.rooms} rooms, ${counts.steps} career steps, ${counts.people} people, ${counts.calls ?? 0} announcements, ${counts.clips ?? 0} recorded clips.`);
     for (const n of notes) console.log(`  note: ${n}`);
   }
   if (problems.length) {

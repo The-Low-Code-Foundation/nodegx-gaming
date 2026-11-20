@@ -1,0 +1,20 @@
+{
+  "id": "railgun",
+  "about": "A broadside railgun fired (weapons/railgun.mjs).",
+  "who": "ship",
+  "say": [
+    "{Side} railgun, fire."
+  ],
+  "slots": {
+    "Side": [
+      "Port",
+      "Starboard"
+    ]
+  },
+  "to": {
+    "bridge": "headset",
+    "gunners": "headset"
+  },
+  "priority": 2,
+  "again": 2
+}

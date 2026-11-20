@@ -1,0 +1,13 @@
+{
+  "id": "raider-off",
+  "about": "The raider is breaking off (weapons/raid.mjs).",
+  "who": "ship",
+  "say": [
+    "The raider is breaking off."
+  ],
+  "to": {
+    "all": "tannoy",
+    "flight": "radio"
+  },
+  "priority": 2
+}

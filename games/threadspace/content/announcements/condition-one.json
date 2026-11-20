@@ -1,0 +1,19 @@
+{
+  "id": "condition-one",
+  "about": "Condition one, the whole ship vented (integrity.mjs setCondition; the archived first carrier).",
+  "who": "captain",
+  "say": [
+    "Set condition one throughout the ship. All hands, don vac suits. Venting in {warn} seconds."
+  ],
+  "slots": {
+    "warn": [
+      "10"
+    ]
+  },
+  "to": {
+    "all": "tannoy"
+  },
+  "priority": 4,
+  "delay": 1.8,
+  "again": 30
+}

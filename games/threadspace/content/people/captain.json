@@ -1,0 +1,13 @@
+{
+  "id": "captain",
+  "name": "Captain",
+  "dept": "command",
+  "cast": {
+    "voiceId": "voice_10othgsdn3o3",
+    "design": "A composed, grounded woman in her early fifties with a Nairobi Kenyan English accent, a low, warm voice, quietly certain, used to command.",
+    "gender": "female",
+    "language": "en-KE",
+    "style": "A serving ship's captain on the broadcast, not an actor: plain, direct and steady. The urgency is in the words, not the delivery; any feeling shows only as quiet resolve.",
+    "sample": "General quarters, general quarters. Raider closing to starboard. All hands, man your battle stations. Close all pressure doors."
+  }
+}

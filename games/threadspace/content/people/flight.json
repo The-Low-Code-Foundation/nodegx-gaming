@@ -2,10 +2,6 @@
   "id": "flight",
   "name": "Lieutenant Moss",
   "dept": "flight",
-  "voice": {
-    "pitch": 1.15,
-    "rate": 1.08
-  },
   "cast": {
     "voiceId": "voice_y99kim4gm369",
     "design": "A relaxed, bright-voiced woman in her late twenties with a Brisbane Australian accent, easy and confident.",

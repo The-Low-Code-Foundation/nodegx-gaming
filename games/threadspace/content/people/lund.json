@@ -2,10 +2,6 @@
   "id": "lund",
   "name": "Leading Hand Lund",
   "dept": "crew",
-  "voice": {
-    "pitch": 0.95,
-    "rate": 1.04
-  },
   "cast": {
     "voiceId": "voice_9qx9ovq63lde",
     "design": "A loud, gruff man in his forties with a broad Glasgow Scottish accent, a voice that carries down a passage.",

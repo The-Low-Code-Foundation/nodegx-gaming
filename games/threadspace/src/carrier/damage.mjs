@@ -144,16 +144,15 @@ const VERB = { fire: 'Put the fire out', electrical: 'Repair the fault', leak: '
 const OUT = { fire: 'Fire out', electrical: 'Fault repaired', leak: 'Leak patched' };
 
 export class DamageControl {
-  /** `auto`: raise jobs by themselves while you walk. `voices`: call them out (voice.mjs: a recorded clip for a
-   *  line it has, else the browser's own speech, a voice installed on this computer). */
-  constructor(C, { hud, sfx, auto = true, voices = null, seed = Date.now() } = {}) {
+  /** `auto`: raise jobs by themselves while you walk. Each job is called out on the bus (`call`), and the announcer
+   *  (src/core/announcer.mjs) says it to whoever should hear it. */
+  constructor(C, { hud, sfx, auto = true, seed = Date.now() } = {}) {
     this.C = C;
     this.L = C.L;
     this.D = C.L.damage;
     this.hud = hud;
     this.sfx = sfx;
     this.auto = auto && !!this.D;
-    this.voices = voices; // voice.mjs: the speakers' calls
     this.rand = mulberry(seed % 2147483647);
     this.carry = new Map(); // kit id → { agent } (seconds left, for an extinguisher)
     this.job = null;
@@ -226,12 +225,9 @@ export class DamageControl {
     this.job = job;
     this.placeMarker();
     this.marker.visible = true;
-    // The alarm, then the call.
-    if (kind === 'fire') this.sfx?.cue('klaxon', { n: 4 });
-    else this.sfx?.cue('chime'), setTimeout(() => this.sfx?.cue('chime'), 450);
-    const deckName = this.C.deckName(room.deck).toLowerCase();
-    const call = `${K.call} ${K.name} in ${job.place}. ${deckName[0].toUpperCase() + deckName.slice(1)}, frame ${frameOf(this.L, spot.z)}, ${job.side}.`;
-    this.say(call, `${K.call} ${K.name} in ${job.place}.`, kind === 'fire' ? 2600 : 900);
+    // The call, with its alarm (content/announcements/damage-<kind>.json: the announcer decides who hears it).
+    this.C.bus?.emit('call', { id: `damage-${kind}`, room: room.id, frame: frameOf(this.L, spot.z), side: job.side });
+    this.say(null, `${K.call} ${K.name} in ${job.place}.`);
     this.C.bus?.emit('job', { job });
     return job;
   }
@@ -491,8 +487,8 @@ export class DamageControl {
         job.idle = 0;
         job.size++;
         if (job.size >= job.K.lost) return this.end(false, `The fire in the ${job.room.name.toLowerCase()} could not be held. The compartment is sealed and flooded with suppressant.`);
-        this.sfx?.cue('klaxon', { n: 2 });
-        this.say(`The fire in ${job.place} is spreading.`, `The fire is spreading (${job.size} of ${job.K.lost - 1}).`);
+        this.C.bus?.emit('call', { id: 'damage-spreading', room: job.room.id });
+        this.say(null, `The fire is spreading (${job.size} of ${job.K.lost - 1}).`);
       }
     }
     if (job.kind === 'electrical' && !job.isolated && job.t >= job.K.after) {
@@ -528,7 +524,8 @@ export class DamageControl {
     if (ok) {
       const grade = job.t < 60 ? 'Smartly done.' : job.t < 120 ? 'Well done.' : 'Done, but it took a while.';
       this.sfx?.cue('chime');
-      this.say(`${OUT[job.kind]} in ${job.place}.`, `${OUT[job.kind]} in ${mins}. ${grade}`, 0, 7);
+      this.C.bus?.emit('call', { id: 'damage-done', room: job.room.id, out: `${OUT[job.kind]}.` });
+      this.say(null, `${OUT[job.kind]} in ${mins}. ${grade}`, 0, 7);
     } else {
       this.sfx?.cue('klaxon', { n: 1 });
       this.say(null, why, 0, 8);
@@ -537,10 +534,11 @@ export class DamageControl {
 
   // --- the job card and the speakers ---
 
-  /** Shows `text` on the card for `secs`, and speaks `call` over the speakers after `delay` ms. */
+  /** Shows `text` on the card for `secs`. (`call` and `delay` are gone: the ship's calls are said on the bus as
+   *  `call` events, and the announcer, src/core/announcer.mjs, decides who hears them.) */
   say(call, text, delay = 0, secs = 5) {
+    if (call) console.warn('dc.say(call) is gone: emit a call on the bus', call);
     if (text) this.msg = { text, t: secs };
-    if (call) this.voices?.say('ship', call, { delay, pitch: 0.85, rate: 1.02 });
   }
 
   card(mode) {

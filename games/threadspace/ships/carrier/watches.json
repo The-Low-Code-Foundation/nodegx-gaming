@@ -153,12 +153,12 @@
     "color": "#ff3a24"
   },
   "pipes": {
-    "change": "Change of watch. {section} has the {watch} watch.",
-    "down": "Pipe down. Darken ship: the passages go to red lighting.",
-    "call": "Call the hands. Out of your racks.",
-    "shake": "{section}, wakey wakey. You have the {watch} watch. Muster at the {muster} at {time}.",
-    "present": "{section}, all present and correct. Fall out to your stations.",
-    "adrift": "{section}: one hand adrift from muster. The new apprentice. Name in the book."
+    "change": "Now relieve the watch. {section} has the {watch} watch.",
+    "down": "Taps, taps. Lights out. Darken ship: the passages go to red lighting.",
+    "call": "Reveille, reveille. All hands, out of your racks.",
+    "shake": "{section}, on your feet. You have the {watch} watch. Muster at the {muster} at {time}.",
+    "present": "{section}, all present or accounted for. Carry on to your stations.",
+    "adrift": "{section}: one hand absent from muster. The new apprentice. On report."
   },
   "drum": {
     "max": 12,

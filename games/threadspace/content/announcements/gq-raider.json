@@ -1,0 +1,27 @@
+{
+  "id": "gq-raider",
+  "about": "A raider you can fight is closing (integrity.mjs attack).",
+  "who": "captain",
+  "say": [
+    "General quarters, general quarters. Raider closing {side}. All hands, man your battle stations. Close all pressure doors."
+  ],
+  "slots": {
+    "side": [
+      "to port",
+      "to starboard",
+      "from above",
+      "from below"
+    ]
+  },
+  "to": {
+    "all": "tannoy",
+    "flight": "radio"
+  },
+  "priority": 4,
+  "delay": 0.3,
+  "again": 30,
+  "alarm": {
+    "cue": "klaxon",
+    "n": 5
+  }
+}

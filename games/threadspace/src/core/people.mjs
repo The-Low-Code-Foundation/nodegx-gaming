@@ -1,6 +1,6 @@
 // People, one file each: content/people/<id>.json. A person is who they are wherever they serve: `name`, `dept`
-// (their uniform's colours: `UNIFORMS` in src/carrier/crew.mjs), `voice` (the browser's speech for a line with no
-// recorded clip: `pitch`, `rate`) and `cast` (their recorded voice: tools/voices.mjs). Where they stand is the ship's:
+// (their uniform's colours: `UNIFORMS` in src/carrier/crew.mjs) and `cast` (their recorded voice: tools/voices.mjs).
+// Some only speak on the broadcast (the captain, the engineer officer): an announcement names them. Where they stand is the ship's:
 // a ship's career names its officers in `people` ({ id, room, at, yaw, pose }) and its routine names each section's
 // `leader` ({ id }), and `joinPeople` fills each in from the person's file. A person can move ships; the post stays.
 //

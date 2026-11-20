@@ -125,7 +125,8 @@ export const raidParts = {
       R.torpLeft -= Math.min(T.salvo, R.torpLeft);
       if (!this.torpCalled || this.time - this.torpCalled > 12) {
         this.torpCalled = this.time;
-        this.dc?.say('Torpedo launch. Torpedoes inbound. Point defence is tracking.', 'Torpedoes inbound: point defence tracking.', 0, 5);
+        this.C.bus?.emit('call', { id: 'torpedoes-inbound' });
+        this.dc?.say(null, 'Torpedoes inbound: point defence tracking.', 0, 5);
       }
     }
     // Its own point defence against the carrier's torpedoes.
@@ -142,7 +143,7 @@ export const raidParts = {
       R.flakT = K.flak.every[0] + this.rand() * (K.flak.every[1] - K.flak.every[0]);
       this.flakShot(R, fi);
     }
-    if (wp.leave && dist > (K.clear ?? 5500)) R.target ? this.endRaid(null, 'The target tug is clear.') : this.endRaid('The raider is breaking off.', 'The raider is breaking off.');
+    if (wp.leave && dist > (K.clear ?? 5500)) R.target ? this.endRaid(null, 'The target tug is clear.') : this.endRaid('raider-off', 'The raider is breaking off.');
     // A target's strobe, so you can find it against the stars.
     if (R.target && !R.gone && (R.strobeT -= dt) <= 0) {
       R.strobeT = 1.2;
@@ -214,17 +215,20 @@ export const raidParts = {
     this.sfx?.play('boom', 30, 12);
     if (this.fhull > 0 || this.crippled) return;
     this.crippled = true;
-    this.dc?.say('Flight control. You are hit and dead in space. Hands off: we are bringing you in.', 'You are hit and dead in space: flight control is bringing you in.', 0, 8);
+    this.C.bus?.emit('call', { id: 'fighter-down' });
+    this.dc?.say(null, 'You are hit and dead in space: flight control is bringing you in.', 0, 8);
     this.C.bus?.emit('fighter-down');
   },
 
+  /** The raid is over: `call` is the announcement (an id), `text` the card's line. */
   endRaid(call, text) {
     const R = this.raider;
     if (!R || R.gone) return;
     R.gone = true;
     if (!R.dead) R.obj.removeFromParent();
     this.ship.raidOver();
-    if (call || text) this.dc?.say(call, text, 0, 6);
+    if (call) this.C.bus?.emit('call', { id: call });
+    if (text) this.dc?.say(null, text, 0, 6);
   },
 
   /** The raider is hit at `p` (world): its hull takes it, and at nothing it blows up. */
@@ -263,6 +267,6 @@ export const raidParts = {
     }
     R.obj.removeFromParent();
     this.sfx?.play('boom', this.ear ? Math.min(900, this.ear.distanceTo(c) * 0.5) : 600, 60);
-    this.endRaid('Splash one. The raider is destroyed. Well done, gunners.', 'Splash one: the raider is destroyed.');
+    this.endRaid('splash', 'Splash one: the raider is destroyed.');
   }
 };

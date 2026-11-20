@@ -1,0 +1,29 @@
+{
+  "id": "structure-hit",
+  "about": "A shell through a drum's hub ring, a spoke or a sleeve strut (integrity.mjs structureHit).",
+  "who": "ai",
+  "say": [
+    "Hit on {what}.",
+    "{result}"
+  ],
+  "slots": {
+    "what": [
+      "the forward drum's hub ring",
+      "the after drum's hub ring",
+      "a spoke of the forward drum",
+      "a spoke of the after drum",
+      "a sleeve strut"
+    ],
+    "result": [
+      "The ring corridor is venting.",
+      "Structure damaged, no breach."
+    ]
+  },
+  "to": {
+    "drums": "tannoy",
+    "dc": "headset",
+    "bridge": "headset"
+  },
+  "priority": 3,
+  "delay": 0.3
+}

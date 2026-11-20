@@ -1,0 +1,15 @@
+{
+  "id": "bridge-line",
+  "about": "The bridge talks to your turret in the career (a step's `start`: career.mjs).",
+  "who": "ship",
+  "say": [
+    "{line}"
+  ],
+  "slots": {
+    "line": "a career step's `start` (tools/voices.mjs records them)"
+  },
+  "to": {
+    "you": "headset"
+  },
+  "priority": 3
+}

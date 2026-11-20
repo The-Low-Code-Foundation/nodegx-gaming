@@ -1,0 +1,13 @@
+{
+  "id": "drive-burning",
+  "about": "The main drive lit (drive.mjs; a ship with drums).",
+  "who": "ai",
+  "say": [
+    "Main drive burning. Weightless spaces, hold on."
+  ],
+  "to": {
+    "all": "tannoy"
+  },
+  "priority": 2,
+  "again": 20
+}

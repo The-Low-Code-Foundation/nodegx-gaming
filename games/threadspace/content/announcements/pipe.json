@@ -1,0 +1,18 @@
+{
+  "id": "pipe",
+  "about": "The routine's pipes: the change of watch, taps, reveille (watch.mjs). Its own strip shows the words.",
+  "who": "ship",
+  "say": [
+    "{line}"
+  ],
+  "slots": {
+    "line": "the watch bill's `pipes` (tools/voices.mjs records them)"
+  },
+  "show": false,
+  "to": {
+    "all": "tannoy"
+  },
+  "priority": 1,
+  "delay": 1.9,
+  "again": 60
+}

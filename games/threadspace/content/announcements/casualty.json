@@ -1,0 +1,25 @@
+{
+  "id": "casualty",
+  "about": "After a hull breach: the medical team goes (integrity.mjs strike).",
+  "who": "medical",
+  "say": [
+    "Casualty reported in the {part}. Medical team, away."
+  ],
+  "slots": {
+    "part": [
+      "bow section",
+      "forward drum",
+      "after drum",
+      "hangar section",
+      "stern section"
+    ]
+  },
+  "to": {
+    "medical": "headset",
+    "dc": "headset",
+    "zone": "tannoy"
+  },
+  "priority": 2,
+  "delay": 3,
+  "again": 30
+}

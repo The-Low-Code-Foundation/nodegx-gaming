@@ -1,0 +1,21 @@
+{
+  "id": "nav-on-station",
+  "about": "Stopped on the waypoint (helmsight.mjs).",
+  "who": "ship",
+  "say": [
+    "Navigator. On station at waypoint {name}."
+  ],
+  "slots": {
+    "name": [
+      "Tango",
+      "Sierra",
+      "Romeo",
+      "Kilo",
+      "Victor"
+    ]
+  },
+  "to": {
+    "bridge": "headset"
+  },
+  "priority": 1
+}

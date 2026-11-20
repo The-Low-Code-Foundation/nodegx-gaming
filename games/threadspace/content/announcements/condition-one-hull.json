@@ -1,0 +1,19 @@
+{
+  "id": "condition-one-hull",
+  "about": "Condition one, the fixed hull vented and the drums kept (integrity.mjs setCondition).",
+  "who": "captain",
+  "say": [
+    "Set condition one throughout the ship. All hands, don vac suits. Venting the fixed hull in {warn} seconds. The drums stay pressurised."
+  ],
+  "slots": {
+    "warn": [
+      "10"
+    ]
+  },
+  "to": {
+    "all": "tannoy"
+  },
+  "priority": 4,
+  "delay": 1.8,
+  "again": 30
+}

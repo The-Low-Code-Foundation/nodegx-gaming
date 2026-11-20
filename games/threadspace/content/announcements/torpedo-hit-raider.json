@@ -1,0 +1,13 @@
+{
+  "id": "torpedo-hit-raider",
+  "about": "One of ours hit the raider (weapons/broadside.mjs).",
+  "who": "ship",
+  "say": [
+    "Torpedo hit on the raider."
+  ],
+  "to": {
+    "all": "tannoy",
+    "flight": "radio"
+  },
+  "priority": 2
+}

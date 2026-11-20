@@ -102,6 +102,13 @@
 #c-clock i, #c-duty .d-watch { font-style: normal; color: var(--text); }
 #c-clock i::before, #c-duty .d-watch::before { content: ''; display: inline-block; width: 8px; height: 8px; border-radius: 2px; background: var(--c); margin-right: 5px; vertical-align: 0; }
 #c-pipe { position: absolute; left: 50%; bottom: 44px; transform: translateX(-50%); max-width: min(560px, calc(100% - 32px)); font-size: 13px; color: #ffe2a8; background: rgba(12, 12, 9, 0.82); border: 1px solid var(--line); border-radius: 6px; padding: 5px 12px; text-align: center; pointer-events: none; }
+/* What the ship says, as a subtitle (src/core/announcer.mjs): who, coloured by how it reached you (the tannoy amber,
+   your headset green, the cockpit radio blue), then the words. */
+#c-sub { position: absolute; left: 50%; bottom: 84px; transform: translateX(-50%); max-width: min(620px, calc(100% - 32px)); font-size: 14px; line-height: 1.35; color: #eef3f6; background: rgba(8, 10, 14, 0.78); border-radius: 6px; padding: 6px 12px; text-align: center; pointer-events: none; }
+#c-sub[hidden] { display: none; }
+#c-sub b { font-family: var(--mono); font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; margin-right: 8px; color: #ffc850; }
+#c-sub b.headset { color: #7dffb0; }
+#c-sub b.radio { color: #8fc4ff; }
 #c-duty .d-watch { font-family: var(--mono); font-size: 11px; margin-top: 3px; }
 #c-bill { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(560px, calc(100% - 32px)); max-height: calc(100% - 100px); overflow-y: auto; background: #ebe6d8; color: #1c1b18; border: 6px solid #3a3226; border-radius: 4px; padding: 14px 18px; font-size: 12px; line-height: 1.45; box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6); pointer-events: none; }
 #c-bill .b-head { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 2px solid #1c1b18; padding-bottom: 4px; margin-bottom: 8px; font-family: var(--mono); }

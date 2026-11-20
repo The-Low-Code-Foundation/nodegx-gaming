@@ -1,0 +1,15 @@
+{
+  "id": "propellant-leak",
+  "about": "A propellant tank is holed (plant.mjs).",
+  "who": "engineer",
+  "say": [
+    "Propellant leak. A tank is holed."
+  ],
+  "to": {
+    "bridge": "headset",
+    "engineering": "headset",
+    "dc": "headset"
+  },
+  "priority": 3,
+  "again": 30
+}

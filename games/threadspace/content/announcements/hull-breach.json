@@ -1,0 +1,19 @@
+{
+  "id": "hull-breach",
+  "about": "A shell holed a walkable compartment (integrity.mjs strike).",
+  "who": "ai",
+  "say": [
+    "Hull breach.",
+    "{room}",
+    "{deck}"
+  ],
+  "show": "{say} Frame {frame}, {side}.",
+  "to": {
+    "zone": "tannoy",
+    "dc": "headset",
+    "bridge": "headset",
+    "medical": "headset"
+  },
+  "priority": 4,
+  "delay": 0.4
+}

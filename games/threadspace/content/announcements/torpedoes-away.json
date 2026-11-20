@@ -1,0 +1,13 @@
+{
+  "id": "torpedoes-away",
+  "about": "The CIC fired the tubes (weapons/torpedoes.mjs).",
+  "who": "ship",
+  "say": [
+    "Tubes one and two, fire. Birds away."
+  ],
+  "to": {
+    "bridge": "headset",
+    "gunners": "headset"
+  },
+  "priority": 2
+}

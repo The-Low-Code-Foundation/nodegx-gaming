@@ -2,10 +2,6 @@
   "id": "guns",
   "name": "Lieutenant Varga",
   "dept": "command",
-  "voice": {
-    "pitch": 1.05,
-    "rate": 1.06
-  },
   "cast": {
     "voiceId": "voice_3uge17k0jmq0",
     "design": "A sharp, clear-voiced woman in her early thirties with a Johannesburg South African accent, crisp and quick.",

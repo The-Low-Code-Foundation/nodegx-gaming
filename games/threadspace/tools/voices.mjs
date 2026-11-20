@@ -15,13 +15,16 @@
 // gap, run --design again (it makes a new voice from the same description; it will sound a little different, so record
 // the lines again too). Change a `design` and clear its `voiceId` to make it anew.
 //
-// The game never calls Gemini: it plays these files, and a line with no clip is spoken by the browser's own speech
-// (src/carrier/voice.mjs). So the key is only needed here, and only in the environment; never write it into a file.
+// The game never calls Gemini: it plays these files, and a line with no clip is not spoken at all, only shown
+// (src/carrier/voice.mjs, src/core/announcer.mjs). So the key is only needed here, and only in the environment; never
+// write it into a file.
 //
-// Every line the game can say with fixed words is worked out from the data (both carriers': ships/carrier/ and the
-// first one's, archive/carrier-v1/): the officers' orders in career.json, the leading hand and the pipes in watches.json, and the ship's calls listed
-// in voices.json (which also holds who speaks in which voice). Lines with a place or a frame number in
-// them (a fire's call-out, a hull breach) are not recorded; the browser speaks those.
+// Every line the game can say is worked out from the data (both carriers': ships/carrier/ and the first one's,
+// archive/carrier-v1/): the officers' orders in career.json, the leading hand and the pipes in watches.json, the
+// officers' words at general quarters (career.json `stations`), and the ship's calls in content/announcements/, piece by
+// piece: a call's `{room}`, `{deck}` and `{section}` are recorded as one short clip per room, deck and part of the ship
+// (src/core/announcer.mjs `shipWords`), so the ship's automated voice can name any of them; its other slots are
+// recorded whole, once per value.
 //
 // The index (assets/voice/index.json) keeps, per line, the hash of what it was recorded from (model, saved voice,
 // style, words). Change a speaker's direction or a line's words and that clip is recorded again on the next run.
@@ -36,6 +39,7 @@ import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadLayout } from '../src/core/ship.mjs';
 import { PEOPLE, loadPeople, peopleNamed } from '../src/core/people.mjs';
+import { loadCalls, callLines } from '../src/core/announcer.mjs';
 import { check } from './check.mjs';
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
@@ -43,9 +47,12 @@ import { spawnSync } from 'node:child_process';
 const here = (p) => new URL(`../${p}`, import.meta.url);
 const json = (p) => JSON.parse(readFileSync(here(p)));
 const V = json('ships/carrier/voices.json');
-// Who speaks: the officers and leading hands, each in their own file (content/people/<id>.json, their `cast`), and the
-// ship's broadcast (`speakers.ship` in voices.json). `V.speakers` here is all of them; each is written back where it lives.
-const people = await loadPeople(peopleNamed(json('ships/carrier/career.json'), json('ships/carrier/watches.json')), async (p) => json(p));
+// Who speaks: the officers and leading hands, and the officers on the broadcast, each in their own file
+// (content/people/<id>.json, their `cast`), and the two voices that are not people (`speakers` in voices.json: the
+// ship's automated voice and the bridge's talker). `V.speakers` here is all of them; each is written back where it lives.
+const calls = await loadCalls(async (p) => json(p));
+const callers = [...new Set([...calls.values()].map((a) => a.who))].filter((id) => !V.speakers[id]);
+const people = await loadPeople([...new Set([...peopleNamed(json('ships/carrier/career.json'), json('ships/carrier/watches.json')), ...callers])], async (p) => json(p));
 V.speakers = { ...Object.fromEntries([...people.values()].map((p) => [p.id, p.cast])), ...V.speakers };
 const OUT = here('assets/voice/');
 const INDEX = here('assets/voice/index.json');
@@ -90,13 +97,19 @@ add(leader, fill(W.pipes.present, mine, W.watches[0]));
 add(leader, fill(W.pipes.adrift, mine, W.watches[0]));
 for (const st of K.steps) if (st.do === 'muster') add(leader, st.say), add(leader, st.adrift?.call), add(leader, st.adrift?.say);
 
-// The ship's broadcast: the bridge in the career, the fixed calls, then the pipes.
+// The officers at general quarters: you closed up late, then got there (career.json `stations`).
+const S = K.stations;
+for (const r of Object.values(S?.ranks ?? {})) if (r.who) add(r.who, S.adrift.replaceAll('{at}', r.at)), add(r.who, S.closed.replaceAll('{at}', r.at));
+
+// The bridge in the career, then the pipes.
 for (const st of K.steps) add('ship', st.start);
-for (const t of V.ship) add('ship', t);
 add('ship', W.pipes.down);
 add('ship', W.pipes.call);
 for (const s of W.sections) for (const w of W.watches) add('ship', fill(W.pipes.change, s, w));
 }
+
+// The ship's calls (content/announcements/), today's ship only: their words, and the ship's words for every place.
+for (const l of callLines(calls, today.L)) add(l.speaker, l.text);
 
 // --- how a line is said ---
 

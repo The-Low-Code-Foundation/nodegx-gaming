@@ -1,0 +1,20 @@
+{
+  "id": "broadside",
+  "about": "A broadside fired, from the helm or the CIC (weapons/broadside.mjs).",
+  "who": "ship",
+  "say": [
+    "{Side} broadside, fire. Birds away."
+  ],
+  "slots": {
+    "Side": [
+      "Port",
+      "Starboard"
+    ]
+  },
+  "show": "{Side} broadside, fire: {n} away.",
+  "to": {
+    "bridge": "headset",
+    "gunners": "headset"
+  },
+  "priority": 2
+}

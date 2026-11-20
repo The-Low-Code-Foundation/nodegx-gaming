@@ -160,6 +160,33 @@ Left for the phases that design their formats: `content/announcements/` (phase 3
   That is eleven, and covers every call that exists today. Generic crew for conversations come in phase 7.
 - Rewrite the existing lines with the joint-service glossary (decision 3), then record with `tools/voices.mjs`.
 
+**Built, 20 November 2026; not yet recorded** (CLAUDE.md has the details):
+
+- **The announcer** (`src/core/announcer.mjs`): a system says `C.bus.emit('call', { id, room, … })` and the call's file
+  in `content/announcements/` (42 of them) says who speaks it, its words, who it is for and by what channel, its
+  priority, how soon it may be said again, and its alarm. Every `dc.say(call, …)` in the code became one; the card's
+  own text stays where it tells you what to do.
+- **Who hears what.** Audiences `all`, `you`, `zone` (the bow, either drum, the hangar, the stern), `drums` and the
+  departments; channels the tannoy (where there is air, or in a sealed helmet), the headset (your nets, anywhere
+  aboard), the radio (the cockpit, flight control). Your nets are your rank's (`depts` in `career.json`), the seat you
+  are in, and the room you stand in (`nets` in `voices.json`: on the bridge you hear the bridge's calls). Checked in
+  the browser: an apprentice in the mess hears a fire in the gym (same drum); someone in the hangar unsuited hears
+  general quarters not at all, suited through the helmet; a pilot hears the radio only.
+- **Say it once.** The same words are not said again within `again` seconds; a higher call cuts off a lower one;
+  routine calls go stale in the queue after 12 s, damage calls after 40, priority 4 and 5 never. Breaches of the
+  airless hangar are not called. The damage alarms are local (`near`): the klaxon is loud in the room, faint in its
+  zone, silent elsewhere; general quarters and venting sound everywhere.
+- **No browser voice.** It is gone. A line with no clip shows as a subtitle (`#c-sub`, who and how it reached you).
+- **The cast** is eleven: the ship's automated voice (`ai`, in `voices.json`) names any room in pieces (hazard, room,
+  deck: 126 short clips cover every room, deck and section); the captain, the engineer officer and the medical officer
+  are people (`content/people/`), named by role until the story bible names them.
+- **The words**: `content/glossary.json`, checked by `tools/check.mjs` on every spoken line. General quarters, man your
+  battle stations, secure from general quarters, now relieve the watch, reveille, taps, late for muster, on report.
+  The ranks in people's names (Coxswain, Leading Hand) are left for the story bible.
+- **Still to do:** design the four new voices (`--design --sample out`), audition them, and record the 227 lines that
+  have no clip (`tools/voices.mjs`, about half an hour at the rate limit, maybe over two days of quota); then
+  `--prune` the old shield and "action stations" clips.
+
 ## Phase 4. Living weightless (three or four sessions) [1, 5, 6, and the brace in 5]
 
 - **Handholds.** Rails and handles generated on every wall, deck and deckhead of a weightless room, from the layout,

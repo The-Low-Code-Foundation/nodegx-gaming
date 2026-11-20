@@ -1,0 +1,13 @@
+{
+  "id": "splash",
+  "about": "The raider is destroyed (weapons/raid.mjs).",
+  "who": "ship",
+  "say": [
+    "Splash one. The raider is destroyed. Well done, gunners."
+  ],
+  "to": {
+    "all": "tannoy",
+    "flight": "radio"
+  },
+  "priority": 3
+}

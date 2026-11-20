@@ -1,0 +1,16 @@
+{
+  "id": "venting",
+  "about": "The pumps start (integrity.mjs setCondition; the archived first carrier).",
+  "who": "ai",
+  "say": [
+    "Venting the ship. Helmets on."
+  ],
+  "to": {
+    "all": "tannoy"
+  },
+  "priority": 4,
+  "alarm": {
+    "cue": "klaxon",
+    "n": 2
+  }
+}

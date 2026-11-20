@@ -1,0 +1,13 @@
+{
+  "id": "heat-full-pdc",
+  "about": "The heat sinks are full: the guns hold fire (plant.mjs; a ship without railguns).",
+  "who": "engineer",
+  "say": [
+    "Heat sinks full. Point defence holding fire. Main drive restricted."
+  ],
+  "to": {
+    "all": "tannoy"
+  },
+  "priority": 4,
+  "again": 30
+}

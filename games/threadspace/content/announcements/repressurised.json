@@ -1,0 +1,12 @@
+{
+  "id": "repressurised",
+  "about": "The air is back everywhere (integrity.mjs).",
+  "who": "ai",
+  "say": [
+    "The ship is repressurised. You may open your helmets."
+  ],
+  "to": {
+    "all": "tannoy"
+  },
+  "priority": 2
+}

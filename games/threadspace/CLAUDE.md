@@ -191,8 +191,11 @@ other ship here). The game (`src/core/ship.mjs` `loadLayout`), the node tools an
 | `src/carrier/career.mjs` | `Career`: your first week aboard. Puts the officers at their posts (with a "Talk to" use each), runs the steps in order (`check()`: talk, go, read, sleep, muster, rounds, drill, suit, man, shoot, raid, board, launch, land, helm, turn, transit), promotes you and unlocks parts of the ship (`allows()`, `refuse()`), at action stations sends you to your station by rank (`stations`, `closeUp()`: closed up, or adrift in the book after `close` seconds), draws the duty card (`#c-duty`), the gold chevron over the officer you want and the gold marker in the cutaway, and saves progress in localStorage (`begin()`, `free()`) with the ship's clock and the times you were adrift (`book`). A save made against a different number of steps is not picked up again, and each ship saves under its own key (`Career.key`). `main.mjs` gates the helm, the fighters and the turret hatches on it, and raids come by themselves only once `raids` is unlocked. `__carrier.career`: `i` (the step), `complete()`, `talked(id)`. |
 | `ships/carrier/watches.json` | The ship's routine, as data: the clock's `rate` and start, the seven `watches`, the three watch `sections` (and which keeps day 1's middle watch, `first`), your line on the bill (`you`: section, part of ship, muster room and spot, bunk, `shake`), the `muster` (when the section falls in, where they stand, the way they march off), `night`, and the `pipes` (the words). Its `about` says what each field is. |
 | `src/carrier/watch.mjs` | `Routine`: the ship's clock (`t`, ship seconds from day 1 00:00; `rate` of them a real second), the watch and section at any time (`watchAt`, `nextOwn`, `onWatch`), the bell each half hour (`bells()`, the last dog watch's 1-2-3-8) and the pipes at the change of watch and at night, the crew at their posts by watch (`wanted()`, `man()`: a face changes only out of your sight, `seen()`), the muster (`fallIn()`, the roll at the bell, `onMuster`, the march off), the watch bill's board and panel (`board()`, `openBill()`), your bunk (`bunk()`, `cantSleep()`, `sleep()`), the clock in the top right (`#c-clock`), and night lighting (`light()`, after `LightPool.update`). `__carrier.routine`; `__carrier.time('17:45')` sets the clock. |
-| `src/carrier/voice.mjs` | `Voices`: everyone who speaks aloud. `say(speaker, text, {delay, pitch, rate, clipOnly})` plays the recorded clip for that exact line (`assets/voice/index.json`, keyed `speaker|line`), or a run of clips when the line is several recorded lines end to end (the muster's roll and the order after it), else the browser's own speech (a local English voice; `pitch` / `rate` are for that). The ship's broadcast (`ship`) queues; a person's new line cuts off their last. `clipOnly` says nothing without a clip (the pipes). `?voice=0` turns it all off. `__carrier.voices`. |
-| `ships/carrier/voices.json` | The ship's broadcast voice (`speakers.ship`) and its fixed calls that live in code (`ship`), and the TTS `model`. A speaker's cast is the saved Gemini voice (`voiceId`), the description it was designed from (`design`, `gender`, `language`), the short acting note sent with each line (`style`), `tannoy` (through a speaker), `sample` (the audition line); the officers' and leading hands' casts are in their own files in `content/people/`. |
+| `src/core/announcer.mjs` | `Announcer`: every call the ship makes, and who hears it. A system says `C.bus.emit('call', { id, room, … })`; the call's file (`content/announcements/<id>.json`; the format is at the top of this file) says who speaks, the words as pieces, the subtitle, who it is for and by what (`to`: `{ audience: channel }`; audiences `all`, `you`, `zone`, `drums` and the departments; channels `tannoy`, `headset`, `radio`), `priority` (1–5: a higher call cuts off a lower one, the queue goes highest first, routine calls go stale), `delay`, `again` (say it once: the same words are not said again within it) and `alarm` (its sound, `near` for heard only in its room and fainter in its zone). `you()` (set in `main.mjs`) is where you are and which nets you are on: your rank's `depts` (`career.json` `stations.ranks`; free roam is on every net) and the seat you are in. The tannoy is heard where there is air, or in a sealed helmet; the headset anywhere aboard; the radio in the fighter and flight control. A heard call plays its clips and shows `#c-sub` (who, coloured by channel, then the words); one with no clip is a subtitle with no sound. The ship's automated voice (`ai`) names any room piece by piece (`spokenRoom`, `spokenDeck`, `spokenSection`; `shipWords(L)` is every one, which `tools/voices.mjs` records). `log` is the last fifty calls and how each reached you (`null`: not at all). `__carrier.announcer`. |
+| `content/announcements/` | One file per call (42), and `index.json` listing them. Who says what: `ai` (the ship's automated voice) for alarms, fire detection, hits, venting, the airlock, torpedo warnings; `captain` for general quarters, condition one and securing; `engineer` for the drive, heat, radiators, propellant; `medical` for casualties; `ship` (the bridge's talker) for the navigator, the CIC's fire orders, the raid's end and the pipes; `flight` on the radio. |
+| `content/glossary.json` | The words the crew use and avoid (real modern joint service: general quarters, man your battle stations, now relieve the watch, reveille, taps, on report, birds away, splash…). `tools/check.mjs` fails on a spoken line that says an `avoid` word. |
+| `src/carrier/voice.mjs` | `Voices`: plays the recordings. `say(speaker, text)` plays a person's recorded clip for that exact line (`assets/voice/index.json`, keyed `speaker|line`), or a run of clips when the line is several recorded lines end to end (the muster's roll and the order after it); a line with no clip is not spoken (no browser speech). `piecesOf(speaker, words)` is the files for a call's pieces; `play(channel, files, done)` plays them on `broadcast` (the announcer's) or `person`, cutting off what was playing, and returns a handle to `stop()`. `?voice=0` turns it all off (subtitles still show). `__carrier.voices`. |
+| `ships/carrier/voices.json` | The two voices that are not people (`speakers.ai`, the ship's automated system; `speakers.ship`, the bridge's talker), the TTS `model`, and `nets` (the rooms where a department's net is on the speaker). A speaker's cast is the saved Gemini voice (`voiceId`), the description it was designed from (`design`, `gender`, `language`), the short acting note sent with each line (`style`), `label` (the subtitle's name), `tannoy` (through a speaker), `sample` (the audition line); everyone else's cast is in their own file in `content/people/`. |
 | `content/people/<id>.json`, `src/core/people.mjs` | People, one file each (`content/README.md`): `name`, `dept`, `voice` (the browser's speech) and `cast` (the recorded voice). The ship's files name them by `id` where they stand (the career's `people`, each section's `leader`), and `main.mjs` joins the two at load (`loadPeople`, `joinPeople`), so `career.mjs` and `watch.mjs` see a whole person. |
 | `tools/check.mjs` | `node tools/check.mjs`: the one check over the content. The ship's folder against its `index.json`; every room the layout, the career and the routine name; each career step's kind, officer, drill and unlocks; every spot inside its room; every person's file; the cast and the clip index. Exit 1 on a problem. `tools/carrier-v2.mjs` runs it after writing, `tools/voices.mjs` before recording; run it after any change to content. Its geometry (overlaps, the hull) stays `carrier-v2.mjs`'s. A new kind of content gets a section in it. |
 | `tools/voices.mjs` | Records the lines with Gemini TTS into `assets/voice/` (see "Voices" below). |
@@ -298,10 +301,12 @@ Try it from the console: `__carrier.career.complete()` does the order in hand; `
 
 ### Voices (recorded with Gemini TTS)
 
-The game plays mp3s; it never calls an AI service. `tools/voices.mjs` works out every line with fixed words from the
-data (each `talk` step's `say` in the career; "You have your orders." and "Carry on." for each officer; your leading
-hand's shake for each watch, the roll, and the muster step's words; each step's `start`; the pipes; the `ship` list in
-`ships/carrier/voices.json`) and records what is missing or changed:
+The game plays mp3s; it never calls an AI service, and a line with no recording is not spoken (the ship's calls show
+as a subtitle; the officers' words are on the duty card). `tools/voices.mjs` works out every line from the data (each
+`talk` step's `say` in the career; "You have your orders." and "Carry on." for each officer; your leading hand's wake-up
+for each watch, the roll, and the muster step's words; the officers' words at general quarters; each step's `start`;
+the pipes; and every piece of every call in `content/announcements/`, with the ship's words for every room, deck and
+part of the ship) and records what is missing or changed:
 
 ```bash
 node tools/voices.mjs --list                          # every line, ✓ where there is a clip; needs no key
@@ -316,14 +321,17 @@ Each speaker is a voice designed in Gemini 3.8 Flash TTS from a 1–2 sentence d
 timbre, accent; permanent traits only) and saved in the Google project behind the key (`POST /v1beta/voices`); every
 line is spoken in it through the Interactions API with the speaker's `style` as the acting note. The crew come from
 all over: an Irish coxswain, a Nigerian damage control chief, a South African gunnery officer, an Australian pilot, a
-Texan officer of the watch, a Glaswegian leading hand, a Canadian voice on the broadcast. Keep that mix in new casting.
+Texan officer of the watch, Glaswegian, Jamaican and Mumbai leading hands, a Canadian bridge talker, a Kenyan captain,
+a Singaporean engineer officer, a Filipino medical officer, and an accentless automated voice for the ship herself.
+Keep that mix in new casting.
 
 - The key goes in the environment only, never in a file in this repo. It needs `ffmpeg` (trims, levels, makes the
   tannoy sound, encodes 48 kb/s mono mp3).
 - Change a line in the career or the watches, or a speaker's direction, and the next run records that line again
-  (the index keeps a hash of what each clip was made from). Until it does, the browser speaks the new words.
-- A new spoken line in code: say it through `voices.say(speaker, text)` (the ship: `dc.say(call, text)`), and if its
-  words are fixed, add it to `ship` in `ships/carrier/voices.json` (or derive it in `tools/voices.mjs`) and record it.
+  (the index keeps a hash of what each clip was made from). Until it does, the new words are shown, not spoken.
+- A new call the ship makes: a file in `content/announcements/` (see `content/README.md`, "A new call") and
+  `this.C.bus?.emit('call', { id, … })` in the code; `tools/check.mjs` checks the two match. A person speaking to you
+  in code: `voices.say(speaker, text)`, with the line derived in `tools/voices.mjs` so it gets recorded.
 - A new speaker: the `cast` in their person file (`content/people/<id>.json`), with `design`, `gender`,
   `language` (BCP-47, e.g. `en-IE`), `style` and a `sample` line; then `--design --sample out`, listen, and record.
   `--design` writes the new `voiceId` back into that file (the ship's into `voices.json`). Cast
@@ -333,7 +341,11 @@ Texan officer of the watch, a Glaswegian leading hand, a Canadian voice on the b
   repo), clear the `voiceId`s (in `content/people/` and `voices.json`) and run `--design`: the same descriptions make new voices, close but not identical, so
   record every line again to keep each character consistent. To change a voice, edit its `design`, clear its
   `voiceId`, `--design`, and record its lines again (its hash changes, so a plain run does that).
-- Calls with a place or a number in them (a job's call-out, a hull breach) are not recorded: there are too many.
+- A call with a place in it (a job's call-out, a hull breach) is said by the ship's automated voice in pieces: the
+  hazard, then the room, then the deck, each its own clip, as a real ship's automated system says it. Frame numbers
+  and sides are on the subtitle, not said.
+- Words: `content/glossary.json`. Real modern joint-service military, not Royal Navy folk speech: `tools/check.mjs`
+  fails a line that says an `avoid` word.
 - Time words: the tool says `0400` as "oh four hundred" and drops brackets from room names (`speakable()`).
 - Listen to new clips. A clip that sounds wrong: delete its entry in `assets/voice/index.json` and run again (each
   take differs). Stage directions belong in `style`, never in a line's words: the model may speak them.

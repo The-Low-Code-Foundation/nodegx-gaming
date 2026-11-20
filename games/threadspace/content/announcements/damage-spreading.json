@@ -1,0 +1,20 @@
+{
+  "id": "damage-spreading",
+  "about": "A fire nobody is fighting grows a size (damage.mjs).",
+  "who": "ai",
+  "say": [
+    "Fire spreading.",
+    "{room}"
+  ],
+  "to": {
+    "zone": "tannoy",
+    "dc": "headset",
+    "bridge": "headset"
+  },
+  "priority": 3,
+  "alarm": {
+    "cue": "klaxon",
+    "n": 2,
+    "near": true
+  }
+}

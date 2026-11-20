@@ -1,0 +1,17 @@
+{
+  "id": "hit",
+  "about": "A shell hit a sealed compartment (tanks, magazines, machinery): integrity.mjs strike.",
+  "who": "ai",
+  "say": [
+    "Hit.",
+    "{section}"
+  ],
+  "show": "Hit: {Room}. Frame {frame}.",
+  "to": {
+    "zone": "tannoy",
+    "dc": "headset",
+    "bridge": "headset"
+  },
+  "priority": 3,
+  "delay": 0.4
+}

@@ -1,0 +1,15 @@
+{
+  "id": "torpedo-hit",
+  "about": "A torpedo struck her (integrity.mjs arrive).",
+  "who": "ai",
+  "say": [
+    "Torpedo hit.",
+    "{section}"
+  ],
+  "show": "Torpedo hit: {section}, frame {frame}, {side}.",
+  "to": {
+    "all": "tannoy"
+  },
+  "priority": 4,
+  "delay": 0.2
+}

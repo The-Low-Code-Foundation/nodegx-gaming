@@ -1,0 +1,16 @@
+{
+  "id": "venting-hull",
+  "about": "The pumps start on the fixed hull (integrity.mjs setCondition).",
+  "who": "ai",
+  "say": [
+    "Venting the fixed hull. Helmets on."
+  ],
+  "to": {
+    "all": "tannoy"
+  },
+  "priority": 4,
+  "alarm": {
+    "cue": "klaxon",
+    "n": 2
+  }
+}

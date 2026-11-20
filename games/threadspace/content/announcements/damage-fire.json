@@ -1,0 +1,24 @@
+{
+  "id": "damage-fire",
+  "about": "A fire is detected (damage.mjs raise).",
+  "who": "ai",
+  "say": [
+    "Fire, fire, fire.",
+    "{room}",
+    "{deck}",
+    "Away the damage control party."
+  ],
+  "show": "{say} Frame {frame}, {side}.",
+  "to": {
+    "zone": "tannoy",
+    "dc": "headset",
+    "bridge": "headset"
+  },
+  "priority": 3,
+  "delay": 2.6,
+  "alarm": {
+    "cue": "klaxon",
+    "n": 4,
+    "near": true
+  }
+}

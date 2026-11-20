@@ -1,0 +1,15 @@
+{
+  "id": "heat-clear",
+  "about": "The heat is back under the limit (plant.mjs).",
+  "who": "engineer",
+  "say": [
+    "Heat back under the limit. Weapons free."
+  ],
+  "to": {
+    "bridge": "headset",
+    "engineering": "headset",
+    "gunners": "headset"
+  },
+  "priority": 2,
+  "again": 20
+}

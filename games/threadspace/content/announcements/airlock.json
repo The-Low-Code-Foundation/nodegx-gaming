@@ -1,0 +1,19 @@
+{
+  "id": "airlock",
+  "about": "You cycle the hangar airlock (integrity.mjs cycle).",
+  "who": "ai",
+  "say": [
+    "{how}"
+  ],
+  "slots": {
+    "how": [
+      "Airlock cycling. Pumping down.",
+      "Airlock cycling. Filling."
+    ]
+  },
+  "to": {
+    "you": "tannoy"
+  },
+  "priority": 1,
+  "again": 2
+}

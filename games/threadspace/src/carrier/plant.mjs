@@ -81,7 +81,11 @@ export class Plant {
   hitRadiator(r, amount) {
     const was = r.health;
     r.health = Math.max(0, r.health - amount);
-    if (was > 0.4 && r.health <= 0.4) this.dc?.say(`The ${r.m.id.replace('radiator-', '')} radiator is badly damaged.`, `${r.m.id.replace('radiator-', '')} radiator damaged: she sheds heat more slowly.`, 0, 5);
+    if (was > 0.4 && r.health <= 0.4) {
+      const side = r.m.id.replace('radiator-', '').replace('stbd', 'starboard');
+      this.C.bus?.emit('call', { id: 'radiator-damaged', side });
+      this.dc?.say(null, `${side[0].toUpperCase() + side.slice(1)} radiator damaged: she sheds heat more slowly.`, 0, 5);
+    }
   }
 
   /** G at the helm: spread or fold the radiators. */
@@ -129,16 +133,18 @@ export class Plant {
     if (!this.warned && this.heat >= H.warn) {
       this.warned = true;
       this.sfx?.cue('chime');
-      this.dc?.say('Heat warning. Heat sinks at eighty percent.', 'Heat warning: the sinks are 80% full. Spread the radiators (G at the helm) or ease off.', 0, 6);
+      this.C.bus?.emit('call', { id: 'heat-warning' });
+      this.dc?.say(null, 'Heat warning: the sinks are 80% full. Spread the radiators (G at the helm) or ease off.', 0, 6);
     } else if (this.warned && this.heat < H.warn - 0.1) this.warned = false;
     const wasHot = this.hot;
     this.hot = this.heat >= H.limit || (this.hot && this.heat > H.limit - 0.08);
     if (this.hot && !wasHot) {
       this.sfx?.cue('klaxon', { n: 2 });
       // A ship with railguns names them (the torpedo broadside launches cold and makes no heat).
-      if (this.C.L.weapons?.railgun) this.dc?.say('Heat sinks full. Point defence and railgun holding fire. Main drive restricted.', 'Heat sinks full: point defence and railgun hold fire, the drive is held back.', 0, 7);
-      else this.dc?.say('Heat sinks full. Point defence holding fire. Main drive restricted.', 'Heat sinks full: point defence holds fire, the drive is held back.', 0, 7);
-    } else if (wasHot && !this.hot) this.dc?.say(null, 'Heat back under the limit: weapons free.', 0, 4);
+      this.C.bus?.emit('call', { id: this.C.L.weapons?.railgun ? 'heat-full' : 'heat-full-pdc' });
+      if (this.C.L.weapons?.railgun) this.dc?.say(null, 'Heat sinks full: point defence and railguns hold fire, the drive is held back.', 0, 7);
+      else this.dc?.say(null, 'Heat sinks full: point defence holds fire, the drive is held back.', 0, 7);
+    } else if (wasHot && !this.hot) this.C.bus?.emit('call', { id: 'heat-clear' }), this.dc?.say(null, 'Heat back under the limit: weapons free.', 0, 4);
     // Reaction mass: what the drive burned, and what leaks out of a holed tank.
     const isp = this.P.propellant.isp;
     let flow = 0;
@@ -152,7 +158,7 @@ export class Plant {
         this.prop = Math.max(0, this.prop - this.prop0 * k.share * this.P.propellant.leak * dt);
       }
     }
-    if (leaking && !this.leaking) this.dc?.say('Propellant leak. A tank is holed.', 'Propellant leak: a holed tank is venting reaction mass until it is sealed.', 0, 6);
+    if (leaking && !this.leaking) this.C.bus?.emit('call', { id: 'propellant-leak' }), this.dc?.say(null, 'Propellant leak: a holed tank is venting reaction mass until it is sealed.', 0, 6);
     this.leaking = leaking;
     // What the heat and the tanks allow the main drive.
     const allow = this.prop <= 0 ? 0 : this.hot ? H.throttle : 1;

@@ -1,0 +1,13 @@
+{
+  "id": "medical",
+  "name": "Medical officer",
+  "dept": "crew",
+  "cast": {
+    "voiceId": "voice_4bwoukkohtst",
+    "design": "A gentle, steady man in his late thirties with a Manila Filipino English accent, warm and reassuring.",
+    "gender": "male",
+    "language": "en-PH",
+    "style": "Calm and quick, the voice of someone who has seen worse; reassuring without slowing down.",
+    "sample": "Casualty reported in the forward drum. Medical team, away. Stretcher party to the ring corridor."
+  }
+}
