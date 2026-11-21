@@ -19,10 +19,11 @@ the cheek and a wedding; nobody ages or dies.
 - The places bar at the top switches between Home, Work, the Park and **the street** (each new game names its own). Walk down it, click a
   house's door to knock, go to a party (or gatecrash it), or look round a house for sale; 🗺️ opens the town map.
 - **Free will** (bottom left) lets your Sim choose for itself when you have nothing planned.
-- The game saves in this browser as you play. The start screen offers to carry on or begin again.
+- A new game starts with **Make your Sim** (traits, school year, birthday), then how the life begins and what your Sim
+  dreams of. The game saves in this browser as you play. The start screen offers to carry on or begin again.
 
 The work questions are maths, French, English, science, history and geography, pitched at a school year you choose in
-Settings (French school years, CP to 5e: ages 6 to 12).
+Settings (French school years, CP to 5e: ages 6 to 12). At the boulangerie the maths is about baking.
 
 ## State
 
