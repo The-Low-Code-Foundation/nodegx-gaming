@@ -4,7 +4,7 @@
 // and the room, the Sims' "walls down"), the things a Sim can use and where it stands to use them, and a walk grid.
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { dressHome, dressHouse, dressOffice, dressPark, pondLife, lampGlow } from './dressing.mjs';
+import { dressHome, dressHouse, dressOffice, dressPark, dressStreet, pondLife, lampGlow } from './dressing.mjs';
 import { kindOf } from './game/shop.mjs';
 
 const loader = new GLTFLoader();
@@ -706,6 +706,34 @@ async function lifeHouse(group, spec) {
     view: { target: [0, 0.7, 0], camera: [7.5 * k, 7.5 * Math.min(k, 1.35), 9 * k], max: 18 * k, fog: [24 * k, 60 * k] }
   };
 }
+// ---- Sunny Lane (round 15): the street, a place to walk down ----
+// The brief's round-14 list: "The street to walk down instead of the town card (a fifth place: the houses' fronts, the
+// bus)". Each house's front door (Door_1 in its front wall, facing the street: `use.front` is the house's id, or 'flat'),
+// low hedges between the front gardens (so the way from one door to the next is out along the pavement), lamps across
+// the road, and the bus stop to the park. Which door goes where is the page's (`doorTo`, `doorFor`): it knows whose
+// home is whose. `spec`: { w, d, fronts } (town.mjs STREET_SIZE and streetLayout()).
+async function lifeStreet(group, { w, d, fronts }) {
+  const z0 = -d / 2, P = [];
+  for (const [k, f] of fronts.entries()) {
+    P.push([F('Door_1'), f.x - f.width / 2 + 1.3, z0 + 0.06, 0, 2.05, { act: 'door', label: `No. ${f.no}`, offers: 'streetDoor', front: f.id }]);
+    // A hedge between this garden and the next.
+    const next = fronts[k + 1];
+    if (next) for (const z of [z0 + 0.4, z0 + 1.3]) P.push([S('Bush_2'), (f.x + f.width / 2 + next.x - next.width / 2) / 2, z, k + z, 0.95]);
+  }
+  const lamps = [];
+  for (let x = -w / 2 + 6; x < w / 2 - 2; x += 12) if (Math.abs(x - (fronts[0].x + fronts[fronts.length - 1].x) / 2) > 2) lamps.push([x, z0 + 12.1]);
+  for (const [x, z] of lamps) P.push([S('Streetlight_Single'), x, z, Math.PI, 3.8]);
+  lampGlow(group, lamps.map(([x, z]) => [x, 3.45, z]));
+  // The bus stop on the far pavement, halfway along (no Sim walks the whole street to catch the bus), facing the road.
+  const mid = (fronts[0].x + fronts[fronts.length - 1].x) / 2;
+  P.push([BUS_STOP, mid, z0 + 11.4, Math.PI, 2.45, { act: 'door', label: 'Bus stop', offers: 'streetBus' }]);
+  const items = await furnish(group, P);
+  const dressed = await dressStreet(group, furnish, S, { w, d, fronts });
+  return {
+    w, d, walls: [], items, cell: 0.5, starts: [], shadow: 12, fade: dressed.fade, street: { fronts, labels: dressed.labels, balloons: dressed.balloons, signs: dressed.signs, hits: dressed.hits },
+    view: { target: [0, 3, -4], camera: [5, 13.5, 22], max: 34, fog: [44, 120] }
+  };
+}
 // A shop thing ({ id, x, z, turn, width? }, as saved) as `furnish` places it.
 export function placementOf(e) {
   const s = kindOf(e.id);
@@ -733,7 +761,7 @@ export function houseFurniture(w, d, n = 1, seed = 1) {
   return out.map(([id, x, z, turn]) => ({ id, x, z, turn }));
 }
 
-export const PLACES = { home, park, office, lifeHome, lifeOffice, lifePark, lifeHouse };
+export const PLACES = { home, park, office, lifeHome, lifeOffice, lifePark, lifeHouse, lifeStreet };
 
 // Builds a place into its own group (call once; switching places adds/removes the group).
 export async function buildPlace(name, options) {
@@ -759,6 +787,8 @@ export async function buildPlace(name, options) {
     name, group, floor, grid, walls: p.walls, items: p.items.filter((i) => i.obj), view: p.view, bounds: { w: p.w, d: p.d }, starts: p.starts,
     clickable: group.children.filter((c) => c.isInstancedMesh && c.userData.items?.some((i) => i.use?.act || i.use?.decor)),
     door: p.items.find((i) => i.use?.act === 'door') ?? null,
+    // Round 15: the street's fronts, name boards and party balloons (dressing.mjs dressStreet).
+    street: p.street ?? null,
     shadow: p.shadow ?? 6,
     // The parts that move (round 10): { item, kind: 'fridge' | 'tv' | 'shower', update(dt, on) }. The page says when each
     // is on (the door open, the picture playing, the water running).

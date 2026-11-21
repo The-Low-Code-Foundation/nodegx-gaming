@@ -31,7 +31,7 @@ import { people } from './looks.mjs';
 import { createSim, lookControls } from './create.mjs';
 import { readSave, writeSave, clearSave, lifeState, restoreLife } from './save.mjs';
 import { SHOP, SHOP_KINDS, shopItem, CAMP_BED, COT, sellPrice, LOVELY, LOOK_COST, kindOf, FLAT_FURNITURE } from './shop.mjs';
-import { SIZES, EXTENSION, HOUSES, houseById, FLAT_LOOK, COLLEAGUE_HOUSES, NEIGHBOURS, awake, PARTY, INVITED, partyHouse, partyNow, GUEST, HOME_PARTY, STREET } from './town.mjs';
+import { SIZES, EXTENSION, HOUSES, houseById, FLAT_LOOK, COLLEAGUE_HOUSES, NEIGHBOURS, awake, PARTY, INVITED, partyHouse, partyNow, GUEST, HOME_PARTY, STREET, STREET_SIZE, streetLayout } from './town.mjs';
 import { blankLook } from './looks.mjs';
 import { makeProp, wear } from './props.mjs';
 import { Baby, BABY_NEEDS, BABY_NAMES, BLANKETS, MAX_BABIES } from './baby.mjs';
@@ -97,10 +97,11 @@ const labels = Object.fromEntries(STATIONS.map((s) => [s.id, t(`station.${s.id}`
 // Round 14: the flat is built empty (its door only) and furnished by the page from the household's furniture (below),
 // so anything in it can be moved, sold or put away. `home` is whichever home the household has now: the flat, the flat
 // with an extension, or a house they bought (`rehome`). The town's houses are built the first time someone goes.
-const [flat, office, park] = await Promise.all([buildPlace('lifeHome', { empty: true }), buildPlace('lifeOffice', { labels }), buildPlace('lifePark')]);
+// Round 15: and Sunny Lane, the street the houses stand on (world.mjs lifeStreet), built with the others.
+const [flat, office, park, street] = await Promise.all([buildPlace('lifeHome', { empty: true }), buildPlace('lifeOffice', { labels }), buildPlace('lifePark'), buildPlace('lifeStreet', { ...STREET_SIZE, fronts: streetLayout() })]);
 let home = flat;
 home.house = 'flat';
-const places = { home, office, park };
+const places = { home, office, park, street };
 // The shiny things take the room light; matte ones (walls, floors, cloth, wood) don't need it.
 function shine(p) {
   p.group.traverse((o) => {
@@ -108,10 +109,10 @@ function shine(p) {
       if (m.isMeshStandardMaterial && !m.envMap && (m.metalness > 0.3 || m.roughness < 0.3) && !shiny.includes(m)) (m.envMap = roomLight), shiny.push(m);
   });
 }
-for (const p of [home, office, park]) shine(p);
+for (const p of [home, office, park, street]) shine(p);
 const allPlaces = () => [...new Set(Object.values(places))];
 const nameOf = (p) => Object.keys(places).find((k) => places[k] === p);
-for (const p of [home, office, park]) scene.add(p.group);
+for (const p of [home, office, park, street]) scene.add(p.group);
 const place = home; // the flat as it was at the start (round 8's name, kept for the checks)
 let view = null;
 // `centre`: where to look (the Sim you look after, when the view goes with them); the camera keeps the place's angle.
@@ -254,6 +255,7 @@ async function makeSim(who, at, i, { name = null, look = null, body = null, ...o
   life.onBaby = haveBaby;
   life.onDressUp = dressUp;
   life.mayLeave = mayLeave;
+  life.via = via;
   life.onArrive = arrived;
   life.titleOf = (p) => titleOf(p);
   everyone.push(life);
@@ -753,6 +755,73 @@ function housePlace(id) {
   return building.get(id);
 }
 const titleOf = (p) => (p === home ? t('place.home') : p.house ? houseTitle(p.house) : t(`place.${nameOf(p)}`));
+// ---- Sunny Lane, the street (round 15) ----
+// The brief's round-14 list: "The street to walk down instead of the town card (a fifth place: the houses' fronts, the
+// bus)". Home to a house, a house to home or to another house, and home to the park and back all go along it (Life
+// `via`): out of one front door, down the pavement, in at the other (the park's is the bus stop). The office stays the
+// bus's, straight there and back, as it was. A click on a house's door, its front or its name board says who lives there
+// and what you can do: knock, go to the party (invited or not), look round, buy, go in.
+const frontDoor = (id) => street.items.find((i) => i.use?.front === id) ?? null;
+const busStop = street.items.find((i) => i.use?.offers === 'streetBus');
+const homeFront = () => homeState.id; // 'flat', or the id of the house they bought
+const inTown = (p) => !!p && (p === home || !!p.house);
+street.doorTo = (to) => (to === 'home' ? frontDoor(homeFront()) : houseById(to) ? frontDoor(to) : busStop);
+street.doorFor = (from) => (from === home ? frontDoor(homeFront()) : from?.house ? frontDoor(from.house) : busStop);
+function via(from, to) {
+  const there = places[to];
+  if (from === street || !there) return null;
+  return (inTown(from) && (inTown(there) || there === park)) || (from === park && inTown(there)) ? 'street' : null;
+}
+// The name boards over the houses (who lives there, a party, for sale, yours) and the balloons at a party's gate.
+function streetTick() {
+  if (view !== street) return;
+  for (const f of street.street.fronts) {
+    const label = street.street.labels.get(f.id), h = houseById(f.id), mine = homeFront() === f.id;
+    const party = mine ? !!homeParty : !!h && partyAt(f.id);
+    street.street.balloons.get(f.id).visible = party;
+    const sign = street.street.signs.get(f.id);
+    if (sign) sign.visible = !mine && h?.kind === 'sale';
+    if (mine) label.set(`${party ? '🎉' : '🏠'} ${f.no} · ${t('place.home')}`, '#2f6b4f');
+    else if (!h) label.set(`🏢 ${f.no} · ${t('street.flats')}`, '#56636e');
+    else if (h.kind === 'sale') label.set(`🪧 ${f.no} · ${t(`house.${f.id}`)} · ${t('ui.cost', { cost: h.price })}`, '#b5473c');
+    else label.set(`${party ? '🎉' : '🏡'} ${f.no} · ${houseTitle(f.id)}`, party ? '#7a4ab0' : '#3a6a9a');
+  }
+}
+// What a house's door offers, for the one you look after (who may be at home, or anywhere: they walk round).
+function openDoorMenu(item, x, y) {
+  const id = item.use.front, f = street.street.fronts.find((g) => g.id === id), h = houseById(id), who = sel;
+  const rows = [];
+  const btn = (key, label, on = true, note = '') => `<button data-${key} ${on ? '' : 'disabled'}>${label}${note ? `<span class="gain">${note}</span>` : ''}</button>`;
+  let head;
+  if (homeFront() === id) {
+    head = `🏠 ${t('place.home')}<small>${f.no} ${STREET}</small>`;
+    rows.push(btn('home', `🏠 ${t('street.goIn')}`, who.place !== home));
+  } else if (!h) {
+    head = `🏢 ${t('street.flats')}<small>${f.no} ${STREET}</small>`;
+    rows.push(btn('none', t('street.movedOut'), false));
+  } else if (h.kind === 'sale') {
+    const cost = buyCost(id);
+    head = `🪧 ${t(`house.${id}`)}<small>${f.no} ${STREET} · ${t('town.forSale')} · ${t('town.size', SIZES[h.size])}</small>`;
+    rows.push(btn('visit', `👀 ${t('town.look')}`, who.place !== places[id]), btn('buy', `🏡 ${t('ui.sale.buy')}`, household.money >= cost, t('ui.cost', { cost: Math.max(0, cost) })));
+  } else {
+    const v = visitState(id), party = partyAt(id), living = residentsOf(id);
+    head = `${party ? '🎉' : '🏡'} ${houseTitle(id)}<small>${f.no} ${STREET}${living.length ? ` · ${living.map((l) => l.name).join(', ')}` : ''}</small>`;
+    const label = party ? (invited(id) ? `🎉 ${t('street.party')}` : `🙊 ${t('street.crash')}`) : `🚪 ${t('street.knock')}`;
+    const here = who.place === places[id];
+    rows.push(btn('visit', label, v.ok && !here, here ? '' : v.ok ? '' : t(`town.why.${v.why}`)));
+  }
+  rows.push(btn('town', `🗺️ ${t('ui.town.map')}`));
+  $('menu').innerHTML = `<div class="with">${head}</div>${rows.join('')}`;
+  const on = (key, fn) => {
+    const b = $('menu').querySelector(`[data-${key}]`);
+    if (b) b.onclick = () => (($('menu').hidden = true), fn());
+  };
+  on('home', () => who.command(GO_HOME));
+  on('visit', () => goVisit(id));
+  on('buy', () => openBuy(id));
+  on('town', () => openTown());
+  showMenu(x, y, rows.length + 1);
+}
 // At home to visit now: awake, not at work, not round somewhere else.
 const workDayNow = (l) => l.job && weekday(minutes) < 5 && (minutes % 1440) >= 8 * 60 && (minutes % 1440) < careerOf(l.job).ends;
 function homeNow(l) {
@@ -1045,12 +1114,12 @@ function light() {
 }
 
 // ---- where: the places, and who is in each. You see the one the Sim you look after is in ----
-const PLACE_ICONS = { home: '🏠', office: '🏢', park: '🌳' };
+const PLACE_ICONS = { home: '🏠', office: '🏢', park: '🌳', street: '🏘️' };
 let followed = null; // the place sel was in last frame: when it changes, the view goes with them
 // Round 14: a house in the town shows here while someone from the household is in it (or you are looking at it), and
 // 🗺️ Town opens the street: who lives where, the parties, the houses for sale, an extension.
 function renderPlaces() {
-  const shown = [home, office, park, ...allPlaces().filter((p) => p.house && p !== home && (view === p || lives.some((l) => l.present && l.place === p)))];
+  const shown = [home, office, park, street, ...allPlaces().filter((p) => p.house && p !== home && (view === p || lives.some((l) => l.present && l.place === p)))];
   $('places').innerHTML = shown
     .map((p) => {
       const k = nameOf(p);
@@ -1058,7 +1127,7 @@ function renderPlaces() {
       const icon = PLACE_ICONS[k] ?? (partyAt(p.house) ? '🎉' : houseById(p.house)?.kind === 'sale' ? '🪧' : '🏡');
       return `<button data-place="${k}" class="${view === p ? 'on' : ''}">${icon} ${titleOf(p)}${here ? `<small>${here}</small>` : ''}</button>`;
     })
-    .join('') + `<button data-town>🗺️ ${t('ui.town.button')}<small>${STREET}</small></button>`;
+    .join('') + `<button data-town title="${t('ui.town.map')}">🗺️</button>`;
   for (const b of $('places').children) b.onclick = () => (b.dataset.town != null ? openTown() : setView(places[b.dataset.place]));
 }
 // In the office and the park the camera keeps the one you look after in the middle (the flat is small enough to see whole).
@@ -1087,18 +1156,24 @@ renderer.domElement.addEventListener('pointerup', (e) => {
   if (!down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 6) return;
   // Placing something bought: the click puts it down (or says why it can't go there).
   if (placing) return placeHere(e.clientX, e.clientY);
-  // Not where they are: the click is only for looking.
-  if (sel.place !== view || !sel.present) return;
+  // Not where they are: the click is only for looking. Round 15: on the street, a house's door (or the bus stop) still
+  // answers: the one you look after walks there from wherever they are.
+  const away = sel.place !== view || !sel.present;
+  if (away && view !== street) return;
   ray.setFromCamera(new THREE.Vector2((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1), camera);
   // Round 14: everything in the home can be clicked (to move, box or sell it), so something with nothing to do with it
   // (the TV, a plant) no longer stops a click on what stands behind it (a cot behind the TV: parked-lifesim-r14-tvcot).
   // It is the click's only if nothing usable is further along.
   let only = null;
-  for (const h of ray.intersectObjects([...everyone.filter((l) => inView(l) && !l.carer).map((l) => l.proxy), view.floor, ...view.clickable], false)) {
+  const fronts = view.street?.hits ?? [];
+  const targets = away ? [...view.clickable, ...fronts] : [...everyone.filter((l) => inView(l) && !l.carer).map((l) => l.proxy), view.floor, ...view.clickable, ...fronts];
+  for (const h of ray.intersectObjects(targets, false)) {
     const who = h.object.userData.life;
     if (who) return who === sel ? undefined : openSocialMenu(who, e.clientX, e.clientY);
-    const item = h.object.isInstancedMesh ? h.object.userData.items[h.instanceId] : null;
+    const item = h.object.isInstancedMesh ? h.object.userData.items[h.instanceId] : h.object.userData.front ? frontDoor(h.object.userData.front) : null;
     if (item?.gone) continue;
+    if (item?.use?.front) return openDoorMenu(item, e.clientX, e.clientY);
+    if (away && item?.use?.offers !== 'streetBus') continue;
     if (item && offersFor(item).length) return openMenu(item, e.clientX, e.clientY);
     if (item && item.bought && item.bought.id !== 'campBed') {
       only ??= item;
@@ -1136,7 +1211,7 @@ function openMenu(item, x, y, point = null) {
     ? `<button data-move>↔ ${t('ui.shop.move')}</button>${bought.price ? `<button data-store ${keep ? 'disabled' : ''}>📥 ${t('ui.shop.store')}<span class="gain">${keep || ''}</span></button><button data-sell ${keep ? 'disabled' : ''}>📦 ${t('ui.shop.sell')}<span class="gain">${keep || `+${t('ui.cost', { cost: sellPrice(bought) })}`}</span></button>` : ''}`
     : '';
   // A way out (a front door, the bus stop): anywhere in the town (round 14); and a house for sale's door: buy it.
-  const out = item && (item.use?.act === 'door' || item.use?.offers === 'busStop');
+  const out = item && (item.use?.act === 'door' || item.use?.offers === 'busStop' || item.use?.offers === 'streetBus');
   const sale = out && view.house && houseById(view.house)?.kind === 'sale' && !owned(view.house) ? houseById(view.house) : null;
   const doorRows = out ? `<button data-town>🗺️ ${t('ui.town.go')}</button>${sale ? `<button data-buyhouse>🏡 ${t('ui.sale.buy')}<span class="gain">${t('ui.cost', { cost: sale.price })}</span></button>` : ''}` : '';
   $('menu').innerHTML = head + offers.map((o, i) => `<button data-i="${i}">${o.baby ? `${o.icon} ` : ''}${t(`action.${o.id}`)}<span class="gain">${o.task ? '🪙' : gain(o)}</span></button>`).join('') + extra + doorRows;
@@ -1946,6 +2021,7 @@ function frame(now) {
     lovely();
     if (Math.floor(minutes / 60) !== Math.floor((savedAt ?? -60) / 60)) save();
     renderPanels();
+    streetTick();
     renderPeople();
     renderToasts();
     renderCards();
@@ -1992,6 +2068,8 @@ window.__life = {
   get caring() { return caring && { ...caring }; }, get nanny() { return nanny; }, get careAsk() { return !!careAsk; }, nannyLife,
   // Round 14: the town.
   measure, kindOf, srcOf,
+  // Round 15: the street.
+  street, via, frontDoor, openDoorMenu, streetTick,
   neighbours, neighboursLoaded, guests, get homeState() { return { ...homeState }; }, get homeParty() { return !!homeParty; }, housePlace, residentsOf, visitState,
   partyToday, partyAt, invited, openTown, goVisit, openBuy, buyHouse, openExtend, extendHome, inviteOver, throwParty, store, rehome, homeNow, titleOf, get moving() { return moving; },
   ready: true

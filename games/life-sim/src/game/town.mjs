@@ -69,3 +69,20 @@ export const partyNow = (minutes) => {
 export const GUEST = { comes: 20, stays: 180 };
 // A party at home: everyone the household is Friends with, for four hours, and the food costs this much.
 export const HOME_PARTY = { cost: 40, minutes: 240 };
+
+// Round 15: Sunny Lane as a place to walk down (world.mjs lifeStreet), instead of only a card. The houses' fronts stand
+// in a row along the back of the street, by number, the flat's block first; a front is as wide as its house is big
+// (`widths` by SIZES index). Across the road: the pavement, the lamps, and the bus stop to the park. Going from home to a
+// house (or to the park) is out of the front door, along the street, and in at the other door.
+export const FRONT = { flat: 8, widths: [7, 7.5, 7.5, 9, 9], gap: 1.8, from: -38 };
+export const STREET_SIZE = { w: 84, d: 14 };
+// Each front: { id ('flat' or a house's id), no, x (its middle), width, storeys, look, sale }.
+export function streetLayout() {
+  let x = FRONT.from;
+  return [{ id: 'flat', no: 1, size: 0, look: FLAT_LOOK, flat: true }, ...[...HOUSES].sort((a, b) => a.no - b.no)].map((h) => {
+    const width = h.flat ? FRONT.flat : FRONT.widths[h.size];
+    const front = { id: h.id, no: h.no, x: x + width / 2, width, storeys: h.flat ? 3 : 2, look: h.look, sale: h.kind === 'sale', flat: !!h.flat };
+    x += width + FRONT.gap;
+    return front;
+  });
+}

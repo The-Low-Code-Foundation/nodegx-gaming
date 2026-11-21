@@ -108,7 +108,13 @@ Object.assign(OFFERS, {
     { id: 'goHome', act: 'travel', travel: 'home', minutes: 1, gives: {}, free: false, icon: '🏠', away: true },
     { id: 'goPark', act: 'travel', travel: 'park', minutes: 1, gives: {}, free: false, icon: '🌳' }
   ],
-  busStop: [{ id: 'goHome', act: 'travel', travel: 'home', minutes: 1, gives: {}, free: false, icon: '🏠' }]
+  busStop: [{ id: 'goHome', act: 'travel', travel: 'home', minutes: 1, gives: {}, free: false, icon: '🏠' }],
+  // Round 15: Sunny Lane's bus stop, to the park (and back to your own door). The houses' doors on the street are the
+  // page's (who lives there, a party, for sale: page.mjs openDoorMenu).
+  streetBus: [
+    { id: 'goPark', act: 'travel', travel: 'park', minutes: 1, gives: {}, free: false, icon: '🌳' },
+    { id: 'goHome', act: 'travel', travel: 'home', minutes: 1, gives: {}, free: false, icon: '🏠' }
+  ]
 });
 
 const night = (h) => h >= 22 || h < 6;

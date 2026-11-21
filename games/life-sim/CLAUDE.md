@@ -25,12 +25,13 @@ Time: one game minute a second at speed 1 (`SPEEDS` in `life.mjs`). Every need n
 - `wardrobe.mjs`: body weight and height morphs, hair colour, clothes colours, borrowing another person's hair or
   outfit; reads `wardrobe/catalogue.json` (which outfits and hairstyles fit whom).
 - `sim.mjs`: one Sim's body: animation mixer, walking an A* path, using a thing, the shadow blob.
-- `world.mjs`: the places (`PLACES`: `lifeHome`, `lifeOffice`, `lifePark`, `lifeHouse`; `home`, `park`, `office` are the
+- `world.mjs`: the places (`PLACES`: `lifeHome`, `lifeOffice`, `lifePark`, `lifeHouse`, `lifeStreet` (Sunny Lane); `home`, `park`, `office` are the
   older test versions `lifeHome` and friends build on), the made-in-code models (`MADE`: fridge, TV, telescope, cot,
   camp bed), `furnish` (loads, fits and instances models), the walk grid (`makeGrid`), `houseFurniture` (a town
   house's layout), `STATIONS` (the office's work stations).
 - `dressing.mjs`: everything only looked at: painted floor and wall textures, the sky and the sun, windows, the
-  garden and street, party decorations (`partyDecor`), the pond and its ducks, lamp glow.
+  garden and street, party decorations (`partyDecor`), the pond and its ducks, lamp glow, Sunny Lane's house fronts
+  (`dressStreet`: name boards, For sale boards and party balloons the page shows and hides).
 
 `src/game/` (the game):
 
@@ -49,7 +50,8 @@ Time: one game minute a second at speed 1 (`SPEEDS` in `life.mjs`). Every need n
   generated question bank (maths, French, English, history, science); `school/france.mjs` the geography banks;
   `stem.mjs` the older promotion questions.
 - `shop.mjs`: `SHOP`, everything that can be bought (field list at the top), `kindOf`, `FLAT_FURNITURE`.
-- `town.mjs`: `SIZES` (home sizes), `EXTENSION` prices, `HOUSES` on Sunny Lane, who lives where, `PARTY` timetable.
+- `town.mjs`: `SIZES` (home sizes), `EXTENSION` prices, `HOUSES` on Sunny Lane, who lives where, `PARTY` timetable,
+  `streetLayout()` (where each house's front stands on the street, by number).
 - `baby.mjs`, `childcare.mjs`: the baby's needs and names; the nanny and the nursery.
 - `create.mjs`, `looks.mjs`: make-your-Sim screen; a Sim's look as data and how it is dressed.
 - `props.mjs`: what is in a Sim's hands or on the table, the eating motion, wedding clothes.
@@ -92,10 +94,22 @@ adds, `chance` it goes well, `lock` (the bond level it needs), `free` (whether f
 `'action.<id>'` (the button), `'react.<id>.ok'` / `'react.<id>.fail'` (what the other says) and `'ui.fail.<id>'`
 (search `compliment` there to see the set).
 
+## Sunny Lane, the street
+
+The houses' fronts stand in a row on the street (`lifeStreet`), the flat's block first, by number. Going from home to a
+house, from one house to another, or from home to the park and back is along the street: the page's `via` tells
+`Life.travel` to come out onto the street at the door they left by, walk to the other door, and go in (one to-do item
+throughout). The street's `doorTo(to)` and `doorFor(fromPlace)` say which door: your home's front (`homeState.id`), a
+house's, or the bus stop (the park). The office is still straight there and back by bus. Clicking a house's door, its
+front or its name board opens `openDoorMenu` in `page.mjs` (knock, go to the party or gatecrash it, look round, buy, go
+in, the town map), even while the one you look after is indoors: they walk out to it. The places bar's 🗺️ opens the
+old town card (extensions, a party at home).
+
 ## How to add a house to the street (the nearest thing to a level)
 
 1. Add an entry to `HOUSES` in `src/game/town.mjs`: `{ id: 's4', no: 8, kind: 'sale', size: 3, price: 1500, look: { feature: 0xe0e8d0, floor: 'carpet', curtains: 0x406080 } }`.
-   `size` indexes `SIZES`; `look` is the wall, floor and curtains (`dressing.mjs` `dressHouse`).
+   `size` indexes `SIZES`; `look` is the wall, floor and curtains (`dressing.mjs` `dressHouse`). Its front goes up on
+   Sunny Lane by itself (`streetLayout`, in number order; `FRONT.widths` says how wide by size).
 2. A house for sale stands empty (the household's own furniture moves in when it is bought). A lived-in house is
    furnished by `houseFurniture(w, d, n, seed)` in `src/world.mjs` (called from `page.mjs`); to give a house its own
    layout, add a branch there that returns `{ id, x, z, turn }` entries using `SHOP` ids.

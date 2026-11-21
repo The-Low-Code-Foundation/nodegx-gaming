@@ -1193,3 +1193,208 @@ export function pondLife(group, [px, pz, pr]) {
     }
   };
 }
+
+// ---- Sunny Lane (round 15): the street as a place to walk down ----
+// The houses' fronts in a row along the back (z = −d/2 is the front walls' face; each house goes back from there out
+// of the walk grid), their front gardens, the pavement, the road, the far pavement with its lamps, and hedges and trees
+// beyond. The doors, the hedges between the gardens, the lamps and the bus stop are world.mjs's (things a Sim walks
+// round or uses); everything here is only looked at. `fronts`: town.mjs streetLayout(). Returns the trees (to step aside
+// for the camera), a name board over each house (`labels`: id → { sprite, set(text, colour) }) and balloons at each gate
+// (`balloons`: id → group, shown by the page while that house has a party) and a For sale board in each garden
+// (`signs`: id → group, shown while it is for sale and not yours).
+const ROOFS = [0x8a4a3a, 0x5a6470, 0x9a5a40, 0x6a5040];
+// Glass seen from the street: the sky in it by day, a streak of light across it; lit warm from inside at night where
+// someone lives (`lived`), dark where nobody does.
+const frontGlasses = new Map();
+function frontGlass(lived) {
+  if (!frontGlasses.has(lived)) {
+    const map = canvasTexture('frontGlass', 128, 128, (g, W, H) => {
+      const sky = g.createLinearGradient(0, 0, W * 0.3, H);
+      sky.addColorStop(0, '#cfe4f2'), sky.addColorStop(0.55, '#8fb2c8'), sky.addColorStop(1, '#5f7f96');
+      g.fillStyle = sky, g.fillRect(0, 0, W, H);
+      g.fillStyle = 'rgba(255,255,255,0.35)';
+      g.beginPath(), g.moveTo(W * 0.15, H), g.lineTo(W * 0.55, 0), g.lineTo(W * 0.75, 0), g.lineTo(W * 0.35, H), g.fill();
+    }, { repeat: false });
+    const glass = new THREE.MeshBasicMaterial({ map, color: 0xffffff });
+    const night = new THREE.Color(lived ? 0xffc46a : 0x1a2240), day = new THREE.Color(0xffffff);
+    ticking.push({ group: null, tick: (_dt, c) => glass.color.copy(night).lerp(day, daylight(c.hour)) });
+    frontGlasses.set(lived, glass);
+  }
+  return frontGlasses.get(lived);
+}
+function plaque(text) {
+  const tex = canvasTexture(`plaque-${text}`, 128, 128, (g, W, H) => {
+    g.fillStyle = '#f6f1e4', g.fillRect(0, 0, W, H);
+    g.strokeStyle = '#2a3a4a', g.lineWidth = 8, g.strokeRect(6, 6, W - 12, H - 12);
+    g.fillStyle = '#2a3a4a', g.font = 'bold 76px system-ui, sans-serif', g.textAlign = 'center', g.textBaseline = 'middle';
+    g.fillText(text, W / 2, H / 2 + 4);
+  }, { repeat: false });
+  return planeMesh(0.28, 0.28, new THREE.MeshStandardMaterial({ map: tex, roughness: 0.6 }));
+}
+function houseFront(group, f, z0, r) {
+  const parts = [];
+  const add = (m) => (group.add(m), parts.push(m), m);
+  const storey = 2.8, h = storey * f.storeys + 0.3, depth = 6;
+  // Brick for every other house, painted render (the house's own colour inside) for the rest; the flat's block brick.
+  let wallMat;
+  if (f.flat || f.no % 2) {
+    const map = canvasTexture('brick', 256, 256, brickPainter).clone();
+    map.needsUpdate = true;
+    map.repeat.set(f.width / 0.9, h / 0.6);
+    wallMat = new THREE.MeshStandardMaterial({ map, roughness: 0.95 });
+  } else wallMat = mat(f.look?.feature ?? 0xe8e0d0, { roughness: 0.9 });
+  const body = new THREE.Mesh(new THREE.BoxGeometry(f.width, h, depth), wallMat);
+  body.position.set(f.x, h / 2, z0 - depth / 2);
+  body.castShadow = body.receiveShadow = true;
+  body.userData.front = f.id;
+  group.add(body);
+  parts.body = body;
+  const roofMat = mat(ROOFS[f.no % ROOFS.length], { roughness: 0.85 });
+  if (f.flat) {
+    // A flat roof with a parapet, and a sign over the entrance.
+    add(boxMesh(f.width + 0.2, 0.4, depth + 0.2, f.x, h + 0.2, z0 - depth / 2, roofMat));
+  } else {
+    // A pitched roof: a triangle across the depth, run along the front (overhanging a little at each end).
+    const s = new THREE.Shape();
+    s.moveTo(-0.35, 0), s.lineTo(depth + 0.35, 0), s.lineTo(depth / 2, 2.3), s.closePath();
+    const geo = new THREE.ExtrudeGeometry(s, { depth: f.width + 0.4, bevelEnabled: false }).rotateY(Math.PI / 2).translate(-(f.width + 0.4) / 2, 0, 0);
+    const roof = new THREE.Mesh(geo, roofMat);
+    roof.position.set(f.x, h, z0);
+    roof.castShadow = true;
+    group.add(roof);
+    // A chimney.
+    add(boxMesh(0.6, 1.4, 0.6, f.x + f.width * 0.3, h + 1.6, z0 - depth * 0.6, mat(0x9a6a5a)));
+  }
+  // The door is world.mjs's (Door_1, at x − width/2 + 1.3). Over it a little canopy, beside it the number.
+  const doorX = f.x - f.width / 2 + 1.3;
+  add(boxMesh(1.5, 0.08, 0.6, doorX, 2.35, z0 + 0.3, roofMat));
+  const num = add(plaque(String(f.no)));
+  num.position.set(doorX + 0.85, 1.75, z0 + 0.012);
+  add(boxMesh(1.3, 0.12, 0.5, doorX, 0.06, z0 + 0.25, mat(0xb0a898, { roughness: 0.9 })));
+  // Windows: the ground floor's right of the door, every floor above along the front.
+  const glass = frontGlass(!f.sale);
+  const win = (x, y, w = 1.1, hh = 1.2) => {
+    const piece = windowPiece(w, hh, { outside: true });
+    piece.children[0].material = glass;
+    piece.position.set(x, y, z0 + 0.01);
+    add(piece);
+  };
+  for (let x = doorX + 2.2; x < f.x + f.width / 2 - 0.8; x += 2.2) win(x, 1.45);
+  for (let k = 1; k < f.storeys; k++) for (let x = f.x - f.width / 2 + 1.3; x < f.x + f.width / 2 - 0.6; x += 2.2) win(x, k * storey + 1.45);
+  // The front garden: a path to the pavement, a flower bed under the window.
+  group.add(ground('paving', 1.3, 2.2, doorX, z0 + 1.1, -0.02));
+  flowerBed(group, (doorX + 1.0 + f.x + f.width / 2 - 0.3) / 2, z0 + 0.45, Math.max(1, f.x + f.width / 2 - 0.3 - doorX - 1.0), 0.45, 0, 40 + f.no);
+  // Every house has its board, shown while it is for sale (the page's: one bought comes down, one sold goes up).
+  if (!f.flat) {
+    parts.sign = saleSign();
+    parts.sign.position.set(f.x + f.width / 2 - 1.0, 0, z0 + 1.6);
+    parts.sign.visible = f.sale;
+    group.add(parts.sign);
+  }
+  if (f.flat) {
+    const board = canvasTexture('flatsSign', 512, 96, (g, W, H) => {
+      g.fillStyle = '#2f4a5a', g.fillRect(0, 0, W, H);
+      g.fillStyle = '#fff', g.font = '600 52px system-ui, sans-serif', g.textAlign = 'center', g.textBaseline = 'middle';
+      g.fillText('Sunny Lane Flats', W / 2, H / 2 + 3);
+    }, { repeat: false });
+    add(planeMesh(2.6, 0.5, new THREE.MeshStandardMaterial({ map: board, roughness: 0.6 }), f.x + 0.8, 2.55, z0 + 0.012));
+  }
+  return parts;
+}
+// A name board over a house, drawn again when what it says changes.
+export function streetLabel() {
+  const c = document.createElement('canvas');
+  c.width = 640;
+  c.height = 96;
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true, fog: false }));
+  sprite.scale.set(4.4, 0.66, 1);
+  sprite.renderOrder = 10;
+  let last = '';
+  return {
+    sprite,
+    set(text, colour = '#2f6b4f') {
+      if (text + colour === last) return;
+      last = text + colour;
+      const g = c.getContext('2d');
+      g.clearRect(0, 0, c.width, c.height);
+      g.font = '600 46px system-ui, sans-serif';
+      const w = Math.min(c.width - 16, g.measureText(text).width + 56);
+      g.fillStyle = colour;
+      g.beginPath();
+      g.roundRect((c.width - w) / 2, 8, w, 80, 40);
+      g.fill();
+      g.fillStyle = '#fff';
+      g.textAlign = 'center';
+      g.textBaseline = 'middle';
+      g.fillText(text, c.width / 2, 50, c.width - 60);
+      tex.needsUpdate = true;
+    }
+  };
+}
+// Balloons tied to a gatepost: a house having a party.
+function gateBalloons(seed) {
+  const g = new THREE.Group();
+  const r = rand(seed);
+  const colours = [0xe8484a, 0xf2c94c, 0x4a90e2, 0x7ed36a, 0xf08ac0, 0x9a6ad8];
+  const lines = [];
+  g.add(boxMesh(0.1, 1.0, 0.1, 0, 0.5, 0, mat(0xf2efe8)));
+  for (let k = 0; k < 6; k++) {
+    const top = new THREE.Vector3((r() - 0.5) * 0.7, 1.9 + r() * 0.6, (r() - 0.5) * 0.5);
+    const b = new THREE.Mesh(new THREE.SphereGeometry(0.2, 14, 10).scale(1, 1.2, 1), new THREE.MeshStandardMaterial({ color: colours[k % colours.length], roughness: 0.25 }));
+    b.position.copy(top);
+    b.castShadow = true;
+    g.add(b);
+    lines.push(top.x, top.y - 0.24, top.z, 0, 1.0, 0);
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(lines, 3));
+  g.add(new THREE.LineSegments(geo, new THREE.LineBasicMaterial({ color: 0xdddddd })));
+  g.visible = false;
+  return g;
+}
+export async function dressStreet(group, furnish, S, { w, d, fronts }) {
+  if (!DOM) return { fade: [], labels: new Map(), balloons: new Map(), signs: new Map(), hits: [] };
+  const z0 = -d / 2, r = rand(57);
+  // The ground: grass everywhere, the front pavement, the road and its lines, the far pavement.
+  group.add(ground('grass', w + 120, 140, 0, 0, -0.03));
+  group.add(ground('paving', w + 60, 2.2, 0, z0 + 3.1, -0.018));
+  group.add(ground('asphalt', w + 120, 6, 0, z0 + 7.2, -0.022));
+  const lines = new THREE.Mesh(new THREE.PlaneGeometry(w + 120, 0.14).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0xf2f0e6, roughness: 0.8, transparent: true }));
+  lines.material.map = canvasTexture('dashesX', 64, 8, (c) => ((c.fillStyle = '#fff'), c.fillRect(0, 0, 32, 8)));
+  lines.material.map.repeat.set((w + 120) / 3, 1);
+  lines.material.alphaMap = lines.material.map;
+  lines.position.set(0, -0.015, z0 + 7.2);
+  group.add(lines);
+  group.add(ground('paving', w + 60, 2.2, 0, z0 + 11.3, -0.018));
+  // Kerbs along both pavements.
+  const kerb = mat(0xb8b2a6, { roughness: 0.9 });
+  for (const z of [z0 + 4.2, z0 + 10.2]) group.add(boxMesh(w + 60, 0.08, 0.16, 0, 0.0, z, kerb));
+  const looked = [];
+  const labels = new Map(), balloons = new Map(), signs = new Map(), hits = [];
+  for (const f of fronts) {
+    const parts = houseFront(group, f, z0, r);
+    looked.push(...parts);
+    const label = streetLabel();
+    label.sprite.position.set(f.x, 2.8 * f.storeys + 0.9, z0 + 0.6);
+    label.sprite.userData.front = f.id;
+    hits.push(parts.body, label.sprite);
+    if (parts.sign) signs.set(f.id, parts.sign);
+    group.add(label.sprite);
+    labels.set(f.id, label);
+    const b = gateBalloons(f.no * 13);
+    b.position.set(f.x - f.width / 2 + 2.3, 0, z0 + 2.0);
+    group.add(b);
+    balloons.set(f.id, b);
+  }
+  bake(group, [{ userData: { decor: looked } }]);
+  // Beyond the far pavement: a low hedge, trees, and the backs of the houses of the next street.
+  const P = [];
+  for (let x = -w / 2 - 10; x <= w / 2 + 10; x += 1.4) P.push([S('Bush_1'), x + (r() - 0.5) * 0.2, -z0 + 6.0 + (r() - 0.5) * 0.2, r() * 6, 1.1 + r() * 0.3]);
+  for (let x = -w / 2; x <= w / 2; x += 9 + r() * 4) P.push([S(['CommonTree_1', 'CommonTree_3', 'BirchTree_1'][Math.floor(r() * 3)]), x, -z0 + 8.5 + r() * 2, r() * 6, 5.5 + r() * 1.5]);
+  // Trees behind the houses, their tops over the roofs.
+  for (let x = -w / 2; x <= w / 2; x += 7 + r() * 5) P.push([S(['CommonTree_2', 'PineTree_1', 'CommonTree_4'][Math.floor(r() * 3)]), x, z0 - 9 - r() * 3, r() * 6, 8 + r() * 2]);
+  // `hits`: a click on a house's front or its name board is a click on its door (the page's).
+  return { fade: await scenery(group, furnish, P), labels, balloons, signs, hits };
+}

@@ -161,23 +161,26 @@ export class Life {
 
   // ---- places ----
   // In at a place's way in (its door, the park's bus stop), standing about. `away`: a colleague going home, out of sight.
-  arrive(place) {
+  // Round 15: a place with many ways in (the street: a door for each house, the bus stop) says which one someone coming
+  // from `from` comes out of (`doorFor`).
+  arrive(place, from = null) {
     this.sim.release();
     this.place = place;
     this.sim.home = place;
     this.sim.path = [];
+    const door = (from && place.doorFor?.(from)) || place.door;
     // Two coming in together (a date, the end of the day) stand side by side, not inside each other.
     const here = this.everyone.filter((o) => o !== this && o.present && o.place === place).map((o) => o.sim.position);
-    const spot = place.door.spot.clone();
+    const spot = door.spot.clone();
     for (const [dx, dz] of [[0, 0], [0.7, 0], [-0.7, 0], [0, 0.7], [0, -0.7], [0.7, 0.7], [-0.7, -0.7]]) {
-      const p = place.door.spot.clone().add(new THREE.Vector3(dx, 0, dz));
+      const p = door.spot.clone().add(new THREE.Vector3(dx, 0, dz));
       if (place.grid.free(p) && here.every((h) => h.distanceTo(p) > 0.6)) {
         spot.copy(p);
         break;
       }
     }
     this.sim.position.copy(spot);
-    this.sim.group.rotation.y = place.door.facing + Math.PI;
+    this.sim.group.rotation.y = door.facing + Math.PI;
     this.sim.finish();
   }
   travel(to) {
@@ -193,7 +196,22 @@ export class Life {
     }
     const place = this.places[to];
     if (!place) return;
-    this.arrive(place);
+    // Round 15: from home to a house in the town (or to the park), the way is along the street (the page's `via`): out of
+    // this door onto Sunny Lane, a walk to the other door, and in. Still the one thing on the to-do list.
+    const hop = this.via?.(this.place, to);
+    const street = hop && this.places[hop];
+    if (street && street !== this.place && street !== place) {
+      const from = this.place;
+      this.arrive(street, from);
+      this.onArrive?.(this, street);
+      if (!d) return;
+      this.doing = d;
+      d.waiting = 0;
+      const door = street.doorTo?.(to) ?? street.door;
+      return this.sim.goTo(door.spot, () => this.doing === d && this.travel(to));
+    }
+    const from = this.place;
+    this.arrive(place, from);
     if (d?.offer.travel === 'office') this.startShift(d.endsAt);
     // A date begins at the park: both have the moodlet, and three hours of it.
     if (to === 'park' && this.date) this.date.until ??= (this.clock?.() ?? 0) + 180;
@@ -365,7 +383,11 @@ export class Life {
     this.sim.walkClip = this.needs.energy < 20 || this.mood.emotion === 'sad' ? 'mc_walkSlow' : 'Walk_Loop';
     if (offer.act === 'walk') return this.sim.goTo(entry.point, () => this.doing === d && this.complete());
     // Somewhere else: to this place's way out, and in at the other's.
-    if (offer.act === 'travel') return this.place.door ? this.sim.goTo(this.place.door.spot, () => this.doing === d && this.travel(offer.travel)) : this.travel(offer.travel);
+    // Round 15: a place with many ways out (the street) says which door goes there (`doorTo`).
+    if (offer.act === 'travel') {
+      const door = this.place.doorTo?.(offer.travel) ?? this.place.door;
+      return door ? this.sim.goTo(door.spot, () => this.doing === d && this.travel(offer.travel)) : this.travel(offer.travel);
+    }
     // A work station: the page asks its questions once they are there; it ends when they are answered (taskDone).
     if (offer.task)
       return this.sim.use(item, { act: offer.act, clip: offer.clip, started: () => {

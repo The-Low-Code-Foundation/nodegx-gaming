@@ -16,7 +16,8 @@ the cheek and a wedding; nobody ages or dies.
   do with it; what you pick goes on the to-do list at the bottom.
 - **Drag** to look around; scroll to zoom. Walls drop when they are in the way.
 - The clock (top left) has pause and three speeds. **Buy things** opens the shop.
-- The places bar at the top switches between Home, Work, the Park and the Town.
+- The places bar at the top switches between Home, Work, the Park and **Sunny Lane**, the street. Walk down it, click a
+  house's door to knock, go to a party (or gatecrash it), or look round a house for sale; 🗺️ opens the town map.
 - **Free will** (bottom left) lets your Sim choose for itself when you have nothing planned.
 - The game saves in this browser as you play. The start screen offers to carry on or begin again.
 
@@ -25,8 +26,9 @@ Settings (French school years, CP to 5e: ages 6 to 12).
 
 ## State
 
-Playable end to end, built over fourteen rounds of play-testing on a laptop and a tablet. Not done: the tablet needs a measured performance pass for big parties, a double bed for two, inside walls for
-bigger houses, a walk-round furniture shop.
+Playable end to end, built over fourteen rounds of play-testing on a laptop and a tablet, plus a fifteenth: Sunny Lane
+as a street to walk down. Not done: the tablet needs a measured performance pass for big parties (and the street), a
+double bed for two, inside walls for bigger houses, a walk-round furniture shop.
 
 ## Run it locally
 
