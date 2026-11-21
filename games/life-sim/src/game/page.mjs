@@ -49,7 +49,7 @@ import { GOALS, goalById, openGoals, rollGoal, stepsDone, STEP_POINTS, GOAL_POIN
 import { WANTS, WANT_SLOTS, WANT_LASTS, rollWant, wantById } from './wants.mjs';
 import { DECK, EVENTS, POWER_CUT, eventById, pickEvent, pickWho, outcomeOf } from './events.mjs';
 import { WEATHER, rollWeather } from './weather.mjs';
-import { TOWNLIFE, dayOfTown, startTown, priceFor } from './townlife.mjs';
+import { TOWNLIFE, dayOfTown, startTown, priceFor, REACH, pickReach, sociable } from './townlife.mjs';
 
 const params = new URLSearchParams(location.search);
 const $ = (id) => document.getElementById(id);
@@ -1105,6 +1105,7 @@ function townTick() {
   }
   guestsTick();
   townLifeTick();
+  reachTick();
 }
 // ---- the town lives without you (round 16, phase 4; townlife.mjs) ----
 // Once a game day, at 03:00 (TOWNLIFE.at), the town's day is played out as data: nobody is drawn and no animation
@@ -1189,6 +1190,43 @@ function giveWant(l, id) {
   l.wants = (l.wants ?? []).filter((w) => w.id !== id);
   if (l.wants.length >= WANT_SLOTS) l.wants.shift();
   l.wants.push({ id, until: minutes + 2 * WANT_LASTS });
+}
+// ---- the town comes to you (round 16, phase 4.3; townlife.mjs REACH) ----
+// Someone there with the Sim you play starts something with them now and then, by their traits and the bond. Gentle:
+// a look every REACH.every game minutes, a gap between two, a few a day; never with a card open (a question at a
+// work station), never at work's own business, asleep, busy with something you asked or on the way somewhere.
+let reachAt = 0;
+const reached = new Map(); // a household Sim → { day, n, last }
+function reachTick() {
+  if (!townLifeOn || card || minutes < reachAt) return;
+  reachAt = minutes + REACH.every;
+  const day = Math.floor(minutes / 1440);
+  for (const you of lives) {
+    if (!you.present || you.card || you.doing?.by === 'job' || you.doing?.by === 'you' || you.doing?.other) continue;
+    const st = reached.get(you)?.day === day ? reached.get(you) : { day, n: 0, last: -1e9 };
+    reached.set(you, st);
+    if (st.n >= REACH.perDay || minutes - st.last < REACH.gap) continue;
+    for (const them of npcs()) {
+      if (!them.present || them.place !== you.place || them.critical || them.card || them.doing?.other || (them.doing && them.doing.by !== 'self')) continue;
+      if (you.busyFor(them) || Math.random() >= REACH.chance * sociable(them)) continue;
+      // Married to someone else (than the other one): no flirting, from them or with them.
+      const married = (p) => {
+        const s = spouseOf(p, everyone);
+        return !!s && s !== (p === them ? you : them);
+      };
+      const ix = pickReach(them, you, bondOf(them, you), { married, lockOf, interactionById }, Math.random);
+      if (!ix) continue;
+      if (them.doing) them.stop('other');
+      them.queue = them.queue.filter((e) => e.by === 'job');
+      them.start({ offer: ix, other: you, by: 'self', why: 'social' });
+      them.think(ix.hearts ?? ix.icon, `action.${ix.id}`);
+      toast(t(`ui.reach.${ix.id}`, { a: them.name, b: you.name }));
+      st.n++;
+      st.last = minutes;
+      window.__life.lastReach = { from: them.name, to: you.name, ix: ix.id, at: minutes };
+      break;
+    }
+  }
 }
 // The babies of the town who live in a house (with their parents).
 const babiesAt = (id) => townLife.babies.filter((b) => residentsOf(id).some((r) => b.parents.includes(r.name)));
@@ -2782,7 +2820,7 @@ window.__life = {
   // Round 16, phase 3.
   eventsOn, deck, eventsTick, openEvent, eventCtx, eventPeople, EVENTS, eventById, lastEvent: null, openMenu, offerWhy,
   // Round 16, phase 4.
-  townLifeOn, townLife, townLifeTick, playTownDay, TOWNLIFE, babiesAt, newsText, npcs, openNews,
+  townLifeOn, townLife, townLifeTick, playTownDay, TOWNLIFE, babiesAt, newsText, npcs, openNews, reachTick, REACH, lastReach: null,
   weatherNow, weatherTick, get weather() { return weather && { ...weather }; }, set weatherId(id) { weather = { day: Math.floor(minutes / 1440), id, told: true }; }, snowmen, weatherFx, ducks,
   folk, get extras() { return extras(); }, furniture, storage, save, snapshot, openShop, startPlacing, stopPlacing, turnPlacing, placeHere, hover, sell, beauty, openLook, get home() { return home; }, saving,
   get placing() { return placing; }, get start() { return start?.kind ?? null; },

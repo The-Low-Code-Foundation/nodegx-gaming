@@ -230,3 +230,49 @@ export function dayOfTown(w, random) {
   }
   return { news, moved, houses: changed, newcomer };
 }
+
+// ---- the town comes to you (the roadmap's 4.3) ----
+// Someone from the town, there with the Sim you play (at their house, at a party, in the park, at work), sometimes starts
+// something with them: a joker tells a joke, a chatty one comes for a chat, a romantic one flirts (only once there is a
+// romance between them, never someone married to someone else), a grumpy one teases now and then. Gentle and rare:
+// a look every `every` game minutes, `chance` each (times how sociable they are), never two within `gap` minutes for
+// the same Sim, at most `perDay` a day; never while a question at a work station is open, at work's own business, asleep
+// or on the way somewhere (the page's). The interaction is social.mjs's, run by Life as if they had chosen it.
+export const REACH = {
+  every: 20,
+  chance: 0.1,
+  gap: 90,
+  perDay: 4,
+  // How sociable: × chance.
+  sociable: { chatty: 1.6, cheerful: 1.2, joker: 1.2, shy: 0.4, grumpy: 0.7 },
+  // What they start, by weight: `base` × each trait they have. `romance`: only with a romance this far on (and nobody
+  // married to anyone else). Locks (social.mjs `lock`) still hold: a hug once Friends.
+  kinds: [
+    { ix: 'chat', base: 1, traits: { chatty: 2.5, cheerful: 1.3, shy: 0.5 } },
+    { ix: 'joke', base: 0.4, traits: { joker: 6, cheerful: 1.3, grumpy: 0.3 } },
+    { ix: 'compliment', base: 0.4, traits: { cheerful: 2, romantic: 2, grumpy: 0.2 } },
+    { ix: 'hug', base: 0.3, traits: { cheerful: 2, shy: 0.3, grumpy: 0.2 } },
+    { ix: 'talkLikes', base: 0.4, traits: { chatty: 1.5 } },
+    { ix: 'flirt', base: 0, traits: { romantic: 4 }, romance: 15 },
+    { ix: 'tease', base: 0, traits: { grumpy: 0.4 } }
+  ]
+};
+// What `them` (someone from the town) starts with `you`, or null: `bond` theirs, `married(p)` → whether p is married to
+// someone other than the other one. `lockOf` (social.mjs) says what the bond allows.
+export function pickReach(them, you, bond, { married, lockOf, interactionById }, random) {
+  const traits = them.traits ?? [];
+  const options = [];
+  for (const k of REACH.kinds) {
+    const ix = interactionById(k.ix);
+    if (!ix || lockOf(ix, bond)) continue;
+    if (k.romance != null && (bond.romance < k.romance || married(them) || married(you))) continue;
+    // Base 0: only from someone with the trait (a tease from a grumpy one, a flirt from a romantic one).
+    let w = traits.some((t) => k.traits[t] != null) ? Math.max(k.base, 1) : k.base;
+    for (const t of traits) w *= k.traits[t] ?? 1;
+    if (w > 0) options.push([ix, w]);
+  }
+  let r = random() * options.reduce((s, [, w]) => s + w, 0);
+  for (const [ix, w] of options) if ((r -= w) <= 0) return ix;
+  return options.at(-1)?.[0] ?? null;
+}
+export const sociable = (them) => (them.traits ?? []).reduce((k, t) => k * (REACH.sociable[t] ?? 1), 1);
