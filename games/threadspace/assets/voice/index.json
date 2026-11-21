@@ -1724,6 +1724,30 @@
    "voice": "voice_av0j47o3r5ps",
    "secs": 3.02
   },
+  "ship|Bandits. Enemy fighters escorting the raider. Point defence will engage them as they close.": {
+   "file": "ship-bandits-enemy-fighters-escorting-the-892c5e.mp3",
+   "hash": "892c5ed566",
+   "voice": "voice_av0j47o3r5ps",
+   "secs": 4.97
+  },
+  "ship|Splash one bandit.": {
+   "file": "ship-splash-one-bandit-28f9c6.mp3",
+   "hash": "28f9c60bd2",
+   "voice": "voice_av0j47o3r5ps",
+   "secs": 1.58
+  },
+  "ai|Point defence mount out of action.": {
+   "file": "ai-point-defence-mount-out-of-action-8f04d8.mp3",
+   "hash": "8f04d87ab3",
+   "voice": "voice_86u1detsknuf",
+   "secs": 2
+  },
+  "flight|Flight control. Missile launch, it's tracking you. Cut your drive and flare.": {
+   "file": "flight-flight-control-missile-launch-it-s-t-e33a82.mp3",
+   "hash": "e33a82f249",
+   "voice": "voice_y99kim4gm369",
+   "secs": 4.57
+  },
   "guns|Before you shoot at anything that shoots back, you shoot at a sled. A tug is streaming a target down our starboard side. First, draw a vac suit from one of the grey VAC SUITS lockers, in the spine, at damage control or in the flight gear room: at general quarters this ship sets condition one and pumps the air out of the fixed hull, so a hole cannot blow anyone out with it. The drums keep theirs. Then climb up into the dorsal turret. Lay your sight on the amber diamond, not on the sled: that is where the sled will be when your shell gets there. Three hits.": {
    "file": "guns-before-you-shoot-at-anything-that-sh-d36be4.mp3",
    "hash": "d36be4e2b7",
