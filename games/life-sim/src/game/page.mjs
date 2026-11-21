@@ -227,7 +227,7 @@ const saved = start?.kind === 'continue' ? start.save : null;
 const seasonForced = SEASON_IDS.includes(params.get('season')) ? params.get('season') : null;
 const dateForced = params.has('date') ? Math.max(1, Math.min(YEAR_DAYS, Number(params.get('date')) || 1)) - 1 : null;
 const calendarOn = !quick || params.has('calendar') || !!seasonForced || dateForced != null;
-const calendar = { start: null, told: null, born: {}, cake: {}, presents: {}, events: {}, ...(saved?.calendar ?? {}) };
+const calendar = { start: null, told: null, day: null, outing: null, cake: {}, events: {}, ...(saved?.calendar ?? {}) };
 // Round 16, phase 3.4: the day's weather ({ day, id }: weather.mjs), rolled each morning; a test URL has sunshine unless
 // `?weather=rain|snow|sun` (which keeps it so).
 const weatherForced = WEATHER[params.get('weather')] ? params.get('weather') : null;
@@ -1596,13 +1596,15 @@ let minutes = saved?.minutes ?? h0 * 60 + m0;
 let speed = Number(params.get('speed') ?? 1);
 // ---- the calendar (round 16, phase 6; calendar.mjs) ----
 // On in a game; on a test URL only with ?calendar=1, ?season=<spring|summer|autumn|winter> (today its first day) or
-// ?date=<1 to 28> (today that day of the year). `calendar`: `start` (the day of the year the game began on: a new
-// game's by the town's dice; a save from before phase 6 makes the day it loads the first day of spring), `told` (the
-// season last announced), `cake` / `presents` (whose birthday has had them, by year), `events` (each town event's
-// state, by year: advertised, entered).
+// ?date=<1 to 28> (today that day of the year; on a test URL the weekday stays the game's own, so it may not match).
+// `calendar`: `start` (the day of the year the game began on: a new game's by the town's dice, the first day of a
+// season, so every season begins on a Monday; a save from before phase 6 is in spring's first week the day it loads,
+// on the same weekday), `told` (the season last announced), `day` (the last day its birthdays were done), `outing`
+// (the last weekend day of an outing), `cake` (the year each one last had a birthday cake), `events` (each town
+// event's: the game day it was advertised for, the day it was told, who went and who entered, by day).
 const today0 = Math.floor(minutes / 1440);
 if (seasonForced || dateForced != null) calendar.start = startFor(today0, dateForced ?? yearDayOf(seasonForced, 1));
-else if (calendar.start == null) calendar.start = saved ? startFor(today0, 0) : rollStart(TOWN.seed ? townDice(TOWN.seed, 7999) : Math.random);
+else if (calendar.start == null) calendar.start = saved ? startFor(today0, today0 % CALENDAR.seasonDays) : rollStart(TOWN.seed ? townDice(TOWN.seed, 7999) : Math.random);
 const dateNow = () => dateOf(Math.floor(minutes / 1440), calendar.start);
 const seasonNow = () => (calendarOn ? dateNow().season : null);
 const weekendNow = () => calendarOn && isWeekend(weekday(minutes));

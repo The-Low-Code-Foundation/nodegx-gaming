@@ -25,8 +25,8 @@ export function readSave() {
     // v7 (round 16, phase 5): the household's side earnings (`side`: paintings to sell, the vegetables, today's odd
     // job, all earned so far); skills were in `lives` already. A v6 save or older loads with none (skills.mjs freshSide).
     // v8 (round 16, phase 6): the calendar (`calendar`: the day of the year the game began on, what has been told,
-    // the town's events seen) and each Sim's birthday (a day of the year). A v7 save or older loads with the calendar
-    // starting on the first day of spring that day, and birthdays rolled for the household (page.mjs).
+    // the town's events seen) and each Sim's birthday (a day of the year). A v7 save or older loads in spring's first week
+    // (on the same weekday: every season begins on a Monday), and the household's birthdays by the town's dice (page.mjs).
     return [1, 2, 3, 4, 5, 6, 7, 8].includes(s?.v) && Array.isArray(s.lives) && s.lives.length ? s : null;
   } catch {
     return null;

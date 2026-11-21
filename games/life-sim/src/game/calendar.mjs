@@ -34,7 +34,7 @@ export const yearDayOf = (season, dayOfSeason = 1) => Math.max(0, SEASON_IDS.ind
 // Where a new game's year begins: the first day of a season, by the town's dice (each town its own).
 export const rollStart = (random) => Math.floor(random() * SEASONS.length) * CALENDAR.seasonDays;
 // The start that makes game day `day` the day of the year `yearDay` (a test URL's ?season= or ?date=; an old save:
-// the first day of spring the day it loads).
+// spring's first week the day it loads, on its weekday).
 export const startFor = (day, yearDay) => (((yearDay - day) % YEAR_DAYS) + YEAR_DAYS) % YEAR_DAYS;
 
 // ---- 6.2: birthdays (no ageing) ----
