@@ -670,6 +670,8 @@ export class Life {
       if (item?.use?.act === 'sleep' && this.home && item !== this.home && !this.home.gone && this.place.items.includes(this.home)) continue;
       for (const offer of offersFor(item)) {
         if (offer.offered === false || offer.free === false || offer.cost || offer.travel || offer.task) continue;
+        // Round 16, phase 3: not now (the page's: a power cut, the weather).
+        if (this.offerOk && !this.offerOk(offer)) continue;
         if (this.carer && !offer.baby) continue;
         const gives = offer.advertises ?? offer.gives;
         if (only && !(gives[only] > 0)) continue;

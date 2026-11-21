@@ -61,8 +61,220 @@ export const EVENTS = [
       { id: 'handIn', icon: '😇', done: { moodlet: 'goodDeed', points: 40 } },
       { id: 'ducks', icon: '🦆', when: (c) => c.weather !== 'rain', done: { needs: { fun: 25 }, moodlet: 'ducks', count: 'feedDucks' } }
     ]
+  },
+
+  // ---- 3.2: gentle trouble (a hassle, soon over) ----
+  // The loo won't flush (a hassle: not again for six days). Fixing it is the dice (phase 5's handiness skill will be the dice then; for now, who they are).
+  {
+    id: 'loo', icon: '🚽', where: ['home'], hours: [7, 22], weight: 0.8, again: 6,
+    who: { from: 'neighbours' },
+    choices: [
+      { id: 'plumber', icon: '📞', cost: 30, done: { moodlet: 'sorted' } },
+      { id: 'fix', icon: '🔧', chance: 0.5, traits: { clumsy: -0.2, neat: 0.1, bookworm: 0.1 }, good: { moodlet: 'handy', points: 30 }, bad: { moodlet: 'soggy', money: -30 } },
+      { id: 'askWho', icon: '🏡', done: { friendship: 4, needs: { bladder: 100 }, moodlet: 'relief' } }
+    ]
+  },
+  // A power cut in the evening: no telly and no oven at home for an hour and a half (POWER_CUT).
+  {
+    id: 'powerCut', icon: '🕯️', where: ['home'], hours: [19, 23], weight: 0.7, again: 5,
+    choices: [
+      { id: 'candles', icon: '🕯️', done: { moodlet: 'candlelit', mateMoodlet: 'candlelit', mateFriendship: 3, powerCut: 90 } },
+      { id: 'stories', icon: '👻', when: (c) => !!c.mate, done: { moodlet: 'spooky', mateMoodlet: 'spooky', mateFriendship: 5, needs: { fun: 20 }, powerCut: 90 } },
+      { id: 'bed', icon: '😴', done: { needs: { energy: 10 }, powerCut: 90 } }
+    ]
+  },
+  // A drippy tap.
+  {
+    id: 'tap', icon: '🚰', where: ['home'], hours: [8, 22], weight: 0.7, again: 5, traits: { neat: 1.5 },
+    choices: [
+      { id: 'fix', icon: '🔧', chance: 0.6, traits: { clumsy: -0.25, neat: 0.1 }, good: { moodlet: 'handy', points: 20 }, bad: { moodlet: 'soggy' } },
+      { id: 'plumber', icon: '📞', cost: 15, done: { moodlet: 'sorted' } },
+      { id: 'bucket', icon: '🪣', done: { needs: { fun: -5 } } }
+    ]
+  },
+  // Where are the keys? (A work morning.)
+  {
+    id: 'keys', icon: '🔑', where: ['home'], hours: [7, 9], days: [0, 1, 2, 3, 4], when: (c) => c.job > 0, traits: { messy: 2.5, neat: 0.4 },
+    who: { from: 'neighbours' },
+    choices: [
+      { id: 'search', icon: '🔍', chance: 0.6, traits: { neat: 0.2, messy: -0.15 }, good: { moodlet: 'sorted' }, bad: { needs: { energy: -10 }, moodlet: 'oops' } },
+      { id: 'mate', icon: '🙋', when: (c) => !!c.mate, done: { mateFriendship: 3, moodlet: 'sorted' } },
+      { id: 'spare', icon: '🗝️', done: { friendship: 4, moodlet: 'sorted' } }
+    ]
+  },
+  // A spider in the bath.
+  {
+    id: 'spider', icon: '🕷️', where: ['home'], hours: [7, 23], weight: 0.8, again: 3,
+    choices: [
+      { id: 'catch', icon: '🫙', chance: 0.7, traits: { shy: -0.2, sporty: 0.1, cheerful: 0.05 }, good: { moodlet: 'brave' }, bad: { moodlet: 'oops' } },
+      { id: 'mate', icon: '🙋', when: (c) => !!c.mate, done: { mateFriendship: 2, mateMoodlet: 'brave' } },
+      { id: 'name', icon: '🕷️', done: { needs: { fun: 10 } } }
+    ]
+  },
+  // Music from next door, late.
+  {
+    id: 'noisy', icon: '🎵', where: ['home'], hours: [20, 23], weight: 0.7,
+    who: { from: 'neighbours', traits: { chatty: 1.5, joker: 1.5, shy: 0.3 } },
+    choices: [
+      { id: 'ask', icon: '🙏', chance: 0.75, traits: { chatty: 0.1, grumpy: -0.2 }, good: { friendship: 4, needs: { energy: 5 } }, bad: { friendship: -2 } },
+      { id: 'join', icon: '💃', done: { friendship: 6, needs: { fun: 30, social: 20, energy: -5 }, moodlet: 'party', count: 'party' } },
+      { id: 'earplugs', icon: '😴', done: { needs: { energy: 5 } } }
+    ]
+  },
+  // The printer jams at work.
+  {
+    id: 'printer', icon: '🖨️', where: ['office'], hours: [9, 17],
+    who: { from: 'colleagues' },
+    choices: [
+      { id: 'fix', icon: '🔧', chance: 0.5, traits: { bookworm: 0.2, clumsy: -0.2 }, good: { moodlet: 'handy', points: 30 }, bad: { moodlet: 'oops' } },
+      { id: 'askWho', icon: '🙋', done: { friendship: 4 } },
+      { id: 'later', icon: '🤷', done: {} }
+    ]
+  },
+
+  // ---- 3.2: nice surprises ----
+  // A stray cat at the door. Adopting waits for pets (phase 5).
+  {
+    id: 'cat', icon: '🐱', kind: 'knock', where: ['home'], hours: [8, 20], weight: 0.9, traits: { cheerful: 1.3 },
+    who: { from: 'neighbours' },
+    choices: [
+      { id: 'milk', icon: '🥛', done: { moodlet: 'catCuddle', needs: { fun: 20 } } },
+      { id: 'owner', icon: '🔍', chance: 0.6, good: { friendship: 6, moodlet: 'goodDeed', points: 40 }, bad: { moodlet: 'goodDeed' } },
+      { id: 'adopt', icon: '🏠', later: 5 }
+    ]
+  },
+  // A busker.
+  {
+    id: 'busker', icon: '🎸', where: ['park', 'street'], hours: [10, 19],
+    choices: [
+      { id: 'coin', icon: '🪙', cost: 2, done: { moodlet: 'music', needs: { fun: 15 } } },
+      { id: 'dance', icon: '💃', done: { moodlet: 'danced', needs: { fun: 30, energy: -5 }, count: 'dance' } },
+      { id: 'listen', icon: '👂', done: { needs: { fun: 10 } } }
+    ]
+  },
+  // A parcel for the neighbours, left with you.
+  {
+    id: 'parcel', icon: '📦', where: ['home'], hours: [9, 18],
+    who: { from: 'neighbours', house: true },
+    choices: [
+      { id: 'take', icon: '🚶', done: { friendship: 5, moodlet: 'goodDeed', go: 'whoHouse' } },
+      { id: 'keep', icon: '📥', done: { friendship: 2 } }
+    ]
+  },
+  // Free samples from a new café.
+  {
+    id: 'sample', icon: '🧁', where: ['park', 'street'], hours: [10, 18], traits: { foodie: 2.5 }, like: 'eat',
+    choices: [
+      { id: 'try', icon: '😋', chance: 0.75, traits: { foodie: 0.2 }, good: { needs: { hunger: 25 }, moodlet: 'yum' }, bad: { needs: { hunger: 10 }, moodlet: 'oops' } },
+      { id: 'mate', icon: '🎁', when: (c) => !!c.mate, done: { mateFriendship: 3, mateMoodlet: 'yum' } },
+      { id: 'no', icon: '🙂', done: {} }
+    ]
+  },
+  // A raffle ticket.
+  {
+    id: 'raffle', icon: '🎟️', where: ['park', 'street'], hours: [10, 18], weight: 0.7, when: (c) => c.money >= 5,
+    choices: [
+      { id: 'buy', icon: '🎟️', cost: 5, chance: 0.2, good: { money: 60, moodlet: 'foundCoins', points: 30 }, bad: { needs: { fun: 5 } } },
+      { id: 'no', icon: '🙂', done: {} }
+    ]
+  },
+  // A kite stuck in a tree.
+  {
+    id: 'kite', icon: '🪁', where: ['park'], hours: [10, 18], traits: { sporty: 1.5 },
+    choices: [
+      { id: 'climb', icon: '🧗', chance: 0.55, traits: { sporty: 0.25, lazy: -0.15, clumsy: -0.2 }, good: { moodlet: 'goodDeed', points: 50, needs: { energy: -5 } }, bad: { moodlet: 'oops', needs: { energy: -5 } } },
+      { id: 'keeper', icon: '🧑‍🌾', done: { moodlet: 'goodDeed' } }
+    ]
+  },
+  // Someone says something nice.
+  {
+    id: 'compliment', icon: '😊', where: ['park', 'street', 'office'], hours: [9, 20], goals: { popular: 1.5 },
+    who: { from: 'anyone', friendship: 0, traits: { cheerful: 2, romantic: 1.5, grumpy: 0.2 } },
+    choices: [
+      { id: 'thanks', icon: '😊', done: { friendship: 3, moodlet: 'complimented' } },
+      { id: 'back', icon: '💬', chance: 0.85, traits: { chatty: 0.1, shy: -0.2 }, good: { friendship: 6, moodlet: 'complimented', count: 'compliment' }, bad: { friendship: 1, moodlet: 'awkward' } }
+    ]
+  },
+  // The little free library on the street.
+  {
+    id: 'library', icon: '📚', where: ['street'], hours: [8, 20], traits: { bookworm: 3 }, like: 'read',
+    choices: [
+      { id: 'take', icon: '📖', done: { moodlet: 'goodBook', needs: { fun: 15 } } },
+      { id: 'swap', icon: '🔁', done: { moodlet: 'goodDeed', points: 20 } },
+      { id: 'no', icon: '🙂', done: {} }
+    ]
+  },
+  // A ball over the fence.
+  {
+    id: 'ball', icon: '⚽', where: ['home', 'street'], hours: [10, 19], traits: { sporty: 1.5 },
+    who: { from: 'neighbours' },
+    choices: [
+      { id: 'kick', icon: '🦵', chance: 0.6, traits: { sporty: 0.3, clumsy: -0.2 }, good: { friendship: 4, needs: { fun: 20 }, moodlet: 'pumped' }, bad: { friendship: 2, needs: { fun: 10 }, moodlet: 'oops' } },
+      { id: 'carry', icon: '🤲', done: { friendship: 3 } }
+    ]
+  },
+  // Birds singing in the park.
+  {
+    id: 'birds', icon: '🐦', where: ['park'], hours: [6, 11], weight: 0.8, traits: { cheerful: 1.5, nightOwl: 0.5 },
+    choices: [
+      { id: 'whistle', icon: '🎶', chance: 0.6, good: { moodlet: 'birdsong', needs: { fun: 15 } }, bad: { needs: { fun: 10 } } },
+      { id: 'listen', icon: '👂', done: { moodlet: 'birdsong' } }
+    ]
+  },
+
+  // ---- 3.2: invitations ----
+  // A birthday party tonight at their house: say yes and it is the evening's party (town.mjs PARTY hours), and you are
+  // asked.
+  {
+    id: 'birthday', icon: '🎂', where: ['home', 'street', 'park', 'house'], hours: [9, 17], weight: 0.9, goals: { popular: 2 }, again: 4,
+    who: { from: 'anyone', friendship: 10, house: true, traits: { chatty: 1.5, cheerful: 1.3 } },
+    choices: [
+      { id: 'yes', icon: '🎉', done: { friendship: 4, party: true, moodlet: 'invited', diary: true } },
+      { id: 'present', icon: '🎁', cost: 15, done: { friendship: 8, party: true, moodlet: 'invited', diary: true } },
+      { id: 'card', icon: '✉️', done: { friendship: 2 } }
+    ]
+  },
+  // A wedding in the park this afternoon (one of theirs is getting married).
+  {
+    id: 'wedding', icon: '💒', where: ['home', 'street', 'park', 'house'], hours: [9, 14], weight: 0.6, goals: { family: 2, popular: 1.5 }, again: 5,
+    who: { from: 'anyone', friendship: 25, traits: { romantic: 1.5 } },
+    choices: [
+      { id: 'go', icon: '💐', done: { friendship: 5, moodlet: 'weddingGuest', needs: { fun: 20, social: 20 }, count: 'party', go: 'park', diary: true } },
+      { id: 'present', icon: '🎁', cost: 20, done: { friendship: 9, moodlet: 'weddingGuest', needs: { fun: 20, social: 20 }, count: 'party', go: 'park', diary: true } },
+      { id: 'card', icon: '✉️', done: { friendship: 1 } }
+    ]
+  },
+  // A talent show at the park (weekends).
+  {
+    id: 'talent', icon: '🎤', where: ['home', 'street', 'park'], hours: [10, 17], days: [5, 6], weight: 0.9, traits: { joker: 2, chatty: 1.5, shy: 0.5 }, again: 3,
+    choices: [
+      { id: 'perform', icon: '🎤', chance: 0.5, traits: { joker: 0.2, chatty: 0.1, cheerful: 0.1, shy: -0.2 }, good: { moodlet: 'standingOvation', points: 100, money: 50, go: 'park', diary: true }, bad: { moodlet: 'gaveItAGo', points: 30, go: 'park' } },
+      { id: 'watch', icon: '👏', done: { needs: { fun: 30 }, moodlet: 'laughed', go: 'park' } },
+      { id: 'no', icon: '🙂', done: {} }
+    ]
+  },
+  // A picnic in the park.
+  {
+    id: 'picnic', icon: '🧺', where: ['home', 'street'], hours: [10, 15], weight: 0.8,
+    who: { from: 'anyone', friendship: 25, traits: { foodie: 1.5, cheerful: 1.3 } },
+    choices: [
+      { id: 'go', icon: '🧺', done: { friendship: 6, needs: { hunger: 30, social: 20 }, moodlet: 'picnic', go: 'park' } },
+      { id: 'no', icon: '🙂', done: { friendship: 1 } }
+    ]
+  },
+  // A colleague's birthday at work.
+  {
+    id: 'officeCake', icon: '🎂', where: ['office'], hours: [10, 16], weight: 0.8,
+    who: { from: 'colleagues' },
+    choices: [
+      { id: 'sing', icon: '🎶', done: { friendship: 5, whoMoodlet: 'party', moodlet: 'cake', needs: { fun: 15, hunger: 15 } } },
+      { id: 'card', icon: '✉️', done: { friendship: 3 } },
+      { id: 'slice', icon: '🍰', done: { needs: { hunger: 20 }, moodlet: 'cake' } }
+    ]
   }
 ];
+// A power cut (the `powerCut` outcome): what can't be done at home until it is back.
+export const POWER_CUT = { off: ['tv', 'cook'] };
 export const eventById = (id) => EVENTS.find((e) => e.id === id) ?? null;
 
 // How likely an event is now, for `c` (0: not now).

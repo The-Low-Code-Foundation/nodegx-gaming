@@ -47,7 +47,7 @@ import { REWARDS, rewardById, cantBuy } from './rewards.mjs';
 import { rollLikes, cleanLikes, GIFT } from './likes.mjs';
 import { GOALS, goalById, openGoals, rollGoal, stepsDone, STEP_POINTS, GOAL_POINTS } from './goals.mjs';
 import { WANTS, WANT_SLOTS, WANT_LASTS, rollWant, wantById } from './wants.mjs';
-import { DECK, EVENTS, eventById, pickEvent, pickWho, outcomeOf } from './events.mjs';
+import { DECK, EVENTS, POWER_CUT, eventById, pickEvent, pickWho, outcomeOf } from './events.mjs';
 
 const params = new URLSearchParams(location.search);
 const $ = (id) => document.getElementById(id);
@@ -329,6 +329,7 @@ async function makeSim(who, at, i, { name = null, look = null, body = null, ...o
   life.partnerOf = (other) => partners(life, other);
   life.onArrive = arrived;
   life.onDid = wished;
+  life.offerOk = (offer) => !offerWhy(life, offer);
   life.titleOf = (p) => titleOf(p);
   everyone.push(life);
   return life;
@@ -1265,6 +1266,8 @@ function light() {
   sun.color.copy(sunWarm).lerp(sunNoon, Math.min(1, high * 1.6));
   for (const m of shiny) m.envMapIntensity = 0.25 + 0.6 * day;
   lamp.intensity = view.house ? 6 * (1 - day) : 0;
+  // Round 16, phase 3: a power cut at home, after dark: no lamp, and dimmer.
+  if (deck.powerOff > minutes && view === home) (lamp.intensity = 0), (sky.intensity *= 0.35 + 0.65 * day);
 }
 
 // ---- where: the places, and who is in each. You see the one the Sim you look after is in ----
@@ -1368,7 +1371,9 @@ function openMenu(item, x, y, point = null) {
   const out = item && (item.use?.act === 'door' || item.use?.offers === 'busStop' || item.use?.offers === 'streetBus');
   const sale = out && view.house && houseById(view.house)?.kind === 'sale' && !owned(view.house) ? houseById(view.house) : null;
   const doorRows = out ? `<button data-town>🗺️ ${t('ui.town.go')}</button>${sale ? `<button data-buyhouse>🏡 ${t('ui.sale.buy')}<span class="gain">${t('ui.cost', { cost: sale.price })}</span></button>` : ''}` : '';
-  $('menu').innerHTML = head + offers.map((o, i) => `<button data-i="${i}">${o.baby ? `${o.icon} ` : ''}${t(`action.${o.id}`)}<span class="gain">${o.task ? '🪙' : gain(o)}</span></button>`).join('') + extra + doorRows;
+  // Round 16, phase 3: greyed when it can't be done now (a power cut), with why.
+  const why = (o) => offerWhy(sel, o);
+  $('menu').innerHTML = head + offers.map((o, i) => `<button data-i="${i}" ${why(o) ? 'disabled' : ''}>${o.baby ? `${o.icon} ` : ''}${t(`action.${o.id}`)}<span class="gain">${why(o) ? t(why(o)) : o.task ? '🪙' : gain(o)}</span></button>`).join('') + extra + doorRows;
   for (const b of $('menu').querySelectorAll('button[data-i]'))
     b.onclick = () => {
       sel.command(offers[b.dataset.i], sideFor(sel, item), point);
@@ -1741,6 +1746,12 @@ const eventPeople = (l) =>
     life: o, friendship: peekBond(l, o)?.friendship ?? 0, traits: o.traits, neighbour: neighbours.includes(o), colleague: colleagues.includes(o),
     house: !!o.house && HOUSES.some((h) => h.id === o.house && h.kind === 'lived')
   }));
+// Round 16, phase 3: why an offer isn't there now (a key for the menu's note), or null: in a power cut at home, the telly
+// and the oven.
+function offerWhy(l, offer) {
+  if (deck.powerOff > minutes && l.place === home && POWER_CUT.off.includes(offer.id)) return 'event.powerOff';
+  return null;
+}
 const eventFree = (l) => l.present && !l.card && !l.doing?.offer.task && l.doing?.offer.act !== 'sleep' && l.doing?.offer.act !== 'travel';
 function eventsTick() {
   if (!eventsOn || !colleaguesIn || card || placing || moving || !eventFree(sel)) return;
@@ -1749,6 +1760,7 @@ function eventsTick() {
     forcedEvent = null;
     if (e) return openEvent(e, pickWho(e, eventPeople(sel)));
   }
+  if (deck.powerOff && minutes >= deck.powerOff) (deck.powerOff = 0), toast(t('event.powerBack'));
   const day = Math.floor(minutes / 1440);
   if (deck.day !== day) Object.assign(deck, { day, today: 0 });
   deck.next ??= minutes + 60;
@@ -1756,7 +1768,8 @@ function eventsTick() {
   deck.next = minutes + DECK.every;
   const m = minutes % 1440;
   if (m < DECK.from || m >= DECK.to || deck.today >= DECK.most || minutes - (deck.last ?? -1e9) < DECK.gap) return;
-  if (Math.random() >= DECK.perDay / ((DECK.to - DECK.from) / DECK.every)) return;
+  // The chance a look brings one: `perDay` over the looks in a day that aren't in the gap after one.
+  if (Math.random() >= DECK.perDay / ((DECK.to - DECK.from - DECK.perDay * DECK.gap) / DECK.every)) return;
   const got = pickEvent(eventCtx(sel), eventPeople(sel));
   if (got) openEvent(got.event, got.who);
 }
@@ -2582,7 +2595,7 @@ window.__life = {
   // Round 16, phase 2.
   factsOf, checkGoals, openGoalPicker, aimsOn, wantsTick, wantCtx, wished, openRewards, buyReward, diary, openDiary, milestone,
   // Round 16, phase 3.
-  eventsOn, deck, eventsTick, openEvent, eventCtx, eventPeople, EVENTS, eventById, lastEvent: null,
+  eventsOn, deck, eventsTick, openEvent, eventCtx, eventPeople, EVENTS, eventById, lastEvent: null, openMenu, offerWhy,
   folk, get extras() { return extras(); }, furniture, storage, save, snapshot, openShop, startPlacing, stopPlacing, turnPlacing, placeHere, hover, sell, beauty, openLook, get home() { return home; }, saving,
   get placing() { return placing; }, get start() { return start?.kind ?? null; },
   setSpeed, advance, get minutes() { return minutes; }, set minutes(v) { minutes = v; },

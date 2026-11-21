@@ -91,7 +91,21 @@ export const MOODLETS = {
   cake: { emotion: 'happy', weight: 1, icon: '🍰', minutes: 180 },
   crunchy: { emotion: 'happy', weight: 1, icon: '🍞', minutes: 60 },
   foundCoins: { emotion: 'happy', weight: 1, icon: '🪙', minutes: 120 },
-  goodDeed: { emotion: 'happy', weight: 1, icon: '😇', minutes: 240 }
+  goodDeed: { emotion: 'happy', weight: 1, icon: '😇', minutes: 240 },
+  sorted: { emotion: 'happy', weight: 1, icon: '👍', minutes: 90 },
+  handy: { emotion: 'happy', weight: 2, icon: '🔧', minutes: 360 },
+  soggy: { emotion: 'uncomfortable', weight: 1, icon: '🧦', minutes: 45 },
+  candlelit: { emotion: 'happy', weight: 1, icon: '🕯️', minutes: 180 },
+  spooky: { emotion: 'happy', weight: 1, icon: '👻', minutes: 180 },
+  brave: { emotion: 'happy', weight: 1, icon: '🦸', minutes: 240 },
+  catCuddle: { emotion: 'happy', weight: 2, icon: '🐱', minutes: 240 },
+  music: { emotion: 'happy', weight: 1, icon: '🎶', minutes: 120 },
+  invited: { emotion: 'happy', weight: 1, icon: '✉️', minutes: 600 },
+  weddingGuest: { emotion: 'happy', weight: 2, icon: '💒', minutes: 600 },
+  standingOvation: { emotion: 'happy', weight: 3, icon: '👏', minutes: 1440 },
+  gaveItAGo: { emotion: 'happy', weight: 1, icon: '🎤', minutes: 360 },
+  picnic: { emotion: 'happy', weight: 2, icon: '🧺', minutes: 300 },
+  birdsong: { emotion: 'happy', weight: 1, icon: '🐦', minutes: 120 }
 };
 
 export const EMOTIONS = {
