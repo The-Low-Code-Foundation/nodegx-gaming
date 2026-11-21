@@ -17,8 +17,16 @@ import { makeBiscuits, disposeBiscuits, BISCUIT_OPTIONS } from './biscuit.mjs';
 import * as Books from './books.mjs';
 import * as Piano from './piano.mjs';
 import * as Dance from './dance.mjs';
+// Round 3: the first floor and the gardens (they add their places to castle.mjs's), and their five mini-games.
+import './upstairs.mjs';
+import './grounds.mjs';
+import * as Toys from './toys.mjs';
+import * as Paint from './paint.mjs';
+import * as Stars from './stars.mjs';
+import * as Flowers from './flowers.mjs';
+import * as Pony from './pony.mjs';
 import { YEARS, SUBJECTS, topicsFor, DEFAULT_YEAR } from './school/school.mjs';
-import { ROOMS, roomById, REWARDS, ITEMS, ITEM_FROM, TIMERS, WARDROBE, DEFAULT_LOOK, POTION_RESPAWN, WAKE_HP, HUBS, roomsIn, FREED, stats as statsOf, hitFor, hitsToKnockOut } from './data.mjs';
+import { ROOMS, roomById, REWARDS, ITEMS, ITEM_FROM, TIMERS, WARDROBE, DEFAULT_LOOK, POTION_RESPAWN, WAKE_HP, HUBS, HUB_LINKS, roomsIn, FREED, stats as statsOf, hitFor, hitsToKnockOut } from './data.mjs';
 
 const $ = (s) => document.querySelector(s);
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -145,6 +153,16 @@ function updateCamera(dt) {
       if (Math.max(l, r) > dist + 0.2) cam.yaw += (l >= r ? 1 : -1) * dt * 1.4;
     }
     const want = new THREE.Vector3(h.x + Math.sin(cam.yaw) * dist, 1.5 + (cam.height - 1.5) * (dist / cam.dist), h.z + Math.cos(cam.yaw) * dist);
+    // Even the closest spot is outside the walls (she has just come in through a door, her back to it): stay inside,
+    // along the wall to one side of her (whichever side has room), a little higher, for a three-quarter view from behind,
+    // rather than from inside the door frame.
+    if (b && (want.x < b.minX || want.x > b.maxX || want.z < b.minZ || want.z > b.maxZ)) {
+      const inside = (x, z) => [Math.max(b.minX, Math.min(b.maxX, x)), Math.max(b.minZ, Math.min(b.maxZ, z))];
+      const [wx, wz] = inside(want.x, want.z);
+      const side = [1.6, -1.6].map((k) => inside(wx + Math.cos(cam.yaw) * k, wz - Math.sin(cam.yaw) * k))
+        .find(([x, z]) => !blocked(x, z)) ?? [wx, wz];
+      want.set(side[0], 2.5, side[1]);
+    }
     cam.toPos.copy(want);
     cam.toLook.set(h.x - Math.sin(cam.yaw) * 1.2, 1.15, h.z - Math.cos(cam.yaw) * 1.2);
   }
@@ -176,10 +194,13 @@ function setPlace(id) {
     const rooms = roomsIn(id);
     place.setRestored(rooms.filter((r) => save.won.includes(r.id)).length / rooms.length);
     for (const r of rooms) place.setDoor(r.id, save.won.includes(r.id));
-    if (id === 'hall') place.setDoor('wing', save.won.includes('library'));
+    // The ways on to the other hubs (the Swan Wing's door, the staircase): open once the room that opens them is won.
+    for (const link of Object.values(HUB_LINKS)) if (link.from === id && link.opens) place.setDoor(link.door, save.won.includes(link.opens));
   } else place.setRestored(save.won.includes(id) ? 1 : 0);
   if (id === 'kitchen') placeMirabelle();
   if (id === 'tearoom') placePraline();
+  if (id === 'studio') placePalette();
+  if (id === 'stables' && save.pony?.look) Pony.applyLook(place.feature.friend, save.pony.look);
   const room = roomById(id);
   $('#where').textContent = room ? room.name : HUBS[id];
   game.state = 'explore';
@@ -236,24 +257,69 @@ async function enter(id) {
 }
 game.enter = enter;
 
-// Leaving a room by its door (or by running away): back in the place its door is in (the Hall, or the Swan Gallery),
-// in front of that room's door. Leaving the Gallery is back to the Hall, by the Swan Wing's door.
-const hubOf = (id) => (id === 'gallery' ? 'hall' : roomById(id)?.hub ?? 'hall');
+// Leaving a room by its door (or by running away): back in the place its door is in (a hub), in front of that
+// room's door. Leaving a hub (the Swan Gallery, the Landing, the Gardens) is back to the Hall, by the way it joins it
+// (HUB_LINKS): coming down from the Landing, she walks down the grand staircase.
+const hubOf = (id) => HUB_LINKS[id]?.from ?? roomById(id)?.hub ?? 'hall';
 async function backToHub(fromId) {
   hidePrompt();
   await fade(true);
   const hubId = hubOf(fromId);
   const hub = setPlace(hubId);
   // In front of that room's door, facing into the hall (a door's front faces along its turn, `ry`).
-  const d = hub.doors.find((d) => d.id === (fromId === 'gallery' ? 'wing' : fromId));
+  const d = hub.doors.find((d) => d.id === (HUB_LINKS[fromId]?.door ?? fromId));
   if (d) putHero(d.x + Math.sin(d.ry) * 0.6, d.z + Math.cos(d.ry) * 0.6, d.ry);
   else putHero(hub.spawn.x, hub.spawn.z, hub.spawn.face);
   playMusic(hubBright(hubId) ? 'bright' : 'dark');
   follow();
   snapCamera();
   renderHud();
+  if (HUB_LINKS[fromId]?.door === 'stairs') return climb(false);
   await fade(false);
 }
+
+// Round 3: up or down the Hall's grand staircase, walked rather than faded (the girls wanted to go upstairs). Going up,
+// she climbs from the foot to the gallery, then the Landing fades in; coming down, the Hall fades in with her at the
+// top and she walks down to the foot. The camera keeps beside her, a little below and to the right.
+async function climb(up) {
+  const hall = places.hall, st = hall.stairs, h = game.hero;
+  hidePrompt();
+  game.state = 'cutscene';
+  const [from, to] = up ? [st.foot, st.top] : [st.top, st.foot];
+  const face = up ? Math.PI : 0;
+  const at = (z) => new THREE.Vector3(0, st.y(z), z);
+  const view = (p) => [[p.x + 3.4, p.y + 1.9, p.z + (up ? 2.4 : -0.4)], [p.x, p.y + 1.0, p.z - (up ? 0.9 : -0.9)]];
+  h.target = null;
+  h.speed = 0;
+  h.group.position.copy(at(from[1]));
+  h.group.rotation.set(0, face, 0);
+  const [cp, cl] = view(h.group.position);
+  game.camTo(cp, cl, 0.3);
+  cam.pos.set(...cp);
+  cam.look.set(...cl);
+  if (!up) await fade(false);
+  h.play('Walk_Loop', { fade: 0.2 });
+  if (h.current) h.current.timeScale = 1.3;
+  const dur = Math.abs(to[1] - from[1]) / 1.9;
+  const start = performance.now();
+  await new Promise((resolve) => {
+    const step = () => {
+      const k = Math.min(1, (performance.now() - start) / 1000 / dur);
+      const p = at(from[1] + (to[1] - from[1]) * k);
+      h.group.position.copy(p);
+      game.camTo(...view(p), 0.4);
+      if (k < 1) requestAnimationFrame(step);
+      else resolve();
+    };
+    step();
+  });
+  if (up) return enter('landing');
+  putHero(to[0], to[1], face);
+  game.state = 'explore';
+  follow({ fromView: true });
+  showTip();
+}
+game.climb = climb;
 
 // ---------- the fight ----------
 function startBattle(id) {
@@ -331,12 +397,13 @@ async function reward(id) {
   wearLook();
   if (id === 'kitchen') placeMirabelle(true);
   if (id === 'tearoom') placePraline(true);
+  if (id === 'studio') placePalette(true);
   game.fx.rise(game.hero.group.position);
   clampMeters();
   persist();
   renderHud();
   const buttons = [];
-  const OPEN = { wardrobe: ['Try things on!', openWardrobe], cakes: ['Bake a cake!', () => openBake('cake')], books: ['Read with Hoot!', openBooks], piano: ['Play the piano!', openPiano], biscuits: ['Bake biscuits!', () => openBake('biscuit')], dance: ['Dance!', openDance] }[r.opens];
+  const OPEN = { wardrobe: ['Try things on!', openWardrobe], cakes: ['Bake a cake!', () => openBake('cake')], books: ['Read with Hoot!', openBooks], piano: ['Play the piano!', openPiano], biscuits: ['Bake biscuits!', () => openBake('biscuit')], dance: ['Dance!', openDance], flowers: ['Grow flowers!', openFlowers], pony: ['Groom Étoile!', openPony], toys: ['Play pairs!', openToys], paint: ['Let’s paint!', openPaint], stars: ['Open the star map!', openStars] }[r.opens];
   if (OPEN) buttons.push([OPEN[0], OPEN[1], true], ['Later', null]);
   else buttons.push(['Wonderful!', null, true]);
   return card(r.icon, r.title, `<i>${freedLine}</i><br><br>${r.text}`, buttons);
@@ -344,7 +411,7 @@ async function reward(id) {
 
 // ---------- the heroine's clothes ----------
 function wearLook() {
-  game.hero.wear(save.look, { moonlit: save.won.includes('library'), dawn: save.won.includes('ballroom') });
+  game.hero.wear(save.look, { moonlit: save.won.includes('library'), dawn: save.won.includes('ballroom'), star: save.won.includes('bedchamber') });
 }
 
 // ---------- moving about ----------
@@ -530,12 +597,18 @@ function nearby() {
     }
   for (const d of place.doors) {
     if (Math.hypot(d.x - h.x, d.z - h.z) > 1.3) continue;
-    if (!place.hub || (place.id === 'gallery' && d.id === 'out')) return setPrompt(`exit-${place.id}`, `<h3>Back to ${HUBS[hubOf(place.id)]}</h3>`, [['Go back', () => backToHub(place.id), true]]);
-    if (d.id === 'out') return setPrompt('out', '<h3>The front doors</h3><p>Outside: the moonlit bridge, and the way home.</p>', [['Leave for now', () => toTitle(), true]]);
-    if (d.id === 'wing') {
-      if (!save.won.includes('library')) return setPrompt('wing-locked', '<h3>The Swan Wing 🔒</h3><p>Locked tight, with a silver swan on the lock. Somebody in the <b>Library</b> is keeping the key…</p>', [['I’ll find it', () => hidePrompt(), true]]);
-      const n = roomsIn('gallery').filter((r) => save.won.includes(r.id)).length;
-      return setPrompt(`wing-${n}`, `<h3>The Swan Wing</h3><p>The Music Room, the Tea Room and the Ballroom. ${n ? `${n} of 3 won back ✨` : 'Deeper in the château: the creatures in there are stronger.'}</p>`, [['Go in', () => enter('gallery'), true]]);
+    if (!place.hub) return setPrompt(`exit-${place.id}`, `<h3>Back to ${HUBS[hubOf(place.id)]}</h3>`, [['Go back', () => backToHub(place.id), true]]);
+    if (d.id === 'out' && place.id !== 'hall') {
+      const [title, go] = EXITS[place.id] ?? [`Back to ${HUBS[hubOf(place.id)]}`, 'Go back'];
+      return setPrompt(`exit-${place.id}`, `<h3>${title}</h3>`, [[go, () => backToHub(place.id), true]]);
+    }
+    if (d.id === 'out') return setPrompt('out', '<h3>The front doors</h3><p>Outside: the Gardens, and the moonlit bridge home.</p>', [['Out to the Gardens', () => enter('garden'), true], ['Home for now', () => toTitle()]]);
+    const linkHub = Object.keys(HUB_LINKS).find((k) => HUB_LINKS[k].from === place.id && HUB_LINKS[k].door === d.id);
+    if (linkHub) {
+      const L = LINKS[linkHub], opens = HUB_LINKS[linkHub].opens;
+      if (opens && !save.won.includes(opens)) return setPrompt(`${linkHub}-locked`, L.locked, [['I’ll find a way', () => hidePrompt(), true]]);
+      const rooms = roomsIn(linkHub), n = rooms.filter((r) => save.won.includes(r.id)).length;
+      return setPrompt(`${linkHub}-${n}`, `<h3>${L.name}</h3><p>${L.rooms} ${n ? `${n} of ${rooms.length} won back ✨` : L.deeper}</p>`, [[L.go, () => (d.id === 'stairs' ? climb(true) : enter(linkHub)), true]]);
     }
     const room = roomById(d.id);
     const won = save.won.includes(room.id);
@@ -551,9 +624,20 @@ function nearby() {
     if (f.kind === 'piano') return setPrompt('piano', '<h3>Maestro Fig</h3><p>“The piano is in tune at last! Shall we play?”</p>', [['Play the piano', () => openPiano(), true]]);
     if (f.kind === 'praline') return setPrompt('praline', '<h3>Chef Praline</h3><p>“Biscuits for the ghosts’ tea! Will you help me?”</p>', [['Bake biscuits', () => openBake('biscuit'), true]]);
     if (f.kind === 'dance') return setPrompt('dance', '<h3>Madame Lune</h3><p>“The orchestra is ready, little sorceress. Shall we dance?”</p>', [['Dance!', () => openDance(), true]]);
+    if (f.kind === 'flowers') return setPrompt('flowers', '<h3>Basile the Gnome</h3><p>“The beds are ready! Shall we plant some magic flowers?”</p>', [['Grow flowers', () => openFlowers(), true]]);
+    if (f.kind === 'pony') return setPrompt('pony', '<h3>Étoile the Pegasus Foal</h3><p>She stamps a hoof and flutters her little wings. She wants to be groomed!</p>', [['Groom Étoile', () => openPony(), true]]);
+    if (f.kind === 'toys') return setPrompt('toys', '<h3>Captain Buttons</h3><p>“Attention! The Toy Box is ready. A game of pairs, soldier?”</p>', [['Play pairs', () => openToys(), true]]);
+    if (f.kind === 'paint') return setPrompt('paint', '<h3>Madame Palette</h3><p>“Ah, ma chérie! The easel is waiting. Shall we paint?”</p>', [['Paint', () => openPaint(), true]]);
+    if (f.kind === 'stars') return setPrompt('stars', '<h3>Great-aunt’s Diary</h3><p>“She drew the whole night sky in me. Shall I show you?”</p>', [['Open the star map', () => openStars(), true]]);
   }
   hidePrompt();
 }
+// The words on the ways between hubs (data.mjs HUB_LINKS says where they go and what opens them).
+const LINKS = {
+  gallery: { name: 'The Swan Wing', go: 'Go in', rooms: 'The Music Room, the Tea Room and the Ballroom.', deeper: 'Deeper in the château: the creatures in there are stronger.', locked: '<h3>The Swan Wing 🔒</h3><p>Locked tight, with a silver swan on the lock. Somebody in the <b>Library</b> is keeping the key…</p>' },
+  landing: { name: 'The Grand Staircase', go: 'Go upstairs', rooms: 'Upstairs: the Nursery, the Painting Studio and the Royal Bedchamber.', deeper: 'The highest rooms of all: the creatures up there are the strongest yet.', locked: '<h3>The Grand Staircase 🥀</h3><p>Thorny brambles block the top of the stairs. They grew from a dark spell in the <b>Ballroom</b>: win it, and they will wither away.</p>' }
+};
+const EXITS = { gallery: ['Back to the Grand Hall', 'Go back'], landing: ['The stairs down', 'Down to the Grand Hall'], garden: ['The château’s front doors', 'Back inside'] };
 
 function pickPotion(spot) {
   const it = ITEMS[spot.kind];
@@ -1069,6 +1153,76 @@ async function openDance() {
 }
 game.openDance = openDance;
 
+// ---------- round 3's mini-games: Basile's flowers, Étoile, Captain Buttons's pairs, Madame Palette, the star map ----------
+// Each stands her at the room's feature (`stand`: her spot and turn, the camera and where it looks, from castle data)
+// and hands the module a little api; the module resolves when she closes it.
+async function playMini(mod, extra, stand) {
+  game.state = 'mini';
+  standAt(...stand);
+  const cheer = () => game.fx.rise(game.hero.group.position, [0xffe28a, 0xffffff, 0xffb3d9], 40);
+  await mod.open({ save, persist, sfx, note, cheer, ...extra });
+  backToExplore();
+}
+const friendMood = (f) => (m) => f?.mood(m);
+function openToys() {
+  const f = game.place.feature;
+  return playMini(Toys, { buttons: friendMood(f.friend) }, [f.x, f.z, f.face, ...f.view]);
+}
+function openPaint() {
+  const f = game.place.feature;
+  return playMini(Paint, {
+    palette: (m) => palette && (palette.face.mood = m === 'happy' ? 'happy' : 'neutral'),
+    hang: (canvas) => {
+      const t = new THREE.CanvasTexture(canvas);
+      t.colorSpace = THREE.SRGBColorSpace;
+      f.easel.material.map?.dispose?.();
+      f.easel.material.map = t;
+      f.easel.material.needsUpdate = true;
+      game.fx.rise(f.easel.getWorldPosition(new THREE.Vector3()), [0xffe28a, 0xffffff, 0xffb3d9], 50);
+    }
+  }, [f.x, f.z, f.face, ...f.view]);
+}
+function openStars() {
+  const f = game.place.feature;
+  return playMini(Stars, { diary: friendMood(f.friend) }, [f.x, f.z, f.face, ...f.view]);
+}
+function openFlowers() {
+  const f = game.place.feature;
+  return playMini(Flowers, { basile: friendMood(f.friend), bed: f.bed }, [f.x, f.z, f.face, ...f.view]);
+}
+function openPony() {
+  const f = game.place.feature;
+  return playMini(Pony, { etoile: f.friend, pick: pickOn }, [f.x, f.z, f.face, ...f.view]);
+}
+// What the pointer is on in 3D (the pony game's mud spots): the first of `meshes` under it, or null.
+function pickOn(meshes, x, y) {
+  const r = $('#view').getBoundingClientRect();
+  ray.setFromCamera(new THREE.Vector2(((x - r.left) / r.width) * 2 - 1, -((y - r.top) / r.height) * 2 + 1), camera);
+  return ray.intersectObjects(meshes, false)[0]?.object ?? null;
+}
+Object.assign(game, { openToys, openPaint, openStars, openFlowers, openPony });
+
+// Madame Palette: a copy of the heroine in a sunny dress with a big bow, her hair pink, no staff (a brush instead).
+let palette = null;
+function placePalette(announce = false) {
+  if (!save.won.includes('studio') || game.place?.id !== 'studio') return;
+  const place = game.place;
+  if (!palette) {
+    palette = new Heroine(game.body);
+    palette.wear({ hat: 'bow', cape: 'none', dress: 'sunny', hair: 'pink' });
+    palette.worn.staff?.removeFromParent();
+    palette.worn.staff = null;
+    palette.dye('HAIR', '#ff9ac8');
+    palette.face.mood = 'happy';
+  }
+  place.scene.add(palette.group);
+  const [x, z, ry] = place.feature.palAt;
+  palette.group.position.set(x, 0, z);
+  palette.group.rotation.y = ry;
+  palette.play('Idle_Talking_Loop', { fade: 0.2 });
+  if (announce) game.fx.rise(palette.group.position, [0xffe14a, 0xffffff, 0xff9ac8], 60);
+}
+
 // ---------- the loop ----------
 const timer = new THREE.Timer();
 let t = 0;
@@ -1095,6 +1249,7 @@ function frame(now) {
   }
   mirabelle?.update(dt);
   praline?.update(dt);
+  palette?.update(dt);
   made?.userData.update?.(dt);
   game.fx?.update(dt, camera);
   updateCamera(dt);
@@ -1110,7 +1265,7 @@ function frame(now) {
   wearLook();
   clampMeters();
   // Build the places now, behind the loading screen, so walking through a door never stalls.
-  const all = ['hall', ...ROOMS.slice(0, 3).map((r) => r.id), 'gallery', ...ROOMS.slice(3).map((r) => r.id)];
+  const all = Object.keys(HUBS).flatMap((hub) => [hub, ...roomsIn(hub).map((r) => r.id)]);
   for (const [i, id] of all.entries()) {
     placeFor(id);
     progress(0.8 + ((i + 1) / all.length) * 0.19);

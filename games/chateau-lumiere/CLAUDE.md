@@ -17,11 +17,14 @@ is `localStorage['lumiere.save.v1']`; clear it (or "Start a new château…" in 
 
 | File | What it does |
 |---|---|
-| `index.html` | The page: every overlay (title, HUD, battle menu, question card, wardrobe, bake, books, piano, dance) as plain HTML, and the import map (`./vendor/...`). |
+| `index.html` | The page: every overlay (title, HUD, battle menu, question card, wardrobe, bake, books, piano, dance) as plain HTML, and the import map (`./vendor/...`). The round 3 mini-games build their own panel in JS. `style.css?v=…`: bump it when the CSS changes a lot, so browsers drop the old copy. |
 | `style.css` | All the UI styling. |
-| `src/main.mjs` | The game: the save (`freshSave`, `loadSave`, `persist`), places (`placeFor`, `setPlace`, `enter`, `backToHub`), walking and the camera (`moveHero`, `collide`, `updateCamera`), door cards (`nearby`, `dangerLine`), fights (`startBattle`), rewards (`reward`), the title and pause menu, the mini-game launchers (`openWardrobe`, `openBake`, `openBooks`, `openPiano`, `openDance`), the frame loop. |
-| `src/data.mjs` | **The rules as data**: starting stats, `DEPTHS` (how hard each depth hits), `ROOMS`, `HUBS`, `REWARDS`, `CREATURE_NAMES`, `FREED`, `ITEMS`, `WARDROBE`, `TIMERS`. `stats(save)` adds up what the won rooms give. |
-| `src/castle.mjs` | Builds every place in code: `buildHall`, `buildGallery`, `buildRoom(id, spec)` from `ROOM_SPECS[id]` (size, wall/floor textures, windows, sconces, battle positions, `furnish` function), and one `furnishX` function per room. `buildPlace(id)` is the entry point. |
+| `src/main.mjs` | The game: the save (`freshSave`, `loadSave`, `persist`), places (`placeFor`, `setPlace`, `enter`, `backToHub`), walking and the camera (`moveHero`, `collide`, `updateCamera`), door cards (`nearby`, `dangerLine`), fights (`startBattle`), rewards (`reward`), the title and pause menu, the mini-game launchers (`openWardrobe`, `openBake`, `openBooks`, `openPiano`, `openDance`, and `playMini()` for the round 3 ones: `openToys`, `openPaint`, `openStars`, `openFlowers`, `openPony`), the staircase walk (`climb(up)`), the frame loop. It imports `upstairs.mjs` and `grounds.mjs` only for what they register. |
+| `src/data.mjs` | **The rules as data**: starting stats, `DEPTHS` (how hard each depth hits), `ROOMS`, `HUBS`, `HUB_LINKS` (which hall door leads to which hub, and which won room opens it), `REWARDS`, `CREATURE_NAMES`, `FREED`, `ITEMS`, `WARDROBE`, `TIMERS`. `stats(save)` adds up what the won rooms give. |
+| `src/castle.mjs` | Builds every place in code: `buildHall` (with the Grand Staircase and the front doors), `buildGallery`, `buildRoom(id, spec)` from `ROOM_SPECS[id]` (size, wall/floor textures, windows, sconces, battle positions, `furnish` function, or `outdoor(ctx)` for a room with no walls), `makeHub(...)` for a new hub, and one `furnishX` function per room. `buildPlace(id)` is the entry point. Other files add places with `addPlaces({ id: builder })` and rooms with `addRooms({ id: spec })`, using the helpers in `kit`. |
+| `src/upstairs.mjs` | Round 3, the first floor: `buildLanding` (the Starlit Landing, its stairwell going down) and the Nursery, the Painting Studio and the Royal Bedchamber (`furnishNursery`, `furnishStudio`, `furnishBedchamber`). |
+| `src/grounds.mjs` | Round 3, outside: sky, grass, hedges, fountain (`outdoors()`), `buildGarden` (the Gardens hub, in front of the château), the Rose Garden and the Stables, the flower bed (`flowerBed`, `SEEDS`). |
+| `src/toys.mjs`, `src/paint.mjs`, `src/stars.mjs`, `src/flowers.mjs`, `src/pony.mjs` | The round 3 mini-games: pairs (`DECKS`), colouring by number or by sums (`PICTURES`), joining stars by counting in 1s–10s (`SKIES`), finishing a flower pattern then a times-table sum (`BEDS`), grooming the pegasus (`PONY_OPTIONS`). Each is `open(api)` → a Promise, and sets `window.__game.mini` to a handle for testing. |
 | `src/creatures.mjs` | The creatures, drawn in code: classes `Moth`, `Soot`, `Grimoire` (`MAKERS`), recoloured `VARIANTS`, and `makeCreature(kind)`. Each has `wake()`, `hurt()`, `attack(target)`, `free()`, `update(dt)`. |
 | `src/battle.mjs` | The turn-based fight: command window, question card with a clock, damage, knock-out, win. Calls `ask()` / `record()` from `src/school/school.mjs`. |
 | `src/hero.mjs` | The heroine: loads `assets/vrm/sample-slim.vrm`, retargets Quaternius's animations onto it (`src/retarget.mjs`), dresses her (`wear`, `dye`), the cape cloth. |
@@ -33,15 +36,19 @@ is `localStorage['lumiere.save.v1']`; clear it (or "Start a new château…" in 
 | `src/piano.mjs` | The piano mini-game: `KEYS`, `SONGS`. |
 | `src/dance.mjs` | The rhythm dance: `LANES`, `DANCES`. |
 | `src/cake.mjs`, `src/biscuit.mjs` | The bakes (3D cake/biscuits built from the options picked). Options are `CAKE_OPTIONS` / `BISCUIT_OPTIONS`. |
-| `src/friends.mjs` | The castle characters (chefs, Hoot, Fig, Madame Lune), drawn in code. |
+| `src/friends.mjs` | The castle characters (chefs, Hoot, Fig, Madame Lune, Captain Buttons, the Diary, Basile the gnome, Étoile the pegasus), drawn in code. |
 | `src/exterior.mjs` | The château outside, on the title screen. |
 | `src/fx.mjs`, `src/look.mjs`, `src/face.mjs`, `src/audio.mjs` | Spell effects, post-processing and quality, the heroine's face, synthesised sound (no audio files). |
 
 ## Readiness: B
 
 The numbers and the room list are data (`src/data.mjs`) and the questions are data (`src/school/`). But a room's 3D
-look is a function in `src/castle.mjs`, and each hub's doors are placed by hand there too, so a new room needs code in
-two places. If you plan many rooms, first turn `ROOM_SPECS` + the `doorSpots` objects into one data table.
+look is a function (in `src/castle.mjs`, `src/upstairs.mjs` or `src/grounds.mjs`), and each hub's doors are placed by
+hand next to it, so a new room needs code in two places. If you plan many rooms, first turn `ROOM_SPECS` + the
+`doorSpots` objects into one data table.
+
+Four hubs: the Grand Hall, the Swan Gallery (through the wing door, once the Library is won), the Starlit Landing (up
+the staircase, once the Ballroom is won) and the Gardens (through the front doors, open from the start).
 
 ## How to add a room
 
@@ -52,25 +59,28 @@ Example: a Greenhouse off the Swan Gallery, with two creatures.
    { id: 'greenhouse', hub: 'gallery', name: 'The Greenhouse', depth: 3, creatures: ['nibble', 'offkey'],
      blurb: 'Glass, ivy, and something rustling in the orchids.', reward: 'seeds' }
    ```
-   `hub` is `'hall'` (the default) or `'gallery'`. `depth` 1–5 picks the hit/health row in `DEPTHS`; `hp` overrides the
+   `hub` is `'hall'` (the default), `'gallery'`, `'landing'` or `'garden'`. `depth` 1–5 picks the hit/health row in `DEPTHS`; `hp` overrides the
    creatures' health.
 2. **The reward**: add `seeds` to `REWARDS` in the same file: `{ title, text, gives: { maxHp: 30 } , item?, opens?, icon }`.
    `gives` can carry `ward`, `power`, `maxHp`, `maxMp` (see `stats()`). `opens` names a mini-game key; leave it out
    for a reward that is only stats.
 3. **The creatures' names**: every id in `creatures` needs a line in `CREATURE_NAMES` and `FREED` (`src/data.mjs`).
-4. **The room's look**: in `src/castle.mjs`, write `function furnishGreenhouse({ scene, mood, M, blockers, updates, W, D, H })`
+4. **The room's look**: in `src/castle.mjs` (or, for an upstairs or outdoor room, in `src/upstairs.mjs` / `src/grounds.mjs`, registered with `addRooms`), write `function furnishGreenhouse({ scene, mood, M, blockers, updates, W, D, H })`
    (copy `furnishTea` as a start; push `{ x, z, r }` circles into `blockers` for things she must walk round; return a
    `feature` `{ kind, x, z }` if the room has something to use once won). Then add `greenhouse` to `ROOM_SPECS`, copying
    `tearoom`'s entry: change `W/D/H`, `shell` (floor/wall textures `parquet()`, `tiles()`, `marble()`, `damask(ink, light, key)`),
    `windows`, `sconces`, `battle` (`hero: [x, z]`, one `foes` entry per creature, `camera`, `look`) and `furnish: furnishGreenhouse`.
 5. **The door**: in `buildGallery()` (`src/castle.mjs`), add `greenhouse: { x, z, ry }` to `doorSpots` on a free wall.
-   For a Hall room, the `doorSpots` in `buildHall()`. The id must equal the room id: `nearby()` in `src/main.mjs` looks
+   For a Hall room, the `doorSpots` in `buildHall()`; for the Landing or the Gardens, `buildLanding()` / `buildGarden()`. The id must equal the room id: `nearby()` in `src/main.mjs` looks
    the door up with `roomById(d.id)`.
-6. **The hub text**: `nearby()` in `src/main.mjs` has a hard-coded "The Music Room, the Tea Room and the Ballroom … of 3"
-   line for the wing door; update it. `main.mjs` near line 1113 preloads places with `ROOMS.slice(0, 3)` (Hall rooms) and
-   `ROOMS.slice(3)` (wing rooms): keep Hall rooms first in `ROOMS`, or change that line.
-7. **A mini-game for it** (optional): add a launcher like `openPiano` in `src/main.mjs`, an entry in the `OPEN` map in
-   `reward()` and a `f.kind === '…'` branch in `nearby()`.
+6. **The hub text**: the `LINKS` map in `src/main.mjs` holds the card text for the wing door and the staircase (it names
+   the rooms behind them); update it. Every hub and its rooms are preloaded on the loading screen, so nothing else to do.
+   A whole new hub: a builder registered with `addPlaces` (copy `buildLanding`, using `kit.makeHub`), its name in
+   `HUBS`, how to reach it in `HUB_LINKS`, and its exit line in `EXITS` (`main.mjs`).
+7. **A mini-game for it** (optional): copy `src/flowers.mjs` (a side panel on the right, `open(api)` returning a Promise).
+   Launch it with `playMini(Module, extra, [x, z, face, camera, look])` in `src/main.mjs`, add an entry in the `OPEN` map in
+   `reward()` and a `f.kind === '…'` branch in `nearby()`. The panel covers the right of the screen, so the `furnish`
+   function's feature carries a `view: [camera, look]` that puts the heroine and her friend in the left part.
 8. Play: clear the save, win your room, check the door card, the fight positions and the bright version.
 
 ## How to add a creature
@@ -115,5 +125,8 @@ Hoot's books (`BOOKS` in `src/books.mjs`) carry one question each in `ask`; add 
 - The heroine model is pixiv's VRM sample; any VRM 1.0 model can replace `assets/vrm/sample-slim.vrm` if its licence
   allows. The animations are retargeted by bone name (`src/retarget.mjs`).
 - No server calls. The only network use is the Google Fonts stylesheet in `index.html`; offline it falls back to system fonts.
+- Test handles: `window.__game` (`enter(id)`, `climb(up)`, `answer(right)` in a fight, `mini` while a mini-game is open).
+  URL switches: `?fresh=1` (a new game, nothing read from or written to the save), `?won=dressing,kitchen` (rooms already won), `?at=landing` (start there),
+  `?mute=1`, `?timer=off`, `?quality=low`.
 - Comments in the code mention "rounds" and "the life sim": the game was built in rounds inside the NodeGX repo, where
   it shared the heroine with another prototype. Nothing depends on that.

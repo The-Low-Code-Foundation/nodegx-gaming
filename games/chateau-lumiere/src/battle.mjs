@@ -61,7 +61,11 @@ export class Battle {
     sfx('creature');
     await Promise.all(this.foes.map((f, i) => wait(i * 350).then(() => f.c.wake())));
     const names = [...new Set(this.foes.map((f) => CREATURE_NAMES[f.kind]))];
-    await this.banner(this.foes.length > 1 ? `${this.foes.length} ${names[0]}s block the way!` : `A ${names[0]} wakes up!`, 1400);
+    // "2 Dust Bunnies", "A Smudge Sprite and a Sulky Sketchbook", "The Locked Diary wakes up!"
+    const many = (n) => (/[^aeiou]y$/.test(n) ? `${n.slice(0, -1)}ies` : `${n}s`);
+    const one = (n, cap) => (/^The /.test(n) ? n : `${cap ? 'A' : 'a'}${/^[AEIOU]/.test(n) ? 'n' : ''} ${n}`);
+    const line = this.foes.length === 1 ? `${one(names[0], true)} wakes up!` : names.length === 1 ? `${this.foes.length} ${many(names[0])} block the way!` : `${one(names[0], true)} and ${one(names[1])} block the way!`;
+    await this.banner(line, 1400);
     this.command();
   }
 

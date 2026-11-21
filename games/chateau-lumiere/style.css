@@ -251,3 +251,128 @@ button.link { background: none; border: none; text-decoration: underline; paddin
   #dance .lanes { width: calc(100vw - 28px); top: 40vh; }
   #p-keys .key { height: 90px; }
 }
+
+/* ---------- round 3: Captain Buttons's Toy Box, Madame Palette's colouring, the Diary's star map ---------- */
+
+/* ---------- round 3: Captain Buttons's Toy Box (the Nursery) ---------- */
+#toys .toys-panel { position: fixed; right: 14px; top: 14px; bottom: 14px; width: min(440px, calc(100vw - 28px)); padding: 16px; overflow: auto; z-index: 12; display: flex; flex-direction: column; }
+#toys h2 { margin-bottom: 6px; }
+#t-decks { gap: 6px; }
+#t-decks .chip { font-size: 13px; padding: 6px 11px; }
+#t-say { margin: 10px 0 8px; font-size: 16px; min-height: 44px; line-height: 1.35; }
+#t-say b { color: var(--gold); font-family: var(--head); }
+#toys .toys-panel > * { flex: none; }
+#t-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; align-content: start; perspective: 900px; }
+/* six pairs: 4 × 3; eight pairs: 4 × 4, a little flatter so it fits an 800 × 600 window */
+#toys #t-grid.n16 .card { aspect-ratio: 6 / 5; }
+#toys .win button.card, #toys button.card { position: relative; padding: 0; border: none; border-radius: 12px; background: none; aspect-ratio: 1 / 1; min-height: 64px; max-height: 110px; width: 100%; box-shadow: none; text-shadow: none; }
+#t-grid .card .in { position: absolute; inset: 0; transition: transform 0.35s ease; transform-style: preserve-3d; }
+#t-grid .card.up .in { transform: rotateY(180deg); }
+#t-grid .card .back, #t-grid .card .front { position: absolute; inset: 0; border-radius: 12px; backface-visibility: hidden; -webkit-backface-visibility: hidden; display: grid; place-items: center; }
+#t-grid .card .back {
+  background: radial-gradient(circle at 50% 50%, rgba(255, 226, 138, 0.35), transparent 45%), linear-gradient(160deg, #6b4bc9, #2e1a72);
+  border: 2px solid var(--gold); box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.12);
+}
+#t-grid .card .back::after { content: '★'; font-size: 34px; color: #ffe28a; text-shadow: 0 0 10px rgba(255, 210, 90, 0.9); }
+#t-grid .card .front { transform: rotateY(180deg); background: linear-gradient(180deg, #fffdf6, #f3e8d4); border: 2px solid #c9b88a; color: #3a1240; font: 800 clamp(30px, 6vw, 44px) var(--body); line-height: 1; }
+#t-grid .card.word .front { font-size: clamp(18px, 3.4vw, 24px); }
+#t-grid .card.done .front { background: linear-gradient(180deg, #fff6c8, #ffd36b); border-color: #fff; box-shadow: 0 0 18px rgba(255, 210, 90, 0.85); animation: t-pop 0.4s ease-out; }
+@keyframes t-pop { 50% { transform: rotateY(180deg) scale(1.1); } }
+#toys .t-foot { justify-content: space-between; margin-top: 10px; font-weight: 800; }
+#toys .t-foot .big { font-size: 17px; padding: 9px 18px; }
+@media (max-width: 760px) {
+  #toys .toys-panel { top: auto; max-height: 72vh; padding: 12px; }
+  #toys #t-grid.n16 .card { aspect-ratio: 1 / 1; }
+  #t-say { min-height: 0; font-size: 15px; }
+  #t-grid { gap: 6px; }
+}
+
+/* ---------- Madame Palette's colouring (the Painting Studio) ---------- */
+#paint .paint-panel { position: fixed; right: 14px; top: 14px; bottom: 14px; width: min(460px, calc(100vw - 28px)); padding: 12px 14px 8px; z-index: 12; display: flex; flex-direction: column; gap: 6px; overflow: auto; }
+#paint .paint-panel > * { flex: none; }
+#pt-pictures, #pt-modes { gap: 6px; }
+#pt-pictures .chip, #pt-modes .chip { font-size: 13px; padding: 6px 11px; }
+#pt-modes .chip { font-family: var(--head); }
+#pt-pictures .pt-stars { color: #ffd84a; letter-spacing: 1px; }
+#pt-pictures .chip.on .pt-stars { color: #b0700a; }
+#pt-say { margin: 2px 0; font-size: 16px; min-height: 44px; line-height: 1.35; }
+#pt-say b { color: var(--gold); font-family: var(--head); }
+#paint #pt-paper { flex: 1 1 auto; min-height: 170px; display: flex; justify-content: center; align-items: center; background: #fffaf0; border-radius: 12px; padding: 6px; box-shadow: inset 0 0 0 2px #e8dcc0, 0 6px 18px rgba(0, 0, 0, 0.35); }
+#pt-paper svg.paint-svg { height: 100%; max-height: 100%; width: 100%; aspect-ratio: 1; touch-action: none; }
+#pt-paper .rg { cursor: pointer; transition: fill 0.15s; }
+#pt-paper .lab { font: 800 17px var(--body); fill: #3a3040; text-anchor: middle; paint-order: stroke; stroke: #fffaf0; stroke-width: 4px; stroke-linejoin: round; }
+#pt-palette { display: grid; grid-template-columns: repeat(9, 1fr); gap: 5px; margin-top: 4px; }
+#paint .win button.pt-swatch, #pt-palette .pt-swatch { aspect-ratio: 1; width: 100%; max-width: 48px; justify-self: center; padding: 0; border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.75); display: grid; place-items: center; box-shadow: inset 0 -5px 8px rgba(0, 0, 0, 0.18), 0 2px 6px rgba(0, 0, 0, 0.35); }
+#pt-palette .pt-swatch b { font: 800 17px var(--body); color: #3a3040; text-shadow: 0 0 4px rgba(255, 255, 255, 0.9); }
+#pt-palette .pt-swatch.on { border: 3px solid var(--gold); transform: scale(1.14); box-shadow: 0 0 0 3px #3a1240, 0 0 16px rgba(255, 220, 140, 0.95); }
+#paint .pt-foot { justify-content: space-between; }
+#paint .pt-foot .small { margin: 0; }
+#paint .pt-foot button.big { font-size: 17px; padding: 8px 20px; }
+
+@media (max-width: 760px) {
+  #paint .paint-panel { top: 30vh; }
+  #pt-say { font-size: 14px; min-height: 0; }
+  #pt-paper { min-height: 140px; }
+}
+
+/* ---------- the Royal Bedchamber: great-aunt's star map (src/stars.mjs) ---------- */
+#stars .stars-panel { position: fixed; right: 14px; top: 14px; bottom: 14px; width: min(460px, calc(100vw - 28px)); padding: 14px 16px 8px; z-index: 12; display: flex; flex-direction: column; overflow-y: auto; overflow-x: hidden; }
+#stars .stars-panel > * { flex: none; }
+#stars h2 { font-size: 20px; margin-bottom: 6px; }
+#s-skies { gap: 5px; margin-bottom: 4px; }
+#s-skies .chip { font-size: 13px; padding: 5px 10px; }
+#s-say { margin: 4px 0 6px; font-size: 16px; min-height: 22px; line-height: 1.35; }
+#s-say b { color: var(--gold); font-family: var(--head); }
+#stars #s-sky { flex: 1 1 auto; min-height: 220px; display: flex; justify-content: center; align-items: center; border-radius: 14px; border: 2px solid rgba(241, 220, 160, .55);
+  background: radial-gradient(ellipse at 30% 20%, #2a2a7a 0%, #141448 45%, #070722 100%); overflow: hidden; touch-action: none; }
+#s-sky svg.sky { width: 100%; height: 100%; max-height: 100%; aspect-ratio: 1; }
+.sky .bg { fill: #dfe6ff; animation: twinkle 3.6s ease-in-out infinite; }
+@keyframes twinkle { 0%, 100% { opacity: .9; } 50% { opacity: .25; } }
+.sky .figure { fill: rgba(190, 200, 255, .08); stroke: rgba(210, 220, 255, .55); stroke-width: .6; stroke-linejoin: round; stroke-linecap: round; opacity: 0; transition: opacity 1.6s ease; pointer-events: none; }
+.sky .figure.show { opacity: 1; }
+.sky .link { stroke: #ffe8a8; stroke-width: 1; stroke-linecap: round; filter: drop-shadow(0 0 1.4px rgba(255, 220, 140, .95)); pointer-events: none; }
+.sky .link.new { stroke-dasharray: 120; stroke-dashoffset: 120; animation: draw-link .5s ease-out forwards; }
+@keyframes draw-link { to { stroke-dashoffset: 0; } }
+.sky .star { cursor: pointer; }
+.sky .star .hit { fill: transparent; }
+.sky .star .halo { fill: rgba(200, 215, 255, .22); }
+.sky .star .core { fill: #fff; filter: drop-shadow(0 0 1.2px #cfe0ff); }
+.sky .star text { font: 800 4.6px var(--body); fill: #ffd9ec; text-anchor: middle; paint-order: stroke; stroke: #0b0b30; stroke-width: 1.2px; pointer-events: none; }
+.sky .star.lit .core { fill: #ffe28a; filter: drop-shadow(0 0 2px #ffd060); }
+.sky .star.lit .halo { fill: rgba(255, 220, 120, .35); }
+.sky .star.lit text { fill: #ffe28a; }
+.sky .star.hint .halo { animation: hint-pulse 1s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+@keyframes hint-pulse { 0%, 100% { fill: rgba(255, 180, 220, .25); transform: scale(1); } 50% { fill: rgba(255, 180, 220, .7); transform: scale(1.6); } }
+.sky .star.shake { animation: star-shake .4s ease-in-out; transform-box: fill-box; transform-origin: center; }
+.sky .star.shake .core { fill: #ff8fb0; }
+@keyframes star-shake { 0%, 100% { transform: translateX(0); } 20% { transform: translateX(-1.6px); } 40% { transform: translateX(1.6px); } 60% { transform: translateX(-1.2px); } 80% { transform: translateX(1.2px); } }
+#s-name { margin: 8px 0 0; padding: 8px 12px; border-radius: 12px; background: rgba(255, 240, 200, .1); border: 1px solid rgba(241, 220, 160, .5); animation: name-in .6s ease-out; }
+@keyframes name-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+#s-name h3 { margin: 0 0 4px; font-size: 17px; }
+#s-name h3 span { color: #ffd9ec; font-family: var(--body); font-weight: 700; font-size: 14px; }
+#s-name p { margin: 0; font-size: 15px; line-height: 1.35; }
+#s-hint { opacity: .85; }
+@media (max-width: 760px) {
+  #stars .stars-panel { top: auto; height: 72vh; }
+  #s-sky { min-height: 180px; }
+}
+
+/* round 3, outside: Basile's flower beds and grooming Étoile */
+.say { font-size: 16px; line-height: 1.4; margin: 8px 0 10px; }
+.say b { color: var(--gold); font-family: var(--head); }
+#fl-beds .chip, #po-steps .chip { font-size: 13px; padding: 6px 11px; }
+#fl-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; margin: 4px 0 8px; }
+#flowers .win button.slot, #flowers button.slot { aspect-ratio: 1; padding: 2px; border-radius: 12px; background: #5a3a22; border: 2px solid #8a6040; display: grid; place-items: center; }
+#flowers button.slot.fixed { opacity: 1; background: #4a3020; border-color: #6a4a30; }
+#flowers button.slot.wrong { border-color: #ff6a6a; box-shadow: 0 0 10px #ff6a6a; }
+#flowers button.slot:disabled { opacity: 1; }
+.flower-ic { width: 100%; max-width: 44px; height: auto; display: block; }
+.flower-ic .hole { fill: #3a2414; }
+.flower-ic text { fill: #c9a070; font: 700 13px var(--body); }
+#flowers .seeds { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+#flowers .seeds button { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 2px; border-radius: 14px; font-size: 11px; }
+#flowers .seeds .flower-ic { max-width: 36px; }
+#flowers .answers, #pony .answers { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+#flowers .answers button, #pony .answers button { font: 800 22px var(--head); padding: 12px 4px; border-radius: 14px; }
+#pony .big-count { font: 700 22px var(--head); color: var(--gold); text-align: center; margin: 10px 0; }
+#pony h3 { font-family: var(--body); font-size: 16px; line-height: 1.35; }

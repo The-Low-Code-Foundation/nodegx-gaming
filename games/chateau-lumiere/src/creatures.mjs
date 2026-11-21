@@ -1561,7 +1561,14 @@ export const VARIANTS = {
   offkey: { base: 'soot', tint: 0x5a3cc8, amount: 0.75, scale: 1 },
   nibble: { base: 'moth', tint: 0xb06a2a, amount: 0.65, scale: 1.05 },
   crumb: { base: 'soot', tint: 0xa0522d, amount: 0.7, scale: 0.95 },
-  queen: { base: 'moth', tint: 0x2a3a9a, amount: 0.7, scale: 1.55 }
+  queen: { base: 'moth', tint: 0x2a3a9a, amount: 0.7, scale: 1.55 },
+  // Round 3: the Gardens and the first floor.
+  bramble: { base: 'moth', tint: 0x2f9a2a, amount: 0.92, scale: 0.95 },
+  mudsprite: { base: 'soot', tint: 0x8a5a2a, amount: 0.9, scale: 1.05 },
+  dustbunny: { base: 'soot', tint: 0xb8a8c8, amount: 0.7, scale: 1.1 },
+  smudge: { base: 'soot', tint: 0x2a6ad0, amount: 0.8, scale: 1 },
+  sketchbook: { base: 'grimoire', tint: 0x2f8a6a, amount: 0.55, scale: 1 },
+  diary: { base: 'grimoire', tint: 0xb02040, amount: 0.8, scale: 1.4 }
 };
 
 function dye(c, { tint, amount, scale }) {

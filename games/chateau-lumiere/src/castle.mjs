@@ -534,9 +534,29 @@ function commonMats(mood) {
 }
 
 // The shell: floor, ceiling, walls with wallpaper above a panelled dado, a cornice, and pilasters.
-function shell(mood, M, { w, d, h, floorMap, floorDark, floorBright, wallMap, wallBump = null, wallDark, wallBright, ceilingDark = 0x15151c, ceilingBright = 0xd8cec2 }) {
+// `plain`: bare walls (a stable's planks), no panelled dado, gold rail or cornice. `hole`: { x, z, w, d }, an opening
+// in the floor (the Landing's stairwell). Its floor is drawn from a shape then, so its texture is laid out in metres.
+function shell(mood, M, { w, d, h, floorMap, floorDark, floorBright, wallMap, wallBump = null, wallDark, wallBright, ceilingDark = 0x15151c, ceilingBright = 0xd8cec2, plain = false, hole = null }) {
   const g = new THREE.Group();
-  const floor = new THREE.Mesh(new THREE.PlaneGeometry(w, d).rotateX(-Math.PI / 2), mood.mat({ dark: floorDark, bright: floorBright, map: floorMap, roughness: 0.45, metalness: 0.05 }));
+  let floorGeo = new THREE.PlaneGeometry(w, d).rotateX(-Math.PI / 2);
+  if (hole) {
+    const sh = new THREE.Shape();
+    sh.moveTo(-w / 2, -d / 2);
+    sh.lineTo(w / 2, -d / 2);
+    sh.lineTo(w / 2, d / 2);
+    sh.lineTo(-w / 2, d / 2);
+    const ho = new THREE.Path();
+    ho.moveTo(hole.x - hole.w / 2, hole.z - hole.d / 2);
+    ho.lineTo(hole.x - hole.w / 2, hole.z + hole.d / 2);
+    ho.lineTo(hole.x + hole.w / 2, hole.z + hole.d / 2);
+    ho.lineTo(hole.x + hole.w / 2, hole.z - hole.d / 2);
+    sh.holes.push(ho);
+    // Shape space is (x, z); laid flat it must keep +z towards the camera, so mirror y before turning it down.
+    floorGeo = new THREE.ShapeGeometry(sh).rotateX(Math.PI / 2);
+    const uv = floorGeo.attributes.uv, pos = floorGeo.attributes.position;
+    for (let i = 0; i < uv.count; i++) uv.setXY(i, (pos.getX(i) + w / 2) / w, (pos.getZ(i) + d / 2) / d);
+  }
+  const floor = new THREE.Mesh(floorGeo, mood.mat({ dark: floorDark, bright: floorBright, map: floorMap, roughness: 0.45, metalness: 0.05, side: hole ? THREE.DoubleSide : THREE.FrontSide }));
   floor.receiveShadow = true;
   floor.name = 'floor';
   g.add(floor);
@@ -557,6 +577,7 @@ function shell(mood, M, { w, d, h, floorMap, floorDark, floorBright, wallMap, wa
     wall.rotation.y = ry;
     wall.receiveShadow = true;
     g.add(wall);
+    if (plain) continue;
     const dado = new THREE.Mesh(new THREE.BoxGeometry(len, 1.05, 0.06), dadoMat);
     dado.position.set(x, 0.525, z);
     dado.rotation.y = ry;
@@ -1105,13 +1126,32 @@ function buildHall() {
   box(W, 0.3, 1.6, stepMat, 0, 3.6, -D / 2 + 0.8, scene);
   for (let x = -W / 2 + 0.3; x < W / 2; x += 0.35) cyl(0.04, 0.05, 0.8, M.cream, x, 4.15, -D / 2 + 1.55, scene, 6);
   box(W, 0.08, 0.14, M.gold, 0, 4.58, -D / 2 + 1.55, scene);
+  // Round 3: they wither when the Ballroom is won (setDoor('stairs')), and roses climb the balustrade in their place.
   const thorns = mood.mat({ dark: 0x1c2a1e, bright: 0x2e5a34, roughness: 0.8 });
-  for (let i = 0; i < 14; i++) {
+  const thornGroup = new THREE.Group(), roseGroup = new THREE.Group();
+  for (let i = 0; i < 22; i++) {
     const t = new THREE.Mesh(new THREE.TorusGeometry(0.4 + rand() * 0.4, 0.04, 5, 12, Math.PI * (1 + rand())), thorns);
-    t.position.set((rand() - 0.5) * 3.6, 4 + rand() * 1.2, -D / 2 + 1.4 + rand() * 0.4);
+    t.position.set((rand() - 0.5) * 3.6, (i < 14 ? 4 : 3.4) + rand() * 1.2, -D / 2 + 1.4 + rand() * (i < 14 ? 0.4 : 1.0));
     t.rotation.set(rand() * 3, rand() * 3, rand() * 3);
-    scene.add(t);
+    thornGroup.add(t);
   }
+  scene.add(thornGroup);
+  const roseLeaf = new THREE.MeshStandardMaterial({ color: 0x3f8a4a, roughness: 0.7 });
+  const roseCols = [0xff7aa8, 0xffd0e0, 0xffe08a].map((c) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.5, emissive: c, emissiveIntensity: 0.12, flatShading: true }));
+  for (let i = 0; i < 40; i++) {
+    const x = (i % 2 ? -1 : 1) * (1.9 + (rand() - 0.5) * 0.15), k = rand();
+    const y = 0.4 + k * 3.6 + 0.6 + rand() * 0.3, z = -D / 2 + 1.1 + (1 - k) * steps * run - 0.4;
+    const leaf = new THREE.Mesh(new THREE.IcosahedronGeometry(0.09, 0), roseLeaf);
+    leaf.position.set(x, y, z);
+    roseGroup.add(leaf);
+    if (i % 2 === 0 || i < 10) {
+      const r = new THREE.Mesh(new THREE.IcosahedronGeometry(0.07, 1), roseCols[i % 3]);
+      r.position.set(x + (rand() - 0.5) * 0.12, y + 0.06, z + (rand() - 0.5) * 0.12);
+      roseGroup.add(r);
+    }
+  }
+  roseGroup.visible = false;
+  scene.add(roseGroup);
   // Portraits between the pillars.
   const frameMat = M.gold;
   const paintings = [];
@@ -1175,6 +1215,11 @@ function buildHall() {
     const front = door.localToWorld(new THREE.Vector3(0, 0, 1.1));
     doors.push({ id, x: front.x, z: front.z, door, glow, ry: s.ry });
   }
+  // Round 3: the foot of the staircase is a way through too (up to the Starlit Landing), with no door of its own.
+  doors.push({ id: 'stairs', x: 0, z: z0 + 1.0, door: null, glow: null, ry: 0 });
+  // The climb, for main.mjs to walk her up or down: from the foot to the gallery, and her height at each z.
+  const stairFront = -D / 2 + 1.1 + steps * run - 0.4 + run / 2;
+  const stairs = { foot: [0, z0 + 0.7], top: [0, -D / 2 + 0.7], y: (z) => Math.max(0, Math.min(steps, (stairFront - z) / run)) * rise };
   // Potion spots: small round tables with a glowing bottle.
   const tableMat = M.wood;
   const potionSpots = [[-3.6, 3.2, 'heart'], [3.6, 3.2, 'star'], [-3.6, -3.6, 'star'], [3.6, -3.6, 'heart']].map(([x, z, kind]) => {
@@ -1199,13 +1244,18 @@ function buildHall() {
   const place = {
     id: 'hall', scene, mood, W, D, H, hub: true,
     bounds: { minX: -W / 2 + 0.5, maxX: W / 2 - 0.5, minZ: -D / 2 + 0.5, maxZ: D / 2 - 0.5 },
-    blockers, doors, potionSpots,
+    blockers, doors, potionSpots, stairs,
     spawn: { x: 0, z: 3.6, face: Math.PI },
     setRestored(f) {
       mood.set(f);
     },
     // A door's look: glowing violet while its room is cursed, warm and open once won.
     setDoor(id, won) {
+      if (id === 'stairs') {
+        thornGroup.visible = !won;
+        roseGroup.visible = won;
+        return;
+      }
       const d = doors.find((d) => d.id === id);
       if (!d || id === 'out') return;
       d.glow.color.set(won ? 0xffc77a : 0x8f6bff);
@@ -1218,7 +1268,7 @@ function buildHall() {
       motesUpdate(dt, t, mood.f);
       for (const u of updates) u(dt, t, mood.f);
       for (const d of doors) {
-        const seal = d.door.userData.seal;
+        const seal = d.door?.userData.seal;
         if (!seal?.visible) continue;
         seal.userData.disc.rotation.z = t * 0.35;
         seal.userData.disc.material.opacity = 0.75 + Math.sin(t * 2.2 + d.x) * 0.25;
@@ -1262,12 +1312,14 @@ function buildRoom(id, spec) {
   const mood = new Mood(scene);
   const M = commonMats(mood);
   const { W, D, H } = spec;
-  mood.fog({ color: spec.fogDark ?? 0x080a14, density: 0.07 }, { color: spec.fogBright ?? 0xd9c8b6, density: 0.006 });
-  scene.add(shell(mood, M, { w: W, d: D, h: H, ...spec.shell }));
+  mood.fog({ color: spec.fogDark ?? 0x080a14, density: spec.fogDensity ?? 0.07 }, { color: spec.fogBright ?? 0xd9c8b6, density: 0.006 });
+  // An outdoor room (round 3, the Rose Garden): `spec.outdoor(ctx)` draws its ground, sky and hedges instead of walls.
+  if (spec.outdoor) spec.outdoor({ scene, mood, M, W, D, H });
+  else scene.add(shell(mood, M, { w: W, d: D, h: H, ...spec.shell }));
   lighting(mood, { sunFrom: spec.sunFrom ?? [-5, 7, 2], shadowBox: Math.max(W, D) / 2 + 1, ghost: [-1.6, 1.4, -0.4] });
-  for (const win of spec.windows) windowOn(mood, M, scene, { ...win, curtainBright: spec.curtain ?? 0xd9577f });
+  for (const win of spec.windows ?? []) windowOn(mood, M, scene, { ...win, curtainBright: spec.curtain ?? 0xd9577f });
   if (spec.chandelier !== false) chandelier(mood, M, scene, { x: 0, z: 0, y: H - 1.2, r: 0.75, candles: 8 });
-  cobwebs(mood, scene, [[-W / 2 + 0.05, H - 0.1, -D / 2 + 0.05, 0, 1.6], [W / 2 - 0.05, H - 0.1, -D / 2 + 0.05, -Math.PI / 2, 1.5], [-W / 2 + 0.05, H - 0.1, D / 2 - 0.05, Math.PI / 2, 1.3], [W / 2 - 0.05, 2.6, D / 2 - 0.05, Math.PI, 1.1], ...(spec.webs ?? [])]);
+  if (!spec.outdoor) cobwebs(mood, scene, [[-W / 2 + 0.05, H - 0.1, -D / 2 + 0.05, 0, 1.6], [W / 2 - 0.05, H - 0.1, -D / 2 + 0.05, -Math.PI / 2, 1.5], [-W / 2 + 0.05, H - 0.1, D / 2 - 0.05, Math.PI / 2, 1.3], [W / 2 - 0.05, 2.6, D / 2 - 0.05, Math.PI, 1.1], ...(spec.webs ?? [])]);
   const motesUpdate = motes(mood, scene, { w: W, d: D, h: H });
   const exitDoor = makeDoor(mood, M);
   exitDoor.position.set(0, 0, D / 2 - 0.14);
@@ -2118,8 +2170,76 @@ const ROOM_SPECS = {
   }
 };
 
+// A hub of round 3 (the Starlit Landing, the Gardens): its doors from `doorSpots` ({ id: { x, z, ry, big?, plain?,
+// door? } }; `door: false` is a way through with no door, like the stairwell), drawn and lit as the Swan Gallery's are,
+// and the place object every hub returns. `extra` is merged into it (its own setDoor, stairs, sky…).
+function makeHub({ id, scene, mood, M, W, D, H, doorSpots, blockers, updates, potionSpots = [], spawn, bounds, extra = {} }) {
+  const doors = [];
+  for (const [did, sp] of Object.entries(doorSpots)) {
+    if (sp.door === false) {
+      doors.push({ id: did, x: sp.x, z: sp.z, door: null, glow: null, ry: sp.ry });
+      continue;
+    }
+    const door = makeDoor(mood, M, did === 'out' || sp.plain ? sp.big ? { w: 2.4, h: 3.6 } : {} : sp.big ? { w: 2.4, h: 3.6, rune: true } : { rune: true });
+    door.position.set(sp.x, 0, sp.z);
+    door.rotation.y = sp.ry;
+    scene.add(door);
+    const glowL = new THREE.PointLight(0x8f6bff, 3, 4, 1.6);
+    glowL.position.copy(door.localToWorld(new THREE.Vector3(0, 1.2, 0.8)));
+    if (did !== 'out' && !sp.plain) scene.add(glowL);
+    const front = door.localToWorld(new THREE.Vector3(0, 0, 1.1));
+    doors.push({ id: did, x: front.x, z: front.z, door, glow: glowL, ry: sp.ry });
+  }
+  const own = extra.setDoor;
+  return {
+    id, scene, mood, W, D, H, hub: true,
+    bounds: bounds ?? { minX: -W / 2 + 0.5, maxX: W / 2 - 0.5, minZ: -D / 2 + 0.5, maxZ: D / 2 - 0.5 },
+    blockers, doors, potionSpots, spawn,
+    setRestored(f) {
+      mood.set(f);
+    },
+    ...extra,
+    setDoor(did, won) {
+      if (own?.(did, won)) return;
+      const d = doors.find((d) => d.id === did);
+      if (!d?.door || did === 'out') return;
+      d.glow.color.set(won ? 0xffc77a : 0x8f6bff);
+      d.door.userData.arch.material.emissive.set(won ? 0xffc06a : 0x6b4bff);
+      d.door.userData.arch.material.emissiveIntensity = won ? 1.8 : 0.6;
+      for (const [i, leaf] of d.door.userData.leaves.entries()) leaf.rotation.y = won ? (i ? -1 : 1) * 0.5 : 0;
+      if (d.door.userData.seal) d.door.userData.seal.visible = !won;
+    },
+    update(dt, t) {
+      for (const u of updates) u(dt, t, mood.f);
+      for (const d of doors) {
+        const seal = d.door?.userData.seal;
+        if (!seal?.visible) continue;
+        seal.userData.disc.rotation.z = t * 0.35;
+        seal.userData.disc.material.opacity = 0.75 + Math.sin(t * 2.2 + d.z) * 0.25;
+      }
+      for (const p of potionSpots) {
+        p.bottle.visible = p.pool.visible = p.back <= 0;
+        p.bottle.rotation.y = t * 0.8;
+        p.bottle.position.y = (p.y ?? 0.86) + Math.sin(t * 2 + p.x) * 0.03;
+        if (p.back > 0) p.back -= dt;
+      }
+    }
+  };
+}
+
+// Round 3's places live in their own files (upstairs.mjs: the Starlit Landing and its rooms; grounds.mjs: the
+// Gardens and theirs). They build with the same parts, from `kit`, and add themselves here: a hub's builder with
+// `addPlaces`, a room's spec (the shape of ROOM_SPECS' entries) with `addRooms`.
+const PLACES = { hall: buildHall, gallery: buildGallery };
+export const addPlaces = (builders) => Object.assign(PLACES, builders);
+export const addRooms = (specs) => Object.assign(ROOM_SPECS, specs);
+export const kit = {
+  TAU, lerp, ease, clamp01, rand, mulberry, tex, Mood, commonMats, shell, windowOn, chandelier, cobwebs, motes, lighting, sweeper, makeDoor,
+  lightShaft, column, sconce, mist, box, sphere, cyl, potionTable, roseUrn, buildRoom, makeHub, makePotion,
+  marble, parquet, tiles, damask, stone, stoneBump, runner, portrait, books, stained, panel, doorLeaf
+};
+
 export function buildPlace(id) {
-  if (id === 'hall') return buildHall();
-  if (id === 'gallery') return buildGallery();
+  if (PLACES[id]) return PLACES[id]();
   return buildRoom(id, ROOM_SPECS[id]);
 }

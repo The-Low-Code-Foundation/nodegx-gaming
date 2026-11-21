@@ -4,7 +4,7 @@ A junior sorceress inherits a haunted fairy-tale château and wins it back, room
 full of cursed creatures. In a fight, her spell is a question: a right answer casts it, a wrong one (or running out
 of time) lets the creature strike. Win a room and it lights up, the creature turns back into what it was before the
 curse (a silk butterfly, a hearth fairy, a storybook), and there is a surprise inside: a wardrobe of dresses, a chef
-who bakes magic cakes, a stronger staff, a piano to learn, a ball to dance at.
+who bakes magic cakes, a stronger staff, a piano to learn, a ball to dance at, a pegasus foal to groom.
 
 The questions are school work the player picks on the title screen: a school year (French years CP to 5e, roughly
 ages 6 to 12), a subject (maths, science, geography, French, English, history, or a mix) and a topic (times tables,
@@ -40,8 +40,14 @@ Progress is saved in the browser. "Start a new château…" in the pause menu wi
 
 - **The Grand Hall** and three rooms: the Dressing Room ★, the Kitchen ★★, the Library ★★★★.
 - **The Swan Wing**, opened by a key from the Library: the Music Room ★★★, the Tea Room ★★★★ and the Ballroom ★★★★★.
-- **Five mini-games** unlocked by won rooms: dress-up, cake and biscuit baking, Hoot's library books (a question at the
-  end of each), the piano (reading notes on a stave), and a rhythm dance at the ball.
+- **The Gardens**, through the front doors, open from the start: the Rose Garden ★★ and the Stables ★★★.
+- **Upstairs**, once the Ballroom is won: she climbs the Grand Staircase to the Starlit Landing, with the Nursery ★★★★,
+  the Painting Studio ★★★★ and great-aunt's Royal Bedchamber ★★★★★.
+- **Ten mini-games** unlocked by won rooms: dress-up, cake and biscuit baking, Hoot's library books (a question at the
+  end of each), the piano (reading notes on a stave), a rhythm dance at the ball, Basile the gnome's flower beds
+  (finish a pattern, then work out the water), grooming and flying Étoile the pegasus (with a carrot sum), Captain
+  Buttons's memory pairs (toys, sums, English words), Madame Palette's colouring by number or by sums, and the Diary's
+  star map (join the stars by counting in 1s, 2s, 5s, 10s…).
 - Deeper rooms hit harder. Clearing the easy rooms first (a cloak, a better staff) is how you survive the deep ones.
 
 ## State

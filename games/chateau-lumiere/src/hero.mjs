@@ -216,6 +216,45 @@ function makeCrown() {
   g.add(crescent);
   return g;
 }
+// The rose crown (the Rose Garden's): a twist of green leaves with roses round it, a big one at the front.
+function makeRoseCrown() {
+  const g = new THREE.Group();
+  const leaf = new THREE.MeshStandardMaterial({ color: 0x3f9a4a, roughness: 0.6 });
+  const band = new THREE.Mesh(new THREE.TorusGeometry(0.112, 0.012, 6, 40), leaf);
+  band.rotation.x = Math.PI / 2;
+  band.position.y = 0.012;
+  g.add(band);
+  const colours = [0xff6f9a, 0xffd0e0, 0xffe08a, 0xff9ab8];
+  for (let i = 0; i < 12; i++) {
+    const a = (i / 12) * Math.PI * 2, big = i === 0;
+    const rose = new THREE.Mesh(new THREE.IcosahedronGeometry(big ? 0.03 : 0.02, 1), new THREE.MeshStandardMaterial({ color: colours[i % 4], roughness: 0.5, emissive: colours[i % 4], emissiveIntensity: 0.15, flatShading: true }));
+    rose.position.set(Math.sin(a) * 0.116, 0.022 + (big ? 0.01 : 0), Math.cos(a) * 0.116);
+    g.add(rose);
+    const l = new THREE.Mesh(new THREE.SphereGeometry(0.016, 8, 6), leaf);
+    l.scale.set(1.6, 0.5, 0.8);
+    l.position.set(Math.sin(a + 0.26) * 0.12, 0.012, Math.cos(a + 0.26) * 0.12);
+    l.rotation.y = a;
+    g.add(l);
+  }
+  return g;
+}
+// The star crown (the Royal Bedchamber's): a gold circlet with five stars standing up round it, a glowing one in front.
+function makeStarCrown() {
+  const g = new THREE.Group();
+  const band = new THREE.Mesh(new THREE.CylinderGeometry(0.112, 0.118, 0.026, 40, 1, true), gold);
+  band.material.side = THREE.DoubleSide;
+  band.position.y = 0.012;
+  g.add(band);
+  const gem = new THREE.MeshStandardMaterial({ color: 0xfff2c0, emissive: 0xffd36b, emissiveIntensity: 2.4, roughness: 0.1 });
+  for (let i = -2; i <= 2; i++) {
+    const a = i * 0.55, front = i === 0;
+    const star = new THREE.Mesh(starGeometry(front ? 0.04 : 0.026, front ? 0.018 : 0.012, 0.008), front ? gem : gold);
+    star.position.set(Math.sin(a) * 0.116, 0.045 + (front ? 0.012 : 0), Math.cos(a) * 0.116);
+    star.rotation.y = a;
+    g.add(star);
+  }
+  return g;
+}
 function makeBow(colour) {
   const g = new THREE.Group();
   const m = new THREE.MeshStandardMaterial({ color: colour, roughness: 0.55 });
@@ -310,8 +349,10 @@ function makeCape(outerColour, liningColour, sparkle) {
 }
 // The staff: a slim wooden shaft wound with a ribbon, a crescent moon at the top cradling a crystal. Her light.
 // `dawn` (the Ballroom's Dawn Staff): pale gold with a sunrise-pink crystal, above the Moonlit Staff.
-export function makeStaff({ moonlit = false, dawn = false } = {}) {
+export function makeStaff({ moonlit = false, dawn = false, star = false } = {}) {
   const g = new THREE.Group();
+  // The Star Staff (round 3, the Royal Bedchamber): the Dawn Staff's gold, with a star of light in place of the crystal.
+  if (star) dawn = true;
   const wood = new THREE.MeshStandardMaterial({ color: dawn ? 0xffe2b0 : moonlit ? 0xe8e6ff : 0x8a5a3a, roughness: moonlit || dawn ? 0.3 : 0.7, metalness: moonlit || dawn ? 0.5 : 0 });
   const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.018, 1.05, 10), wood);
   shaft.position.y = 0.2;
@@ -328,6 +369,13 @@ export function makeStaff({ moonlit = false, dawn = false } = {}) {
   crystal.position.y = 0.76;
   crystal.name = 'crystal';
   g.add(crystal);
+  if (star) {
+    crystal.material.color.set(0xfff4c8);
+    crystal.material.emissive.set(0xffd36b);
+    const s = new THREE.Mesh(starGeometry(0.06, 0.026, 0.01), new THREE.MeshStandardMaterial({ color: 0xfff2c0, emissive: 0xffd36b, emissiveIntensity: 2.6 }));
+    s.position.y = 0.76;
+    g.add(s);
+  }
   const glow = new THREE.PointLight(dawn ? 0xffb0c4 : moonlit ? 0x9fc3ff : 0xc49bff, 0.12, 1.6, 2);
   glow.position.y = 0.76;
   g.add(glow);
@@ -452,7 +500,7 @@ export class Heroine {
   }
 
   // Puts on a look ({ hat, cape, dress, hair }, ids from data.mjs WARDROBE) and the staff.
-  wear(look, { moonlit = false, dawn = false, chef = false } = {}) {
+  wear(look, { moonlit = false, dawn = false, star = false, chef = false } = {}) {
     const dress = WARDROBE.dress.find((d) => d.id === look.dress) ?? WARDROBE.dress[0];
     const hair = WARDROBE.hair.find((d) => d.id === look.hair) ?? WARDROBE.hair[0];
     if (chef) {
@@ -479,9 +527,11 @@ export class Heroine {
     else if (hatId === 'bow') hat = makeBow(dress.skirt);
     else if (hatId === 'chef') hat = makeChefHat();
     else if (hatId === 'crown') hat = makeCrown();
+    else if (hatId === 'roses') hat = makeRoseCrown();
+    else if (hatId === 'starcrown') hat = makeStarCrown();
     if (hat) {
       // Placed in the body's frame (above and slightly behind the crown of the head), then hung on the head bone.
-      const at = { witch: [0, 0.135, -0.025, 0.82, -0.16], tiara: [0, 0.12, 0.01, 1, -0.12], bow: [0, 0.12, -0.11, 1, 0.2], chef: [0, 0.15, -0.02, 1, -0.08], crown: [0, 0.125, -0.005, 1, -0.1] }[hatId];
+      const at = { witch: [0, 0.135, -0.025, 0.82, -0.16], tiara: [0, 0.12, 0.01, 1, -0.12], bow: [0, 0.12, -0.11, 1, 0.2], chef: [0, 0.15, -0.02, 1, -0.08], crown: [0, 0.125, -0.005, 1, -0.1], roses: [0, 0.12, -0.005, 1, -0.12], starcrown: [0, 0.125, -0.005, 1, -0.1] }[hatId];
       this.placeOn(head, hat, at);
       this.worn.hat = hat;
     }
@@ -491,7 +541,8 @@ export class Heroine {
     this.worn.skirt = skirt;
     const capeId = chef ? 'none' : look.cape;
     if (capeId !== 'none') {
-      const cape = capeId === 'starlight' ? makeCape(0x4a55c8, 0xb8c4ff, true) : capeId === 'midnight' ? makeCape(0x1c1650, 0xc8d4ff, true) : makeCape(0xe0609a, 0xffd3e6, false);
+      const CAPES = { starlight: [0x4a55c8, 0xb8c4ff, true], midnight: [0x1c1650, 0xc8d4ff, true], riding: [0x2f6b4a, 0xf2d48a, false], stars: [0x10123a, 0xffe7a0, true] };
+      const cape = makeCape(...(CAPES[capeId] ?? [0xe0609a, 0xffd3e6, false]));
       // Hung on the upper chest (so it turns with her body), but placed at the base of her neck.
       const chest = this.bones.upperChest, root = this.group.getWorldQuaternion(new THREE.Quaternion()).invert();
       const neck = this.bones.neck.getWorldPosition(new THREE.Vector3()).sub(chest.getWorldPosition(new THREE.Vector3())).applyQuaternion(root);
@@ -499,7 +550,7 @@ export class Heroine {
       this.worn.cape = cape;
     }
     if (!chef) {
-      const staff = makeStaff({ moonlit, dawn });
+      const staff = makeStaff({ moonlit, dawn, star });
       this.worn.staff = staff;
       this.holdStaff(staff);
     }
