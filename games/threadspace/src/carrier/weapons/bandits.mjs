@@ -356,6 +356,7 @@ export const banditParts = {
       if (_x.copy(A).addScaledVector(ab, k).distanceTo(g.pivot) < G.pdcRadius) {
         const was = g.hp;
         g.hp = Math.max(0, g.hp - (G.pdcDamage[0] + this.rand() * (G.pdcDamage[1] - G.pdcDamage[0])));
+        this.ship.parts?.spot(g.m.id, _x); // where it was struck: its sparks, and where a drone welds it
         const at = this.C.frame.localToWorld(_x.clone());
         this.flash(at, 2, '#ffd090', 0.15);
         if (was >= 25 && g.hp < 25) {
@@ -371,7 +372,9 @@ export const banditParts = {
       const q = _x.copy(A).addScaledVector(ab, i / n);
       const rad = this.plant?.radiatorAt(q);
       if (rad) {
-        this.plant.hitRadiator(rad, G.radiator);
+        const P = this.ship.parts, part = P?.byId.get(rad.m.id);
+        if (part) P.hit(part, G.radiator * 100, q, ab.clone().normalize(), 'bandit');
+        else this.plant.hitRadiator(rad, G.radiator);
         this.flash(this.C.frame.localToWorld(q.clone()), 1.5, '#ffb070', 0.12);
         return true;
       }

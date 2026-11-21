@@ -482,6 +482,7 @@ export class Integrity {
         // A new compartment: holed at the face the shell came through, to space or to the compartment before.
         const face = n.b ? this.face(n.b, q, dir) : { at: q.clone(), n: dir.clone() };
         const h = this.makeHole(n, last, face.at, face.n, last ? hole * 0.7 : hole);
+        if (!last) h.hull = entry.clone(); // where her skin is holed: a drone plates it from outside (carrier-repair.mjs)
         if (h.look) breaches.push(h);
         this.hurt(n, damage * (1 - (0.5 * s) / pen));
         path.push(n);
@@ -856,6 +857,7 @@ export class Integrity {
     if (exposed && opts.part.part !== 'spine') return this.structureHit(entry, dir, opts);
     const pen = opts.pen ?? S.pen[0] + r() * (S.pen[1] - S.pen[0]) - (opts.shell && ar ? ar.pen : 0);
     if (opts.torpedo) {
+      this.parts?.blast(entry); // the warhead wrecks the machinery near where it struck (carrier-damage.mjs)
       const z = entry.z;
       this.C.bus?.emit('call', { id: 'torpedo-hit', z, frame: frameOf(this.L, z), side: sideOf(entry.x) });
       this.dc?.say(null, `Torpedo hit: frame ${frameOf(this.L, z)}, ${sideOf(entry.x)}.`, 0, 6);
@@ -884,6 +886,7 @@ export class Integrity {
       this.hurt(n, (opts.damage ?? S.damage[0] + r() * (S.damage[1] - S.damage[0])) * 0.5);
       res.path.push(n);
     }
+    if (part.part === 'hub' && part.half) this.parts?.hub(part.half, opts.damage ?? S.damage[0] + r() * (S.damage[1] - S.damage[0]));
     const half = part.half && D.halves.find((h) => h.id === part.half)?.name.toLowerCase();
     const what = { hub: `the ${half}'s hub ring`, spoke: `a spoke of the ${half}`, strut: 'a sleeve strut' }[part.part];
     this.C.bus?.emit('call', { id: 'structure-hit', room: n?.c.id, what, result: n ? 'The ring corridor is venting.' : 'Structure damaged, no breach.' });
@@ -1132,6 +1135,7 @@ export class Integrity {
 
   /** The drones: one to each hole to space, out of the drone bay; they seal it after `seal` seconds a 0.1 m². */
   dronesFrame(dt) {
+    if (this.repair) return; // the drones and parties of carrier-repair.mjs do it (ROADMAP phase 9 session 4)
     const D = this.N.drones;
     const bay = this.nodes.get(D.from);
     const free = this.droneCount - this.drones.filter((d) => !d.done).length;
@@ -1185,7 +1189,11 @@ export class Integrity {
     const drive = clamp((this.sys('drive') - 0.2) / 0.5, 0, 1) * (this.power ? 1 : 0);
     for (const t of this.thrusters) {
       if (t.kind === 'main') t.health = drive;
-      else if (t.node) t.health = clamp((t.node.health / 100 - 0.2) / 0.4, 0, 1);
+      else if (t.node || t.dmg != null) {
+        // Its compartment's health, and its cluster's own (carrier-damage.mjs), worked out afresh so a mend shows.
+        const own = t.node ? clamp((t.node.health / 100 - 0.2) / 0.4, 0, 1) : 1;
+        t.health = t.dmg != null ? Math.min(own, t.dmg) : own;
+      }
     }
     this.driveFactor = drive;
     this.lsFactor = clamp(this.sys('life-support') * 1.25, 0, 1) * (this.power ? 1 : 0.5);

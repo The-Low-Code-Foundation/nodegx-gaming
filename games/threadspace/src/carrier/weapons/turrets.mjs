@@ -28,9 +28,10 @@ export const turretParts = {
       // the hoist runs.
       const bb = this.ship.node(t.spec.barbette)?.health ?? 100;
       const mag = this.ship.node(t.spec.magazine)?.health ?? 100;
-      t.rate = clamp((bb - 15) / 45, 0, 1) * (this.ship.power ? 1 : 0.35);
-      const hoistOk = bb >= 25 && mag >= 15;
-      t.hoist = !hoistOk ? (mag < 15 ? 'stopped: magazine wrecked' : 'stopped: barbette wrecked') : t.stock <= 0 ? 'magazine empty' : t.ready >= G.rack ? 'rack full' : 'running';
+      // A hit on the turret itself (carrier-damage.mjs) puts it out of action until it is mended.
+      t.rate = t.out ? 0 : clamp((bb - 15) / 45, 0, 1) * (this.ship.power ? 1 : 0.35);
+      const hoistOk = bb >= 25 && mag >= 15 && !t.out;
+      t.hoist = !hoistOk ? (t.out ? 'stopped: turret wrecked' : mag < 15 ? 'stopped: magazine wrecked' : 'stopped: barbette wrecked') : t.stock <= 0 ? 'magazine empty' : t.ready >= G.rack ? 'rack full' : 'running';
       if (hoistOk && t.stock > 0 && t.ready < G.rack && (t.hoistT += dt) >= G.hoist) (t.hoistT = 0), t.ready++, t.stock--;
       const you = this.manned === t && mode === 'gun';
       if (you) {
@@ -65,7 +66,7 @@ export const turretParts = {
       t.house.updateMatrixWorld(true);
       const wantsFire = you ? f.trigger : t.layed;
       if (you || wantsFire) t.fouled = !this.clear(t);
-      if (wantsFire && !t.fouled && t.ready > 0 && t.cool[t.barrel] <= 0) this.shoot(t, you);
+      if (wantsFire && !t.out && !t.fouled && t.ready > 0 && t.cool[t.barrel] <= 0) this.shoot(t, you);
     }
   },
 

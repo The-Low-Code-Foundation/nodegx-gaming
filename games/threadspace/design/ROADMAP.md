@@ -516,6 +516,35 @@ thrust lost, gas leaking, systems out, rooms losing air. The rescue craft are in
   (the plant already models this), a thruster quad hit loses thrust, a tank holed leaks propellant (and the leak
   pushes her), a turret hit is out until mended, a hangar door jammed, a drum bearing hit makes the drum shudder. The
   drones and damage control parties mend them over time, by priority, and you can do any job yourself.
+  Scoped: the drones mend what is outside; you and the damage control parties mend what can be reached from inside
+  (the bay door from the hangar, a turret from its hoist trunk, a drum bearing from the spine, holes between
+  compartments). Going outside in a suit to mend the hull is a later phase.
+  **Built (session 4, 21 November 2026):** `carrier-damage.mjs` and `carrier-repair.mjs`, with the layout's
+  `integrity.parts` (set in `tools/carrier-v2.mjs`). The carrier has 34 parts: her two radiators, eight thruster
+  clusters, ten turrets, ten point defence guns, the two bay doors and the two drum bearings. Shells and strafing
+  runs hit a part before the hull behind it (a radiator lets the round through, anything else stops it), and a
+  torpedo's warhead hurts every part in its reach. A part's damage does what it should: a cluster thrusts in
+  proportion to its health, a turret below 45 is out (its hoist stopped), a hit bay door jams where it stands (that
+  side's fighters can neither launch nor land, and the other door still answers the switch), a hit bearing makes its
+  drum shudder, and a holed tank leaks propellant through the hole and the leak pushes and turns her (the helm's
+  flight assist fights it). New calls: thrusters-damaged, turret-down, turret-back, bay-jammed, bay-clear,
+  bearing-damaged. All mending is one queue, ordered by `parts.order`: tanks, breaches, the doors, thrusters,
+  bearings, turrets, holes inside, guns, radiators, then hull holes. Four drones from the drone bay fly outside on a
+  braking profile, routed round the hull's envelope (wider where the radiators are spread), and weld at a stand-off;
+  the old instant drone patch is gone, and the guns no longer mend themselves. Two-person damage control parties go
+  to the work from damage control, timed by the length of the way, and work suited in foot restraints. You can do or
+  help with any inside job: hold E at it with the tool kit.
+  Also fixed: a thruster with no compartment of its own kept its damage after it was mended.
+  Fingerprints: brace, career, float, landing, repair and walk unchanged. raid 4e4b91af→0815b51d (only the air
+  moved, the holes now sealed on the drones' real timing); bandits 6c1409c6→1f8a8e41 (the strafed gun waits for a
+  drone, 87 at the end, not 97); helm de551463→f928afef (the guns the raider hits stay down, so 2 torpedoes shot
+  down, not 4, and 4 hit, not 2); missiles f5285102→4b891fab (the bandits' rounds take out her guns, so the bandits
+  die at 70 s and 73 s, not 42 s and 57 s, and the fighter takes more); collide 91b34421→e719976c (the check now
+  really shuts both doors, so the fighter strikes the outer bay door, named now, not the opening behind it). A new
+  `hull` scenario: six hits, the jammed door holds open while the other shuts, the leak pushes her (5.3 MN), you
+  help at the turret for 60 s, everything mended by 360 s in queue order (0e76d0c7).
+  Not done: not yet played by hand; missiles that hit the carrier don't go through the parts; the drones don't show
+  in the cutaway; the six new calls are unrecorded (`node tools/voices.mjs --list`); no spacewalk.
 
 ## The opening ([`OPENING.md`](OPENING.md))
 

@@ -1,0 +1,27 @@
+{
+  "id": "thrusters-damaged",
+  "about": "A hit has damaged one of her manoeuvring clusters (carrier-damage.mjs).",
+  "who": "engineer",
+  "say": [
+    "The {what} are damaged."
+  ],
+  "slots": {
+    "what": [
+      "bow port upper thrusters",
+      "stern port upper thrusters",
+      "bow starboard upper thrusters",
+      "stern starboard upper thrusters",
+      "bow port lower thrusters",
+      "stern port lower thrusters",
+      "bow starboard lower thrusters",
+      "stern starboard lower thrusters"
+    ]
+  },
+  "to": {
+    "bridge": "headset",
+    "engineering": "headset",
+    "dc": "headset"
+  },
+  "priority": 3,
+  "again": 6
+}

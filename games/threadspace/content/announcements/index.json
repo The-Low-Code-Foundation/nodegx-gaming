@@ -51,6 +51,12 @@
     "bandits",
     "splash-bandit",
     "pdc-down",
-    "missile-warning"
+    "missile-warning",
+    "thrusters-damaged",
+    "turret-down",
+    "turret-back",
+    "bay-jammed",
+    "bay-clear",
+    "bearing-damaged"
   ]
 }

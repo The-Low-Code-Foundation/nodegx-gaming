@@ -84,8 +84,8 @@ export const pdcParts = {
       g.ok = health >= 25 && mag >= 15 && g.hp >= 25 && this.ship.power;
       g.why = !this.ship.power ? 'no power' : health < 25 ? 'wrecked' : g.hp < 25 ? 'shot up' : mag < 15 ? 'magazine wrecked' : g.stock <= 0 ? 'empty' : hot ? 'heat' : '';
       g.firing = false;
-      // Mended between raids (the repair drones): `repair` hit points a second.
-      if (g.hp < 100 && (!R || R.gone)) g.hp = Math.min(100, g.hp + dt * (this.W.pdc.repair ?? 0));
+      // Mended by the repair drones (carrier-repair.mjs); without them, `repair` hit points a second between raids.
+      if (!this.ship.repair && g.hp < 100 && (!R || R.gone)) g.hp = Math.min(100, g.hp + dt * (this.W.pdc.repair ?? 0));
       const pivot = this.C.frame.localToWorld(_a.copy(g.pivot));
       const up = _b.copy(g.up).applyQuaternion(this.C.obj.quaternion);
       const best = g.ok ? this.pdTarget(g, P, pivot, up, cosArc, raiderLive ? R : null) : null;

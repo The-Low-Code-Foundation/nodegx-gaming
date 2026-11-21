@@ -1,0 +1,28 @@
+{
+  "id": "turret-back",
+  "about": "A turret is mended (carrier-repair.mjs).",
+  "who": "ai",
+  "say": [
+    "{what} back in action."
+  ],
+  "slots": {
+    "what": [
+      "Bow dorsal turret",
+      "Bow ventral turret",
+      "Hangar dorsal turret 1",
+      "Hangar ventral turret 1",
+      "Hangar dorsal turret 2",
+      "Hangar ventral turret 2",
+      "Hangar dorsal turret 3",
+      "Hangar ventral turret 3",
+      "Stern dorsal turret",
+      "Stern ventral turret"
+    ]
+  },
+  "to": {
+    "bridge": "headset",
+    "gunners": "headset",
+    "dc": "headset"
+  },
+  "priority": 2
+}

@@ -1,0 +1,21 @@
+{
+  "id": "bearing-damaged",
+  "about": "A shell through a hub ring has damaged a drum bearing (carrier-damage.mjs).",
+  "who": "engineer",
+  "say": [
+    "The {what} bearing is damaged. The drum is shuddering."
+  ],
+  "slots": {
+    "what": [
+      "forward drum",
+      "after drum"
+    ]
+  },
+  "to": {
+    "drums": "tannoy",
+    "bridge": "headset",
+    "engineering": "headset",
+    "dc": "headset"
+  },
+  "priority": 3
+}

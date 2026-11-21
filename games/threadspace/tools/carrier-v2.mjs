@@ -651,6 +651,29 @@ integrity.armour.structure = { stop: 0.7, pen: 3 };
 integrity.about = integrity.about.replace('(a torpedo is never stopped).', '(a torpedo is never stopped). `armour.structure`: the same for the open drum section\'s exposed structure (the spine, the hub rings, the spokes and the end struts, `drum.structure`), reached through the sleeve\'s open ends.');
 integrity.about = integrity.about.replace('Everyone suits up first.', 'Everyone suits up first. `drums`: false keeps the drums\' rooms and ring corridors pressurised (only the fixed hull is pumped down).');
 integrity.about = integrity.about.replace('`suit`: a vac suit (the `suit` kit, worn, not carried) holds', '`suit`: the duty suit everyone wears outside the drums (changed into at the lockers by each drum\'s lift; the `suit` kit is its fresh bottles) holds');
+// The carrier's outside parts and how she is mended (src/carrier/carrier-damage.mjs, carrier-repair.mjs; ROADMAP phase
+// 9 session 4).
+integrity.parts = {
+  about: 'The carrier\'s outside parts and how she is mended (src/carrier/carrier-damage.mjs, carrier-repair.mjs). Each kind (`kinds`) has health 100 and is mended `by` the drones (outside) or a damage control party (inside), taking `min` + `per` × what it has lost / 100 seconds. `radiator`: plant.mjs\'s two panels, shedding heat as they are unhurt. `rcs`: each manoeuvring cluster (a ball `r` m round it), pushing nothing under `off` health and all it can from `full`. `turret`: each turret (a ball `r`), out of action under `out`. `pdc`: each point defence and flak mount (a ball `r`; its health is the gun\'s own `hp`), out under `out`. `door`: each bay door, jammed where it stands under `jam`. `bearing`: each drum\'s bearing, hit through its hub ring (`structure` of the shell\'s damage), shuddering under `shudder` (the drum wobbles `wobble` rad at worst). A gun shell takes `shell` health from a part it meets (a radiator 0.6 of that); a torpedo\'s blast every part within `torpedo.r` m, `torpedo.hp` at the blast and less with distance. A holed propellant tank vents its leak (plant.propellant.leak) at `leak.ve` m/s, which pushes her. Jobs are taken in `order` (the worst hit first within a kind): `tank` (a hole in a propellant tank), `breach` (into a room with air), `inside` (between two compartments, a party\'s), `hole` (into a sealed space); the rest are the kinds. `drones`: out of the bay\'s hatch at `exit` (her frame) going `out`, round her `clear` m off her hull and spread radiators, at up to `cruise` m/s and `accel` m/s² (steering time constant `tau`), through each waypoint within `pass` m at `corner` m/s, holding `standoff` m off the work; drawn `scale` times the hangar\'s drones. Their number, bay and seal time are `integrity.drones`. `parties`: `count` of them from the `from` room, timed at `speed` m/s along their way (climbs count 1.5×) after `setup` s. You can do any inside job with the `kit`, adding `help` (a party is 1).',
+  kinds: {
+    radiator: { by: 'drone', min: 20, per: 140 },
+    rcs: { by: 'drone', r: 4.5, off: 15, full: 85, min: 15, per: 110 },
+    turret: { by: 'party', r: 6, out: 45, min: 25, per: 150 },
+    pdc: { by: 'drone', r: 2.6, out: 25, min: 10, per: 60 },
+    door: { by: 'party', jam: 55, min: 30, per: 120 },
+    bearing: { by: 'party', shudder: 80, min: 40, per: 200, wobble: 0.004 },
+  },
+  shell: [20, 45],
+  torpedo: { r: 18, hp: [50, 90] },
+  structure: 0.8,
+  leak: { ve: 450 },
+  order: ['tank', 'breach', 'door', 'rcs', 'bearing', 'turret', 'inside', 'pdc', 'radiator', 'hole'],
+  kit: 'toolkit',
+  help: 1,
+  drones: { exit: [-25.2, 10, 103], out: [-1, 0.35, 0], clear: 12, cruise: 12, accel: 3, tau: 0.6, pass: 3, corner: 3, standoff: 3.5, scale: 2.5 },
+  parties: { count: 2, from: 'damage-control', speed: 2, setup: 10 },
+};
+integrity.about = integrity.about.replace('`inside` whether they also seal holes between compartments.', '`inside` is no longer read: a hole between compartments is a damage control party\'s (`parts.parties`); the drones fly out of the bay and round her (`parts.drones`).');
 const plant = structuredClone(v1.plant);
 plant.propellant.tanks = ['tanks-aft', 'tanks-aft-s', 'hangar-bottom', 'hangar-bottom-2', 'hangar-bottom-3', 'hangar-bottom-4', 'hangar-bottom-5'];
 

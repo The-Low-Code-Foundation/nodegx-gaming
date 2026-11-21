@@ -8,6 +8,7 @@
 // Or one, on its own page (each wants a fresh load), in the console:
 //
 //   carrier.html?at=bridge&voice=0&crew=0&dc=0&hold=1&seed=7     → (await import('./tools/carrier-check.mjs')).run('raid')
+//   carrier.html?at=bridge&voice=0&crew=0&dc=0&hold=1&seed=7     → run('hull')
 //   carrier.html?at=helm&voice=0&crew=0&dc=0&hold=1&seed=7       → run('helm')
 //   carrier.html?at=fighter&voice=0&crew=0&dc=0&hold=1&seed=7    → run('landing')
 //   carrier.html?at=fighter&voice=0&crew=0&dc=0&hold=1&seed=7    → run('repair')
@@ -298,6 +299,48 @@ const scenarios = {
   /** The fighter against the ship (collide.mjs): launched, then set going at the hull from a spot in the ship's
    *  frame each time: a slow bump, a crash, 150 m/s (she must not pass through), a glancing pass, into the open bay
    *  over a parked fighter, into a shut bay door, the turning bow swinging into her, and a crash that holes her. */
+  /** The carrier's own parts hit and mended (carrier-damage.mjs, carrier-repair.mjs): a thruster cluster, a radiator,
+   *  the bow dorsal turret, the port bay door (jammed open while the bay is shut), the forward drum's bearing, and a
+   *  propellant tank holed from below (its leak pushing her). The drones and parties mend them by priority, and you
+   *  help at the turret with the tool kit. */
+  async hull(c) {
+    const P = c.parts, H = c.hullRepair, get = (id) => P.byId.get(id);
+    const at = (id, x, y, z) => get(id).pos.clone().set(x, y, z);
+    c.bayNow();
+    P.hit(get('rcs-1'), 70, get('rcs-1').pos.clone());
+    P.hit(get('radiator-port'), 55, at('radiator-port', -45, 0.5, 120));
+    P.hit(get('turret-dorsal'), 60, get('turret-dorsal').pos.clone());
+    P.hit(get('bay-door'), 50, at('bay-door', -23.5, -3, 33));
+    P.hub('a', 60);
+    const shot = c.ship.hit({ target: 'tanks-aft', from: 'below', pen: 30 });
+    c.tick(2, 1 / 30); // two frames: the cluster's damage reaches its thrusters on the next one
+    const hit = {
+      shot: shot?.path, rcs: r3(get('rcs-1').ts[0].health), turretOut: !!get('turret-dorsal').t.out, jammed: c.doors.sides.w.jammed,
+      shudder: c.C.drums.halves.map((h) => r3(h.shudder ?? 0)), leak: P.leaks.map((l) => Math.round(l.force)), queue: H.board().map((j) => `${j.what}:${j.by}`)
+    };
+    // The bay shut: the jammed port door stays open, the starboard one shuts.
+    c.doors.setBay(0);
+    run_(c, 8);
+    const bay = { port: r3(c.doors.kOf('w')), stbd: r3(c.doors.kOf('e')), ship: snap(c).ship };
+    // You at the turret's hoist trunk with the tool kit, holding E, until the party gets there and a while after.
+    c.dc.carry.set(c.L.integrity.parts.kit, { agent: Infinity });
+    const tt = get('turret-dorsal').task, u = tt?.use;
+    if (u) {
+      c.place(c.L.weapons.turrets[0].from.deck, u.pos.x, u.pos.z + 0.8, 0);
+      key('KeyE');
+    }
+    const near = c.walker.nearestUse()?.repair === tt;
+    run_(c, 60, () => !get('turret-dorsal').task);
+    key('KeyE', 'keyup');
+    const helped = r3(tt?.helped ?? 0);
+    const t = run_(c, 900, () => !H.tasks.length);
+    return {
+      hit, bay, near, helped, t, log: H.log.map((j) => `${j.what}:${j.by}@${j.t}`),
+      after: { hp: P.parts.filter((p) => p.hp < p.max).map((p) => p.id), door: [r3(c.doors.kOf('w')), c.doors.sides.w.jammed], shudder: c.C.drums.halves.map((h) => r3(h.shudder ?? 0)) },
+      rcsAfter: r3(get('rcs-1').ts[0].health), drones: H.drones.map((d) => d.state), ...snap(c)
+    };
+  },
+
   async collide(c) {
     const f = c.fighter, C = c.C, THREE = await import('three');
     const step = (secs, until) => run_(c, secs, until);
@@ -338,7 +381,7 @@ const scenarios = {
     out.bay = shoot([-50, -6, 33], [1, -0.08, 0], 6, port, 14);
     c.doors.setBay(0);
     c.doors.k = 0;
-    c.doors.frame(0);
+    c.doors.place ? c.doors.place() : c.doors.frame(0); // each side's door shut at once
     out.door = shoot([-40, -4, 33], [1, 0, 0], 5, port, 6);
     c.bayNow();
     c.body.ang.set(0, 0.06, 0);
@@ -659,7 +702,7 @@ export async function run(name) {
 }
 
 const PAGES = {
-  raid: 'at=bridge', helm: 'at=helm', landing: 'at=fighter', repair: 'at=fighter', collide: 'at=fighter', bandits: 'at=fighter', missiles: 'at=fighter', walk: 'at=bridge', float: 'at=bridge', brace: 'at=bridge', career: ''
+  raid: 'at=bridge', hull: 'at=bridge', helm: 'at=helm', landing: 'at=fighter', repair: 'at=fighter', collide: 'at=fighter', bandits: 'at=fighter', missiles: 'at=fighter', walk: 'at=bridge', float: 'at=bridge', brace: 'at=bridge', career: ''
 };
 
 /** Every scenario, each in a fresh page of its own (an iframe), from any page of this site: `{ name: { hash, … } }`.

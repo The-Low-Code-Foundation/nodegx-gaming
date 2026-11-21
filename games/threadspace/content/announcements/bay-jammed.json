@@ -1,0 +1,25 @@
+{
+  "id": "bay-jammed",
+  "about": "A hit has jammed a hangar bay door (carrier-damage.mjs).",
+  "who": "flight",
+  "say": [
+    "The {side} bay door is jammed {how}."
+  ],
+  "slots": {
+    "side": [
+      "port",
+      "starboard"
+    ],
+    "how": [
+      "open",
+      "shut",
+      "part open"
+    ]
+  },
+  "to": {
+    "flight": "radio",
+    "bridge": "headset",
+    "dc": "headset"
+  },
+  "priority": 4
+}

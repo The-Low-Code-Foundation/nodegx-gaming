@@ -109,7 +109,26 @@ export const projectileParts = {
     const q = new THREE.Vector3();
     for (let i = 1; i <= n; i++) {
       q.lerpVectors(A, B, i / n);
-      if (!s.radiator && this.plant) {
+      const P = this.ship.parts;
+      if (P) {
+        // Her machinery standing proud of the skin (carrier-damage.mjs): a turret, a gun mount or a thruster cluster
+        // stops the round and takes it; a spread radiator is wrecked in part and the round goes on through.
+        const part = P.at(q);
+        if (part && !(part.kind === 'radiator' && s.radiator)) {
+          const dir = _a.subVectors(B, A).normalize();
+          if (s.torpedo && part.kind !== 'radiator') {
+            this.ship.arrive(q, dir, { ...this.torpHarm(), part: { part: 'hull' } });
+            return true;
+          }
+          P.hit(part, s.torpedo ? 60 : P.shellHp(part.kind === 'radiator' ? 0.6 : 1), q, dir);
+          this.flash(this.C.frame.localToWorld(q.clone()), part.kind === 'radiator' ? 4 : 6, '#ffb070', 0.3);
+          if (part.kind === 'radiator') s.radiator = true;
+          else {
+            this.impact(this.C.frame.localToWorld(_n.copy(q)), _w.subVectors(B, A).normalize().transformDirection(this.C.frame.matrixWorld), 1, '#ffb070');
+            return true;
+          }
+        }
+      } else if (!s.radiator && this.plant) {
         const r = this.plant.radiatorAt(q);
         if (r) {
           s.radiator = true;
@@ -120,6 +139,9 @@ export const projectileParts = {
       // What it meets: the hull, or in the drum section's open tube the sleeve, a drum or the exposed structure.
       const met = this.ship.meets ? this.ship.meets(q) : this.ship.inHull(q) && { part: 'hull' };
       if (met) {
+        // A bay door in the hangar's wall: the door takes it as well as whatever is behind.
+        const door = met.part === 'hull' && P?.doorAt(q);
+        if (door && !s.torpedo) P.hit(door, s.torpedo ? 70 : P.shellHp(), q, _a.subVectors(B, A).normalize());
         if (s.torpedo) this.ship.arrive(q, _a.subVectors(B, A), { ...this.torpHarm(), part: met });
         else {
           this.impact(this.C.frame.localToWorld(_n.copy(q)), _w.subVectors(B, A).normalize().transformDirection(this.C.frame.matrixWorld), 1, '#ffb070');

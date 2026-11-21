@@ -64,7 +64,7 @@ let DRONE_GEO = null;
 /** A repair drone: a squat body with a jet pod on each corner, a stack of hull plates on its back, an eye at the front
  *  and a welding arm under it (its own group, `arm`, turned to the work; `tip` the torch). Three merged meshes and the
  *  arm. Faces -z. */
-function droneMesh() {
+export function droneMesh() {
   if (!DRONE_GEO) {
     const B = (w, h, d, x, y, z, rx = 0, ry = 0, rz = 0) => new THREE.BoxGeometry(w, h, d).rotateX(rx).rotateY(ry).rotateZ(rz).translate(x, y, z);
     const C = (r, h, x, y, z, rx = 0, rz = 0, seg = 8) => new THREE.CylinderGeometry(r, r, h, seg).rotateX(rx).rotateZ(rz).translate(x, y, z);

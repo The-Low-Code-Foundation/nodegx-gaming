@@ -1,0 +1,20 @@
+{
+  "id": "bay-clear",
+  "about": "A jammed bay door has been freed (carrier-damage.mjs).",
+  "who": "flight",
+  "say": [
+    "The {side} bay door is free."
+  ],
+  "slots": {
+    "side": [
+      "port",
+      "starboard"
+    ]
+  },
+  "to": {
+    "flight": "radio",
+    "bridge": "headset",
+    "dc": "headset"
+  },
+  "priority": 3
+}

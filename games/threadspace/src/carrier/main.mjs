@@ -54,6 +54,8 @@ import { Doors } from './doors.mjs';
 import { Collisions } from './collide.mjs';
 import { FighterDamage } from './fighter-damage.mjs';
 import { Repairs } from './fighter-repair.mjs';
+import { CarrierDamage } from './carrier-damage.mjs';
+import { HullRepair } from './carrier-repair.mjs';
 import { Rescue } from './rescue.mjs';
 import { loadLayout, fetchJson } from '../core/ship.mjs';
 import { loadPeople, peopleNamed, joinPeople } from '../core/people.mjs';
@@ -258,7 +260,9 @@ ship.status = () => {
     ...(guns.railSides
       ? [['Railguns', Math.min(...guns.railSides.map((k) => { const r = guns.railSide(k, null); return r.ok ? (ship.power && !plant.hot ? 1 : 0.3) : 0.2; })), guns.railSides.map((k) => `${k} ${guns.rail[k].stock}${guns.rail[k].charge < 1 ? ` (${Math.round(guns.rail[k].charge * 100)}%)` : ''}`).join(' · ')]]
       : []),
-    ...plant.rows()
+    ...plant.rows(),
+    ...(parts ? parts.rows() : []),
+    ...(hullRepair ? hullRepair.rows() : [])
   ];
 };
 // The helm's sight (helmsight.mjs): the railgun's pip, the nav plot, the heat and the Δv, over the view from the helm.
@@ -329,6 +333,11 @@ const walk = (G.walk = new WalkSeat(G));
 const rescue = (G.rescue = new Rescue(G)); // the tanker and the tug, called from the cockpit (rescue.mjs)
 // A damaged fighter on her pad is mended by drones and the deck crew, and held until she is (fighter-repair.mjs).
 const repairs = (G.repairs = guns.fdmg && L.fighter.repair ? new Repairs(G, { crew: q.get('crew') !== '0' }) : null);
+// The carrier's own outside parts and what a hit on each does, and the drones and parties that mend her (ROADMAP phase
+// 9 session 4: carrier-damage.mjs, carrier-repair.mjs).
+Object.assign(G, { thrusterList, carrierGas });
+const parts = (G.parts = ship.parts = L.integrity.parts ? new CarrierDamage(G) : null);
+const hullRepair = (G.repair = ship.repair = parts ? new HullRepair(G, { crew: q.get('crew') !== '0' }) : null);
 walker.floater = new Floater(G); // weightless: the handholds, pushing off, drifting, the puffer (weightless.mjs)
 const helmSeat = new HelmSeat(G);
 const fighterSeat = new FighterSeat(G);
@@ -406,11 +415,12 @@ function tick(dt) {
   drive.hold();
   helm.frame(mode === 'helm' ? f : IDLE, dt, mode === 'helm');
   drive.standBy(dt, helm, mode === 'helm');
-  fighter.frame(mode === 'fighter' ? f : IDLE, dt, mode === 'fighter', { carrier: body, bayOpen: doors.open });
+  const padSide = L.fighters[fighter.index]?.side; // she goes out and comes in on her pad's side: that door
+  fighter.frame(mode === 'fighter' ? f : IDLE, dt, mode === 'fighter', { carrier: body, bayOpen: doors.openOn(padSide) });
   rescue.frame(dt); // a tanker or a tug out to her: after she has moved, so the tow bar holds her where it is
   // The approach lane: lit while you are out in her, and flight control catches you at its end.
   const lane = approach.frame(dt, fighter, body, mode !== 'walk' && (fighter.flying || fighter.phase === 'landing'));
-  if (mode === 'fighter' && fighter.flying && lane.call === 'catch' && doors.open) fighter.capture(lane);
+  if (mode === 'fighter' && fighter.flying && lane.call === 'catch' && doors.openOn(padSide)) fighter.capture(lane);
   updatePlumes(thrusterList, time, carrierGas, dt);
   carrierGas.stepTick();
   gas.frame(dt, time);
@@ -424,6 +434,7 @@ function tick(dt) {
   dc.frame(dt, f, walker, mode);
   ship.frame(dt, f, walker, mode);
   plant.frame(dt, { stations: ship.stations }); // after integrity has set the thrusters' health: heat and tanks cap the drive
+  parts?.frame(dt); // what each hurt part does (next frame's thrusters, turrets, doors, drums), and a holed tank's push
   helmSeat.fire(f);
   doors.frame(dt);
   C.obj.updateMatrixWorld(true);
@@ -433,6 +444,7 @@ function tick(dt) {
   guns.frame(dt, mode === 'gun' ? f : IDLE, mode, camera);
   guns.fdmg?.frame(dt, { cockpit: mode === 'fighter' && !fading }); // her damage seen and heard: looks only
   repairs?.frame(dt, f, walker, mode); // the repair crews on the damaged fighters' pads; holds the one you are in
+  hullRepair?.frame(dt, f, walker, mode); // the drones and damage control parties mending her, by priority
 
   // Which decks are drawn: the one you stand on; the bridge from the helm; none from the chase view; the hangar deck
   // from a fighter (you are in it, or you can see into it through the open bay); all in the cutaway.
@@ -460,6 +472,7 @@ function tick(dt) {
   tickCrew(crew, dt, drawnDeck);
   if (hands) tickCrew(hands.crew, dt, drawnDeck);
   if (repairs) tickCrew(repairs.crew, dt, drawnDeck);
+  if (hullRepair) tickCrew(hullRepair.crew, dt, drawnDeck);
   career.tickPeople(dt, (p) => drawnDeck(p.deck) && (!C.isDrum(p.deck) || p.I.group.visible));
 
   // The main drive's push, what it does to you, and the seat's camera and HUD.
@@ -600,7 +613,7 @@ window.addEventListener('keydown', wake, { once: true });
 
 window.__carrier = {
   C, L, K, W, crew, routine, hands, body, helm, thrusters, walker, renderer, camera, cut, fighter, dc, ship, guns, plant, helmSight, sfx, approach, cockpit, career, voices, announcer,
-  gas, carrierGas, blazes, feel, flightAudio, composer, bloom, ABOARD, ambience, input, G, seats, drive, doors, rescue, repairs,
+  gas, carrierGas, blazes, feel, flightAudio, composer, bloom, ABOARD, ambience, input, G, seats, drive, doors, rescue, repairs, parts, hullRepair,
   mode: () => mode,
   tick: (n = 1, dt = 1 / 60) => {
     for (let i = 0; i < n; i++) tick(dt);

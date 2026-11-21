@@ -85,7 +85,7 @@ export class FighterSeat {
     const fl = fighter.flight;
     hud.where(fighter.flying ? `Fighter · ${fl.assistOn ? 'attitude hold: the mouse moves the aim' : 'hold off: your hand on the valves'} · mouse ${fighter.mouseMode}` : ph === 'landing' ? 'Fighter · on approach' : ph === 'wrecked' ? 'Fighter · breaking up' : 'Fighter · in the hangar');
     if (ph === 'seated' && fighter.held) hud.use({ key: '', label: `Under repair, no launch: ${fighter.held}` });
-    else if (ph === 'seated') hud.use(fighter.refuelT > 0 ? { key: '', label: 'The deck crew are topping up your tanks' } : !fl.online ? { key: '', label: 'The drive is spinning up' } : doors.open ? { key: 'W', label: 'Launch (hold)' } : { key: '', label: 'Flight control is opening the bay doors' });
+    else if (ph === 'seated') hud.use(fighter.refuelT > 0 ? { key: '', label: 'The deck crew are topping up your tanks' } : !fl.online ? { key: '', label: 'The drive is spinning up' } : doors.openOn(L.fighters[fighter.index]?.side) ? { key: 'W', label: 'Launch (hold)' } : doors.sides?.[L.fighters[fighter.index]?.side === 'starboard' ? 'e' : 'w']?.jammed ? { key: '', label: 'The bay door on your side is jammed: the damage control party is on it' } : { key: '', label: 'Flight control is opening the bay doors' });
     else if (ph === 'flying') hud.use(this.G.rescue?.prompt() ?? (fighter.canLand(body.vel) && !approach.state.inLane ? { label: 'Hand over: flight control brings you in' } : low(fl) ? { key: '1 / 2', label: `${fl.dryMain ? 'Fuel dry' : 'Fuel low'}: 1 calls the tanker, 2 a tug to tow you home` } : null));
     else if (ph === 'turn' && fighter.lastLanding?.manual) hud.use({ key: '', label: grade(fighter.lastLanding) });
     else hud.use(PROMPTS[ph] ?? null);
@@ -103,7 +103,7 @@ export class FighterSeat {
     const aim = lane.inLane ? { point: approach.pointAt(Math.max(0, lane.along - 80)), label: `BAY ${range(dist)}` } : { point: entry, label: `LANE ${range(entryDist)}` };
     cockpit.frame(dt, {
       fighter, carrier: body, C, lane, approach, camera, aim, bayDist: dist, closing, entryDist,
-      cockpit: fighter.view === 'cockpit', bayOpen: doors.open, pad: fighter.index + 1,
+      cockpit: fighter.view === 'cockpit', bayOpen: doors.openOn(L.fighters[fighter.index]?.side), pad: fighter.index + 1,
       foe: fighter.flying ? guns.foe(FOE) : null, marks: fighter.flying ? guns.foeMarks(MARKS) : null, rounds: guns.rounds, roundsMax: L.weapons.fighter?.rounds,
       missiles: guns.rails, flares: guns.myFlares, lock: fighter.flying ? guns.lock : null, lockName: guns.lockName(), seeing: guns.seeing, warn: fighter.flying ? guns.warn : null,
       hull: guns.fhull != null ? guns.fhull / L.weapons.fighter.hull : 1, damage: guns.fdmg, jammed: guns.time - (guns.jammedT ?? -9) < 0.6,

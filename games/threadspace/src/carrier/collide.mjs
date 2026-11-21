@@ -151,8 +151,8 @@ export class Collisions {
   hangarSolid(c) {
     const C = this.C, I = C.decks.get(c.deck);
     const y0 = I.floorY, y1 = I.floorY + (c.h ?? 3), [x0, x1] = c.x, [z0, z1] = c.z;
-    const bays = (c.bayDoors ?? []).map((d) => ({ x: d.side === 'w' ? x0 : x1, z0: d.from, z1: d.to, h: d.height }));
-    const doors = () => this.doors?.k ?? 1;
+    const bays = (c.bayDoors ?? []).map((d) => ({ x: d.side === 'w' ? x0 : x1, z0: d.from, z1: d.to, h: d.height, side: d.side }));
+    const doors = (side) => (this.doors?.kOf ? this.doors.kOf(side) : this.doors?.k ?? 1); // each side's own (one may be jammed)
     const best = { d: Infinity };
     const offer = (d, px, py, pz, nx, ny, nz) => {
       if (d >= best.d) return;
@@ -185,7 +185,7 @@ export class Collisions {
             const dx = p.x - wx;
             if (Math.abs(dx) >= r) continue;
             const bay = bays.find((b) => b.x === wx);
-            const top = bay ? y0 + bay.h * doors() : y0; // the opening: from the floor up to the leaves' lower edge
+            const top = bay ? y0 + bay.h * doors(bay.side) : y0; // the opening: from the floor up to the leaves' lower edge
             const inHole = bay && p.z > bay.z0 && p.z < bay.z1 && p.y < top;
             const s = dx >= 0 ? 1 : -1;
             if (!inHole) offer(Math.abs(dx), wx, p.y, p.z, s, 0, 0);

@@ -625,16 +625,19 @@ function hangar(C, I, c, hooks) {
   // further outboard each, so they nest behind the wall's header. Without the headroom, one slab lifts into the deck
   // above. C.bayDoor moves them all.
   const head = (c.h ?? 0) - 0.4;
+  const sideLeaves = {};
   const leaves = doors.flatMap((d, k) => {
     const x = d.side === 'w' ? x1 - 0.1 : x2 + 0.1, out = d.side === 'w' ? -1 : 1;
     const room = head - d.height, n = room >= 1 ? Math.ceil(d.height / room) : 1, lh = d.height / n;
-    return Array.from({ length: n }, (_, i) => {
+    return (sideLeaves[d.side] = Array.from({ length: n }, (_, i) => {
       const leaf = at(box(0.3, lh - 0.04, d.to - d.from, metal('#6a727c', { metalness: 0.5 })), x + out * 0.12 * i, I.floorY + lh * (i + 0.5), (d.from + d.to) / 2);
       const rise = n > 1 ? d.height + 0.2 - lh * i : d.height - 0.4;
       return I.door(`bay${k ? `-${k}` : ''}${i ? `-leaf${i}` : ''}`, leaf, new THREE.Vector3(0, rise, 0));
-    });
+    }));
   });
   C.bayDoor = leaves.length === 1 ? leaves[0] : { set: (k) => leaves.forEach((d) => d.set(k)) };
+  // Each side's leaves on their own (doors.mjs: a jammed door stays where it is while the other moves).
+  C.bayDoorSides = Object.fromEntries(Object.entries(sideLeaves).map(([s, ls]) => [s, { set: (k) => ls.forEach((d) => d.set(k)) }]));
 }
 
 /** A fighter's boarding frame in a weightless hangar: two uprights with grab bars between them up to the cockpit's sill,
@@ -1004,6 +1007,8 @@ function buildOutside(C) {
       panel.userData.live = true;
       panel.userData.home = panel.position.y;
       panel.userData.travel = y1 - y0 + 0.3;
+      panel.userData.side = m.x < 0 ? 'w' : 'e';
+      panel.name = 'outer bay door'; // what a fighter flown into it struck (collide.mjs)
       O.add(panel);
       (C.bayPanels ??= []).push(panel);
       C.bayPanel ??= panel;

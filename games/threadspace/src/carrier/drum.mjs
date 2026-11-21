@@ -536,5 +536,15 @@ function spineLifts(C) {
 /** Turns the drums: each half `dir` × ω about the axis. Seen from the bow, dir 1 is clockwise. */
 export function drumsFrame(C, dt) {
   if (!C.drums) return;
-  for (const h of C.drums.halves) h.node.rotation.z += h.dir * h.omega * dt;
+  for (const h of C.drums.halves) {
+    h.node.rotation.z += h.dir * h.omega * dt;
+    // A damaged bearing (carrier-damage.mjs `shudder`, 0 to 1): the drum wobbles on its axis once a turn, with a
+    // rattle on top, as a bearing with a flat in it does.
+    const s = h.shudder ?? 0, W = C.L.integrity?.parts?.kinds.bearing;
+    if (s > 0 && W) {
+      const a = h.node.rotation.z, k = s * W.wobble;
+      h.node.rotation.x = k * Math.sin(a) + k * 0.25 * Math.sin(a * 23);
+      h.node.rotation.y = k * Math.cos(a) + k * 0.25 * Math.cos(a * 17);
+    } else if (h.node.rotation.x || h.node.rotation.y) h.node.rotation.x = h.node.rotation.y = 0;
+  }
 }
