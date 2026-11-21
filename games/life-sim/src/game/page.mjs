@@ -5,6 +5,7 @@
 //   ?needs=hunger:10,energy:80 (start values; ?needs2= for the flatmate)  ?freewill=0  ?start=07:30 (the clock)
 //   ?seed=1 (free will's dice, for tests)  ?year=CE2 (the school year the work questions are pitched at)
 //   ?colleagues=2,3,4,5 (who works at the office; default four others, at random) | none
+//   ?town=N (round 16: the town's seed; a test's URL has the classic Sunny Lane, 0, and a new game a town of its own)
 // Round 10: a plain /life/ starts with "carry on, or a new game?" (a save in this browser) or the create-a-Sim screen,
 // and saves as it goes. A test's URL (?seed=, ?person= or ?flatmate=) starts straight in as before and saves nothing;
 // ?menu adds the start back (and saving) to a test's URL; ?save=1 saves without it.
@@ -31,7 +32,7 @@ import { people } from './looks.mjs';
 import { createSim, lookControls } from './create.mjs';
 import { readSave, writeSave, clearSave, lifeState, restoreLife } from './save.mjs';
 import { SHOP, SHOP_KINDS, shopItem, CAMP_BED, COT, sellPrice, LOVELY, LOOK_COST, kindOf, FLAT_FURNITURE } from './shop.mjs';
-import { SIZES, EXTENSION, HOUSES, houseById, FLAT_LOOK, COLLEAGUE_HOUSES, NEIGHBOURS, awake, PARTY, INVITED, partyHouse, partyNow, GUEST, HOME_PARTY, STREET, STREET_SIZE, streetLayout } from './town.mjs';
+import { SIZES, EXTENSION, HOUSES, houseById, FLAT_LOOK, COLLEAGUE_HOUSES, NEIGHBOURS, awake, PARTY, INVITED, partyHouse, partyNow, GUEST, HOME_PARTY, STREET_SIZE, streetLayout, TOWN, makeTown, rollTown, townDice } from './town.mjs';
 import { blankLook } from './looks.mjs';
 import { makeProp, wear } from './props.mjs';
 import { Baby, BABY_NEEDS, BABY_NAMES, BLANKETS, MAX_BABIES } from './baby.mjs';
@@ -97,11 +98,13 @@ const labels = Object.fromEntries(STATIONS.map((s) => [s.id, t(`station.${s.id}`
 // Round 14: the flat is built empty (its door only) and furnished by the page from the household's furniture (below),
 // so anything in it can be moved, sold or put away. `home` is whichever home the household has now: the flat, the flat
 // with an extension, or a house they bought (`rehome`). The town's houses are built the first time someone goes.
-// Round 15: and Sunny Lane, the street the houses stand on (world.mjs lifeStreet), built with the others.
-const [flat, office, park, street] = await Promise.all([buildPlace('lifeHome', { empty: true }), buildPlace('lifeOffice', { labels }), buildPlace('lifePark'), buildPlace('lifeStreet', { ...STREET_SIZE, fronts: streetLayout() })]);
+// Round 15: and Sunny Lane, the street the houses stand on (world.mjs lifeStreet). Round 16: built once the start is
+// chosen, because the street is the town's (town.mjs makeTown: a new game's own, or the saved one).
+const [flat, office, park] = await Promise.all([buildPlace('lifeHome', { empty: true }), buildPlace('lifeOffice', { labels }), buildPlace('lifePark')]);
+let street = null;
 let home = flat;
 home.house = 'flat';
-const places = { home, office, park, street };
+const places = { home, office, park };
 // The shiny things take the room light; matte ones (walls, floors, cloth, wood) don't need it.
 function shine(p) {
   p.group.traverse((o) => {
@@ -109,10 +112,10 @@ function shine(p) {
       if (m.isMeshStandardMaterial && !m.envMap && (m.metalness > 0.3 || m.roughness < 0.3) && !shiny.includes(m)) (m.envMap = roomLight), shiny.push(m);
   });
 }
-for (const p of [home, office, park, street]) shine(p);
+for (const p of [home, office, park]) shine(p);
 const allPlaces = () => [...new Set(Object.values(places))];
 const nameOf = (p) => Object.keys(places).find((k) => places[k] === p);
-for (const p of [home, office, park, street]) scene.add(p.group);
+for (const p of [home, office, park]) scene.add(p.group);
 const place = home; // the flat as it was at the start (round 8's name, kept for the checks)
 let view = null;
 // `centre`: where to look (the Sim you look after, when the view goes with them); the camera keeps the place's angle.
@@ -163,6 +166,17 @@ const saved = start?.kind === 'continue' ? start.save : null;
 const person = start?.kind === 'new' ? start.who : saved ? saved.lives[0].who : Number(params.get('person') ?? 0);
 // Not in a saved game: everyone is who they were.
 const mate = saved ? null : params.get('flatmate') === 'none' ? null : Number(params.get('flatmate') ?? (person + 1 + Math.floor(Math.random() * 11)) % 12);
+// ---- the town (round 16, town.mjs makeTown) ----
+// A saved game: its town (a save from before round 16: the classic Sunny Lane, which it was). A new game: a new town,
+// rolled here. A test's URL: the classic town, or ?town=N.
+const townSeed = saved ? Number(saved.town?.seed ?? 0) : params.has('town') ? Number(params.get('town')) : quick ? 0 : rollTown();
+makeTown(townSeed);
+const streetName = () => t(`town.street.${TOWN.street}`);
+const houseName = (h) => (h ? t(`house.name.${h.name}`) : '');
+street = places.street = await buildPlace('lifeStreet', { ...STREET_SIZE, fronts: streetLayout(), name: streetName() });
+shine(street);
+scene.add(street.group);
+street.group.visible = view === street;
 
 // Carry on (a save in this browser), or a new game. With no save, straight to making a Sim.
 async function startScreen(save) {
@@ -651,8 +665,10 @@ async function loadColleagues() {
   else if (pinned) who = pinned.split(',').map(Number).filter((n) => !taken.has(n));
   else {
     const pool = [...Array(12).keys()].filter((n) => !taken.has(n));
+    // Round 16: a seeded town picks them (the same people for the same town and household); the classic one at random.
+    const dice = TOWN.seed ? townDice(TOWN.seed, 1) : Math.random;
     for (let i = pool.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
+      const j = Math.floor(dice() * (i + 1));
       [pool[i], pool[j]] = [pool[j], pool[i]];
     }
     who = pool.slice(0, 4);
@@ -666,7 +682,7 @@ async function loadColleagues() {
     c.sim.group.visible = false;
     c.freeWill = true;
     // They have worked there a while: some higher up than others.
-    c.job = { career: 'office', level: Math.floor(Math.random() * 4), performance: 0, lastDay: -1 };
+    c.job = { career: 'office', level: Math.floor((TOWN.seed ? townDice(TOWN.seed, 10 + k) : Math.random)() * 4), performance: 0, lastDay: -1 };
     const was = saved?.colleagues?.find((x) => x.who === n);
     if (was?.job) c.job = { ...was.job, lastDay: -1 };
     giveDesk(c);
@@ -732,7 +748,7 @@ const owned = (id) => homeState.id === id;
 function houseTitle(id) {
   const h = houseById(id);
   if (owned(id)) return t('place.home');
-  if (h.kind === 'sale') return t(`house.${id}`);
+  if (h.kind === 'sale') return houseName(houseById(id));
   const names = residentsOf(id).map((l) => l.name);
   return names.length ? t(names.length > 1 ? 'house.of2' : 'house.of', { a: names[0], b: names[1] }) : t('house.empty', { no: h.no });
 }
@@ -746,8 +762,9 @@ function loadNeighbours() {
     let who = (saved?.town?.neighbours ?? []).filter((n) => !taken.has(n));
     if (!saved?.town) {
       const free = [...Array(12).keys()].filter((n) => !taken.has(n));
+      const dice = TOWN.seed ? townDice(TOWN.seed, 2) : Math.random;
       for (let i = free.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
+        const j = Math.floor(dice() * (i + 1));
         [free[i], free[j]] = [free[j], free[i]];
       }
       const woman = (n) => /^Female/.test(folk.cast[n]?.name ?? '');
@@ -774,7 +791,7 @@ function housePlace(id) {
     building.set(id, (async () => {
       const h = houseById(id), { w, d } = SIZES[h.size], living = residentsOf(id);
       const furnished = h.kind === 'lived' ? houseFurniture(w, d, Math.max(1, Math.min(2, living.length)), h.no) : [];
-      const p = await buildPlace('lifeHouse', { w, d, look: h.look, forSale: h.kind === 'sale', furniture: furnished });
+      const p = await buildPlace('lifeHouse', { w, d, look: h.look, forSale: h.kind === 'sale', furniture: furnished, street: streetName() });
       p.house = id;
       shine(p);
       scene.add(p.group);
@@ -788,7 +805,7 @@ function housePlace(id) {
     })());
   return building.get(id);
 }
-const titleOf = (p) => (p === home ? t('place.home') : p.house ? houseTitle(p.house) : t(`place.${nameOf(p)}`));
+const titleOf = (p) => (p === home ? t('place.home') : p.house ? houseTitle(p.house) : p === street ? streetName() : t(`place.${nameOf(p)}`));
 // ---- Sunny Lane, the street (round 15) ----
 // The brief's round-14 list: "The street to walk down instead of the town card (a fifth place: the houses' fronts, the
 // bus)". Home to a house, a house to home or to another house, and home to the park and back all go along it (Life
@@ -816,8 +833,8 @@ function streetTick() {
     const sign = street.street.signs.get(f.id);
     if (sign) sign.visible = !mine && h?.kind === 'sale';
     if (mine) label.set(`${party ? '🎉' : '🏠'} ${f.no} · ${t('place.home')}`, '#2f6b4f');
-    else if (!h) label.set(`🏢 ${f.no} · ${t('street.flats')}`, '#56636e');
-    else if (h.kind === 'sale') label.set(`🪧 ${f.no} · ${t(`house.${f.id}`)} · ${t('ui.cost', { cost: h.price })}`, '#b5473c');
+    else if (!h) label.set(`🏢 ${f.no} · ${t('street.flats', { street: streetName() })}`, '#56636e');
+    else if (h.kind === 'sale') label.set(`🪧 ${f.no} · ${houseName(h)} · ${t('ui.cost', { cost: h.price })}`, '#b5473c');
     else label.set(`${party ? '🎉' : '🏡'} ${f.no} · ${houseTitle(f.id)}`, party ? '#7a4ab0' : '#3a6a9a');
   }
 }
@@ -828,18 +845,18 @@ function openDoorMenu(item, x, y) {
   const btn = (key, label, on = true, note = '') => `<button data-${key} ${on ? '' : 'disabled'}>${label}${note ? `<span class="gain">${note}</span>` : ''}</button>`;
   let head;
   if (homeFront() === id) {
-    head = `🏠 ${t('place.home')}<small>${f.no} ${STREET}</small>`;
+    head = `🏠 ${t('place.home')}<small>${f.no} ${streetName()}</small>`;
     rows.push(btn('home', `🏠 ${t('street.goIn')}`, who.place !== home));
   } else if (!h) {
-    head = `🏢 ${t('street.flats')}<small>${f.no} ${STREET}</small>`;
+    head = `🏢 ${t('street.flats', { street: streetName() })}<small>${f.no} ${streetName()}</small>`;
     rows.push(btn('none', t('street.movedOut'), false));
   } else if (h.kind === 'sale') {
     const cost = buyCost(id);
-    head = `🪧 ${t(`house.${id}`)}<small>${f.no} ${STREET} · ${t('town.forSale')} · ${t('town.size', SIZES[h.size])}</small>`;
+    head = `🪧 ${houseName(houseById(id))}<small>${f.no} ${streetName()} · ${t('town.forSale')} · ${t('town.size', SIZES[h.size])}</small>`;
     rows.push(btn('visit', `👀 ${t('town.look')}`, who.place !== places[id]), btn('buy', `🏡 ${t('ui.sale.buy')}`, household.money >= cost, t('ui.cost', { cost: Math.max(0, cost) })));
   } else {
     const v = visitState(id), party = partyAt(id), living = residentsOf(id);
-    head = `${party ? '🎉' : '🏡'} ${houseTitle(id)}<small>${f.no} ${STREET}${living.length ? ` · ${living.map((l) => l.name).join(', ')}` : ''}</small>`;
+    head = `${party ? '🎉' : '🏡'} ${houseTitle(id)}<small>${f.no} ${streetName()}${living.length ? ` · ${living.map((l) => l.name).join(', ')}` : ''}</small>`;
     const label = party ? (invited(id) ? `🎉 ${t('street.party')}` : `🙊 ${t('street.crash')}`) : `🚪 ${t('street.knock')}`;
     const here = who.place === places[id];
     rows.push(btn('visit', label, v.ok && !here, here ? '' : v.ok ? '' : t(`town.why.${v.why}`)));
@@ -1100,7 +1117,7 @@ async function buyHouse(id) {
   if (h.kind !== 'sale' || owned(id) || household.money < buyCost(id)) return;
   household.money -= buyCost(id);
   const boxed = await rehome({ id, size: h.size, paid: h.price });
-  toast(t('ui.move.done', { house: t(`house.${id}`) }));
+  toast(t('ui.move.done', { house: houseName(houseById(id)) }));
   if (boxed?.length) toast(t('ui.move.boxed', { n: boxed.length }));
 }
 
@@ -1616,7 +1633,7 @@ function snapshot() {
     storage: [...storage],
     boxedBase: [...boxedBase],
     home: { ...homeState },
-    town: { neighbours: neighbours.map((n) => n.who) },
+    town: { seed: TOWN.seed, neighbours: neighbours.map((n) => n.who) },
     // Each baby, with the cot they lie in (its place in `furniture`).
     babies: babies.filter((b) => b.cot).map((b) => ({ ...b.saved(), cot: furniture.findIndex((e) => e.item === b.cot) }))
   };
@@ -1692,15 +1709,15 @@ function openTown() {
   const next = SIZES[homeState.size + 1], ext = EXTENSION[homeState.size + 1];
   const yourNo = homeState.id === 'flat' ? 1 : houseById(homeState.id).no;
   const rows = [
-    row('🏠', t('town.yours', { no: yourNo, street: STREET }), `${homeState.id === 'flat' ? t('town.flat') : t(`house.${homeState.id}`)} · ${size(homeState.size)}`,
+    row('🏠', t('town.yours', { no: yourNo, street: streetName() }), `${homeState.id === 'flat' ? t('town.flat') : houseName(houseById(homeState.id))} · ${size(homeState.size)}`,
       next ? `<button class="go" data-extend ${money < ext ? 'disabled' : ''}>🔨 ${t('town.extend', next)} <small>${t('ui.cost', { cost: ext })}</small></button>` : `<small>${t('town.biggest')}</small>`)
   ];
   for (const h of [...HOUSES].sort((a, b) => a.no - b.no)) {
     if (owned(h.id)) continue;
-    const v = visitState(h.id), addr = `${h.no} ${STREET}`;
+    const v = visitState(h.id), addr = `${h.no} ${streetName()}`;
     if (h.kind === 'sale') {
       const cost = buyCost(h.id);
-      rows.push(row('🪧', `${t(`house.${h.id}`)} <small>${addr}</small>`, `${t('town.forSale')} · ${size(h.size)} · ${t('ui.cost', { cost: h.price })}${homeState.paid ? ` · ${t('town.trade', { cost: Math.max(0, cost) })}` : ''}`,
+      rows.push(row('🪧', `${houseName(h)} <small>${addr}</small>`, `${t('town.forSale')} · ${size(h.size)} · ${t('ui.cost', { cost: h.price })}${homeState.paid ? ` · ${t('town.trade', { cost: Math.max(0, cost) })}` : ''}`,
         `<button data-go="${h.id}" ${busy ? 'disabled' : ''}>👀 ${t('town.look')}</button><button class="go" data-buyhouse="${h.id}" ${money < cost ? `disabled title="${t('ui.money.short', { name: who.name, cost })}"` : ''}>🏡 ${t('town.buy')}</button>`));
       continue;
     }
@@ -1713,7 +1730,7 @@ function openTown() {
   }
   rows.push(row('🌳', t('place.park'), t('town.park'), `<button data-park ${busy ? 'disabled' : ''}>🚶 ${t('town.go')}</button>`));
   const partyButton = homeParty ? `<small>🎉 ${t('town.partyOn')}</small>` : `<button data-party ${money < HOME_PARTY.cost || !awake(minutes) ? 'disabled' : ''}>🎉 ${t('town.throwParty')} <small>${t('ui.cost', { cost: HOME_PARTY.cost })}</small></button>`;
-  openCard(who, 'town', `<h2>🗺️ ${STREET}</h2><p class="intro">${t(busy ? 'town.introBusy' : 'town.intro', { name: who.name, coins: money })}</p>
+  openCard(who, 'town', `<h2>🗺️ ${streetName()}</h2><p class="intro">${t(busy ? 'town.introBusy' : 'town.intro', { name: who.name, coins: money })}</p>
     <div class="rows town">${rows.join('')}</div><div class="actions">${partyButton}<button id="card-close">${t('ui.shop.done')}</button></div>`);
   $('card-close').onclick = closeCard;
   for (const b of $('card').querySelectorAll('[data-go]')) b.onclick = () => goVisit(b.dataset.go);
@@ -1736,7 +1753,7 @@ function openBuy(id) {
   const h = houseById(id), cost = buyCost(id);
   if (card || !h || owned(id)) return;
   const back = homeState.paid ? t('ui.sale.sellOld', { coins: homeState.paid }) : t('ui.sale.rented');
-  openCard(sel, 'buy', `<h2>🏡 ${t('ui.sale.title', { house: t(`house.${id}`) })}</h2><p class="intro">${t('ui.sale.intro', { size: t('town.size', SIZES[h.size]), price: h.price })} ${back}</p>
+  openCard(sel, 'buy', `<h2>🏡 ${t('ui.sale.title', { house: houseName(houseById(id)) })}</h2><p class="intro">${t('ui.sale.intro', { size: t('town.size', SIZES[h.size]), price: h.price })} ${back}</p>
     <p class="intro">${t('ui.sale.van')}</p>
     <div class="actions"><button id="card-close">${t('ui.start.back')}</button><button class="go" id="buy-yes" ${household.money < cost ? 'disabled' : ''}>🏡 ${t('ui.sale.yes', { cost: Math.max(0, cost) })}</button></div>`);
   $('card-close').onclick = closeCard;
@@ -2097,7 +2114,7 @@ window.__offerOfSocial = interactionById;
 window.__life = {
   life, sim, lives, everyone, colleagues, place, places, camera, controls, renderer, t, bondOf, select, beds, household, ask, closeCard, openStation, setView, desks, props,
   get card() { return card; }, get year() { return year; }, get speed() { return speed; }, get view() { return nameOf(view); },
-  get sel() { return sel; }, colleaguesLoaded,
+  get sel() { return sel; }, colleaguesLoaded, town: TOWN, HOUSES, streetName,
   folk, get extras() { return extras(); }, furniture, storage, save, snapshot, openShop, startPlacing, stopPlacing, turnPlacing, placeHere, hover, sell, beauty, openLook, get home() { return home; }, saving,
   get placing() { return placing; }, get start() { return start?.kind ?? null; },
   setSpeed, advance, get minutes() { return minutes; }, set minutes(v) { minutes = v; },

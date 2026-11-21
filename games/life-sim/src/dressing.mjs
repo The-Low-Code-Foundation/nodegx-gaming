@@ -924,7 +924,7 @@ export async function dressHouse(group, walls, furnish, S, spec) {
   lampGlow(group, [[-w / 2 - 6.8, 3.45, -4], [-w / 2 - 6.8, 3.45, 8]]);
   for (const [z, n] of [[-7, '2Story_Mat'], [5, '2Story_Wide_Mat']]) P.push([S(n), -w / 2 - 17.5, z, Math.PI / 2, 7.5]);
   if (spec.forSale) {
-    const sign = saleSign();
+    const sign = saleSign(spec.street);
     sign.position.set(-w / 2 - 2.0, 0, doorZ + 1.3);
     sign.rotation.y = -Math.PI / 2;
     group.add(sign);
@@ -932,15 +932,15 @@ export async function dressHouse(group, walls, furnish, S, spec) {
   return scenery(group, furnish, P);
 }
 // A "For sale" board on a post, by the path (round 14).
-function saleSign() {
+function saleSign(street = 'Sunny Lane') {
   const g = new THREE.Group();
-  const board = canvasTexture('forSale', 256, 160, (c, W, H) => {
+  const board = canvasTexture(`forSale-${street}`, 256, 160, (c, W, H) => {
     c.fillStyle = '#fff', c.fillRect(0, 0, W, H);
     c.fillStyle = '#c8202a', c.fillRect(0, 0, W, 48);
     c.fillStyle = '#fff', c.font = 'bold 34px system-ui, sans-serif', c.textAlign = 'center', c.textBaseline = 'middle';
     c.fillText('FOR SALE', W / 2, 26);
     c.fillStyle = '#2a2a2a', c.font = '600 26px system-ui, sans-serif';
-    c.fillText('Sunny Lane', W / 2, 88);
+    c.fillText(street, W / 2, 88);
     c.fillText('Homes 🏡', W / 2, 126);
   }, { repeat: false });
   g.add(boxMesh(0.07, 1.5, 0.07, 0, 0.75, 0, mat(0xf2efe8)));
@@ -1231,13 +1231,14 @@ function plaque(text) {
   }, { repeat: false });
   return planeMesh(0.28, 0.28, new THREE.MeshStandardMaterial({ map: tex, roughness: 0.6 }));
 }
-function houseFront(group, f, z0, r) {
+function houseFront(group, f, z0, r, street) {
   const parts = [];
   const add = (m) => (group.add(m), parts.push(m), m);
   const storey = 2.8, h = storey * f.storeys + 0.3, depth = 6;
   // Brick for every other house, painted render (the house's own colour inside) for the rest; the flat's block brick.
   let wallMat;
-  if (f.flat || f.no % 2) {
+  // Round 16: a seeded town says which (`look.brick`) and the roof's colour (`look.roof`).
+  if (f.flat || (f.look?.brick ?? f.no % 2)) {
     const map = canvasTexture('brick', 256, 256, brickPainter).clone();
     map.needsUpdate = true;
     map.repeat.set(f.width / 0.9, h / 0.6);
@@ -1249,7 +1250,7 @@ function houseFront(group, f, z0, r) {
   body.userData.front = f.id;
   group.add(body);
   parts.body = body;
-  const roofMat = mat(ROOFS[f.no % ROOFS.length], { roughness: 0.85 });
+  const roofMat = mat(ROOFS[(f.look?.roof ?? f.no) % ROOFS.length], { roughness: 0.85 });
   if (f.flat) {
     // A flat roof with a parapet, and a sign over the entrance.
     add(boxMesh(f.width + 0.2, 0.4, depth + 0.2, f.x, h + 0.2, z0 - depth / 2, roofMat));
@@ -1286,16 +1287,17 @@ function houseFront(group, f, z0, r) {
   flowerBed(group, (doorX + 1.0 + f.x + f.width / 2 - 0.3) / 2, z0 + 0.45, Math.max(1, f.x + f.width / 2 - 0.3 - doorX - 1.0), 0.45, 0, 40 + f.no);
   // Every house has its board, shown while it is for sale (the page's: one bought comes down, one sold goes up).
   if (!f.flat) {
-    parts.sign = saleSign();
+    parts.sign = saleSign(street);
     parts.sign.position.set(f.x + f.width / 2 - 1.0, 0, z0 + 1.6);
     parts.sign.visible = f.sale;
     group.add(parts.sign);
   }
   if (f.flat) {
-    const board = canvasTexture('flatsSign', 512, 96, (g, W, H) => {
+    const board = canvasTexture(`flatsSign-${street}`, 512, 96, (g, W, H) => {
       g.fillStyle = '#2f4a5a', g.fillRect(0, 0, W, H);
       g.fillStyle = '#fff', g.font = '600 52px system-ui, sans-serif', g.textAlign = 'center', g.textBaseline = 'middle';
-      g.fillText('Sunny Lane Flats', W / 2, H / 2 + 3);
+      g.font = `600 ${street.length > 12 ? 44 : 52}px system-ui, sans-serif`;
+      g.fillText(`${street} Flats`, W / 2, H / 2 + 3);
     }, { repeat: false });
     add(planeMesh(2.6, 0.5, new THREE.MeshStandardMaterial({ map: board, roughness: 0.6 }), f.x + 0.8, 2.55, z0 + 0.012));
   }
@@ -1354,7 +1356,7 @@ function gateBalloons(seed) {
   g.visible = false;
   return g;
 }
-export async function dressStreet(group, furnish, S, { w, d, fronts }) {
+export async function dressStreet(group, furnish, S, { w, d, fronts, name = 'Sunny Lane' }) {
   if (!DOM) return { fade: [], labels: new Map(), balloons: new Map(), signs: new Map(), hits: [] };
   const z0 = -d / 2, r = rand(57);
   // The ground: grass everywhere, the front pavement, the road and its lines, the far pavement.
@@ -1374,7 +1376,7 @@ export async function dressStreet(group, furnish, S, { w, d, fronts }) {
   const looked = [];
   const labels = new Map(), balloons = new Map(), signs = new Map(), hits = [];
   for (const f of fronts) {
-    const parts = houseFront(group, f, z0, r);
+    const parts = houseFront(group, f, z0, r, name);
     looked.push(...parts);
     const label = streetLabel();
     label.sprite.position.set(f.x, 2.8 * f.storeys + 0.9, z0 + 0.6);

@@ -732,7 +732,7 @@ async function lifeHouse(group, spec) {
 // low hedges between the front gardens (so the way from one door to the next is out along the pavement), lamps across
 // the road, and the bus stop to the park. Which door goes where is the page's (`doorTo`, `doorFor`): it knows whose
 // home is whose. `spec`: { w, d, fronts } (town.mjs STREET_SIZE and streetLayout()).
-async function lifeStreet(group, { w, d, fronts }) {
+async function lifeStreet(group, { w, d, fronts, name }) {
   const z0 = -d / 2, P = [];
   for (const [k, f] of fronts.entries()) {
     P.push([F('Door_1'), f.x - f.width / 2 + 1.3, z0 + 0.06, 0, 2.05, { act: 'door', label: `No. ${f.no}`, offers: 'streetDoor', front: f.id }]);
@@ -748,7 +748,7 @@ async function lifeStreet(group, { w, d, fronts }) {
   const mid = (fronts[0].x + fronts[fronts.length - 1].x) / 2;
   P.push([BUS_STOP, mid, z0 + 11.4, Math.PI, 2.45, { act: 'door', label: 'Bus stop', offers: 'streetBus' }]);
   const items = await furnish(group, P);
-  const dressed = await dressStreet(group, furnish, S, { w, d, fronts });
+  const dressed = await dressStreet(group, furnish, S, { w, d, fronts, name });
   return {
     w, d, walls: [], items, cell: 0.5, starts: [], shadow: 12, fade: dressed.fade, street: { fronts, labels: dressed.labels, balloons: dressed.balloons, signs: dressed.signs, hits: dressed.hits },
     view: { target: [0, 3, -4], camera: [5, 13.5, 22], max: 34, fog: [44, 120] }
