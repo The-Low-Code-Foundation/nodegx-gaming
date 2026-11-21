@@ -32,6 +32,7 @@
 import * as THREE from 'three';
 import { MeshBVH } from '../../vendor/three-mesh-bvh/index.module.js';
 import { clamp } from '../util.mjs';
+import { cradleBox } from './sets/hangar.mjs';
 
 const _a = new THREE.Vector3();
 const _b = new THREE.Vector3();
@@ -153,6 +154,8 @@ export class Collisions {
     const y0 = I.floorY, y1 = I.floorY + (c.h ?? 3), [x0, x1] = c.x, [z0, z1] = c.z;
     const bays = (c.bayDoors ?? []).map((d) => ({ x: d.side === 'w' ? x0 : x1, z0: d.from, z1: d.to, h: d.height, side: d.side }));
     const doors = (side) => (this.doors?.kOf ? this.doors.kOf(side) : this.doors?.k ?? 1); // each side's own (one may be jammed)
+    // The berths' cradles (sets/hangar.mjs `cradle`): the carriage under a berthed ship, a box each.
+    const cradles = (C.L.berths ?? []).filter((b) => b.box).map((b) => cradleBox(b, y0));
     const best = { d: Infinity };
     const offer = (d, px, py, pz, nx, ny, nz) => {
       if (d >= best.d) return;
@@ -200,6 +203,13 @@ export class Collisions {
               }
             }
           }
+        }
+        for (const k of cradles) {
+          const qx = clamp(p.x, k.x[0], k.x[1]), qy = clamp(p.y, k.y[0], k.y[1]), qz = clamp(p.z, k.z[0], k.z[1]);
+          const dx = p.x - qx, dy = p.y - qy, dz = p.z - qz, d = Math.hypot(dx, dy, dz);
+          if (d >= r) continue;
+          if (d > 1e-4) offer(d, qx, qy, qz, dx / d, dy / d, dz / d);
+          else offer(0, p.x, k.y[1], p.z, 0, 1, 0); // inside it: out through its top
         }
         if (!(best.d < r)) return false;
         out.point.copy(best.p);

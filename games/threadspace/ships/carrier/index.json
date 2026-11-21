@@ -5,7 +5,7 @@
     "decks": ["decks", "compartments", "doors", "ladders"],
     "drum": ["drum"],
     "mounts": ["mounts"],
-    "fighter": ["fighters", "fighter"],
+    "fighter": ["fighters", "berthsAbout", "berths", "fighter"],
     "stations": ["stations", "routes"],
     "damage": ["damage"],
     "weapons": ["weapons"],

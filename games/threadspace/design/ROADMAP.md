@@ -701,15 +701,16 @@ Each ends playable. Sizes are sessions of the kind phases 1 to 9 were.
 
 **Phase 10. Any ship (two sessions).** The engine takes a ship folder; systems run by what the layout has; a ship
 needs no drums, hangar, fighters, career, routine or cast. `tools/cutter.mjs` writes `ships/cutter/`. Two ships can
-be built in one page. *Status and facts: see "Built so far" below.*
+be built in one page. **Built** (see "Built so far").
 
 **Phase 11. The bigger carrier (one or two sessions).** The hangar grows to hold six fighters and two cutter berths
 (design, `tools/carrier-v2.mjs`, the Blender hull, every scripted check re-baselined). The layout gains `berths`.
+**Built** (see "Built so far").
 
 **Phase 12. Berthed, launched, recovered (two sessions).** The voyage save. From the carrier: the cutters parked in
 their berths, a gangway spur to each one's port, E to go aboard. From the cutter: the hangar round you, the
 airlock back to the carrier, the launch (bay door, cradle, hand-over), the lane home and the capture. The carrier
-holds her course while you are out.
+holds her course while you are out. **First half built** (see "Built so far").
 
 **Phase 13. Serving on the cutter (two or three sessions).** Her crew of three as people at stations (pilot and
 commander, gunner, engineer), with voices. The career rewritten for her: first days as her junior hand, then a
@@ -730,6 +731,56 @@ your crew and your wingmen, and the captain's seat.
 
 **After that:** the first ThreadSpace page (`index.html`, `src/game.mjs` and its friends) is retired to `archive/`
 once phase 15 has taken what it needs; the gallery's `play` then points at this game.
+
+### Built so far (21 November 2026)
+
+**Phase 10, any ship.** `carrier.html?ship=<id>` builds `ships/<id>/`; `main.mjs` works out `HAS` from the layout
+and the folder and makes each system by it. A ship may leave out drums, hangar, fighters, bay doors, broadside,
+railguns, flak, bandits, heat-seekers, `integrity.parts`, and the career, routine and cast files. `tools/cutter.mjs`
+writes the cutter: 34 m hull (envelope 10.5 × 7.8 × 36.3 m, radiators folded), 420 t with 120 t of reaction mass, one
+4.2 MN drive (10 m/s² loaded), eight jet clusters (a half turn in about 9 s), eight weightless rooms on one deck
+(`flight-deck`, `passage`, `crew-space`, `head`, `mess-nook`, `airlock`, `ops-locker`, `eng-room`), sixteen sealed
+spaces, a dorsal turret, two close-in guns, four forward tubes, two folding radiators, three crew stations, and
+`dock`, her docking port in the starboard wall of the airlock. `?host=<id>` builds a second ship in the page, seen
+from outside. Every carrier check was unchanged by it. CLAUDE.md, "Any ship, and going between ships", has the rules
+a new ship folder must keep.
+
+**Phase 11, the bigger carrier.** 314 m (was 288), 335,545 t, main drive 0.128 g. The hangar is 38 × 23 × 117 m
+inside, one bay door a side 63 m long and 18 m high: the forward 19 m in front of that side's three fighter pads, the
+after 44 m in front of its berth. Six fighters. `berths` in the layout (`berth-port`, bow forward; `berth-starboard`,
+bow aft, so each cutter's docking port faces the gangway), worked out from the cutter's own folder by the generator
+and checked by `tools/check.mjs` (3 m clear all round, a 44 × 11 m door). Each berth has a cradle and a ramp from the
+gangway up to a platform at her port. Five new rooms over the berths on the tunnel deck (`boat-crews`, `boat-stores`,
+`boat-ops`, `boat-gear`, `boat-shop`). The Blender hull is rebuilt. Raids over 20 seeds: about 0.8 hits a raid (was
+1.1), bandits shot down about one in two (was two in three, the flak guns now being further apart), nothing retuned.
+
+**Phase 12, first half.** `src/core/voyage.mjs` (the voyage save and `goAboard`), `src/carrier/berth.mjs` (the
+carried ship's side: cradle, door, launch, hand-over, recovery by flight control, L at the helm) and
+`src/carrier/berths.mjs` (the carrier's side: each berthed ship built and stood on her cradle, solid to you, E at her
+port to go aboard, `?at=berth:<id>` to arrive from her). A `berth` scenario in `tools/carrier-check.mjs` plays the
+launch and the recovery.
+
+**Left in phase 12:**
+
+- **Flying her in yourself**: a lane to the gate and a capture, as `approach.mjs` and `Fighter.capture` do for a
+  fighter. Today only flight control brings her in.
+- **Solids**: the cutter passes through the carrier's hull, and a fighter through a berthed cutter (only her cradle
+  is solid to it). `collide.mjs` is written round one fighter and one ship; it needs "this body against that ship".
+- **The host under way**: the carrier stands still in the world while you are out (`berth.hostVel` is zero). She
+  should hold a course, and later fight.
+- **The crossing**: going from one ship to the other is a fade and a page load. It wants the airlock cycle on both
+  sides and a loading card that looks like one.
+- **The other cutter**: both berths hold a cutter, and you can board either; nothing flies the second one.
+- **The cradle and the door from outside**: the cradle's arms are not drawn moving; the bay door is one 63 m slab a
+  side, where two doors a side would look better (`Doors` and `layout.mjs` key doors by side only).
+- **Seen from the cutter, the carrier has no point defence guns** (made by `Weapons`, not the build) and does not
+  appear in the cutaway.
+- **The career on the carrier still starts you as her hand.** Phase 13 moves it.
+- **Balance**: the cutter's weapons, armour and plant are the carrier's scaled, untuned. A raid on her alone swings
+  from a 23 s kill to two minutes and five torpedo hits.
+- **Looks**: the cutter has no Blender hull (`assets/cutter/hull.glb` would be picked up), the hangar is dim round
+  the berths, the cradles are plain.
+- **Voices**: five new room names and the earlier unrecorded calls have no clip (`node tools/voices.mjs --list`).
 
 ### What comes over from the first ThreadSpace (for phases 15 and 16)
 

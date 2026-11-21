@@ -18,7 +18,8 @@
 // axis). So the game can build a segment's rooms the way it builds a deck today, and spin the lot.
 
 import { readFileSync, writeFileSync } from 'node:fs';
-import { splitLayout } from '../src/core/ship.mjs';
+import { fileURLToPath } from 'node:url';
+import { splitLayout, loadLayout } from '../src/core/ship.mjs';
 import { check } from './check.mjs';
 
 const here = (p) => new URL('../' + p, import.meta.url);
@@ -153,24 +154,40 @@ W('spine', 'Spine', 4, 'corridor', [-1.5, 1.5], [dA.z[0] + 0.2, dB.z[1] - 0.2], 
 
 // Hangar: airless and weightless. The crew tunnel along its roof, the keel passage under its floor, both pressurised.
 const hz0 = hgr.z[0], hz1 = hgr.z[1];
-const doorZ = [hz0 + 42, hz0 + 80]; // the launch doors, both sides
-const hTurrets = [hz0 + 20, hz0 + 58, hz0 + 96];
+// The hangar holds six fighters and two berthed medium ships (ROADMAP phase 11). One long launch door a side: forward,
+// `PADS` metres of it for that side's three fighter pads; aft of them, `BERTH` metres in front of that side's berth,
+// where a cutter lies fore and aft on her cradle and goes out sideways. The berthed ship is read from her own folder
+// (`BERTH_SHIP`), so her envelope and docking port are hers, not numbers copied here.
+const BERTH_SHIP = 'cutter';
+const cutter = await loadLayout(fileURLToPath(here(`ships/${BERTH_SHIP}`)), async (f) => JSON.parse(readFileSync(f)));
+need(cutter.envelope && cutter.dock, `ships/${BERTH_SHIP} has no envelope or dock`);
+const HANGAR_X = 19;  // the hangar's half-width inside
+const CLEAR = 3;      // metres clear all round a berthed ship
+const PADS = 19;      // the door's length in front of a side's fighter pads
+const BERTH = Math.max(44, Math.ceil(cutter.envelope.size[2] + 2 * CLEAR + 1)); // and in front of its berth
+const doorZ = [hz0 + 42, hz0 + 42 + PADS + BERTH]; // the launch doors, both sides
+const DOOR_H = 18;
+const hgrZ = [hz0 + 4, doorZ[1] + 16]; // the hangar itself: 38 m forward of the doors (the airlock end), 16 m aft of them
+const hTurrets = [hz0 + 20, hz0 + 72, hz0 + 124];
+const hx = hgr.s.w / 2; // the hangar section's skin
+need(hz1 - hgrZ[1] >= 20 && hz1 - doorZ[1] >= 36, 'The hangar section is too short for its doors, berths and after magazines.');
 {
   W('fwd-trunk', 'Forward trunk', 4, 'corridor', [-1.5, 1.5], [hz0 + 0.4, hz0 + 3.6], { float: true });
   // The way into the airless hangar from inside the ship: an airlock under the forward trunk. From its outer door the
   // gangway runs aft down the hangar's middle, a spur off it to each fighter (sets/hangar.mjs).
   W('hangar-lock', 'Hangar airlock', 6, 'corridor', [-3, 3], [hz0 + 0.4, hz0 + 3.6], { h: 3.2, airlock: true });
-  W('hangar', 'Hangar', 6, 'hangar', [-17.5, 17.5], [hz0 + 4, hz0 + 98], {
+  W('hangar', 'Hangar', 6, 'hangar', [-HANGAR_X, HANGAR_X], hgrZ, {
     h: 23, vacuum: true,
-    bayDoors: [{ side: 'w', from: doorZ[0], to: doorZ[1], height: 18 }, { side: 'e', from: doorZ[0], to: doorZ[1], height: 18 }],
+    bayDoors: [{ side: 'w', from: doorZ[0], to: doorZ[1], height: DOOR_H }, { side: 'e', from: doorZ[0], to: doorZ[1], height: DOOR_H }],
   });
-  X('ordnance-p', 'Broadside tubes, port, forward', 'magazine', [-22, -17.9], [-12, 11], [hz0 + 4, doorZ[0] - 0.4]);
-  X('ordnance-s', 'Broadside tubes, starboard, forward', 'magazine', [17.9, 22], [-12, 11], [hz0 + 4, doorZ[0] - 0.4]);
-  X('ordnance-p-aft', 'Broadside tubes, port, aft', 'magazine', [-22, -17.9], [-12, 11], [doorZ[1] + 0.4, hz1 - 2.4]);
-  X('ordnance-s-aft', 'Broadside tubes, starboard, aft', 'magazine', [17.9, 22], [-12, 11], [doorZ[1] + 0.4, hz1 - 2.4]);
-  X('aircraft-spares', 'Aircraft spares', 'stores', [-17.5, -0.4], [-12, -2], [hz0 + 98.4, hz1 - 2.4]);
-  X('fighter-ordnance', 'Fighter ordnance', 'magazine', [0, 17.5], [-12, -2], [hz0 + 98.4, hz1 - 2.4]);
-  X('fighter-fuel', 'Fighter propellant', 'tanks', [-17.5, 17.5], [-1.6, 10], [hz0 + 98.4, hz1 - 2.4]);
+  const ox = [HANGAR_X + 0.4, hx - 1.5]; // the ordnance rooms, between the hangar's wall and the skin
+  X('ordnance-p', 'Broadside tubes, port, forward', 'magazine', [-ox[1], -ox[0]], [-12, 11], [hz0 + 4, doorZ[0] - 0.4]);
+  X('ordnance-s', 'Broadside tubes, starboard, forward', 'magazine', ox, [-12, 11], [hz0 + 4, doorZ[0] - 0.4]);
+  X('ordnance-p-aft', 'Broadside tubes, port, aft', 'magazine', [-ox[1], -ox[0]], [-12, 11], [doorZ[1] + 0.4, hz1 - 2.4]);
+  X('ordnance-s-aft', 'Broadside tubes, starboard, aft', 'magazine', ox, [-12, 11], [doorZ[1] + 0.4, hz1 - 2.4]);
+  X('aircraft-spares', 'Aircraft and boat spares', 'stores', [-HANGAR_X, -0.4], [-12, -2], [hgrZ[1] + 0.4, hz1 - 2.4]);
+  X('fighter-ordnance', 'Fighter and boat ordnance', 'magazine', [0, HANGAR_X], [-12, -2], [hgrZ[1] + 0.4, hz1 - 2.4]);
+  X('fighter-fuel', 'Fighter and boat propellant', 'tanks', [-HANGAR_X, HANGAR_X], [-1.6, 10], [hgrZ[1] + 0.4, hz1 - 2.4]);
   // The crew tunnel and the rooms beside it (deck 2). Pilots go from here down the forward trunk to the hangar airlock,
   // and along the gangway to their fighters, in their duty suits.
   W('tunnel', 'Crew tunnel', 2, 'corridor', [-1.5, 1.5], [hz0 + 0.4, hz1 - 0.2], { float: true });
@@ -181,8 +198,12 @@ const hTurrets = [hz0 + 20, hz0 + 58, hz0 + 96];
   W('repair-mid', 'Midships repair locker', 2, 'damage', [1.9, 12], [hz0 + 52, hz0 + 63.6], { fit: 'lockers' });
   W('avionics', 'Avionics workshop', 2, 'repair', [1.9, 12], [hz0 + 64, hz0 + 75.6], { fit: 'workshop' });
   W('fan-mid', 'Midships fan room', 2, 'life-support', [1.9, 12], [hz0 + 76, hz0 + 87.6], { fit: 'machines' });
-  W('aircrew', 'Aircrew office', 2, 'flight', [-14, -1.9], [hz0 + 24.4, hz0 + 53.6], { fit: 'office' });
-  W('flight-equip', 'Flight equipment', 2, 'flight', [-14, -1.9], [hz0 + 62.4, hz0 + 91.6], { fit: 'shelves' });
+  // Port of the tunnel, between the dorsal barbettes: the aircrew's rooms forward, the boat crews' (the berthed
+  // cutters') aft, over their berths.
+  W('aircrew', 'Aircrew office', 2, 'flight', [-14, -1.9], [hTurrets[0] + 4.4, hTurrets[0] + 25.6], { fit: 'office' });
+  W('flight-equip', 'Flight equipment', 2, 'flight', [-14, -1.9], [hTurrets[0] + 26, hTurrets[1] - 4.4], { fit: 'shelves' });
+  W('boat-crews', 'Boat crews’ ready room', 2, 'flight', [-14, -1.9], [hTurrets[1] + 4.4, hTurrets[1] + 25.6], { fit: 'briefing' });
+  W('boat-stores', 'Boat stores', 2, 'stores', [-14, -1.9], [hTurrets[1] + 26, hTurrets[2] - 4.4], { fit: 'shelves' });
   // The keel passage under the hangar floor, between the tanks (deck 7)
   W('keel', 'Keel passage', 7, 'corridor', [-1.5, 1.5], [hz0 + 0.4, hz1 - 0.2], { h: 3.2, float: true });
   // Turrets: three on the roof (port of the tunnel) and three under the floor (starboard of the keel)
@@ -191,9 +212,9 @@ const hTurrets = [hz0 + 20, hz0 + 58, hz0 + 96];
     X(`barbette-h${i + 1}v`, `Hangar ventral barbette ${i + 1}`, 'turret', [6, 14], [-16.8, -12.4], [z - 4, z + 4]);
   });
   // Propellant under the floor: port all along, starboard between the ventral barbettes
-  X('hangar-bottom', 'Hangar bottom tanks, port', 'tanks', [-16, -1.9], [-16.8, -12.4], [hz0 + 0.4, hz1 - 0.4]);
+  X('hangar-bottom', 'Hangar bottom tanks, port', 'tanks', [-17.5, -1.9], [-16.8, -12.4], [hz0 + 0.4, hz1 - 0.4]);
   [[hz0 + 0.4, hTurrets[0] - 4.4], [hTurrets[0] + 4.4, hTurrets[1] - 4.4], [hTurrets[1] + 4.4, hTurrets[2] - 4.4], [hTurrets[2] + 4.4, hz1 - 0.4]]
-    .forEach((z, i) => X(`hangar-bottom-${i + 2}`, `Hangar bottom tanks, starboard ${i + 1}`, 'tanks', [1.9, 16], [-16.8, -12.4], z));
+    .forEach((z, i) => X(`hangar-bottom-${i + 2}`, `Hangar bottom tanks, starboard ${i + 1}`, 'tanks', [1.9, 17.5], [-16.8, -12.4], z));
   X('pdc-mag-h', 'Point defence magazine, hangar', 'pdc', [-14, -1.9], [12.2, 16.8], [hz0 + 4, hTurrets[0] - 4.4]);
 }
 
@@ -252,17 +273,21 @@ const sz0 = stn.z[0], sz1 = stn.z[1];
   X('ventral-wing-p', 'Bow ventral turret wing, port', 'tanks', [-10, -1.9], [-6.5, -2.7], [z0 + 44, z0 + 55.6]);
   // Hangar: the roof girders the crew tunnel deck stands on, the bay door housings over the doors, bulkhead tanks at
   // both ends, air trunking outboard of the tunnel deck's rooms, bilge tanks outboard of the bottom tanks.
-  X('hangar-roof', 'Hangar roof girders', 'aux', [-21, 21], [11.4, 12.1], [hz0 + 4, hz1 - 2.4]);
-  both('bay-housing', 'Bay door housing', 'aux', [17.9, 22], [6.4, 11], [doorZ[0], doorZ[1]]);
-  both('hangar-fwd-tanks', 'Forward hangar bulkhead tanks', 'tanks', [3.4, 20], [-12, 12.8], [hz0 + 0.4, hz0 + 3.6]);
-  both('hangar-aft-tanks', 'Aft hangar bulkhead tanks', 'tanks', [1.9, 20], [-12, 12.8], [hz1 - 2.2, hz1 - 0.4]);
-  X('tunnel-air-p', 'Tunnel deck air trunking, port', 'life-support', [-17, -14.4], [13, 16.8], [hz0 + 4, hz1 - 2.4]);
-  X('tunnel-air-s', 'Tunnel deck air trunking, starboard', 'life-support', [12.4, 17], [13, 16.8], [hz0 + 4, hz1 - 2.4]);
-  both('hangar-bilge', 'Hangar bilge tanks', 'tanks', [16.4, 19], [-15, -12.4], [hz0 + 0.4, hz1 - 0.4]);
+  X('hangar-roof', 'Hangar roof girders', 'aux', [-(hx - 2.5), hx - 2.5], [11.4, 12.1], [hz0 + 4, hz1 - 2.4]);
+  both('bay-housing', 'Bay door housing', 'aux', [HANGAR_X + 0.4, hx - 1.5], [DOOR_H - 12 + 0.4, 11], [doorZ[0], doorZ[1]]);
+  both('hangar-fwd-tanks', 'Forward hangar bulkhead tanks', 'tanks', [3.4, hx - 3.5], [-12, 12.8], [hz0 + 0.4, hz0 + 3.6]);
+  both('hangar-aft-tanks', 'Aft hangar bulkhead tanks', 'tanks', [1.9, hx - 3.5], [-12, 12.8], [hz1 - 2.2, hz1 - 0.4]);
+  X('tunnel-air-p', 'Tunnel deck air trunking, port', 'life-support', [-18.5, -14.4], [13, 16.8], [hz0 + 4, hz1 - 2.4]);
+  X('tunnel-air-s', 'Tunnel deck air trunking, starboard', 'life-support', [12.4, 18.5], [13, 16.8], [hz0 + 4, hz1 - 2.4]);
+  both('hangar-bilge', 'Hangar bilge tanks', 'tanks', [17.9, 20.5], [-15, -12.4], [hz0 + 0.4, hz1 - 0.4]);
   hTurrets.forEach((z, i) => X(`hoist-h${i + 1}d`, `Hangar dorsal turret ${i + 1} hoist`, 'turret', [-5.6, -1.9], [12.2, 16.8], [z - 4, z + 4]));
   W('mid-stores', 'Midships stores', 2, 'stores', [1.9, 12], [hz0 + 88, hz0 + 99.6], { fit: 'shelves' });
-  W('heads-mid', 'Midships washroom', 2, 'water', [1.9, 12], [hz0 + 100, hz1 - 2.6], { fit: 'washroom' });
-  W('aircrew-rest', 'Aircrew rest room', 2, 'welfare', [-14, -1.9], [hz0 + 100.4, hz1 - 2.6], { fit: 'tables' });
+  // Aft of them, over the berths: the cutters' operations room and their crews' gear, then the washroom and a workshop.
+  W('boat-ops', 'Boat operations', 2, 'flight', [1.9, 12], [hz0 + 100, hz0 + 111.6], { fit: 'office' });
+  W('boat-gear', 'Boat crews’ gear', 2, 'flight', [1.9, 12], [hz0 + 112, hz0 + 123.6], { fit: 'lockers' });
+  W('heads-mid', 'Midships washroom', 2, 'water', [1.9, 12], [hz0 + 124, hz0 + 133.6], { fit: 'washroom' });
+  W('boat-shop', 'Boat workshop', 2, 'repair', [1.9, 12], [hz0 + 134, hz1 - 2.6], { fit: 'workshop' });
+  W('aircrew-rest', 'Aircrew rest room', 2, 'welfare', [-14, -1.9], [hTurrets[2] + 4.4, hz1 - 2.6], { fit: 'tables' });
   // Stern
   both('stern-fwd-tanks', 'Forward stern tanks', 'tanks', [1.9, 18], [-15, 12.6], [sz0 + 0.4, sz0 + 4.6]);
   both('eng-air', 'Engineering air trunking', 'life-support', [14.4, 18.6], [13, 16.6], [sz0 + 0.2, sz0 + 44.6]);
@@ -421,16 +446,18 @@ const pdc = (id, at, up, magazine, gun = 'close') => mounts.push({ id, kind: 'pd
   const zb = bow.z[0];
   pdc('pdc-bow-pf', [-19.5, 0, zb + 22], [-1, 0, 0], 'pdc-mag-p'); pdc('pdc-bow-sf', [19.5, 0, zb + 22], [1, 0, 0], 'pdc-mag-s');
   const hp = (id, at, up, gun) => pdc(id, at, up, 'pdc-mag-h', gun);
-  hp('pdc-h-pa', [-23.5, -13, hz1 - 10], [-1, 0, 0]); hp('pdc-h-sa', [23.5, -13, hz1 - 10], [1, 0, 0]);
-  hp('flak-h-d1', [10, 18, hz0 + 40], [0, 1, 0], 'flak'); hp('flak-h-d2', [10, 18, hz0 + 76], [0, 1, 0], 'flak');
-  hp('flak-h-v1', [-10, -18, hz0 + 40], [0, -1, 0], 'flak'); hp('flak-h-v2', [-10, -18, hz0 + 76], [0, -1, 0], 'flak');
+  hp('pdc-h-pa', [-hx, -13, hz1 - 10], [-1, 0, 0]); hp('pdc-h-sa', [hx, -13, hz1 - 10], [1, 0, 0]);
+  // The flak guns stand half way between the hangar's turrets, on the other side of the centreline from them.
+  const fz = [(hTurrets[0] + hTurrets[1]) / 2, (hTurrets[1] + hTurrets[2]) / 2], fy = hgr.s.h / 2;
+  hp('flak-h-d1', [10, fy, fz[0]], [0, 1, 0], 'flak'); hp('flak-h-d2', [10, fy, fz[1]], [0, 1, 0], 'flak');
+  hp('flak-h-v1', [-10, -fy, fz[0]], [0, -1, 0], 'flak'); hp('flak-h-v2', [-10, -fy, fz[1]], [0, -1, 0], 'flak');
   const sp2 = (id, at, up) => pdc(id, at, up, 'magazine-sv');
-  sp2('pdc-s-pf', [-25, 8, sz0 + 10], [-1, 0, 0]); sp2('pdc-s-sf', [25, 8, sz0 + 10], [1, 0, 0]);
+  sp2('pdc-s-pf', [-stn.s.w / 2, 8, sz0 + 10], [-1, 0, 0]); sp2('pdc-s-sf', [stn.s.w / 2, 8, sz0 + 10], [1, 0, 0]);
 }
 mounts.push({ id: 'radiator-port', kind: 'radiator', x: [-(stn.s.w / 2 + stn.s.radSpan), -stn.s.w / 2], y: 0, z: [sz0 + 2, sz0 + 2 + stn.s.radLen] });
 mounts.push({ id: 'radiator-stbd', kind: 'radiator', x: [stn.s.w / 2, stn.s.w / 2 + stn.s.radSpan], y: 0, z: [sz0 + 2, sz0 + 2 + stn.s.radLen] });
-mounts.push({ id: 'bay-door', kind: 'bay-door', x: -hgr.s.w / 2, y: [-12, 6], z: doorZ });
-mounts.push({ id: 'bay-door-s', kind: 'bay-door', x: hgr.s.w / 2, y: [-12, 6], z: doorZ });
+mounts.push({ id: 'bay-door', kind: 'bay-door', x: -hx, y: [-12, -12 + DOOR_H], z: doorZ });
+mounts.push({ id: 'bay-door-s', kind: 'bay-door', x: hx, y: [-12, -12 + DOOR_H], z: doorZ });
 
 // ---- weapons: today's numbers, the new mounts ----
 const weapons = structuredClone(v1.weapons);
@@ -585,22 +612,51 @@ weapons.broadside = {
   starboard: { magazines: ['ordnance-s', 'ordnance-s-aft'], dir: [1, 0, 0], at: [] },
 };
 {
-  const zs = [hz0 + 10, hz0 + 20, hz0 + 30, hz0 + 38, doorZ[1] + 6, doorZ[1] + 14, doorZ[1] + 22, doorZ[1] + 30].slice(0, hgr.s.tubesSide);
+  const zs = [hz0 + 8, hz0 + 16, hz0 + 24, hz0 + 32, doorZ[1] + 6, doorZ[1] + 14, doorZ[1] + 22, doorZ[1] + 30].slice(0, hgr.s.tubesSide);
   for (const z of zs) { weapons.broadside.port.at.push([-hgr.s.w / 2, -2, z]); weapons.broadside.starboard.at.push([hgr.s.w / 2, -2, z]); }
 }
 
-// ---- fighters: 12 pads on the hangar floor, two rows facing their side's door ----
+// ---- fighters: six pads on the hangar floor, three a side, facing their side's door ----
 // Every pad stands in front of its door, so each fighter runs straight out through it and comes straight back in: a pad
-// beside the door would launch her through the hangar wall. Six a side across the 38 m door is a pad every 6.3 m, a
-// gap of 2.7 m between fighters with their radiators folded.
+// beside the door would launch her through the hangar wall. Three a side across the forward `PADS` metres of the door
+// is a pad every 6.3 m, a gap of 2.7 m between fighters with their radiators folded. Aft of them the door is the berth's.
 const fighters = [];
 {
-  const per = Math.ceil(hgr.s.fighters / 2), dz = (doorZ[1] - doorZ[0]) / per, z0 = doorZ[0] + dz / 2;
+  const per = Math.ceil(hgr.s.fighters / 2), dz = PADS / per, z0 = doorZ[0] + dz / 2;
   for (let i = 0; i < hgr.s.fighters; i++) {
     const port = i < per, k = port ? i : i - per;
     fighters.push({ at: [port ? -9 : 9, z0 + k * dz], yaw: port ? 1.5708 : -1.5708, side: port ? 'port' : 'starboard' });
   }
 }
+
+// ---- berths: two medium ships, one each side of the gangway, aft of the fighters ----
+// A berthed ship lies along the carrier's axis on a cradle, `CLEAR` metres off the hangar's floor, in the middle of her
+// `BERTH` metres of door, and goes out sideways through it. The port one points her bow forward and the starboard one
+// aft, so each one's docking port (in her starboard side) faces the gangway. `at` is where her own layout origin sits
+// and `port` where her docking port's door centre then is, both in the carrier's frame.
+const berths = [];
+{
+  const E = cutter.envelope, K = cutter.dock, floor = floorOf[6];
+  need(K.side === 'e', `The berths expect the ${BERTH_SHIP}'s docking port in her starboard side.`);
+  const bz = doorZ[0] + PADS + BERTH / 2; // the middle of the berth's stretch of door
+  const mid = (E.min[2] + E.max[2]) / 2, halfBeam = Math.max(-E.min[0], E.max[0]);
+  const bx = HANGAR_X - CLEAR - 0.4 - halfBeam; // her centre line: her outboard side `CLEAR` and a bit off the wall
+  // The hull's half-width abreast of the berth (the lofts there, as the fighters' launch numbers below)
+  const hw = Math.max(...hull.main.filter((q) => q.z >= hgr.z[0] + step && q.z <= hgr.z[1]).map((q) => q.w)) / 2;
+  for (const [side, o, yaw] of [['port', -1, 0], ['starboard', 1, 3.14159]]) {
+    const f = yaw ? -1 : 1; // her +x and +z in the carrier's frame
+    const at = [r3(o * bx), r3(floor + CLEAR - E.min[1]), r3(bz - f * mid)];
+    const xs = [at[0] + f * E.min[0], at[0] + f * E.max[0]].sort((a, b) => a - b), zs = [at[2] + f * E.min[2], at[2] + f * E.max[2]].sort((a, b) => a - b);
+    berths.push({
+      id: `berth-${side}`, ship: BERTH_SHIP, side, door: o < 0 ? 'w' : 'e', at: at.map(r3), yaw, out: o,
+      port: [r3(at[0] + f * K.at[0]), r3(at[1] + K.at[1]), r3(at[2] + f * K.at[2])],
+      sill: r3(at[1] + K.at[1] - K.h / 2), skin: r3(at[0] + f * K.skin),
+      clear: r1(hw + halfBeam + 2 * CLEAR),
+      box: { x: xs.map(r3), y: [r3(at[1] + E.min[1]), r3(at[1] + E.max[1])], z: zs.map(r3) },
+    });
+  }
+}
+const berthsAbout = 'The hangar\'s berths for medium ships (tools/carrier-v2.mjs; ROADMAP phase 11). Each: `ship` (her folder under ships/), `side` and the bay `door` she leaves by (\'w\' port, \'e\' starboard), `at` [x, y, z] where her own layout origin sits and `yaw` (0: bow forward; π: bow aft), in the carrier\'s frame, `out` (-1 port, +1 starboard: the way her cradle pushes her), `port` (her docking port\'s door centre, carrier\'s frame: the gangway\'s spur ends there), `sill` (that door\'s sill, y) and `skin` (the x of her skin at it), `clear` (metres out from the centreline where her origin is when she is clear of the hull), and `box` (her envelope in the berth, radiators folded: x, y, z ranges).';
 
 // ---- crew posts (the drum's own come with the walking drum) ----
 const st = (room, at, yaw, pose, dept, post, watch, more = {}) => ({ room, at, yaw, pose, dept, ...(post ? { post } : {}), watch, ...more });
@@ -612,9 +668,9 @@ const stations = [
   // The airless hangar's deck crews, suited (crew.mjs puts anyone in a vacuum room in a vac suit) and weightless: the
   // sentry pulling himself up and down the gangway, two at work in the gaps between fighters, one by the port bay door,
   // clear of its lanes.
-  st('hangar', [0, hz0 + 40], 0, 'walk', 'flight', 'Hangar sentry', 'on', { route: [[0, hz0 + 8], [0, hz0 + 68]] }),
+  st('hangar', [0, hz0 + 40], 0, 'walk', 'flight', 'Hangar sentry', 'on', { route: [[0, hz0 + 8], [0, doorZ[0] + PADS + BERTH / 2 - 8]] }),
   st('hangar', [-5.6, doorZ[0] + 6.33], 3.14159, 'workTable', 'flight', 'Deck crew', 'on'),
-  st('hangar', [5.6, doorZ[0] + 19], 0, 'workTable', 'flight', 'Deck crew', 'on'),
+  st('hangar', [5.6, doorZ[0] + 12.67], 0, 'workTable', 'flight', 'Deck crew', 'on'),
   st('hangar', [-15, doorZ[0] - 3], 0, 'lookAround', 'flight', 'Deck crew, launch lanes', 'on'),
   st('flight-control', [7, hz0 + 46], -1.5708, 'workTable', 'flight', 'Flight control', 'on'),
   st('eng-control', [3.95, sz0 + 33.5], 3.14159, 'workTable', 'engineering', 'Engineer of the watch', 'on'),
@@ -670,7 +726,7 @@ integrity.parts = {
   order: ['tank', 'breach', 'door', 'rcs', 'bearing', 'turret', 'inside', 'pdc', 'radiator', 'hole'],
   kit: 'toolkit',
   help: 1,
-  drones: { exit: [-25.2, 10, 103], out: [-1, 0.35, 0], clear: 12, cruise: 12, accel: 3, tau: 0.6, pass: 3, corner: 3, standoff: 3.5, scale: 2.5 },
+  drones: { exit: [-(stn.s.w / 2 + 0.2), 10, sz0 + 12], out: [-1, 0.35, 0], clear: 12, cruise: 12, accel: 3, tau: 0.6, pass: 3, corner: 3, standoff: 3.5, scale: 2.5 },
   parties: { count: 2, from: 'damage-control', speed: 2, setup: 10 },
 };
 integrity.about = integrity.about.replace('`inside` whether they also seal holes between compartments.', '`inside` is no longer read: a hole between compartments is a damage control party\'s (`parts.parties`); the drones fly out of the bay and round her (`parts.drones`).');
@@ -691,7 +747,7 @@ const thrusters = {
   }),
   rcsForce: Math.round((v1.thrusters.rcsForce * M) / v1.mass / 1e5) * 1e5,
   rcs: [[-1, 1], [1, 1], [-1, -1], [1, -1]].flatMap(([sx, sy]) => [
-    { at: [sx * 19, sy * 8, bow.z[0] + 26] }, { at: [sx * 23, sy * 15, sz1 - 8] },
+    { at: [sx * 19, sy * 8, bow.z[0] + 26] }, { at: [sx * (stn.s.w / 2 - 2), sy * 15, sz1 - 8] },
   ]),
 };
 
@@ -729,14 +785,15 @@ fighter.collide = {
 // frame) is over her spine; its hose runs from `hoseAt` (its frame) to her `port`, fills `flow` kg/s [drive, jets], and
 // comes away past `hose` m. The tug's station is a bar's length (`cable`) ahead of her nose; it tows at `tow.accel` up
 // to `tow.cruise`, to a point `tow.beyond` m past the landing gate, and swings her nose to the bar at `swing` rad/s, her swing across it damped at `damp` a second.
-// Home, each goes in `bay` m along the hangar from her pad (toward `bayMid`), from `home` m out past the gate, and is
+// Home, each goes in `bay` m along the hangar from her pad (toward `bayMid`, the middle of the fighters' stretch of the
+// door: over the next pad, never the berths), from `home` m out past the gate, and is
 // stowed `stow` m in from the centre line after `inT` s.
 fighter.rescue = {
   launch: 14, accel: 40, cruise: 450, margin: 0.55, jets: 6, turn: 1.8, tau: 0.5, clear: 22, near: 60,
   dock: { dist: 2.5, speed: 1.5 },
   grab: { spin: 0.04, hold: 34, range: 4, despin: 0.35, steady: 0.012 }, // a tumbling fighter: hold off her centre, a line on her, her spin taken off (rad/s, m, rad/s²)
   tow: { accel: 16, cruise: 320, beyond: 40 },
-  bay: 12, bayMid: 33, home: 12, stow: 14, inT: 6,
+  bay: r3(PADS / 3), bayMid: r3(doorZ[0] + PADS / 2), home: 12, stow: 14, inT: 6,
   kinds: {
     tanker: { station: [0, 8, 0.5], hoseAt: [0, -3.6, 2.2], port: [0, 1.4, 1], flow: [300, 120], hose: 9 },
     tug: { station: [0, 0.6, -42], hoseAt: [0, 0.1, 5.2], port: [0, 0.2, -5.6], cable: 30, swing: 0.8, damp: 1.5 }
@@ -786,10 +843,10 @@ fighter.repair = {
   help: 1,
   reach: 2.6,
   drones: {
-    racks: [{ at: [-17.1, 2.4, 56], n: 3, into: [1, 0, 0] }, { at: [17.1, 2.4, 56], n: 3, into: [-1, 0, 0] }],
+    racks: [{ at: [-(HANGAR_X - 0.4), 2.4, doorZ[0] - 6], n: 3, into: [1, 0, 0] }, { at: [HANGAR_X - 0.4, 2.4, doorZ[0] - 6], n: 3, into: [-1, 0, 0] }],
     gap: 1.0, lane: 5, cruise: 2.4, accel: 0.8, tau: 0.6, standoff: 1.0, radius: 0.32
   },
-  crew: { posts: [[0, 28], [0, 40]], speed: 0.75, setup: 4, h: 1.1, flank: 0.6 },
+  crew: { posts: [[0, doorZ[0] + 3], [0, doorZ[0] + 9.5]], speed: 0.75, setup: 4, h: 1.1, flank: 0.6 },
   board: { w: 1.1, h: 0.78 }
 };
 
@@ -800,7 +857,7 @@ const L = {
   decks, hull, compartments: comps, doors, ladders, drum,
   helm: { at: [0, sz0 + 16], eye: [0, floorOf[1] + 1.75, sz0 + 16.2] },
   spawn: { deck: 2, at: [0, sz0 + 2], yaw: 0 },
-  thrusters, mounts, fighters, fighter,
+  thrusters, mounts, fighters, berthsAbout, berths, fighter,
   stations, routes, damage, weapons, integrity, plant,
 };
 
@@ -871,7 +928,8 @@ console.log(`${L.name}: ${T} m, ${Math.round(A.M).toLocaleString()} t, centre of
 console.log(`Fixed hull: ${comps.filter((c) => c.access === 'walk').length} walkable rooms, ${comps.filter((c) => c.access === 'sealed').length} sealed, ${doors.length} doors, ${ladders.length} ladders, ${Math.round(fixedVol).toLocaleString()} m³`);
 console.log(`Drums: ${drumRooms.length} rooms (${Object.entries(uses).map(([u, n]) => `${n} ${u}`).join(', ')}), ${drumRooms.reduce((a, r) => a + (r.bunks ?? 0), 0)} bunks for ${A.plan.crew + A.plan.marines}`);
 console.log(`       decks ${drumDecks.map((d) => `${d.name.toLowerCase()} r ${d.floorR} m ${d.g} g`).join(', ')}; spokes at segments ${spokeSegs.join(', ')}`);
-console.log(`Mounts: ${mounts.filter((m) => m.kind === 'turret').length} turrets, ${mounts.filter((m) => m.kind === 'pdc').length} point defence, ${weapons.tubes.at.length} bow tubes, ${weapons.broadside.port.at.length * 2} broadside tubes, ${fighters.length} fighter pads`);
+console.log(`Mounts: ${mounts.filter((m) => m.kind === 'turret').length} turrets, ${mounts.filter((m) => m.kind === 'pdc').length} point defence, ${weapons.tubes.at.length} bow tubes, ${weapons.broadside.port.at.length * 2} broadside tubes, ${fighters.length} fighter pads, ${berths.length} berths (${BERTH_SHIP})`);
+{ const hg = comps.find((c) => c.id === 'hangar'); console.log(`Hangar: ${hg.x[1] - hg.x[0]} × ${hg.h} × ${r1(hg.z[1] - hg.z[0])} m inside (z ${hg.z.map(r1)}); doors z ${doorZ.map(r1)} (${r1(doorZ[1] - doorZ[0])} × ${DOOR_H} m); pads at z ${fighters.slice(0, fighters.length / 2).map((f) => r1(f.at[1]))}; ${berths.map((b) => `${b.id} at ${b.at}, port ${b.port}, clear ${b.clear}`).join('; ')}`); }
 if (missing.length) console.log(`\nThe career and the watch bill still name rooms this layout does not have ${missing.join(', ')}`);
 else console.log('\nEvery room the career and the watch bill name is here.');
 if (problems.length) { console.log(`\n${problems.length} problem${problems.length > 1 ? 's' : ''}:\n  ${problems.join('\n  ')}`); process.exitCode = 1; }

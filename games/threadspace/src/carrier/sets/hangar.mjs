@@ -29,7 +29,7 @@ export function dressHangar(C, I, c) {
   }
   // A gantry crane: rails along the long walls high up, a bridge across, its trolley and hook.
   for (const x of [x1 + 1, x2 - 1]) I.group.add(at(box(0.5, 0.6, z2 - z1, P.steel), x, y + h - 1.6, (z1 + z2) / 2));
-  const bz = 12;
+  const bz = (doorE[0]?.from ?? z1 + 38) - 2; // just forward of the bay doors
   I.group.add(at(box(x2 - x1 - 1, 0.8, 0.7, mat('#c8a030')), (x1 + x2) / 2, y + h - 1.2, bz));
   I.group.add(at(box(1.4, 0.6, 1.2, P.dark), x1 + 14, y + h - 1.8, bz), at(cyl(0.02, 0.02, 4, P.black, 4), x1 + 14, y + h - 4.1, bz), at(box(0.4, 0.5, 0.3, yellow), x1 + 14, y + h - 6.2, bz));
   // A catwalk along the inboard wall at the height of the second deck, with its rail; broken where the wall is a bay
@@ -76,8 +76,10 @@ export function dressHangar(C, I, c) {
   // The words on the walls.
   poster(C, I, 'hangar', 16, 3.2, x2 - 0.56, 9.4, onWall(18, 9) ? 18 : (z1 + (doorE[0]?.from ?? z2)) / 2, -Math.PI / 2);
   poster(C, I, 'clear', 9, 0.7, (x1 + x2) / 2 - 6, 9.8, z1 + 0.16, 0);
-  poster(C, I, 'fod', 1.4, 0.9, x2 - 0.15, 1.7, -6.5, -Math.PI / 2);
-  poster(C, I, 'burn', 0.8, 1.1, x2 - 0.15, 1.7, 5.2, -Math.PI / 2);
+  // Two notices at eye height on the starboard wall, forward of its bay door.
+  const noticeZ = Math.min(z1 + 17.5, (doorE[0]?.from ?? z2) - 16);
+  poster(C, I, 'fod', 1.4, 0.9, x2 - 0.15, 1.7, noticeZ, -Math.PI / 2);
+  poster(C, I, 'burn', 0.8, 1.1, x2 - 0.15, 1.7, noticeZ + 11.7, -Math.PI / 2);
   // The hangar's frames: deep ribs up both long walls and across the deckhead.
   for (let z = z1 + 4; z < z2; z += 8) {
     if (onWall(z)) I.group.add(at(box(0.5, h, 0.6, I.s.trim), x2 - 0.25, y + h / 2, z));
@@ -87,7 +89,8 @@ export function dressHangar(C, I, c) {
 
 /** The airless hangar dressed for no weight and no air (the spin-drum carrier's): everything loose is held down.
  *  Crates under cargo nets strapped to the tie-downs, at both ends; a tool chest clamped to the deck beside each pad, its
- *  tools tethered; the gangway from the airlock to every fighter (`gangway`); and handholds along the bulkheads. */
+ *  tools tethered; a cradle under each berth (`cradle`); the gangway from the airlock to every fighter and to each
+ *  berth's docking port (`gangway`); and handholds along the bulkheads. */
 function zeroG(C, I, c, { yellow }) {
   const [x1, x2] = c.x, [z1, z2] = c.z, y = I.floorY;
   const net = mat('#2a2d22'), strap = mat('#c8a030'), clamp = mat('#e0b030'), tether = mat('#ff7a30');
@@ -114,13 +117,81 @@ function zeroG(C, I, c, { yellow }) {
     g.add(at(cyl(0.012, 0.012, 1.3, tether, 4), 0.3, 0.55, 0.85, Math.PI / 2 - 0.3, 0, 0), at(box(0.25, 0.06, 0.08, P.steel), 0.3, 0.1, 1.45));
     return g;
   };
+  // (The last pad's chest stands closer in to her, clear of the berth aft of the pads.)
+  const lastPad = padZ.at(-1);
   for (const f of C.L.fighters) {
     const s = Math.sign(f.at[0]) || 1;
-    place(I, chest(), s * 4.2, f.at[1] + 5.4, s > 0 ? -Math.PI / 2 : Math.PI / 2);
+    place(I, chest(), s * 4.2, f.at[1] + (C.L.berths?.length && f.at[1] === lastPad ? 3.4 : 5.4), s > 0 ? -Math.PI / 2 : Math.PI / 2);
   }
+  for (const b of C.L.berths ?? []) cradle(C, I, c, b, { yellow });
   gangway(C, I, c, { yellow, tether });
   // Handholds along the forward and after bulkheads, at hand height (clear of the airlock's door in the middle).
   for (const z of [z1 + 0.15, z2 - 0.15]) for (let x = x1 + 1; x < x2 - 1; x += 1.5) if (Math.abs(x) > 3.4) I.group.add(at(box(0.5, 0.05, 0.08, yellow), x, y + 1.3, z));
+}
+
+/** A box `t` thick from `a` to `b`, whichever way that runs. */
+const Z1 = new THREE.Vector3(0, 0, 1);
+function bar(a, b, t, m) {
+  const d = new THREE.Vector3().subVectors(b, a), len = d.length();
+  const mesh = box(t, t, len, m);
+  mesh.position.copy(a).addScaledVector(d, 0.5);
+  mesh.quaternion.setFromUnitVectors(Z1, d.divideScalar(len || 1));
+  return mesh;
+}
+
+/** Where a berth's cradle stands, from the berth's `box` (the berthed ship's envelope): the carriage under her, in the
+ *  hangar deck's frame. collide.mjs `hangarSolid` makes the same box solid to a flown fighter. */
+export function cradleBox(b, floorY) {
+  const [bx0, bx1] = b.box.x, [bz0, bz1] = b.box.z;
+  const cx = (bx0 + bx1) / 2;
+  return { x: [cx - 3.2, cx + 3.2], y: [floorY, b.box.y[0]], z: [bz0 + 2.5, bz1 - 2.5] };
+}
+
+/** A berth's cradle (ROADMAP phase 11): what a berthed medium ship lies on, and what pushes her out of the bay door.
+ *  Rails across the deck from the berth to the door's sill; on them a carriage of two long beams with a saddle every
+ *  few metres (a cross-beam on pillars, a padded block either side to clamp her bilges); and on the gangway's side two
+ *  pusher rams from anchor blocks on the deck to the carriage. The berth's outline is painted on the deck. The cradle
+ *  is drawn empty: the ship in it is another module's. */
+function cradle(C, I, c, b, { yellow }) {
+  const y = I.floorY, o = b.out, [bx0, bx1] = b.box.x, [bz0, bz1] = b.box.z;
+  const K = cradleBox(b, y), cx = (K.x[0] + K.x[1]) / 2, keel = K.y[1] - y; // the height of her underside off the deck
+  const wall = o < 0 ? c.x[0] : c.x[1], inner = o < 0 ? bx1 : bx0; // the door's sill, and her side toward the gangway
+  const steel = P.steel, dark = P.dark, pad = mat('#2a2d22'), ram = mat('#aab2bc'), hz = mat('#e0b030');
+  const add = (...m) => I.group.add(...m);
+  const len = bz1 - bz0, zm = (bz0 + bz1) / 2;
+  // The rails she is pushed out on, from her inboard side to the sill, and the stops at their inboard ends.
+  const railZ = [bz0 + 6, zm, bz1 - 6];
+  for (const z of railZ) {
+    const a = inner - o * 0.6, w = Math.abs(wall - a);
+    add(at(box(w, 0.22, 0.5, dark), (a + wall) / 2, y + 0.11, z), at(box(w, 0.06, 0.16, steel), (a + wall) / 2, y + 0.25, z));
+    add(at(box(0.5, 0.7, 0.9, hz), a, y + 0.35, z));
+  }
+  // The carriage: two long beams on bogies over the rails, a saddle every few metres.
+  for (const sx of [-2.2, 2.2]) {
+    add(at(box(0.7, 0.7, K.z[1] - K.z[0], steel), cx + sx, y + 0.85, zm));
+    for (const z of railZ) add(at(box(1.1, 0.5, 1.6, dark), cx + sx, y + 0.5, z));
+  }
+  const port = b.port?.[2] ?? 1e9;
+  for (const k of [0.1, 0.3, 0.5, 0.7, 0.9]) {
+    const z = bz0 + len * k;
+    add(at(box(K.x[1] - K.x[0], 0.5, 0.9, steel), cx, y + keel - 0.75, z));
+    for (const sx of [-2.2, 2.2]) add(at(box(0.5, keel - 2.2, 0.5, steel), cx + sx, y + 1.2 + (keel - 2.2) / 2, z));
+    // The clamps: a padded block under each bilge, on a jack.
+    for (const sx of [-2.6, 2.6]) add(at(box(1.3, 0.3, 1.2, pad), cx + sx, y + keel - 0.15, z), at(cyl(0.16, 0.2, 0.2, ram, 8), cx + sx, y + keel - 0.4, z));
+    add(at(box(0.9, 0.04, 0.92, hz), cx, y + keel - 0.48, z));
+  }
+  // The pushers: a ram from an anchor block on the deck, on her inboard side, to the carriage, clear of her port's spur.
+  for (const z of [bz0 + 10, bz1 - 10].map((z) => (Math.abs(z - port) < 3 ? z + 4 : z))) {
+    const ax = inner - o * 1.6, to = cx - o * 2.55;
+    add(at(box(1.1, 1.3, 1.5, dark), ax, y + 0.65, z), at(box(1.2, 0.05, 1.6, hz), ax, y + 1.32, z));
+    const mid = (ax + to) / 2, L = Math.abs(to - ax);
+    add(at(cyl(0.24, 0.24, L * 0.55, ram, 10), ax + o * L * 0.275, y + 0.85, z, 0, 0, Math.PI / 2), at(cyl(0.15, 0.15, L * 0.5, steel, 10), mid + o * L * 0.25, y + 0.85, z, 0, 0, Math.PI / 2));
+  }
+  // The berth's outline on the deck, and her way out to the door.
+  for (const z of [bz0, bz1]) add(at(box(Math.abs(wall - inner), 0.012, 0.14, yellow), (wall + inner) / 2, y + 0.008, z));
+  add(at(box(0.14, 0.012, len, yellow), inner, y + 0.008, zm));
+  // Solid to you on the gangway's lanyard, as it is to a flown fighter.
+  I.collider(K.x[0], y, K.z[0], K.x[1], y + keel, K.z[1]);
 }
 
 /** A see-through deck grating `w` by `d` (in its own x and z, lying flat): flat bars about 15 cm apart, one shared
@@ -145,6 +216,18 @@ function grating(w, d) {
   return new THREE.Mesh(geo, GRATE);
 }
 
+/** Each berth's spur of the gangway (ROADMAP phase 11), for the gangway at x `gx` with its grating at height `gy`: on
+ *  side `s` of it, a ramp `RW` wide beside the gangway (x `x0` to `xr`) from the grating at z `zr` up to the platform's
+ *  forward edge at `zt`; the platform at the port's sill `py`, `PL` metres either side of the port's z `pz`, from the
+ *  gangway's side `x0` out to `x1`, just short of her skin. fighter-repair.mjs keeps its drones clear of the same. */
+export function berthSpurs(C, c, gx, gy) {
+  const HW = 0.8, RW = 1.0, PL = 1.0, RUN = 6;
+  return (C.L.berths ?? []).filter((b) => b.port && b.sill != null).map((b) => {
+    const s = Math.sign(b.port[0] - gx) || 1, pz = b.port[2];
+    return { b, s, pz, py: b.sill - 0.02, PL, x0: gx + s * HW, xr: gx + s * (HW + RW), x1: (b.skin ?? b.port[0]) - s * 0.2, zr: pz - PL - RUN, zt: pz - PL };
+  });
+}
+
 /** Runs along [a0, b0] with the `gaps` taken out, each at least `min` long. */
 function runs(a0, b0, gaps, min = 0.3) {
   const out = [];
@@ -159,7 +242,8 @@ function runs(a0, b0, gaps, min = 0.3) {
 
 /** The gangway (ROADMAP phase 5, [8]): how you cross the airless, weightless hangar in your duty suit, visor down. A
  *  lattice from the airlock's door aft down the centre of the hangar, a spur off it to each fighter's grab frame, on legs
- *  a little off the deck. A rail along each side of it at hand height (holds: you pull yourself along them, or push off
+ *  a little off the deck, and beyond the fighters a spur to each berth's docking port (`berthSpurs`: the port is some
+ *  metres up a berthed ship's side, so a ramp climbs beside the gangway to a platform at its sill). A rail along each side of it at hand height (holds: you pull yourself along them, or push off
  *  and drift down the middle), and over it, on hoops, an orange safety wire you are clipped to (`I.tethers`:
  *  weightless.mjs `tether` keeps you within reach of it and draws your lanyard). The grab frame's bars are holds too:
  *  E at the frame boards her (layout.mjs `hangar`). */
@@ -167,7 +251,7 @@ function gangway(C, I, c, { yellow, tether }) {
   const z1 = c.z[0], y = I.floorY;
   const gy = y + 0.35, ry = gy + 1.0, wy = gy + 2.0, top = wy + 0.25; // the grating, its rails, the wire, the hoops
   const HW = 0.8, SW = 0.5; // half the width of the gangway and of a spur
-  const steel = P.steel, wire = tether;
+  const steel = P.steel, wire = tether, hazardEdge = mat('#e0b030');
   const V = (x, yy, z) => new THREE.Vector3(x, yy, z);
   const lock = C.L.doors.find((d) => d.between.includes(c.id) && d.between.some((id) => C.rooms.get(id)?.airlock));
   const gx = lock?.at ?? 0; // the airlock's door is in the forward bulkhead: its `at` is the x
@@ -177,7 +261,8 @@ function gangway(C, I, c, { yellow, tether }) {
     const s = Math.sign(f.at[0] - gx) || 1, fx = f.at[0] + 1, b = C.boardAt ?? 4.6;
     return { s, z: f.at[1] - b, x0: gx + s * HW, x1: fx + s * 0.7, fx, fz: f.at[1] - b + 0.6 };
   });
-  const za = z1 + 0.15, zb = Math.max(...spurs.map((p) => p.z)) + 2.5;
+  const B = berthSpurs(C, c, gx, gy);
+  const za = z1 + 0.15, zb = Math.max(...spurs.map((p) => p.z), ...B.map((q) => q.pz + q.PL)) + 2.5;
   const add = (...m) => I.group.add(...m);
   // The lattice: the grating on stringers, on legs to the deck every three metres.
   const deck = (cx, cz, w, d, alongX) => {
@@ -207,7 +292,7 @@ function gangway(C, I, c, { yellow, tether }) {
     hold(I, c, a, b, n, kind, false);
   };
   for (const s of [-1, 1]) {
-    const x = gx + s * HW, gaps = spurs.filter((p) => p.s === s).map((p) => [p.z - SW, p.z + SW]);
+    const x = gx + s * HW, gaps = [...spurs.filter((p) => p.s === s).map((p) => [p.z - SW, p.z + SW]), ...B.filter((q) => q.s === s).map((q) => [q.zr - 0.1, q.zr + 1.4])];
     for (const [a, b] of runs(za + 0.4, zb, gaps)) rail(V(x, ry, a), V(x, ry, b), V(-s, 0, 0));
   }
   for (const p of spurs) {
@@ -236,6 +321,58 @@ function gangway(C, I, c, { yellow, tether }) {
   wireTo(V(gx, wy, za), V(gx, wy, zb - 0.3));
   add(at(box(0.3, 0.08, 0.3, steel), gx, wy + 0.05, za + 0.1));
   for (let z = za + 3; z < zb - 0.5; z += 4) if (!spurs.some((p) => Math.abs(p.z - z) < 0.9)) hoop(gx, z, false);
+  // Each berth's spur: the ramp up beside the gangway, the platform at her docking port's sill, their rails (holds)
+  // and the safety wire on up to the port.
+  for (const q of B) {
+    const { s, x0, x1, xr, zr, zt, pz, py, PL } = q, xm = (x0 + xr) / 2, rise = py - gy;
+    const slope = (z) => gy + (rise * (z - zr)) / (zt - zr); // the ramp's surface at z
+    // The ramp: grating on two stringers, on legs.
+    const g = grating(Math.abs(xr - x0), Math.hypot(zt - zr, rise));
+    g.position.set(xm, (gy + py) / 2, (zr + zt) / 2);
+    g.quaternion.setFromUnitVectors(Z1, V(0, rise, zt - zr).normalize());
+    add(g);
+    for (const x of [x0, xr]) add(bar(V(x, gy - 0.07, zr), V(x, py - 0.07, zt), 0.1, steel));
+    for (const k of [0.5, 1]) {
+      const z = zr + (zt - zr) * k;
+      for (const x of [x0 + s * 0.05, xr - s * 0.05]) add(at(box(0.08, slope(z) - y, 0.08, steel), x, (y + slope(z)) / 2, z), at(box(0.2, 0.02, 0.2, P.dark), x, y + 0.01, z));
+    }
+    add(bar(V(xr, y + 0.1, zr + (zt - zr) * 0.5), V(xr, py - 0.2, zt), 0.05, steel));
+    // The platform: from the gangway's side out to her skin, on legs braced to the deck.
+    const pw = Math.abs(x1 - x0);
+    add(at(grating(pw, 2 * PL), (x0 + x1) / 2, py, pz));
+    for (const e of [-1, 1]) add(at(box(pw, 0.12, 0.06, steel), (x0 + x1) / 2, py - 0.07, pz + e * PL));
+    for (const x of [x0 + s * 0.05, x1 - s * 0.4]) for (const e of [-1, 1]) add(at(box(0.09, py - y, 0.09, steel), x, (y + py) / 2, pz + e * (PL - 0.05)), at(box(0.24, 0.02, 0.24, P.dark), x, y + 0.01, pz + e * (PL - 0.05)));
+    add(bar(V(x0 + s * 0.05, y + 0.1, pz + PL - 0.05), V(x1 - s * 0.4, py - 0.3, pz + PL - 0.05), 0.05, steel), at(box(pw - 0.5, 0.06, 0.06, steel), (x0 + x1) / 2, y + (py - y) * 0.5, pz - PL + 0.05));
+    add(at(box(0.5, 0.03, 2 * PL, hazardEdge), x1 - s * 0.25, py + 0.02, pz)); // the edge at her skin
+    // Rails: up both sides of the ramp, and round the platform but for its end at her port.
+    const rail3 = (a, b, n) => {
+      add(bar(a, b, 0.045, yellow));
+      const d = new THREE.Vector3().subVectors(b, a), k = Math.max(1, Math.round(d.length() / 2));
+      for (let i = 0; i <= k; i++) {
+        const p = a.clone().addScaledVector(d, i / k);
+        add(at(box(0.05, 1.0, 0.05, steel), p.x, p.y - 0.5, p.z));
+      }
+      hold(I, c, a, b, n, 'rail', false);
+    };
+    rail3(V(xr, ry, zr), V(xr, py + 1, zt), V(-s, 0, 0));
+    rail3(V(x0, slope(zr + 1.4) + 1, zr + 1.4), V(x0, py + 1, zt), V(s, 0, 0));
+    rail3(V(xr, py + 1, pz - PL), V(x1, py + 1, pz - PL), V(0, 0, 1));
+    rail3(V(x0, py + 1, pz + PL), V(x1, py + 1, pz + PL), V(0, 0, -1));
+    rail3(V(x0, py + 1, pz - PL), V(x0, py + 1, pz + PL), V(s, 0, 0));
+    // The wire: off the gangway's at the ramp's foot, up over the ramp, and out along the platform to her port.
+    const up = wy - gy, wire3 = (a, b) => (add(bar(a, b, 0.025, wire)), wires.push({ a, b, room: c.id }));
+    wire3(V(gx, wy, zr + 0.6), V(xm, wy, zr + 0.6));
+    wire3(V(xm, wy, zr + 0.6), V(xm, py + up, zt));
+    wire3(V(xm, py + up, zt), V(xm, py + up, pz));
+    wire3(V(xm, py + up, pz), V(x1 - s * 0.3, py + up, pz));
+    // A hoop over the ramp half way up, and one over the platform.
+    const zh = (zr + zt) / 2, yh = slope(zh);
+    for (const x of [x0, xr]) add(at(box(0.06, up + 0.25, 0.06, steel), x, yh + (up + 0.25) / 2, zh));
+    add(at(box(Math.abs(xr - x0), 0.06, 0.06, steel), xm, yh + up + 0.25, zh), at(box(0.03, 0.25, 0.03, steel), xm, yh + up + 0.12, zh));
+    const xh = (xr + x1) / 2;
+    for (const e of [-1, 1]) add(at(box(0.06, up + 0.25, 0.06, steel), xh, py + (up + 0.25) / 2, pz + e * PL));
+    add(at(box(0.06, 0.06, 2 * PL, steel), xh, py + up + 0.25, pz), at(box(0.03, 0.25, 0.03, steel), xh, py + up + 0.12, pz));
+  }
   for (const p of spurs) {
     wireTo(V(gx, wy, p.z), V(p.x1 - p.s * 0.3, wy, p.z));
     const n = Math.max(1, Math.round(Math.abs(p.x1 - p.x0) / 3));

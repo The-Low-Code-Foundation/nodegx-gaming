@@ -3,7 +3,7 @@
   {
    "at": [
     -9,
-    17.166666666666668
+    4.166666666666666
    ],
    "yaw": 1.5708,
    "side": "port"
@@ -11,7 +11,7 @@
   {
    "at": [
     -9,
-    23.5
+    10.5
    ],
    "yaw": 1.5708,
    "side": "port"
@@ -19,31 +19,7 @@
   {
    "at": [
     -9,
-    29.833333333333336
-   ],
-   "yaw": 1.5708,
-   "side": "port"
-  },
-  {
-   "at": [
-    -9,
-    36.16666666666667
-   ],
-   "yaw": 1.5708,
-   "side": "port"
-  },
-  {
-   "at": [
-    -9,
-    42.5
-   ],
-   "yaw": 1.5708,
-   "side": "port"
-  },
-  {
-   "at": [
-    -9,
-    48.83333333333333
+    16.833333333333332
    ],
    "yaw": 1.5708,
    "side": "port"
@@ -51,7 +27,7 @@
   {
    "at": [
     9,
-    17.166666666666668
+    4.166666666666666
    ],
    "yaw": -1.5708,
    "side": "starboard"
@@ -59,7 +35,7 @@
   {
    "at": [
     9,
-    23.5
+    10.5
    ],
    "yaw": -1.5708,
    "side": "starboard"
@@ -67,34 +43,83 @@
   {
    "at": [
     9,
-    29.833333333333336
+    16.833333333333332
    ],
    "yaw": -1.5708,
    "side": "starboard"
+  }
+ ],
+ "berthsAbout": "The hangar's berths for medium ships (tools/carrier-v2.mjs; ROADMAP phase 11). Each: `ship` (her folder under ships/), `side` and the bay `door` she leaves by ('w' port, 'e' starboard), `at` [x, y, z] where her own layout origin sits and `yaw` (0: bow forward; π: bow aft), in the carrier's frame, `out` (-1 port, +1 starboard: the way her cradle pushes her), `port` (her docking port's door centre, carrier's frame: the gangway's spur ends there), `sill` (that door's sill, y) and `skin` (the x of her skin at it), `clear` (metres out from the centreline where her origin is when she is clear of the hull), and `box` (her envelope in the berth, radiators folded: x, y, z ranges).",
+ "berths": [
+  {
+   "id": "berth-port",
+   "ship": "cutter",
+   "side": "port",
+   "door": "w",
+   "at": [
+    -10.3,
+    -5.8,
+    40.85
+   ],
+   "yaw": 0,
+   "out": -1,
+   "port": [
+    -5.9,
+    -6.25,
+    37.95
+   ],
+   "sill": -7.3,
+   "skin": -5.3,
+   "clear": 36.3,
+   "box": {
+    "x": [
+     -15.6,
+     -5
+    ],
+    "y": [
+     -9,
+     -1.2
+    ],
+    "z": [
+     23.85,
+     60.15
+    ]
+   }
   },
   {
+   "id": "berth-starboard",
+   "ship": "cutter",
+   "side": "starboard",
+   "door": "e",
    "at": [
-    9,
-    36.16666666666667
+    10.3,
+    -5.8,
+    43.15
    ],
-   "yaw": -1.5708,
-   "side": "starboard"
-  },
-  {
-   "at": [
-    9,
-    42.5
+   "yaw": 3.14159,
+   "out": 1,
+   "port": [
+    5.9,
+    -6.25,
+    46.05
    ],
-   "yaw": -1.5708,
-   "side": "starboard"
-  },
-  {
-   "at": [
-    9,
-    48.83333333333333
-   ],
-   "yaw": -1.5708,
-   "side": "starboard"
+   "sill": -7.3,
+   "skin": 5.3,
+   "clear": 36.3,
+   "box": {
+    "x": [
+     5,
+     15.6
+    ],
+    "y": [
+     -9,
+     -1.2
+    ],
+    "z": [
+     23.85,
+     60.15
+    ]
+   }
   }
  ],
  "fighter": {
@@ -507,14 +532,14 @@
   "launch": {
    "lift": 1.8,
    "accel": 8,
-   "clear": 35.5,
-   "wings": 25.5
+   "clear": 37,
+   "wings": 27
   },
   "landing": {
    "range": 450,
    "speed": 30,
    "gate": [
-    51.5,
+    53,
     -8
    ],
    "lane": 400,
@@ -602,8 +627,8 @@
     "cruise": 320,
     "beyond": 40
    },
-   "bay": 12,
-   "bayMid": 33,
+   "bay": 6.333,
+   "bayMid": 10.5,
    "home": 12,
    "stow": 14,
    "inT": 6,
@@ -954,9 +979,9 @@
     "racks": [
      {
       "at": [
-       -17.1,
+       -18.6,
        2.4,
-       56
+       -5
       ],
       "n": 3,
       "into": [
@@ -967,9 +992,9 @@
      },
      {
       "at": [
-       17.1,
+       18.6,
        2.4,
-       56
+       -5
       ],
       "n": 3,
       "into": [
@@ -991,11 +1016,11 @@
     "posts": [
      [
       0,
-      28
+      4
      ],
      [
       0,
-      40
+      10.5
      ]
     ],
     "speed": 0.75,

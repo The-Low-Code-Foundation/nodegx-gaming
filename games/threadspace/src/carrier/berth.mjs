@@ -1,0 +1,207 @@
+// A ship carried in another ship's berth: the cutter in the carrier's hangar (design/ROADMAP.md, phase 12).
+//
+// The engine runs the ship you are aboard (`C`, her `Rigid` body, her helm). Her mothership is the host: a second
+// `buildCarrier` out in the world with no systems of her own (main.mjs makes it, `?host=<id>&berth=<berth id>`), her
+// hangar deck drawn round you and her bay doors worked from here. While you are carried, your ship's place is the
+// berth's, in the host's frame; nothing she does at the helm moves her.
+//
+// Phases:
+//   berthed   on the cradle, bay door shut. L at the helm asks to launch.
+//   opening   flight control has the door on your side going up.
+//   launch    the cradle's arms push her out sideways through the door, slowly, to `clear` metres off the host's
+//             centreline. Then the hand-over: she is a body in the world with the velocity she really has (the host's,
+//             the host's turn carrying the berth round, and the push), as fighter.mjs `handOver` does it.
+//   out       yours. L within `recover.range` of the gate and slower than `recover.speed` against the host hands her to
+//             flight control.
+//   recover   flown in along a path in the host's frame: to the gate off her door, then sideways onto the cradle.
+//   closing   down on the cradle, the door coming shut; then berthed.
+//
+// The berth is the host layout's `berths` entry: { id, ship, side, door ('w' | 'e'), at [x, y, z] (where the carried
+// ship's layout origin sits, in the host's frame), yaw, out (-1 port, +1 starboard), port, clear }. A host with a
+// hangar but no `berths` yet gets a stand-in from `standIn()`.
+//
+// Not here yet (ROADMAP phase 12's second half): flying her in yourself down a lane, the cutter against the carrier's
+// hull as solids, the host under way (she stands still in the world), and the cradle drawn moving.
+
+import * as THREE from 'three';
+import { clamp } from '../util.mjs';
+
+const PUSH = 2.2; // m/s the cradle's arms reach
+const PUSH_ACC = 0.5; // m/s² they push at
+const GATE = 30; // metres beyond `clear` where a recovery lines up
+const RECOVER = { range: 900, speed: 20, cruise: 14 }; // flight control takes her inside this, slower than this; flies her in at this
+const smooth = (k) => k * k * (3 - 2 * k);
+const _p = new THREE.Vector3(), _q = new THREE.Quaternion(), _v = new THREE.Vector3(), _w = new THREE.Vector3();
+const UP = new THREE.Vector3(0, 1, 0);
+
+/** A berth for a host whose layout has a hangar with bay doors but no `berths`: on the port side, in front of the
+ *  first port door, the carried ship's keel a metre over the hangar floor. */
+export function standIn(HL, L) {
+  const hangar = HL.compartments.find((c) => c.id === 'hangar');
+  const door = (hangar?.bayDoors ?? []).find((d) => d.side === 'w') ?? hangar?.bayDoors?.[0];
+  if (!hangar || !door) return null;
+  const out = door.side === 'w' ? -1 : 1;
+  const floor = HL.decks.find((d) => d.id === hangar.deck).floor;
+  const half = Math.max(...HL.hull.main.map((s) => s.w)) / 2;
+  const beam = L.envelope ? Math.max(-L.envelope.min[0], L.envelope.max[0]) : 6;
+  const x = out * (Math.abs(out < 0 ? hangar.x[0] : hangar.x[1]) - beam - 3);
+  return { id: 'stand-in', ship: null, side: out < 0 ? 'port' : 'starboard', door: door.side, at: [x, floor + 1 - (L.envelope?.min[1] ?? -3), (door.from + door.to) / 2], yaw: out < 0 ? 0 : Math.PI, out, clear: half + 25 };
+}
+
+export class Berth {
+  /** `C`, `body`: the ship you are aboard and her Rigid. `H`: the host (a built ship), `hostDoors` her Doors.
+   *  `spec`: the berth. `say(text, secs)`: a line on the helm's sight. `onChange(phase)`: told at each change. */
+  constructor({ C, body, H, hostDoors, spec, say = () => {}, onChange = () => {} }) {
+    Object.assign(this, { C, body, H, hostDoors, spec, say, onChange });
+    this.hostVel = new THREE.Vector3(); // the host's velocity in the world (she stands still for now)
+    this.hostAng = new THREE.Vector3(); // and her turn, in her own frame
+    this.phase = 'berthed';
+    this.s = 0; // metres out from the berth along the launch run
+    this.v = 0; // and how fast
+    this.t = 0;
+    // The carried ship's centre of mass relative to her layout origin, turned as she lies in the berth.
+    this.qBerth = new THREE.Quaternion().setFromAxisAngle(UP, spec.yaw ?? 0);
+    this.com = new THREE.Vector3(...C.L.com).applyQuaternion(this.qBerth);
+    this.home = new THREE.Vector3(...spec.at).add(this.com); // her centre of mass on the cradle, in the host's frame
+    this.run = Math.abs(spec.clear) - Math.abs(this.home.x); // how far the cradle pushes her
+    this.place(this.home, this.qBerth);
+  }
+
+  /** Carried: her place is the host's to give, and the helm does nothing. */
+  get carried() {
+    return this.phase !== 'out';
+  }
+
+  /** The gate off her door where recoveries line up, in the world. */
+  gateWorld(t = new THREE.Vector3()) {
+    return this.H.frame.localToWorld(t.set(this.spec.out * (Math.abs(this.spec.clear) + GATE), this.home.y, this.home.z));
+  }
+
+  /** Puts her at `p` (her centre of mass) and `q`, both in the host's frame. */
+  place(p, q) {
+    const { C, H } = this;
+    H.obj.updateMatrixWorld(true);
+    C.obj.position.copy(H.frame.localToWorld(_p.copy(p)));
+    C.obj.quaternion.copy(H.obj.getWorldQuaternion(_q)).multiply(q);
+    C.obj.updateMatrixWorld(true);
+    this.body.vel.copy(this.hostVel);
+    this.body.ang.set(0, 0, 0);
+  }
+
+  /** L at the helm: ask to launch, or ask flight control to bring her in. Returns what was said. */
+  key() {
+    if (this.phase === 'berthed') {
+      this.hostDoors.setBay(1);
+      this.set('opening');
+      return this.tell('Flight control: launch approved. Bay door opening.', 4);
+    }
+    if (this.phase === 'out') {
+      const d = this.C.obj.position.distanceTo(this.gateWorld(_p));
+      const v = _v.copy(this.body.vel).sub(this.hostVel).length();
+      if (d > RECOVER.range) return this.tell(`Flight control: too far out to take you. Close to within ${RECOVER.range} m of the bay (${Math.round(d)} m now).`, 4);
+      if (v > RECOVER.speed) return this.tell(`Flight control: too fast to take you. Slow to under ${RECOVER.speed} m/s against her (${Math.round(v)} now).`, 4);
+      this.startRecover();
+      return this.tell('Flight control has her. Hands off: coming aboard.', 4);
+    }
+    return this.tell(this.phase === 'recover' || this.phase === 'closing' ? 'Flight control has her.' : 'Launching.', 2);
+  }
+
+  tell(text, secs) {
+    this.say(text, secs);
+    return text;
+  }
+
+  set(phase) {
+    this.phase = phase;
+    this.t = 0;
+    this.onChange(phase);
+  }
+
+  startRecover() {
+    const { C, H, spec } = this;
+    H.obj.updateMatrixWorld(true);
+    const p0 = H.frame.worldToLocal(C.obj.position.clone());
+    this.q0 = H.obj.getWorldQuaternion(new THREE.Quaternion()).invert().multiply(C.obj.quaternion);
+    const gate = new THREE.Vector3(spec.out * (Math.abs(spec.clear) + GATE), this.home.y, this.home.z);
+    const off = new THREE.Vector3(spec.out * Math.abs(spec.clear), this.home.y, this.home.z);
+    const pts = [p0];
+    // Not out on her own side yet: over or under the host first, well clear of her, then across.
+    if (p0.x * spec.out < Math.abs(spec.clear)) {
+      const tall = Math.max(...H.L.hull.main.map((s) => s.h)) / 2 + 40;
+      const y = p0.y >= 0 ? Math.max(p0.y, tall) : Math.min(p0.y, -tall);
+      pts.push(new THREE.Vector3(p0.x, y, p0.z), new THREE.Vector3(gate.x, y, gate.z));
+    }
+    pts.push(gate, off, this.home.clone());
+    this.path = new THREE.CatmullRomCurve3(pts, false, 'centripetal');
+    this.pathT = clamp(this.path.getLength() / RECOVER.cruise, 12, 90);
+    this.gateU = clamp(1 - (GATE + this.run) / this.path.getLength(), 0, 1); // how far along the path the gate is
+    this.hostDoors.setBay(1);
+    this.set('recover');
+  }
+
+  frame(dt) {
+    const { spec, hostDoors } = this;
+    this.t += dt;
+    if (this.phase === 'out') return;
+    if (this.phase === 'berthed' || this.phase === 'closing') {
+      this.place(this.home, this.qBerth);
+      if (this.phase === 'closing' && hostDoors.kOf(spec.door) <= 0) {
+        this.set('berthed');
+        this.say('On the cradle. Bay door shut.', 3);
+      }
+      return;
+    }
+    if (this.phase === 'opening') {
+      this.place(this.home, this.qBerth);
+      if (hostDoors.openOn(spec.door)) {
+        this.s = this.v = 0;
+        this.set('launch');
+        this.say('Cradle away.', 2);
+      }
+      return;
+    }
+    if (this.phase === 'launch') {
+      this.v = Math.min(PUSH, this.v + PUSH_ACC * dt);
+      this.s += this.v * dt;
+      this.place(_w.copy(this.home).setX(this.home.x + spec.out * this.s), this.qBerth);
+      if (this.s >= this.run) this.handOver();
+      return;
+    }
+    if (this.phase === 'recover') {
+      // Wait at the gate for the door, then on in.
+      let k = clamp(this.t / this.pathT, 0, 1);
+      if (smooth(k) >= this.gateU && !hostDoors.openOn(spec.door) && smooth(k) < this.gateU + 0.02) {
+        this.t -= dt; // holding at the gate until the door is up
+        k = clamp(this.t / this.pathT, 0, 1);
+      }
+      this.place(this.path.getPoint(smooth(k)), _q.copy(this.q0).slerp(this.qBerth, smooth(clamp(k * 1.6, 0, 1))));
+      if (k >= 1) {
+        hostDoors.setBay(0);
+        this.set('closing');
+      }
+    }
+  }
+
+  /** Clear of the hull: from now on she is a body in the world with the velocity she really has. */
+  handOver() {
+    const { C, H, spec } = this;
+    H.obj.updateMatrixWorld(true);
+    const hq = H.obj.getWorldQuaternion(new THREE.Quaternion());
+    const spin = this.hostAng.clone().applyQuaternion(hq); // the host's turn, in the world
+    const r = C.obj.getWorldPosition(new THREE.Vector3()).sub(H.obj.getWorldPosition(_p));
+    this.body.vel.copy(this.hostVel).add(spin.clone().cross(r)).add(_v.set(spec.out * this.v, 0, 0).applyQuaternion(hq));
+    this.body.ang.copy(spin.applyQuaternion(_q.copy(C.obj.quaternion).invert())); // she was turning with her host
+    this.hostDoors.setBay(0);
+    this.set('out');
+    this.say('Clear of the bay. She is yours.', 4);
+  }
+
+  /** A line for the HUD: where she is in all this. */
+  status() {
+    if (this.phase === 'out') {
+      const d = this.C.obj.position.distanceTo(this.gateWorld(_p));
+      return d < RECOVER.range * 3 ? `bay ${Math.round(d)} m` : '';
+    }
+    return { berthed: 'on the cradle · L launches', opening: 'bay door opening', launch: `cradle pushing her out · ${Math.max(0, Math.round(this.run - this.s))} m to clear`, recover: 'flight control has her', closing: 'on the cradle · bay door closing' }[this.phase];
+  }
+}

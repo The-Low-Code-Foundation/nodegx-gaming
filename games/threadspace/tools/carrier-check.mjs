@@ -19,6 +19,7 @@
 //   carrier.html?at=bridge&voice=0&crew=0&dc=0&hold=1&seed=7     → run('float')
 //   carrier.html?at=bridge&voice=0&crew=0&dc=0&hold=1&seed=7     → run('brace')
 //   carrier.html?voice=0&crew=0&dc=0&hold=1&seed=7 (start page)  → run('career')
+//   carrier.html?ship=cutter&host=carrier&berth=berth-port&at=helm&voice=0&crew=0&dc=0&hold=1&seed=7   → run('berth')
 //   carrier.html?ship=cutter&at=bridge&voice=0&crew=0&dc=0&hold=1&seed=7   → run('cutter')   (another ship: ships/cutter/)
 //
 // `?hold=1` keeps the page from running frames of its own and `?seed=` seeds every random number (carrier.html,
@@ -98,7 +99,41 @@ function counters(c) {
 
 const findUse = (I, pre) => I.interactables.find((u) => u.id.startsWith(pre));
 
+/** Places the scripts name, worked out from the layout so they follow the ship when she is redesigned: `bow` (her
+ *  bow's z), `spine` (the middle of the spine passage, z), `door` (the port bay door: its skin x, its z range), `pads`
+ *  (z half way between the first two fighter pads: the open bay, clear of the berths), `berth` (the middle of the port
+ *  berth, z, or null). */
+function spots(c) {
+  const L = c.L, sp = c.C.rooms.get('spine'), d = L.mounts.find((m) => m.kind === 'bay-door' && m.x < 0), f = L.fighters;
+  const b = (L.berths ?? []).find((q) => q.out < 0);
+  return {
+    bow: L.hull.main[0].z, spine: sp ? Math.round((sp.z[0] + sp.z[1]) / 2) : 0, door: d ? { x: d.x, z: d.z } : null,
+    pads: f?.length > 1 ? r3((f[0].at[1] + f[1].at[1]) / 2) : f?.[0]?.at[1] ?? 0, berth: b ? r3((b.box.z[0] + b.box.z[1]) / 2) : null
+  };
+}
+
 const scenarios = {
+  /** The cutter carried in the carrier's hangar (berth.mjs, `?ship=cutter&host=carrier&berth=berth-port`): on the cradle
+   *  the helm does nothing, L opens the door and the cradle pushes her out, the hand-over gives her the push's velocity,
+   *  a burn away and back to rest, and L again has flight control fly her home and shut the door. */
+  async berth(c) {
+    for (let i = 0; i < 300 && !c.berth; i++) await wait(200); // the host is fetched and built after the ship
+    const b = c.berth, K = c.input.keys, H = c.host, out = { spec: b.spec.id };
+    const local = () => v3(H.frame.worldToLocal(c.C.obj.position.clone()));
+    const hold = (code, secs) => (K.add(code), run_(c, secs), K.delete(code));
+    hold('KeyW', 2); // carried: a burn moves nothing
+    out.carried = { phase: b.phase, at: local(), vel: v3(c.body.vel) };
+    out.asked = b.key();
+    out.launch = { secs: r3(run_(c, 120, () => b.phase === 'out')), at: local(), vel: v3(c.body.vel), door: r3(c.hostDoors.kOf(b.spec.door)) };
+    hold('KeyW', 3); // about 30 m/s against her: over what flight control will take
+    out.away = { at: local(), vel: v3(c.body.vel), status: b.status() };
+    out.far = b.key(); // too fast: flight control says no
+    hold('KeyX', 30); // all stop
+    out.stopped = { at: local(), speed: r3(c.body.vel.length()) };
+    out.home = b.key();
+    out.recover = { secs: r3(run_(c, 200, () => b.phase === 'berthed')), phase: b.phase, at: local(), door: r3(c.hostDoors.kOf(b.spec.door)) };
+    return out;
+  },
   /** The cutter (ships/cutter/, `?ship=cutter`): a ship with no drums, hangar, fighters, career or routine. Every
    *  walkable room stood in, a push off down the passage into engineering, the helm taken at its couch, a burn, a half turn, all
    *  stop, the turret manned, and a raid from port with her own crew at the guns. */
@@ -377,7 +412,8 @@ const scenarios = {
     P.hit(get('rcs-1'), 70, get('rcs-1').pos.clone());
     P.hit(get('radiator-port'), 55, at('radiator-port', -45, 0.5, 120));
     P.hit(get('turret-dorsal'), 60, get('turret-dorsal').pos.clone());
-    P.hit(get('bay-door'), 50, at('bay-door', -23.5, -3, 33));
+    const door = spots(c).door;
+    P.hit(get('bay-door'), 50, at('bay-door', door.x, -3, (door.z[0] + door.z[1]) / 2));
     P.hub('a', 60);
     const shot = c.ship.hit({ target: 'tanks-aft', from: 'below', pen: 30 });
     c.tick(2, 1 / 30); // two frames: the cluster's damage reaches its thrusters on the next one
@@ -441,20 +477,23 @@ const scenarios = {
     };
     const port = -Math.PI / 2; // nose to starboard: in at her port side
     const out = {};
-    out.bump = shoot([-40, 0, -100], [1, 0, 0], 3, port, 5);
-    out.crash = shoot([-45, 0, -100], [1, 0, 0], 15, port, 3);
-    out.fast = shoot([-200, 0, -100], [1, 0, 0], 150, port, 2);
-    out.glance = shoot([-50, 0, -160], [0.34, 0, 0.94], 30, Math.PI - 0.35, 3);
-    out.bay = shoot([-50, -6, 33], [1, -0.08, 0], 6, port, 14);
+    // Her bow's side, 44 m aft of its tip; the bay between the first two pads; a berth's cradle.
+    const S = spots(c), bz = S.bow + 44, dx = S.door.x;
+    out.bump = shoot([-40, 0, bz], [1, 0, 0], 3, port, 5);
+    out.crash = shoot([-45, 0, bz], [1, 0, 0], 15, port, 3);
+    out.fast = shoot([-200, 0, bz], [1, 0, 0], 150, port, 2);
+    out.glance = shoot([-50, 0, S.bow - 16], [0.34, 0, 0.94], 30, Math.PI - 0.35, 3);
+    out.bay = shoot([dx - 26.5, -6, S.pads], [1, -0.08, 0], 6, port, 14);
+    if (S.berth != null) out.cradle = shoot([dx - 15, -10.6, S.berth], [1, 0, 0], 6, port, 8); // in low through the open door at an empty berth: onto its cradle
     c.doors.setBay(0);
     c.doors.k = 0;
     c.doors.place ? c.doors.place() : c.doors.frame(0); // each side's door shut at once
-    out.door = shoot([-40, -4, 33], [1, 0, 0], 5, port, 6);
+    out.door = shoot([dx - 16.5, -4, S.pads], [1, 0, 0], 5, port, 6);
     c.bayNow();
     c.body.ang.set(0, 0.06, 0);
-    out.swing = shoot([-31, 0, -110], [1, 0, 0], 0.0001, port, 5);
+    out.swing = shoot([-31, 0, bz - 10], [1, 0, 0], 0.0001, port, 5);
     c.body.ang.set(0, 0, 0);
-    out.holed = shoot([-60, 0, -100], [1, 0, 0], 40, port, 2);
+    out.holed = shoot([-60, 0, bz], [1, 0, 0], 40, port, 2);
     out.stats = { ...c.collide.stats, ms: undefined, last: undefined };
     return out;
   },
@@ -535,7 +574,7 @@ const scenarios = {
     const at = () => ({ you: v3(w.pos), vel: v3(w.vel), held: F.held?.h.kind ?? null, gas: r3(F.gas) });
     const hold = (code, secs) => (K.add(code), run_(c, secs), K.delete(code));
     out.holds = [...c.C.decks.values()].reduce((n, I) => n + (I.holds?.length ?? 0), 0);
-    c.place(4, 0, -50, -Math.PI / 2); // the spine, facing starboard
+    c.place(4, 0, spots(c).spine, -Math.PI / 2); // the spine, facing starboard
     run_(c, 0.2);
     out.start = at(); // adrift: nothing taken
     F.reset(); // swim toward the starboard rail
@@ -589,7 +628,11 @@ const scenarios = {
     const w = c.walker, F = w.floater, G = c.G, out = {};
     const shown = () => w.interior.interactables.filter((u) => u.id === 'brace' && !u.hidden()).length;
     const at = () => ({ you: v3(w.pos), vel: v3(w.vel), held: F.held?.h.kind ?? null, strapped: !!F.strapped, hurt: r3(F.hurt) });
-    c.place(4, 0, -50, -Math.PI / 2); // the spine
+    // In the spine. A fixed place, not `spots(c).spine`: a kick's sideways jitter is hashed from where it lands
+    // (weightless.mjs `jolt`), and whether the near hit blacks you out, and the loose one does not, hangs on it.
+    const spineZ = -50, sp = c.C.rooms.get('spine');
+    if (!(spineZ > sp.z[0] + 5 && spineZ < sp.z[1] - 5)) throw new Error('brace: z -50 is no longer in the spine; pick a place where the near hit blacks you out and the loose one does not');
+    c.place(4, 0, spineZ, -Math.PI / 2); // the spine
     run_(c, 0.5);
     out.quiet = { shown: shown(), brace: !!c.guns.brace };
     // Strapped in: a torpedo's kick a few metres away moves you not at all.
@@ -612,7 +655,7 @@ const scenarios = {
     out.unstrapped = at();
     // Holding a rail: a hit 60 m off leaves you holding; one 3 m off tears you away, into the wall hard enough to black
     // you out (the damage control party carries you off: a fade, in real time).
-    c.place(4, 0, -50, -Math.PI / 2);
+    c.place(4, 0, spineZ, -Math.PI / 2);
     c.input.keys.add('KeyW');
     run_(c, 1);
     c.input.keys.delete('KeyW');
@@ -630,7 +673,7 @@ const scenarios = {
     for (let i = 0; i < 30 && G.fading; i++) await wait(100);
     out.carried = c.G.walk.roomNow();
     // Loose in the middle of the spine: thrown into the wall.
-    c.place(4, 0, -50, -Math.PI / 2);
+    c.place(4, 0, spineZ, -Math.PI / 2);
     run_(c, 0.2);
     F.hurt = 0;
     kick(-1.5);
@@ -640,7 +683,7 @@ const scenarios = {
     // Last (it holes the spine): a torpedo from 3 km off her starboard beam at the spine, closing at 900 m/s.
     const calls = [], jolts = [];
     const off = G.C.bus.on('call', (e) => calls.push(e.id)), offJ = G.C.bus.on('jolt', (e) => jolts.push([e.kind, r3(e.at.distanceTo(w.pos))]));
-    c.place(4, 0, -50, -Math.PI / 2);
+    c.place(4, 0, spineZ, -Math.PI / 2);
     run_(c, 0.5);
     const aim = w.pos.clone().setY(w.pos.y + 1.6);
     const from = c.C.frame.localToWorld(aim.clone().add({ x: 3000, y: 0, z: 0 }));
@@ -770,7 +813,8 @@ export async function run(name) {
 
 const PAGES = {
   raid: 'at=bridge', hull: 'at=bridge', helm: 'at=helm', landing: 'at=fighter', repair: 'at=fighter', collide: 'at=fighter', bandits: 'at=fighter', missiles: 'at=fighter', walk: 'at=bridge', float: 'at=bridge', brace: 'at=bridge', career: '',
-  cutter: 'ship=cutter&at=bridge' // another ship's folder (ships/cutter/)
+  cutter: 'ship=cutter&at=bridge', // another ship's folder (ships/cutter/)
+  berth: 'ship=cutter&host=carrier&berth=berth-port&at=helm' // the cutter carried in the carrier's hangar (berth.mjs)
 };
 
 /** Every scenario, each in a fresh page of its own (an iframe), from any page of this site: `{ name: { hash, … } }`.

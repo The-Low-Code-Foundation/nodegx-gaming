@@ -31,6 +31,7 @@ import { nearest, band } from './fighter-damage.mjs';
 import { crewMember, removeCrew } from './crew.mjs';
 import { floatIn, footRestraint } from './floating.mjs';
 import { openCanopy } from '../ships.mjs';
+import { berthSpurs, cradleBox } from './sets/hangar.mjs';
 
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 // Physics scratch.
@@ -235,9 +236,13 @@ export class Repairs {
       const s = Math.sign(f.at[0] - gx) || 1, fx = f.at[0] + 1, b = C.boardAt ?? 4.6;
       return { s, z: f.at[1] - b, x0: gx + s * HW, x1: fx + s * 0.7, fx };
     });
-    const za = c.z[0] + 0.15, zb = Math.max(...this.spurs.map((p) => p.z)) + 2.5;
+    // The berths' spurs (a ramp beside the gangway up to a platform at the berthed ship's port) and their cradles.
+    const B = berthSpurs(C, c, gx, this.gy);
+    const za = c.z[0] + 0.15, zb = Math.max(...this.spurs.map((p) => p.z), ...B.map((q) => q.pz + q.PL)) + 2.5;
     this.boxes = [{ x: [gx - HW, gx + HW], y: [y, top], z: [za, zb] }];
     for (const p of this.spurs) this.boxes.push({ x: [Math.min(p.x0, p.x1), Math.max(p.x0, p.x1) + 0.3], y: [y, top], z: [p.z - SW, p.z + SW] });
+    for (const q of B) this.boxes.push({ x: [Math.min(q.x0, q.x1), Math.max(q.x0, q.x1)], y: [y, q.py + 2.3], z: [q.zr, q.pz + q.PL] });
+    for (const b of C.L.berths ?? []) if (b.box) this.boxes.push(cradleBox(b, y));
   }
 
   /** Pad `i`: its board, on a post at the end of her spur, facing the gangway. */

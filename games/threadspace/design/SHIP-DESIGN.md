@@ -67,7 +67,8 @@ A 1 m solid steel belt instead would weigh about 360,000 t, nearly doubling the 
 
 - Size the drum from the crew, not the other way round. The first 1 g drum (112 m long) held about four times the
   crew; one 22 m ring per half was enough.
-- The crew estimate: command 80, 10 a turret, 3 a torpedo tube, 2 a point defence gun, 9 a fighter, 40 + 20 an
+- The crew estimate: command 80, 10 a turret, 3 a torpedo tube, 2 a point defence gun, 9 a fighter, 27 a berthed
+  medium ship (her two crews, her cradle and deck hands, her maintainers), 40 + 20 an
   engine for engineering, damage control 60, support 62. About 12% are officers. Marines on top.
 - Rooms are about 90 m² (10 m round the ring × 9 m deep). A berth room holds 8 two-bunk cabins with heads and
   showers (16 people); officers get 6 single cabins.
@@ -115,8 +116,9 @@ A 1 m solid steel belt instead would weigh about 360,000 t, nearly doubling the 
 |---|---|
 | Bow, 72 m | Weightless. 6 forward torpedo tubes, a turret top and bottom, 6 point defence guns, 0.5 m armour. |
 | Drum, 2 × 22 m | Fixed 0.5 m armoured sleeve round two counter-rotating halves, inner radius 57.5 m, 8 m ring (2 m water/stores belt, two 3 m decks), 40 rooms round, ring corridor, 6 spokes, 3.7 rpm: 0.97 g outer deck, 0.93 g inner. |
-| Hangar, 119 m | Airless, weightless. 12 fighters, launch doors both sides, 8 broadside tubes a side, 3 turrets top and 3 bottom, 6 point defence guns, crew tunnel with boarding tubes. |
+| Hangar, 145 m | Airless, weightless, 38 m wide and 23 m high inside. 6 fighters (three a side) and berths for 2 medium ships (the cutters: each lies fore and aft on a cradle beside the gangway and is pushed out sideways). One launch door a side, 63 m long and 18 m high: its forward 19 m in front of the fighters' pads, the rest in front of the berth. 8 broadside tubes a side, 3 turrets top and 3 bottom, 6 point defence guns, a crew tunnel over it; you reach it through its airlock. |
 | Stern, 53 m | Weightless. 3 engines (140 MN each), folding radiators, bridge tower, a turret top and bottom, 6 point defence guns. |
 
-288 m long, about 312,000 t, 0.14 g on the main drive; about 612 crew plus 120 marines; 320 rooms, 94 spare.
+314 m long, about 336,000 t, 0.13 g on the main drive; about 612 crew plus 120 marines; 320 rooms, 94 spare.
+(Until November 2026 she was 288 m, with a 119 m hangar for twelve fighters: `design/ROADMAP.md`, phase 11.)
 Guns fire 1,000 kg shells at 5,300 m/s.

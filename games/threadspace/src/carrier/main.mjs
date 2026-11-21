@@ -54,6 +54,9 @@ import { Bus } from '../core/events.mjs';
 import { View } from './render.mjs';
 import { Drive } from './drive.mjs';
 import { Doors } from './doors.mjs';
+import { Berth, standIn } from './berth.mjs';
+import { Berths, berthKey } from './berths.mjs';
+import { setShip, goAboard } from '../core/voyage.mjs';
 import { Collisions } from './collide.mjs';
 import { FighterDamage } from './fighter-damage.mjs';
 import { Repairs } from './fighter-repair.mjs';
@@ -438,6 +441,8 @@ const IDLE = { keys: new Set(), dx: 0, dy: 0, wheel: 0, clicked: false, trigger:
 let last = performance.now(), time = 0, avgDt = 1 / 60, saveT = 15;
 let collide = null; // made once the ship's outside is gathered, at the end of this file
 let host = null; // ?host=<id>: a second ship beside her, made at the end of this file
+let berth = null; // ?berth=<id>: she is carried in that berth of the host's hangar (berth.mjs), made with the host
+let hostDoors = null, hostHangar = null; // the host's bay doors, worked from here, and her hangar deck, drawn round you
 
 function frame() {
   const now = performance.now();
@@ -460,7 +465,12 @@ function tick(dt) {
 
   walk.move(f, dt);
   drive.hold();
-  helm.frame(mode === 'helm' ? f : IDLE, dt, mode === 'helm');
+  // Carried in a berth, her place is her host's to give (berth.mjs): the helm's hands do nothing until the hand-over.
+  if (berth?.carried) {
+    thrusters.allocate(new Array(6).fill(0));
+    berth.frame(dt);
+  } else helm.frame(mode === 'helm' ? f : IDLE, dt, mode === 'helm');
+  hostDoors?.frame(dt);
   drive.standBy(dt, helm, mode === 'helm');
   if (fighter) {
     const padSide = L.fighters[fighter.index]?.side; // she goes out and comes in on her pad's side: that door
@@ -521,6 +531,8 @@ function tick(dt) {
     // The cutaway's planes are on materials both ships share (util.mjs `mat`), and would cut her too: not drawn there.
     host.obj.visible = mode !== 'cutaway';
     drumsFrame(host, dt);
+    // Her hangar is drawn while you are in it or near enough to see in through an open door.
+    if (hostHangar) hostHangar.group.visible = !!berth && (berth.carried || camera.position.distanceToSquared(host.obj.position) < 1500 ** 2);
   }
   // A drum deck is drawn while you walk in it (and only the segments round you: the rest are hidden, and so is whoever
   // stands in them).
@@ -601,7 +613,7 @@ function tick(dt) {
   const inside = mode === 'walk' || mode === 'gun' || bridgeView;
   view.light({ mode, dark: mode === 'walk' && !ship.power, inside, look: mode === 'walk' && roomNow ? lookOf(C.rooms.get(roomNow)) : null });
   space.frame(camera, dt);
-  const lit = [...C.decks.values()].filter((I) => I.group.visible).concat(walk.lit());
+  const lit = [...C.decks.values()].filter((I) => I.group.visible).concat(walk.lit(), hostHangar?.group.visible ? [hostHangar] : []);
   lightPool.update(camera.position, mode === 'cutaway' ? [] : lit);
   routine.light(lightPool, hemi, { mode, room: roomNow }); // night: red lighting in the passages
   gas.setView(camera, renderer.domElement.height);
@@ -722,6 +734,21 @@ C.frame.add(C.exterior);
 if (fighter) collide = new Collisions(C, { fighter, guns, ship, doors, spec: L.fighter.collide });
 window.__carrier.collide = collide;
 
+// The ships she carries, on their cradles in her hangar (berths.mjs): E at one's docking port takes you aboard her.
+// `?at=berth:<id>` is how you arrive from one: by her port, on the platform at the end of her spur, suited.
+const berths = (G.berths = L.berths?.length ? await new Berths(G, SHIP_ID, { code: q.get('hull') === 'code' }).build() : null);
+window.__carrier.berths = berths;
+if (q.get('at')?.startsWith('berth:')) {
+  const a = berths?.arrival(q.get('at').slice(6));
+  if (a) {
+    walk.goDeck(a.deck, a.x, a.z, a.yaw);
+    if (a.y !== undefined) walker.pos.y = a.y;
+    walker.floater?.reset?.();
+    ship.don();
+    career.free();
+  }
+}
+
 // ?host=<id>: a second ship beside her (a debug flag: the proof that `buildCarrier` builds two layouts in one page).
 // Built with no hooks and no systems, standing in the world 400 m off the port beam where she starts, and drawn from
 // outside only: her hull and outside fittings, her drums as seen through the sleeve's ends (turning), her decks,
@@ -740,6 +767,35 @@ if (HOST_ID) {
   H.obj.quaternion.copy(C.obj.quaternion);
   world.add(H.obj);
   window.__carrier.host = H;
+  // ?berth=<id>: she starts carried in that berth of the host's hangar (berth.mjs), the hangar drawn round her and the
+  // host's bay doors worked from here. `?berth=1` takes the first berth; a host with a hangar but no `berths` in her
+  // layout gets a stand-in.
+  const want = q.get('berth');
+  const spec = want && (HL.berths?.find((b) => b.id === want) ?? HL.berths?.[0] ?? standIn(HL, L));
+  if (spec) {
+    hostHangar = H.decks.get(H.rooms.get('hangar').deck);
+    hostHangar.group.visible = true;
+    hostDoors = new Doors(H);
+    berth = G.berth = new Berth({
+      C, body, H, hostDoors, spec,
+      say: (t, secs) => helmSight.say(t, secs),
+      // Where she is, for the next page: in her berth, or out.
+      onChange: (phase) => (phase === 'berthed' ? setShip(berthKey(HOST_ID, spec.id), { ship: SHIP_ID }) : phase === 'out' ? setShip(berthKey(HOST_ID, spec.id), { ship: SHIP_ID, out: true }) : null)
+    });
+    helm.ref = berth.hostVel; // speeds at the helm are against her mothership
+    KEYS.helm = KEYS.helm.replace(' · <b>view</b> V', ' · <b>launch / come aboard</b> L · <b>view</b> V');
+    // Her docking port (the layout's `dock`): on the cradle, it is the way back aboard the host.
+    const dk = L.dock, lock = dk && C.rooms.get(dk.room);
+    if (lock) {
+      const u = C.decks.get(lock.deck).use('dock', '', dk.at[0] - (dk.out?.[0] ?? 0) * 0.6, dk.at[2], () => {
+        if (berth.phase !== 'berthed') return dc.say(null, 'The docking port stays shut: she is not on her cradle.', 0, 3);
+        fadeThen(() => goAboard(HOST_ID, { at: `berth:${spec.id}` }));
+      }, { r: 1.8 });
+      Object.defineProperty(u, 'label', { get: () => (berth.phase === 'berthed' ? `Go aboard the ${HL.name?.toLowerCase().includes('carrier') ? 'carrier' : HL.name}` : 'Docking port: shut') });
+    }
+    window.__carrier.berth = berth;
+    window.__carrier.hostDoors = hostDoors;
+  }
 }
 
 // ?hold=1: no frames until a script steps them with `__carrier.tick()` (tools/carrier-check.mjs).

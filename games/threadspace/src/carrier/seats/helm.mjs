@@ -27,6 +27,7 @@ export class HelmSeat {
     else if (code === 'KeyV') this.outlook = this.outlook === 'bridge' ? 'chase' : 'bridge';
     else if (code === 'KeyG') helmSight.say(plant.toggleRadiators());
     else if (code === 'KeyN') helmSight.toggleNav();
+    else if (code === 'KeyL') this.G.berth?.key(); // carried in a berth, or out from one (berth.mjs)
     else if (code === 'KeyQ' && guns.railSides && !this.G.fading) {
       // The broadside railgun on the side facing the raider (weapons.mjs `railFire`).
       const why = guns.railFire();
@@ -51,7 +52,7 @@ export class HelmSeat {
   frame(dt, drive) {
     const { L, C, camera, hud, helm, ship, plant } = this.G;
     const hurt = (ship.power ? '' : ' · emergency power') + (ship.driveFactor < 0.99 ? ` · main drive ${Math.round(ship.driveFactor * 100)}%` : '') + (plant.hot ? ' · HEAT: drive held back' : plant.prop <= 0 ? ' · no reaction mass' : '');
-    hud.where(`At the helm · ${this.outlook === 'bridge' ? (L.helm.room ? 'view from the seat' : 'bridge view') : 'outside view'}${hurt}`);
+    hud.where(`At the helm · ${this.outlook === 'bridge' ? (L.helm.room ? 'view from the seat' : 'bridge view') : 'outside view'}${this.G.berth?.status() ? ` · ${this.G.berth.status()}` : ''}${hurt}`);
     hud.use(null);
     hud.helm(helm);
     if (this.outlook === 'bridge') {

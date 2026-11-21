@@ -12,6 +12,11 @@
 // - the ship's folder (ships/carrier/): every file `index.json` names exists and holds exactly the entries it lists;
 // - every room the layout names (crew posts, floor lines, switchboards, kit racks, magazines, tanks, the drone bay,
 //   railgun rooms, turret barbettes) is a compartment, a drum room or a drum's ring corridor;
+// - the berths (`berths`, a carrier's hangar): each one's ship has a folder with an `envelope` and a `dock`; her
+//   envelope, placed at the berth's `at` and `yaw`, is inside the hangar with `BERTH.clear` metres to its walls, floor
+//   and deckhead, to the gangway down the middle, to the other berths and to the fighter pads and their launch runs;
+//   the bay door on her side opens at least `BERTH.door` (long, high) in front of her and she goes under its head;
+//   her docking port faces the gangway and `port`, `sill`, `skin` and `box` are where her own layout puts them;
 // - the career (career.json): each step's `do` is a kind career.mjs runs, its `who` is an officer, its rooms exist,
 //   a drill's `kind` is a damage control job, `unlock` and `refuse` name things the game unlocks, each rank's action
 //   station names a room or a seat and an officer;
@@ -50,6 +55,9 @@ const UNLOCKS = ['guns', 'raids', 'fighters', 'helm'];
 const SEATS = ['gun', 'fighter', 'helm'];
 const DEPTS = ['command', 'flight', 'engineering', 'crew'];
 const POSES = ['idle', 'walk', 'sitChair', 'workTable', 'talk', 'lookAround'];
+// A berthed ship's room: metres clear all round her, the bay door's clear opening in front of her [long, high], and the
+// half-width of the gangway down the hangar's middle (sets/hangar.mjs `gangway`).
+const BERTH = { clear: 3, door: [44, 11], gangway: 0.8 };
 
 /** Checks the ship in `ships/<ship>`. Returns { problems, notes, counts }. */
 export async function check({ root = ROOT, ship = 'carrier' } = {}) {
@@ -122,6 +130,54 @@ export async function check({ root = ROOT, ship = 'carrier' } = {}) {
     if (s.dept && !DEPTS.includes(s.dept)) problems.push(`stations[${i}] has dept "${s.dept}" (one of ${DEPTS.join(', ')})`);
   }
   for (const t of W8.turrets ?? []) if (!(L.mounts ?? []).some((m) => m.id === t.mount)) problems.push(`turret ${t.mount} has no mount`);
+
+  // ---- the berths ----
+  for (const [i, b] of (L.berths ?? []).entries()) {
+    const at = `berths[${i}] (${b.id})`, e = 0.011;
+    const hg = L.compartments.find((c) => (c.bayDoors ?? []).some((d) => d.side === b.door));
+    if (!hg) { problems.push(`${at}: no hangar has a bay door on side "${b.door}"`); continue; }
+    if (!existsSync(path(`ships/${b.ship}/index.json`))) { problems.push(`${at}: its ship "${b.ship}" has no folder ships/${b.ship}/`); continue; }
+    const S = await loadLayout(path(`ships/${b.ship}`), read);
+    if (!S.envelope || !S.dock) { problems.push(`${at}: ships/${b.ship} has no envelope or dock`); continue; }
+    if (![0, Math.PI].some((y) => Math.abs(b.yaw - y) < 1e-3)) { problems.push(`${at}: yaw ${b.yaw} (0, bow forward, or π, bow aft)`); continue; }
+    const f = b.yaw ? -1 : 1, E = S.envelope, K = S.dock;
+    const span = (k) => [b.at[k] + (k === 1 ? 1 : f) * E.min[k], b.at[k] + (k === 1 ? 1 : f) * E.max[k]].sort((p, q) => p - q);
+    const [bx, by, bz] = [span(0), span(1), span(2)];
+    const floor = L.decks.find((d) => d.id === hg.deck).floor, head = floor + (hg.h ?? 3);
+    const short = (what, d) => { if (d < BERTH.clear - e) problems.push(`${at}: ${Math.round(d * 100) / 100} m to ${what} (${BERTH.clear} m clear wanted)`); };
+    short('the hangar\'s port wall', bx[0] - hg.x[0]); short('the hangar\'s starboard wall', hg.x[1] - bx[1]);
+    short('the hangar\'s forward bulkhead', bz[0] - hg.z[0]); short('the hangar\'s after bulkhead', hg.z[1] - bz[1]);
+    short('the hangar floor', by[0] - floor); short('the deckhead', head - by[1]);
+    // the gangway, from the airlock's door down the middle
+    const lock = L.doors.find((d) => d.between.includes(hg.id) && d.between.some((id) => rooms.get(id)?.airlock));
+    const gx = lock?.at ?? 0;
+    short('the gangway', Math.min(Math.abs(bx[0] - gx), Math.abs(bx[1] - gx)) - BERTH.gangway);
+    if (bx[0] < gx && bx[1] > gx) problems.push(`${at}: she lies across the gangway`);
+    // the fighters on her side and their runs out of the door (a strip as wide as a fighter, from the pad to the wall)
+    const fw = (L.fighter?.size?.[0] ?? 3.6) / 2;
+    for (const [k, p] of (L.fighters ?? []).entries()) {
+      if (Math.sign(p.at[0] - gx) !== Math.sign(b.at[0] - gx)) continue;
+      short(`fighter pad ${k + 1} and its launch run`, Math.max(bz[0] - (p.at[1] + fw), p.at[1] - fw - bz[1]));
+    }
+    for (const o of (L.berths ?? []).filter((o) => o !== b && o.box)) short(`${o.id}`, Math.max(bx[0] - o.box.x[1], o.box.x[0] - bx[1], bz[0] - o.box.z[1], o.box.z[0] - bz[1]));
+    // her bay door: a clear opening in front of her, and her way out through it
+    const d = hg.bayDoors.find((d) => d.side === b.door), mid = (bz[0] + bz[1]) / 2;
+    if ((b.out < 0) !== (b.door === 'w')) problems.push(`${at}: out ${b.out} is not the side of door "${b.door}"`);
+    if (Math.sign(b.at[0] - gx) !== Math.sign(b.out)) problems.push(`${at}: she is not on the side of the gangway she leaves by`);
+    if (d.from > mid - BERTH.door[0] / 2 + e || d.to < mid + BERTH.door[0] / 2 - e) problems.push(`${at}: the bay door (z ${d.from} to ${d.to}) is not open ${BERTH.door[0]} m in front of her (z ${mid - BERTH.door[0] / 2} to ${mid + BERTH.door[0] / 2})`);
+    if (d.height < BERTH.door[1]) problems.push(`${at}: the bay door is ${d.height} m high (${BERTH.door[1]} wanted)`);
+    if (by[1] > floor + d.height - 1) problems.push(`${at}: she stands ${by[1] - floor} m high, the door ${d.height}`);
+    // her docking port: toward the gangway, and where her own layout puts it
+    const port = [b.at[0] + f * K.at[0], b.at[1] + K.at[1], b.at[2] + f * K.at[2]];
+    if ((b.port ?? []).length !== 3 || port.some((v, k) => Math.abs(v - b.port[k]) > e)) problems.push(`${at}: port [${b.port}] is not her docking port's place [${port.map((v) => Math.round(v * 1000) / 1000)}]`);
+    if (Math.abs(port[0] - gx) > Math.abs(b.at[0] - gx)) problems.push(`${at}: her docking port faces away from the gangway`);
+    if (b.sill != null && Math.abs(b.sill - (port[1] - K.h / 2)) > e) problems.push(`${at}: sill ${b.sill} is not her port's sill`);
+    if (b.skin != null && Math.abs(b.skin - (b.at[0] + f * K.skin)) > e) problems.push(`${at}: skin ${b.skin} is not her skin at the port`);
+    if (b.box && [bx, by, bz].some((r, k) => r.some((v, j) => Math.abs(v - b.box['xyz'[k]][j]) > e))) problems.push(`${at}: box is not her envelope in the berth`);
+    const hw = Math.max(...L.hull.main.filter((q) => q.z >= bz[0] - 20 && q.z <= bz[1] + 20).map((q) => q.w), 0) / 2;
+    if (!(b.clear >= hw + Math.max(-E.min[0], E.max[0]))) problems.push(`${at}: clear ${b.clear} is not clear of the hull (${hw} m half-width) by her half-beam`);
+  }
+  counts.berths = L.berths?.length ?? 0;
 
   // ---- the career ----
   const officers = new Set((K.people ?? []).map((p) => p.id));
@@ -272,7 +328,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   const ship = process.argv.slice(2).find((a) => !a.startsWith('--')) ?? 'carrier';
   const { problems, notes, counts } = await check({ ship });
   if (!quiet) {
-    console.log(`Checked ships/${ship}: ${counts.rooms} rooms, ${counts.steps} career steps, ${counts.people} people, ${counts.calls ?? 0} announcements, ${counts.clips ?? 0} recorded clips.`);
+    console.log(`Checked ships/${ship}: ${counts.rooms} rooms, ${counts.berths ? `${counts.berths} berths, ` : ''}${counts.steps} career steps, ${counts.people} people, ${counts.calls ?? 0} announcements, ${counts.clips ?? 0} recorded clips.`);
     for (const n of notes) console.log(`  note: ${n}`);
   }
   if (problems.length) {

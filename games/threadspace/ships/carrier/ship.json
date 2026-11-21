@@ -2,20 +2,20 @@
  "about": "The spin-drum carrier as data, built by tools/carrier-v2.mjs from design/carrier-v2.design.json (see design/SHIP-DESIGN.md and design/CARRIER-REBUILD.md). Metres, the ship's frame (x starboard, y up, -z the bow), the ship's axis at x = 0, y = 0. `compartments` are the fixed, weightless hull (grip shoes; down is -y); `drum` holds the spinning rooms, each in its own segment's frame. Do not edit by hand: change the design or the generator and run it again. The first carrier is archived in archive/carrier-v1/.",
  "name": "Twin-drum carrier",
  "version": 2,
- "length": 288,
- "mass": 311547604,
+ "length": 314,
+ "mass": 335545254,
  "com": [
   0,
   0,
-  -2.4
+  -3.9
  ],
  "sections": [
   {
    "id": "bow",
    "type": "bow",
    "z": [
-    -144,
-    -72
+    -157,
+    -85
    ],
    "w": 49,
    "h": 26,
@@ -25,8 +25,8 @@
    "id": "drum-a",
    "type": "drum",
    "z": [
-    -72,
-    -50
+    -85,
+    -63
    ],
    "w": 136,
    "h": 136,
@@ -36,8 +36,8 @@
    "id": "drum-b",
    "type": "drum",
    "z": [
-    -50,
-    -28
+    -63,
+    -41
    ],
    "w": 136,
    "h": 136,
@@ -47,19 +47,19 @@
    "id": "hangar",
    "type": "hangar",
    "z": [
-    -28,
-    91
+    -41,
+    104
    ],
-   "w": 47,
+   "w": 50,
    "h": 36,
-   "mass": 92839850
+   "mass": 116837500
   },
   {
    "id": "stern",
    "type": "stern",
    "z": [
-    91,
-    144
+    104,
+    157
    ],
    "w": 50,
    "h": 36,
@@ -69,57 +69,57 @@
  "hull": {
   "main": [
    {
-    "z": -144,
+    "z": -157,
     "w": 29.4,
     "h": 15.6,
     "y": 0
    },
    {
-    "z": -111.6,
+    "z": -124.6,
     "w": 45.1,
     "h": 23.9,
     "y": 0
    },
    {
-    "z": -72.3,
+    "z": -85.3,
     "w": 49,
     "h": 26,
     "y": 0
    },
    {
-    "z": -72,
+    "z": -85,
     "w": 136,
     "h": 136,
     "y": 0,
     "c": 0.586
    },
    {
-    "z": -28,
+    "z": -41,
     "w": 136,
     "h": 136,
     "y": 0,
     "c": 0.586
    },
    {
-    "z": -27.7,
-    "w": 47,
-    "h": 36,
-    "y": 0
-   },
-   {
-    "z": 90.7,
-    "w": 47,
-    "h": 36,
-    "y": 0
-   },
-   {
-    "z": 91,
+    "z": -40.7,
     "w": 50,
     "h": 36,
     "y": 0
    },
    {
-    "z": 144,
+    "z": 103.7,
+    "w": 50,
+    "h": 36,
+    "y": 0
+   },
+   {
+    "z": 104,
+    "w": 50,
+    "h": 36,
+    "y": 0
+   },
+   {
+    "z": 157,
     "w": 50,
     "h": 36,
     "y": 0
@@ -127,35 +127,35 @@
   ],
   "island": [
    {
-    "z": 96,
+    "z": 109,
     "w": 16,
     "h": 6,
     "y": 20,
     "c": 0.2
    },
    {
-    "z": 103.8,
+    "z": 116.8,
     "w": 24,
     "h": 8,
     "y": 21,
     "c": 0.2
    },
    {
-    "z": 104,
+    "z": 117,
     "w": 24,
     "h": 16,
     "y": 25,
     "c": 0.2
    },
    {
-    "z": 126,
+    "z": 139,
     "w": 24,
     "h": 16,
     "y": 25,
     "c": 0.2
    },
    {
-    "z": 134,
+    "z": 147,
     "w": 14,
     "h": 8,
     "y": 22,
@@ -166,19 +166,19 @@
  "helm": {
   "at": [
    0,
-   107
+   120
   ],
   "eye": [
    0,
    27.75,
-   107.2
+   120.2
   ]
  },
  "spawn": {
   "deck": 2,
   "at": [
    0,
-   93
+   106
   ],
   "yaw": 0
  },
@@ -188,7 +188,7 @@
     "at": [
      0,
      -11,
-     144
+     157
     ],
     "r": 6,
     "force": 140000000
@@ -197,7 +197,7 @@
     "at": [
      9.5,
      2.5,
-     144
+     157
     ],
     "r": 6,
     "force": 140000000
@@ -206,68 +206,68 @@
     "at": [
      -9.5,
      2.5,
-     144
+     157
     ],
     "r": 6,
     "force": 140000000
    }
   ],
-  "rcsForce": 23400000,
+  "rcsForce": 25200000,
   "rcs": [
    {
     "at": [
      -19,
      8,
-     -118
+     -131
     ]
    },
    {
     "at": [
      -23,
      15,
-     136
+     149
     ]
    },
    {
     "at": [
      19,
      8,
-     -118
+     -131
     ]
    },
    {
     "at": [
      23,
      15,
-     136
+     149
     ]
    },
    {
     "at": [
      -19,
      -8,
-     -118
+     -131
     ]
    },
    {
     "at": [
      -23,
      -15,
-     136
+     149
     ]
    },
    {
     "at": [
      19,
      -8,
-     -118
+     -131
     ]
    },
    {
     "at": [
      23,
      -15,
-     136
+     149
     ]
    }
   ]

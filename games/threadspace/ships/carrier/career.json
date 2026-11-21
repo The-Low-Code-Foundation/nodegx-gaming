@@ -12,7 +12,7 @@
     "room": "tunnel",
     "at": [
       0,
-      -6
+      -19
     ],
     "yaw": 0,
     "say": "The afternoon shuttle has docked under the hangar roof, and you have come up her boarding tube into the crew tunnel. You are the newest, most junior hand aboard. Report to the coxswain in the ship's office, in the after drum, on the inner deck: follow the purple Drums line to the spine, catch the hub ring at the hatch in the spine, then take a lift down."
@@ -21,7 +21,7 @@
     "room": "quarters-c",
     "at": [
       1.2,
-      -69.2
+      -82.2
     ],
     "yaw": 0,
     "say": "You wake in your bunk in quarters C. Your orders stand."
@@ -32,7 +32,7 @@
       "room": "ship-office",
       "at": [
         1.3,
-        -42.1
+        -55.1
       ],
       "yaw": 3.1416,
       "pose": "idle"
@@ -42,7 +42,7 @@
       "room": "damage-control",
       "at": [
         -4.5,
-        114.5
+        127.5
       ],
       "yaw": 3.1416,
       "pose": "lookAround"
@@ -52,7 +52,7 @@
       "room": "dorsal-access",
       "at": [
         6,
-        -94
+        -107
       ],
       "yaw": 1.5708,
       "pose": "idle"
@@ -62,7 +62,7 @@
       "room": "pilots-ready",
       "at": [
         8.5,
-        -18
+        -31
       ],
       "yaw": 1.5708,
       "pose": "idle"
@@ -72,7 +72,7 @@
       "room": "bridge",
       "at": [
         2.6,
-        114.5
+        127.5
       ],
       "yaw": 0,
       "pose": "lookAround"

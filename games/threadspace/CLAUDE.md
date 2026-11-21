@@ -171,6 +171,83 @@ only ±1.9 m long (`z`), so neither her collider nor the next one's reaches the 
 suits, weightless; the ones at work stand in foot restraints (`footRestraint()`, floating.mjs). The archived first carrier's layout has none of them. (The boarding tubes from the crew tunnel down
 to the fighters were taken out in phase 5: the hangar is reached through its airlock.)
 
+## Where the game is going (read first)
+
+`design/ROADMAP.md`, section **"The new course (21 November 2026)"**, is the plan: the carrier is home port, the
+player serves on a medium ship she carries (the **cutter**), and the first game's threads, pirates and boarding come
+over onto this engine. It lists phases 10 to 16, what is built, and a lift-or-rewrite table for the first game's code.
+New work goes there, not into the first game (`index.html`, `game.mjs`), which is kept only until phase 15 has taken
+what it needs.
+
+## Any ship, and going between ships
+
+The engine under `src/carrier/` runs **the ship you are aboard**, whichever she is (the folder and `carrier.html` keep
+their names for now):
+
+- `carrier.html?ship=<id>` builds `ships/<id>/` (default `carrier`), her hull from `assets/<id>/hull.glb` if it is
+  there (the code-lofted hull from `hull.main` if not). `main.mjs` works out `HAS` (drums, fighters, broadside,
+  railguns, spinal, career, routine) from the layout and the folder, and makes each system by that, never by the
+  ship's name. `__carrier.HAS` and `__carrier.ship_id` show it.
+- **A ship folder may leave out**: the files `career.json`, `watches.json`, `voices.json` (she is then free roam, with
+  a plain clock, `watch.mjs` `NoRoutine`, and subtitles only); the layout entries `drum`, `fighters` / `fighter`,
+  `hull.island`, `integrity.parts`, bay doors; and in `weapons`: `broadside`, `railgun`, `flak`, `bandit`, `missile`,
+  `flares`, `heat`.
+- **Layout entries a small ship uses**: `helm.room` (the room the helm is in; the carrier's is `bridge`), `couches`,
+  `dock` (her docking and boarding port: room, side, door centre, the skin's x), `envelope` (her outside with radiators
+  folded: what a berth must clear), `class`, `thrusters.rcsScale`, `scale` on a turret or pdc mount, `fold: true` on a
+  radiator mount.
+- **Room ids are global set keys** (`sets.mjs`): a small ship must not call a room `bridge`, `mess`, `galley`, `cic`,
+  `medbay`, `eng-control` or `quarters-a/b/c`, or it gets the carrier-sized set. The cutter's sets are in
+  `sets/cutter.mjs`, for `flight-deck`, `crew-space`, `mess-nook`, `eng-room`.
+- **Damage jobs on a small ship**: give `damage.kinds.*.rooms` as explicit lists; the rules that pick "a room over
+  30 m²" or "a passage over 14 m" find nothing on her.
+- **The cutter** is written by `node tools/cutter.mjs` (`--check` writes nothing) into `ships/cutter/`: 34 m hull,
+  10 m beam, 420 t (120 t of it reaction mass), one 4.2 MN drive (about 1 g), eight jet clusters (a half turn in about
+  9 s), eight weightless rooms on one deck, a dorsal turret, two close-in guns, four forward tubes, two folding
+  radiators, a docking port to starboard, three crew stations. Her weapons, integrity, plant and damage numbers are
+  the carrier's scaled down, not balanced. Do not edit `ships/cutter/` by hand. `node tools/check.mjs cutter` checks
+  her; `node tools/check.mjs` the carrier.
+- **A second ship in the page**: `?host=<id>` builds another layout with `buildCarrier` (no hooks, no systems) and puts
+  it in the `world` group, seen from outside (`__carrier.host`). What a host does not have: point defence guns (those
+  meshes are made by `Weapons`), a plant (so `HEAT_GLOW` is the one ship's), a place in the cutaway (the cutaway's
+  planes sit on materials both ships share, so the host is hidden there).
+- **Carried in a berth** (`src/carrier/berth.mjs`, `?ship=cutter&host=carrier&berth=<berth id or 1>`): she starts on a
+  cradle in the host's hangar, the hangar deck drawn round her and the host's bay doors worked from this page
+  (`hostDoors`, a `Doors` on the host). While `berth.carried`, `tick` gives her place from the berth and the helm's
+  hands do nothing. **L at the helm** launches (door up, the cradle pushes her out sideways to the berth's `clear`,
+  then a hand-over with the velocity she really has) and, out, asks flight control to bring her in (inside 900 m of
+  the gate off her door and under 20 m/s against the host). The helm's speeds are against the host (`helm.ref`). The
+  berth is the host layout's `berths` entry; a host with a hangar but none gets `standIn()`. `__carrier.berth`
+  (`phase`, `key()`, `status()`).
+- **The voyage** (`src/core/voyage.mjs`, localStorage `threadspace.voyage`): what survives a change of ship: which ship
+  you are aboard and where each carried ship is. `goAboard(id, params)` loads the other ship's page; the cutter's
+  docking port (E, on the cradle) uses it to go back aboard the carrier. The career's save is still its own key.
+- **Not built yet** (ROADMAP phases 12 and 13): flying her in yourself; the cutter and the carrier as solids to each
+  other; the host under way; her own career, crew voices and Blender hull.
+
+- **The carrier's berths** (`berths` in her layout, written by `tools/carrier-v2.mjs` from the cutter's own folder and
+  checked by `tools/check.mjs`: 3 m clear all round, a 44 × 11 m door): `{ id, ship, side, door, at, yaw, out, port,
+  sill, skin, box, clear }`. `at` is where the carried ship's layout origin sits, `port` her docking port's door
+  centre, `box` her envelope, all in the carrier's frame. `src/carrier/berths.mjs` builds each berthed ship on her
+  cradle (no systems, decks hidden, solid to you by her envelope) and puts **E, "Go aboard the cutter"**, at her port;
+  `carrier.html?at=berth:<id>` is how you arrive from her, suited, on her platform. `sets/hangar.mjs` has the cradles
+  (`cradle()`, `cradleBox()`) and the ramps and platforms (`berthSpurs()`); a cradle is solid to a flown fighter
+  (`collide.mjs`), a berthed cutter is not yet.
+
+**The scripted checks' baselines** (seed 7, 21 November 2026, the 314 m carrier): raid ad2a8406, hull 20ef1760, helm
+4b766a23, landing 53faa5da, repair 5b8b23e6, collide 506e36d0, bandits 6de728ae, missiles 39d01e76, walk 574e4238,
+float 2eb50df7, brace b68467c9, career d747c09c, cutter d9a0b315, berth 52032305. A change that should not change how
+a ship behaves must leave every one as it is. `cutter` plays her rooms, the helm, a burn and a half turn, the turret,
+the cutaway and a raid; `berth` plays the launch from the carrier's hangar, a refusal when too fast, and the recovery.
+Run `walk` with nothing else loading the machine (it waits in real time); `brace` is pinned at z −50 in the spine. The
+scripts find their places from the layout (`spots(c)`), so they follow the ship when she is regenerated.
+
+**The carrier now** (older paragraphs below may still give the 288 m ship's numbers): 314 m, 335,545 t, main drive
+0.13 g; hangar 38 × 23 × 117 m inside with one bay door a side, 63 × 18 m; six fighters (pads 0 to 2 port, 3 to 5
+starboard) and two berths; five rooms over the berths on the tunnel deck (`boat-crews`, `boat-stores`, `boat-ops`,
+`boat-gear`, `boat-shop`). `cutaway.mjs` and `seats/helm.mjs` scale camera distances by `L.length / 288`: 288 is the
+reference size, not her length.
+
 ## The carrier prototype (`carrier.html`)
 
 This page is separate from the main game: it imports `interiors.mjs`, `ships.mjs`, `walk.mjs`, `space.mjs`,

@@ -349,9 +349,9 @@ const TYPES = {
     def: { L: 80, inner: 22, depth: 6, decks: 1, belt: 0, beltKind: 'tanks', sides: 12, corridor: 3, spokes: 4, rings: 3, rpm: 4, dir: 1, sleeve: false, armour: 0, gunsTop: 0, gunsBottom: 0 } },
   hangar: { label: 'Hangar', tag: 'zero-g · vacuum', color: '--t-hangar', params: [
     N('L', 'Length', 30, 200, 1, 'm'), N('w', 'Width', 20, 110, 1, 'm'), N('h', 'Height', 12, 70, 1, 'm'),
-    N('fighters', 'Fighters', 0, 30, 1), S('doors', 'Launch doors', [['both', 'Port and starboard'], ['port', 'Port'], ['stbd', 'Starboard'], ['none', 'None']]),
+    N('fighters', 'Fighters', 0, 30, 1), N('berths', 'Medium-ship berths', 0, 4, 1), S('doors', 'Launch doors', [['both', 'Port and starboard'], ['port', 'Port'], ['stbd', 'Starboard'], ['none', 'None']]),
     N('tubesSide', 'Broadside tubes a side', 0, 10, 1), B('tunnel', 'Pressurised crew tunnel'), ...GUNS, N('pdc', 'Point defence guns', 0, 8, 1), ARMOUR ],
-    def: { L: 90, w: 60, h: 34, fighters: 10, doors: 'both', tubesSide: 3, tunnel: true, gunsTop: 1, gunsBottom: 1, pdc: 2, armour: 0.2 } },
+    def: { L: 90, w: 60, h: 34, fighters: 10, berths: 0, doors: 'both', tubesSide: 3, tunnel: true, gunsTop: 1, gunsBottom: 1, pdc: 2, armour: 0.2 } },
   arms: { label: 'Spin arms', tag: 'gravity · reel in', color: '--t-arms', spun: true, params: [
     N('L', 'Hub length', 10, 100, 1, 'm'), N('count', 'Arms', 2, 8, 1), N('reach', 'Reach to floor', 20, 250, 1, 'm'),
     N('podL', 'Pod length', 8, 80, 1, 'm'), N('podW', 'Pod width', 6, 40, 1, 'm'), N('depth', 'Pod height', 3, 14, 0.5, 'm'),
@@ -378,9 +378,9 @@ const PRESETS = [
       { type: 'bow', L: 72, w: 49, h: 26, taper: 0.6, tubes: 6, spinal: false, gunsTop: 1, gunsBottom: 1, pdc: 6, armour: 0.5 },
       { ...DREAM_DRUM, dir: 1 },
       { ...DREAM_DRUM, dir: -1 },
-      { type: 'hangar', L: 119, w: 47, h: 36, fighters: 12, doors: 'both', tubesSide: 8, tunnel: true, gunsTop: 3, gunsBottom: 3, pdc: 6, armour: 0.5 },
+      { type: 'hangar', L: 145, w: 50, h: 36, fighters: 6, berths: 2, doors: 'both', tubesSide: 8, tunnel: true, gunsTop: 3, gunsBottom: 3, pdc: 6, armour: 0.5 },
       { type: 'stern', L: 53, w: 50, h: 36, engines: 3, radSpan: 35, radLen: 48, bridge: 'tower', gunsTop: 1, gunsBottom: 1, pdc: 6, armour: 0.5 } ],
-    notes: 'The chosen carrier. Bow with torpedoes and point defence, an armoured sleeve round the spin drum, a long vacuum hangar with six turrets and sixteen broadside tubes, and a short stern with the bridge tower.\n\nThe drum is now two halves inside the one sleeve, spinning opposite ways. One drum this big would act as a gyroscope the RCS could barely turn. The pair cancels out and looks the same from outside.\n\nRooms: 40 round each ring, about 10 m wide, so floors lean only 4.5° at the edges. Each half is one 22 m ring: 80 rooms of about 10 × 20 m on two decks, 160 in all. That holds the ~730 aboard with about a third spare for growth, passengers or evacuees. Shortening the drum from 112 m to 44 m took about 180,000 t off the ship.\n\nGetting about: each ring has a 3 m corridor right round it on both decks, with rooms fore and aft, so nobody walks through rooms. Six spokes per ring each carry two lifts and a ladder tube, from a hub ring that turns round the fixed spine corridor. You catch the hub ring at walking pace, ride about 45 s down 55 m, and get heavier the whole way. The spine runs bow to stern through a pressurised tunnel along the top of the airless hangar, with boarding tubes down to the fighters. Most action stations are in the weightless hull, so at general quarters the drum empties up the spokes in about 4 to 5 minutes.\n\nOutside in, the 8 m ring is: a 2 m belt of water tanks and stores, then two 3 m decks of rooms (0.97 g and 0.92 g). A shell has to get through the 0.5 m steel sleeve, a 2.5 m gap and the belt before it reaches anyone. Battleships protected their sides the same way, with alternating empty and liquid-filled layers in front of the main armour. The water also shields the crew from radiation, and pumping it between tanks keeps the drum balanced after damage. Solid steel instead would be stronger, but a 1 m steel belt weighs about 360,000 t. Each room is about the size of today\'s mess or gym. Lifts run up the spokes to the corridor at 6 points round each ring. Messes, the sick bay and ops sit beside the lifts, with berths in the quieter stretches between. The combat CIC stays in the fixed, armoured hull; the drum has planning and briefing rooms.' },
+    notes: 'The chosen carrier. Bow with torpedoes and point defence, an armoured sleeve round the spin drum, a long vacuum hangar with six fighters, berths for two medium ships, six turrets and sixteen broadside tubes, and a short stern with the bridge tower.\n\nThe drum is now two halves inside the one sleeve, spinning opposite ways. One drum this big would act as a gyroscope the RCS could barely turn. The pair cancels out and looks the same from outside.\n\nRooms: 40 round each ring, about 10 m wide, so floors lean only 4.5° at the edges. Each half is one 22 m ring: 80 rooms of about 10 × 20 m on two decks, 160 in all. That holds the ~730 aboard with about a third spare for growth, passengers or evacuees. Shortening the drum from 112 m to 44 m took about 180,000 t off the ship.\n\nGetting about: each ring has a 3 m corridor right round it on both decks, with rooms fore and aft, so nobody walks through rooms. Six spokes per ring each carry two lifts and a ladder tube, from a hub ring that turns round the fixed spine corridor. You catch the hub ring at walking pace, ride about 45 s down 55 m, and get heavier the whole way. The spine runs bow to stern through a pressurised tunnel along the top of the airless hangar, with boarding tubes down to the fighters. Most action stations are in the weightless hull, so at general quarters the drum empties up the spokes in about 4 to 5 minutes.\n\nOutside in, the 8 m ring is: a 2 m belt of water tanks and stores, then two 3 m decks of rooms (0.97 g and 0.92 g). A shell has to get through the 0.5 m steel sleeve, a 2.5 m gap and the belt before it reaches anyone. Battleships protected their sides the same way, with alternating empty and liquid-filled layers in front of the main armour. The water also shields the crew from radiation, and pumping it between tanks keeps the drum balanced after damage. Solid steel instead would be stronger, but a 1 m steel belt weighs about 360,000 t. Each room is about the size of today\'s mess or gym. Lifts run up the spokes to the corridor at 6 points round each ring. Messes, the sick bay and ops sit beside the lifts, with berths in the quieter stretches between. The combat CIC stays in the fixed, armoured hull; the drum has planning and briefing rooms.' },
   { id: 'armoured-drum', name: 'Armoured-drum battleship', short: 'B',
     ship: { ...SHIP_DEF, name: 'Armoured-drum battleship', shell: 1200, barrel: 26 },
     sections: [
@@ -449,7 +449,7 @@ function sectionMass(s, ship) {
   } else if (s.type === 'hangar') {
     m.structure = s.w * s.h * s.L * 0.05;
     m.armour = 2 * (s.w + s.h) * s.L * s.armour * 7.85;
-    m.guns += s.fighters * 30;
+    m.guns += s.fighters * 30 + (s.berths || 0) * 420; // a fighter with her stores; a berthed medium ship (the cutter is 420 t)
   } else if (s.type === 'arms') {
     const sp = spunInfo(s);
     m.rooms = sp.massT;
@@ -478,7 +478,7 @@ function analyze(d) {
   const ship = d.ship;
   const secs = d.sections.map((s, i) => ({ s, i, size: sectionSize(s), mass: sectionMass(s, ship), spin: TYPES[s.type].spun ? spunInfo(s) : null }));
   const parts = { structure: 0, armour: 0, belt: 0, rooms: 0, guns: 0, engines: 0, radiators: 0 };
-  let T = 0, maxW = 0, maxH = 0, hullW = 0, hullH = 0, engines = 0, top = 0, bottom = 0, tubesFwd = 0, tubesSide = 0, fighters = 0, pdc = 0, rail = false, floor = 0;
+  let T = 0, maxW = 0, maxH = 0, hullW = 0, hullH = 0, engines = 0, top = 0, bottom = 0, tubesFwd = 0, tubesSide = 0, fighters = 0, berths = 0, pdc = 0, rail = false, floor = 0;
   for (const x of secs) {
     for (const k in parts) parts[k] += x.mass[k];
     T += x.size.L; maxW = Math.max(maxW, x.size.w); maxH = Math.max(maxH, x.size.h);
@@ -486,7 +486,7 @@ function analyze(d) {
     if (x.s.type === 'stern') engines += x.s.engines;
     top += x.s.gunsTop || 0; bottom += x.s.gunsBottom || 0;
     if (x.s.type === 'drum' && !x.s.sleeve) { top -= x.s.gunsTop || 0; bottom -= x.s.gunsBottom || 0; }
-    tubesFwd += x.s.tubes || 0; tubesSide += x.s.tubesSide || 0; fighters += x.s.fighters || 0; pdc += x.s.pdc || 0;
+    tubesFwd += x.s.tubes || 0; tubesSide += x.s.tubesSide || 0; fighters += x.s.fighters || 0; berths += x.s.berths || 0; pdc += x.s.pdc || 0;
     if (x.s.spinal) rail = true;
     if (x.spin) floor += x.spin.floorArea;
   }
@@ -501,7 +501,7 @@ function analyze(d) {
   const Ipitch = Mkg * (T * T + hullH * hullH) / 12;
   const Iroll = Mkg * (hullW * hullW + hullH * hullH) / 12;
   const A = { secs, parts, M, T, maxW, maxH, hullW, hullH, engines, thrust, a, spun, netL, sumL, Ipitch, Iroll,
-    top, bottom, tubesFwd, tubesSide, fighters, pdc, rail, floor };
+    top, bottom, tubesFwd, tubesSide, fighters, berths, pdc, rail, floor };
   A.plan = planRooms(A, ship);
   return A;
 }
@@ -509,7 +509,7 @@ function analyze(d) {
 // ---- crew and rooms ----
 function crewEstimate(A) {
   const parts = { command: 80, guns: 10 * (A.top + A.bottom), torpedoes: 3 * (A.tubesFwd + 2 * A.tubesSide), pdc: 2 * A.pdc,
-    flight: 9 * A.fighters, engineering: 40 + 20 * A.engines, damage: 60, medical: 12, supply: 30, security: 20 };
+    flight: 9 * A.fighters + 27 * A.berths, engineering: 40 + 20 * A.engines, damage: 60, medical: 12, supply: 30, security: 20 };
   return { parts, total: Object.values(parts).reduce((a, b) => a + b, 0) };
 }
 const USES = [
@@ -596,7 +596,7 @@ function planRooms(A, ship) {
   const f = avgArea / 172; // rooms here hold this much more (or less) than a 172 m² room, today's mess
   const all = crew + marines;
   const need = {
-    medical: Math.max(2, Math.ceil(crew / 150 / f)), flight: A.fighters ? Math.max(1, Math.ceil(A.fighters / 6 / f)) : 0,
+    medical: Math.max(2, Math.ceil(crew / 150 / f)), flight: A.fighters + A.berths ? Math.max(1, Math.ceil((A.fighters + 3 * A.berths) / 6 / f)) : 0,
     ops: Math.max(2, Math.ceil(crew / 120 / f)), mess: Math.max(2, Math.ceil((enlisted + marines) / 100 / f)),
     wardroom: Math.max(1, Math.ceil(officers / 60 / f)), officers: Math.ceil(officers / capOf('officers', minArea)),
     berths: Math.ceil(enlisted / capOf('berths', minArea)), marines: marines ? Math.ceil(marines / capOf('marines', minArea)) : 0,
@@ -770,7 +770,7 @@ function secTitle(s, i) { const T = TYPES[s.type]; const arrow = T.spun ? (s.dir
 function secSummary(x) {
   const s = x.s;
   if (x.spin) return `${fmt(x.spin.gG, 2)} g · ${fmt(s.rpm, 1)} rpm · r ${fmt(x.spin.rFloor, 0)} m`;
-  if (s.type === 'hangar') return `${s.fighters} fighters · ${s.tubesSide * 2} side tubes`;
+  if (s.type === 'hangar') return `${s.fighters} fighters${s.berths ? ` · ${s.berths} berths` : ''} · ${s.tubesSide * 2} side tubes`;
   if (s.type === 'bow') return `${s.tubes} tubes${s.spinal ? ' · railgun' : ''}`;
   if (s.type === 'stern') return `${s.engines} engines · bridge ${s.bridge}`;
   return `${fmt(s.L)} m`;
@@ -1230,7 +1230,7 @@ function renderReadouts() {
     ['Crew', `${fmt(A.plan.crew + A.plan.marines)}`, `${fmt(A.plan.bunks)} bunks planned${A.plan.marines ? `, incl. ${A.plan.marines} marines` : ''}`],
     ['Spun floor', `${fmt(A.floor, 0)} m²`, `${A.plan.slots.length} rooms of about ${fmt(A.plan.avgArea, 0)} m²`],
     ['Weapons', `${A.top + A.bottom} turrets`, `${A.tubesFwd} bow + ${A.tubesSide * 2} side tubes · ${A.pdc} PDC`],
-    ['Fighters', `${A.fighters}`, A.rail ? 'plus a spinal railgun' : 'no spinal railgun'],
+    ['Fighters', `${A.fighters}`, `${A.berths ? `${A.berths} medium-ship berths · ` : ''}${A.rail ? 'plus a spinal railgun' : 'no spinal railgun'}`],
   ].map(([k, v, s]) => `<div class="stat"><span>${k}</span><b>${v}</b><em>${s}</em></div>`).join('');
   $('#massbar').innerHTML = MASS_KEYS.map(([k, , c]) => A.parts[k] > 0 ? `<i style="width:${A.parts[k] / A.M * 100}%;background:var(${c})" title="${k}"></i>` : '').join('');
   $('#masslegend').innerHTML = MASS_KEYS.filter(([k]) => A.parts[k] > 0).map(([k, l, c]) => `<span><i style="background:var(${c})"></i>${l} ${fmt(A.parts[k] / 1000, 1)} kt</span>`).join('');
