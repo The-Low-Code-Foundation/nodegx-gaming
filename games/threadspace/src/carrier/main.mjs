@@ -672,7 +672,7 @@ function go(how) {
 boardBtn.addEventListener('click', () => go('carry-on'));
 againBtn.addEventListener('click', () => go('fresh'));
 document.getElementById('c-free').addEventListener('click', () => go('free'));
-if (q.has('at') || q.has('view')) startEl.hidden = true;
+if (q.has('at') || q.has('view') || q.has('berth')) startEl.hidden = true; // `berth`: you came through her docking port
 // Started without the start screen (?at=, ?view=): sound starts with the first click or key.
 const wake = () => {
   sfx.start();
@@ -792,6 +792,12 @@ if (HOST_ID) {
         fadeThen(() => goAboard(HOST_ID, { at: `berth:${spec.id}` }));
       }, { r: 1.8 });
       Object.defineProperty(u, 'label', { get: () => (berth.phase === 'berthed' ? `Go aboard the ${HL.name?.toLowerCase().includes('carrier') ? 'carrier' : HL.name}` : 'Docking port: shut') });
+    }
+    // Come aboard through the port (no `?at=`): you start in her airlock.
+    if (lock && !q.has('at')) {
+      walk.goDeck(lock.deck, (lock.x[0] + lock.x[1]) / 2, (lock.z[0] + lock.z[1]) / 2, Math.PI / 2);
+      walker.floater?.reset?.();
+      career.free();
     }
     window.__carrier.berth = berth;
     window.__carrier.hostDoors = hostDoors;
