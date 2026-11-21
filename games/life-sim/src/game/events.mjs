@@ -143,7 +143,8 @@ export const EVENTS = [
     choices: [
       { id: 'milk', icon: '🥛', done: { moodlet: 'catCuddle', needs: { fun: 20 } } },
       { id: 'owner', icon: '🔍', chance: 0.6, good: { friendship: 6, moodlet: 'goodDeed', points: 40 }, bad: { moodlet: 'goodDeed' } },
-      { id: 'adopt', icon: '🏠', later: 5 }
+      // Phase 5.4: with pets on (skills), the cat comes to live with you (`adopt`, pets.mjs); greyed when there is a pet already.
+      { id: 'adopt', icon: '🏠', later: 5, pets: true, done: { adopt: 'cat', moodlet: 'catCuddle' } }
     ]
   },
   // A busker.

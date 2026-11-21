@@ -352,6 +352,8 @@ export class Life {
       for (const [id, rate] of Object.entries(d.offer.skill ?? {})) this.learn(id, (rate * min) / 60);
       // Seeing to the baby in the cot (round 12): the baby's needs, as `gives` is for their own.
       if (d.offer.baby && d.item?.baby && !d.item.baby.away) d.item.baby.care(d.offer.baby, min);
+      // Round 16, phase 5.4: and the pet's, at its basket (pets.mjs).
+      if (d.offer.pet && d.item?.pet) d.item.pet.care(d.offer.pet, min);
     } else if (d) {
       // On the way. A thing that can't be reached is given up after a while (not the way to work: they always get there).
       d.waiting += min;
@@ -361,7 +363,8 @@ export class Life {
     if (active && d.role === 'lead') this.converse(d, min);
     // The other side of an interaction ends when the one who started it does (complete / stop).
     const babyFull = d?.offer.babyUntil && d.item?.baby && d.item.baby.needs[d.offer.babyUntil] >= 99.5;
-    if (active && d.role !== 'partner' && (d.minutes >= (d.length ?? d.offer.minutes) || (d.offer.until && this.needs[d.offer.until] >= 99.5) || babyFull)) this.complete();
+    const petFull = d?.offer.petUntil && d.item?.pet && d.item.pet.needs[d.offer.petUntil] >= 99.5;
+    if (active && d.role !== 'partner' && (d.minutes >= (d.length ?? d.offer.minutes) || (d.offer.until && this.needs[d.offer.until] >= 99.5) || babyFull || petFull)) this.complete();
 
     for (const [id, left] of [...this.timed]) left - min <= 0 ? this.timed.delete(id) : this.timed.set(id, left - min);
     const had = new Set(this.moodlets);
@@ -737,6 +740,12 @@ export class Life {
           const care = item?.baby && !item.baby.asleep ? item.baby.relief(offer) : 0;
           if (care < 0.05) continue;
           score += care * 1.5;
+        }
+        // Round 16, phase 5.4: the pet's basket, only for a pet that needs it.
+        if (offer.pet) {
+          const care = item?.pet ? item.pet.relief(offer) : 0;
+          if (care < 0.05) continue;
+          score += care * 1.2;
         }
         for (const [id, rate] of Object.entries(gives)) {
           const v = this.needs[id];

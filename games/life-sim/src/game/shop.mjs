@@ -87,7 +87,9 @@ export const CAMP_BED = { id: 'campBed', made: 'CAMP_BED', fit: 0.53, use: { act
 // A cot comes with a baby (round 12, baby.mjs): placed by itself, saved with what was bought, moved like it, never sold.
 export const COT = { id: 'cot', icon: '👶', made: 'COT', fit: 1.55, use: { act: 'interact', label: 'Baby', offers: 'cot' } };
 // Any thing a home can hold, by its id: the shop's, the camp bed, a cot.
-export const kindOf = (id) => (id === 'campBed' ? CAMP_BED : id === 'cot' ? COT : shopItem(id));
+// Round 16, phase 5.4: the pet's basket and bowl (pets.mjs), placed when a pet comes home, moved like a cot, never sold.
+export const PET_BED = { id: 'petBed', icon: '🧺', made: 'PET_BED', fit: 0.3, use: { act: 'interact', label: 'Pet', offers: 'petBed' } };
+export const kindOf = (id) => (id === 'campBed' ? CAMP_BED : id === 'cot' ? COT : id === 'petBed' ? PET_BED : shopItem(id));
 // Sold back for half.
 export const sellPrice = (s) => Math.floor(s.price / 2);
 // A new look at the chest of drawers (clothes and hair; the body is chosen once, when the Sim is made).

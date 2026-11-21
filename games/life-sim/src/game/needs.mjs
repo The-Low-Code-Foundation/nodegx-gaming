@@ -99,6 +99,10 @@ export const MOODLETS = {
   spooky: { emotion: 'happy', weight: 1, icon: '👻', minutes: 180 },
   brave: { emotion: 'happy', weight: 1, icon: '🦸', minutes: 240 },
   catCuddle: { emotion: 'happy', weight: 2, icon: '🐱', minutes: 240 },
+  // Round 16, phase 5.4 (pets.mjs): playing with the pet, a cuddle with it, and a happy pet at home.
+  petPlay: { emotion: 'happy', weight: 1, icon: '🧶', minutes: 180 },
+  petCuddle: { emotion: 'happy', weight: 1, icon: '💕', minutes: 180 },
+  happyPet: { emotion: 'happy', weight: 1, icon: '🐾', minutes: 90 },
   music: { emotion: 'happy', weight: 1, icon: '🎶', minutes: 120 },
   invited: { emotion: 'happy', weight: 1, icon: '✉️', minutes: 600 },
   weddingGuest: { emotion: 'happy', weight: 2, icon: '💒', minutes: 600 },

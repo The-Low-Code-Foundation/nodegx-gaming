@@ -19,6 +19,8 @@
 // be moved, sold or put away in the boxes, and the shop has a lot more in it.
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { makeSky, tick as tickDressing, daylight, partyDecor, weatherLook, greySky, snowman } from '../dressing.mjs';
 import { CANDIDATES, loadTemplate } from '../characters.mjs';
@@ -35,7 +37,7 @@ import { Props } from './props.mjs';
 import { people } from './looks.mjs';
 import { createSim, lookControls } from './create.mjs';
 import { readSave, writeSave, clearSave, lifeState, restoreLife } from './save.mjs';
-import { SHOP, SHOP_KINDS, shopItem, CAMP_BED, COT, sellPrice, LOVELY, LOOK_COST, kindOf, FLAT_FURNITURE } from './shop.mjs';
+import { SHOP, SHOP_KINDS, shopItem, CAMP_BED, COT, PET_BED, sellPrice, LOVELY, LOOK_COST, kindOf, FLAT_FURNITURE } from './shop.mjs';
 import { SIZES, EXTENSION, HOUSES, houseById, FLAT_LOOK, COLLEAGUE_HOUSES, NEIGHBOURS, awake, PARTY, INVITED, partyHouse, partyNow, GUEST, HOME_PARTY, STREET_SIZE, streetLayout, TOWN, makeTown, rollTown, townDice } from './town.mjs';
 import { blankLook } from './looks.mjs';
 import { makeProp, wear } from './props.mjs';
@@ -49,6 +51,7 @@ import { GOALS, goalById, openGoals, rollGoal, stepsDone, STEP_POINTS, GOAL_POIN
 import { WANTS, WANT_SLOTS, WANT_LASTS, rollWant, wantById } from './wants.mjs';
 import { DECK, EVENTS, POWER_CUT, eventById, pickEvent, pickWho, outcomeOf } from './events.mjs';
 import { WEATHER, rollWeather } from './weather.mjs';
+import { Pet, PETS, PET_KINDS, PET_NEEDS, MAX_PETS, ADOPT_FEE, addPets } from './pets.mjs';
 import { SKILLS, SKILL_IDS, addSkills, levelsOf, FIXING, EARNING, ODD_JOB, freshSide, earnWhy } from './skills.mjs';
 import { TOWNLIFE, dayOfTown, startTown, priceFor, REACH, pickReach, sociable, DRAWN } from './townlife.mjs';
 
@@ -197,6 +200,7 @@ const aimsOn = !quick || params.has('goal') || params.has('goals');
 // Round 16, phase 5: skills from objects (skills.mjs), not on a test URL unless `?skills=1`: the skill gains of the
 // things already in the game, the new things to do and to buy. Off, seeded free will chooses as it did.
 const skillsOn = !quick || params.has('skills');
+if (skillsOn) addPets(OFFERS);
 if (skillsOn) addSkills(OFFERS, INTERACTIONS);
 // Round 16, phase 3: things happen (events.mjs), not on a test URL unless `?events=1` (or `?event=<id>`: that one, at
 // once). The deck's state: when it is next looked at, what came up when, today's count, a party you were asked to.
@@ -588,6 +592,145 @@ async function haveBaby(a, b) {
 for (const s of saved?.babies ?? []) {
   const e = (saved.v >= 2 ? furniture : extras())[s.cot];
   if (e?.item && e.id === 'cot') addBaby(new Baby(s), e.item);
+}
+// ---- a pet (round 16, phase 5.4: pets.mjs) ----
+// One a household, in its basket at home (shop.mjs PET_BED, placed with the furniture, moved like a cot). It walks
+// about the home on the walk grid (Idle and Walking clips), comes to its basket when someone sees to it, and curls up
+// there at night. Click it (or the basket) for what can be done for it. Drawn only when you look at home.
+const pets = [];
+const newPets = []; // adopted, waiting for their name on the welcome card
+const petLoader = new GLTFLoader();
+const petModels = {};
+const PET_NIGHT = (h) => h >= 22 || h < 7;
+async function drawPet(pet) {
+  const def = PETS[pet.kind];
+  petModels[pet.kind] ??= petLoader.loadAsync(def.model);
+  const gltf = await petModels[pet.kind];
+  const body = SkeletonUtils.clone(gltf.scene);
+  const box = new THREE.Box3().setFromObject(body), size = box.getSize(new THREE.Vector3());
+  const k = def.height / size.y;
+  body.scale.setScalar(k);
+  body.position.set(-((box.min.x + box.max.x) / 2) * k, -box.min.y * k, -((box.min.z + box.max.z) / 2) * k);
+  // The models face +X; the game's things face +Z.
+  const inner = new THREE.Group();
+  inner.rotation.y = -Math.PI / 2;
+  inner.add(body);
+  const group = new THREE.Group();
+  group.add(inner);
+  body.traverse((o) => o.isMesh && ((o.castShadow = true), (o.frustumCulled = false)));
+  // A click on it (an invisible box its size) is a click on its basket.
+  const proxy = new THREE.Mesh(new THREE.BoxGeometry(0.35, def.height, Math.max(size.x, size.z) * k), proxyMat);
+  proxy.position.y = def.height / 2;
+  proxy.userData.petBed = pet.bed;
+  group.add(proxy);
+  scene.add(group);
+  const mixer = new THREE.AnimationMixer(body);
+  const clip = (n) => mixer.clipAction(gltf.animations.find((a) => a.name === n));
+  Object.assign(pet, { mesh: group, proxy, mixer, idle: clip('Idle'), walking: clip('Walking'), path: [], wait: 2, playing: null });
+  pet.mesh.position.copy(pet.bed.spot);
+  petPlay(pet, 'idle');
+  if (!pet.bubble) makeBubble(pet);
+}
+function petPlay(pet, which) {
+  if (pet.playing === which) return;
+  const next = pet[which], was = pet.playing && pet[pet.playing];
+  next.reset().play();
+  if (was) next.crossFadeFrom(was, 0.25, false);
+  pet.playing = which;
+}
+// Where it lies in its basket.
+const basketAt = (pet) => pet.bed.obj.position.clone().setY(0);
+// Its basket, and its welcome card. `kind` null: the shelter's card (the cat or the dog, for the fee).
+async function adoptPet(kind, fee = 0) {
+  if (pets.length >= MAX_PETS || !home) return null;
+  household.money -= fee;
+  const pet = new Pet({ kind, adopted: minutes });
+  const bed = await placeExtra(await spotFor(PET_BED, { id: 'petBed', x: 1.4, z: 1.2, turn: 0 }));
+  bed.pet = pet;
+  pet.bed = bed;
+  pets.push(pet);
+  await drawPet(pet);
+  newPets.push(pet);
+  save();
+  return pet;
+}
+function petCard(pet) {
+  let name = '';
+  const def = PETS[pet.kind];
+  let hint = def.names[Math.floor(Math.random() * def.names.length)];
+  const draw = () => {
+    openCard(sel, 'pet', `<h2>${def.icon} ${t(`pet.welcome.${pet.kind}`)}</h2><p class="intro">${t('pet.intro', { names: lives.map((l) => l.name).join(' & ') })}</p>
+      <div class="levels baby-name"><span>${t('ui.baby.name')}</span><input id="pet-name" maxlength="14" placeholder="${hint}" value="${name}"><button id="pet-dice" title="${t('ui.baby.another')}">🎲</button></div>
+      <div class="actions"><button class="go" id="pet-welcome">${t('pet.home')}</button></div>`);
+    $('pet-name').oninput = () => (name = cleanName($('pet-name').value));
+    $('pet-dice').onclick = () => ((hint = def.names[Math.floor(Math.random() * def.names.length)]), draw());
+    $('pet-welcome').onclick = () => {
+      pet.name = name || hint;
+      closeCard();
+      toast(t('pet.homeNow', { name: pet.name }));
+      for (const l of lives) l.count('pet');
+      milestone(def.icon, 'pet.diary', { name: pet.name, kind: t(`pet.${pet.kind}`) });
+      save();
+    };
+  };
+  draw();
+}
+// The shelter, by phone (the `adoptPet` offer's card): the cat or the dog.
+function openPets(l) {
+  l.card = null;
+  const rows = PET_KINDS.map((k) => `<div class="offer"><div class="big">${PETS[k].icon}</div><div><b>${t(`pet.${k}`)}</b><div>${t(`pet.${k}.does`)}</div></div>
+      <button class="go" data-kind="${k}" ${household.money < ADOPT_FEE || pets.length >= MAX_PETS ? 'disabled' : ''}>${t('pet.adopt')} <span class="cost">${t('ui.cost', { cost: ADOPT_FEE })}</span></button></div>`).join('');
+  openCard(l, 'pets', `<h2>🐾 ${t('pet.shelter')}</h2><p class="intro">${t('pet.shelter.intro')}</p>${rows}<div class="actions"><button id="card-close">${t('ui.card.notNow')}</button></div>`);
+  $('card-close').onclick = closeCard;
+  for (const b of $('card').querySelectorAll('[data-kind]')) b.onclick = () => (closeCard(), adoptPet(b.dataset.kind, ADOPT_FEE));
+}
+// Each frame (`dt` game minutes, the walk's seconds): where it goes. Seen to: at its basket, facing whoever it is. At
+// night: in its basket. Otherwise a wander to a free spot now and then, and a sit in between.
+const petLook = new THREE.Vector3();
+function drawPets(dt) {
+  for (const pet of pets) {
+    if (!pet.mesh) continue;
+    pet.mesh.visible = view === home && !!pet.bed && !pet.bed.gone;
+    pet.mixer.update(dt);
+    const carer = everyone.find((l) => l.present && l.place === home && l.doing?.item === pet.bed && l.doing.started);
+    const night = PET_NIGHT((minutes % 1440) / 60);
+    const goal = carer || night ? basketAt(pet) : null;
+    if (goal && pet.mesh.position.distanceTo(goal) > 0.15 && (!pet.path.length || pet.path.at(-1).distanceTo(goal) > 0.15)) pet.path = home.grid.path(pet.mesh.position, goal).concat(goal);
+    if (!goal && !pet.path.length && (pet.wait -= dt) <= 0) {
+      const there = new THREE.Vector3((Math.random() - 0.5) * (home.bounds.w - 1.5), 0, (Math.random() - 0.5) * (home.bounds.d - 1.5));
+      if (home.grid.free(there) && there.distanceTo(pet.mesh.position) < 4) pet.path = home.grid.path(pet.mesh.position, there);
+      pet.wait = 4 + Math.random() * 8;
+    }
+    const next = pet.path[0];
+    if (next) {
+      petPlay(pet, 'walking');
+      petLook.copy(next).sub(pet.mesh.position).setY(0);
+      const d = petLook.length(), step = PETS[pet.kind].speed * dt;
+      if (d <= step) pet.mesh.position.copy(next).setY(0), pet.path.shift();
+      else pet.mesh.position.addScaledVector(petLook.divideScalar(d), step);
+      if (d > 0.01) pet.mesh.rotation.y = Math.atan2(petLook.x, petLook.z);
+    } else {
+      petPlay(pet, 'idle');
+      if (carer) pet.mesh.rotation.y = Math.atan2(carer.sim.position.x - pet.mesh.position.x, carer.sim.position.z - pet.mesh.position.z);
+    }
+  }
+}
+// The pets' needs, and the household glad of a happy pet (at home).
+function petsTick(min) {
+  for (const pet of pets) {
+    pet.tick(min);
+    if (pet.happy) for (const l of lives) if (l.present && l.place === home && !l.timed.has('happyPet')) l.addMoodlet('happyPet');
+  }
+}
+for (const s of saved?.pets ?? []) {
+  const e = furniture[s.bed];
+  if (e?.item && e.id === 'petBed' && PETS[s.kind]) {
+    const pet = new Pet(s);
+    pet.bed = e.item;
+    e.item.pet = pet;
+    pets.push(pet);
+    drawPet(pet);
+  }
 }
 const babyAt = new THREE.Vector3();
 const UP = new THREE.Vector3(0, 1, 0);
@@ -1529,11 +1672,11 @@ renderer.domElement.addEventListener('pointerup', (e) => {
   // It is the click's only if nothing usable is further along.
   let only = null;
   const fronts = view.street?.hits ?? [];
-  const targets = away ? [...view.clickable, ...fronts] : [...everyone.filter((l) => inView(l) && !l.carer).map((l) => l.proxy), view.floor, ...view.clickable, ...fronts];
+  const targets = away ? [...view.clickable, ...fronts] : [...everyone.filter((l) => inView(l) && !l.carer).map((l) => l.proxy), ...pets.filter((p) => p.mesh?.visible).map((p) => p.proxy), view.floor, ...view.clickable, ...fronts];
   for (const h of ray.intersectObjects(targets, false)) {
     const who = h.object.userData.life;
     if (who) return who === sel ? undefined : openSocialMenu(who, e.clientX, e.clientY);
-    const item = h.object.isInstancedMesh ? h.object.userData.items[h.instanceId] : h.object.userData.front ? frontDoor(h.object.userData.front) : null;
+    const item = h.object.isInstancedMesh ? h.object.userData.items[h.instanceId] : h.object.userData.front ? frontDoor(h.object.userData.front) : h.object.userData.petBed ?? null;
     if (item?.gone) continue;
     // Round 16, phase 4.2: the notice board (or its name board): what has changed in the town. Read from anywhere.
     if (item?.use?.board || h.object.userData.board) return openNews();
@@ -1655,7 +1798,7 @@ function renderSelf() {
   for (const b of $('self').children) {
     const o = SELF[b.dataset.i];
     // A pizza is delivered to the flat; a job is looked for once.
-    b.hidden = (o.id === 'findJob' && !!sel.job) || (o.id === 'orderPizza' && sel.place !== home);
+    b.hidden = (o.id === 'findJob' && !!sel.job) || (o.id === 'orderPizza' && sel.place !== home) || (o.id === 'adoptPet' && pets.length >= MAX_PETS);
     b.disabled = !!o.cost && household.money < o.cost;
     b.title = b.disabled ? t('ui.money.short', { name: sel.name, cost: o.cost }) : '';
   }
@@ -2038,6 +2181,8 @@ function offerWhy(l, offer) {
   // Round 16, phase 3.4: the weather's (no ducks to feed in the rain).
   const w = weatherNow();
   if (WEATHER[w].off.includes(offer.id)) return `weather.${w}.off`;
+  // Round 16, phase 5.4: one pet a household.
+  if (offer.id === 'adoptPet' && pets.length >= MAX_PETS) return 'pet.have';
   // Round 16, phase 5.2: no paintings to sell yet, the vegetables not ripe, not good enough at music to busk.
   if (offer.earn && household.side && lives.includes(l)) return earnWhy(offer, household.side, levelsOf(l.skills, skillLevel));
   return null;
@@ -2081,7 +2226,10 @@ function openEvent(e, who = null, l = sel) {
   const buttons = shown
     .map((ch, i) => {
       const short = ch.cost && household.money < ch.cost;
-      return `<button data-i="${i}" ${short || ch.later ? 'disabled' : ''}>${ch.icon} ${t(`event.${e.id}.${ch.id}`, vars)}${ch.cost ? ` <span class="cost">${t('ui.cost', { cost: ch.cost })}</span>` : ''}${ch.later ? ` <small>${t('event.later')}</small>` : ''}</button>`;
+      // Round 16, phase 5.4: keeping the cat, with pets on (and no pet yet).
+      const later = ch.later && !(ch.pets && skillsOn);
+      const full = ch.pets && skillsOn && pets.length >= MAX_PETS;
+      return `<button data-i="${i}" ${short || later || full ? 'disabled' : ''}>${ch.icon} ${t(`event.${e.id}.${ch.id}`, vars)}${ch.cost ? ` <span class="cost">${t('ui.cost', { cost: ch.cost })}</span>` : ''}${later ? ` <small>${t('event.later')}</small>` : full ? ` <small>${t('pet.have')}</small>` : ''}</button>`;
     })
     .join('');
   openCard(l, 'event', `<h2>${e.icon} ${t(`event.${e.id}`, vars)}</h2>${head ? `<p class="ring">${head}</p>` : ''}<p class="intro">${t(`event.${e.id}.text`, vars)}</p><div class="choices">${buttons}</div>`);
@@ -2137,6 +2285,7 @@ function eventOutcome(l, e, who, mate, out) {
     bits.push(`+${out.points} 🌟`);
   }
   if (out.count) l.count(out.count);
+  if (out.adopt && skillsOn) adoptPet(out.adopt);
   if (out.diary) milestone(e.icon, `event.${e.id}.diary`, { name: l.name, who: who?.name ?? '' });
   if (out.invite && who && inviteOver(who, true)) guests.at(-1).comesAt = minutes;
   if (out.party && who?.house) deck.party = { id: who.house, day: Math.floor(minutes / 1440) };
@@ -2339,6 +2488,8 @@ function renderCards() {
   if (sel.card?.kind === 'station') return openStation(sel);
   if (sel.card === 'look') return openLook(sel);
   if (newBabies.length) return babyCard(newBabies.shift());
+  if (newPets.length) return petCard(newPets.shift());
+  for (const l of [sel, ...lives.filter((o) => o !== sel)]) if (l.card === 'pets') return openPets(l);
   if (careAsk) return careCard();
   for (const l of [sel, ...lives.filter((o) => o !== sel)]) if (l.card === 'jobs') return openJobs(l);
 }
@@ -2416,7 +2567,9 @@ function snapshot() {
     traits: { ...(saved?.traits ?? {}), ...Object.fromEntries(npcs().map((l) => [l.who, [...(l.traits ?? [])]])), ...Object.fromEntries([...arriving].map(([n, a]) => [n, [...a.traits]])) },
     likes: { ...(saved?.likes ?? {}), ...Object.fromEntries(npcs().filter((l) => l.likes).map((l) => [l.who, { ...l.likes }])), ...Object.fromEntries([...arriving].map(([n, a]) => [n, { ...a.likes }])) },
     // Each baby, with the cot they lie in (its place in `furniture`).
-    babies: babies.filter((b) => b.cot).map((b) => ({ ...b.saved(), cot: furniture.findIndex((e) => e.item === b.cot) }))
+    babies: babies.filter((b) => b.cot).map((b) => ({ ...b.saved(), cot: furniture.findIndex((e) => e.item === b.cot) })),
+    // Round 16, phase 5.4 (v7): the pet, with its basket's place in `furniture`.
+    pets: pets.filter((p) => p.bed && p.name).map((p) => ({ ...p.saved(), bed: furniture.findIndex((e) => e.item === p.bed) }))
   };
 }
 function save() {
@@ -2799,6 +2952,19 @@ function renderBubbles(now) {
     if (b.bubble.innerHTML !== html) b.bubble.innerHTML = html;
     Object.assign(b.bubble.style, { left: `${((babyAt.x + 1) / 2) * innerWidth}px`, top: `${((1 - babyAt.y) / 2) * innerHeight}px` });
   }
+  // Round 16, phase 5.4: over a sulking pet, what it wants.
+  for (const p of pets) {
+    if (!p.bubble) continue;
+    const want = p.mesh?.visible && p.name && p.sulking ? PET_NEEDS.find((n) => n.id === p.sulking) : null;
+    p.bubble.hidden = !want;
+    if (!want) continue;
+    p.mesh.getWorldPosition(babyAt);
+    babyAt.y += PETS[p.kind].height + 0.35;
+    babyAt.project(camera);
+    const html = `<span class="icon">${want.icon}</span><span>${t(`pet.wants.${want.id}`, { name: p.name })}</span>`;
+    if (p.bubble.innerHTML !== html) p.bubble.innerHTML = html;
+    Object.assign(p.bubble.style, { left: `${((babyAt.x + 1) / 2) * innerWidth}px`, top: `${((1 - babyAt.y) / 2) * innerHeight}px` });
+  }
   marker.visible = sel.sim.group.visible;
   sel.sim.head?.getWorldPosition(marker.position);
   marker.position.y += 0.3 + Math.sin(now / 400) * 0.03;
@@ -2807,6 +2973,7 @@ function renderBubbles(now) {
 // The household's news, and a colleague's only when it is about someone who lives here (a date, moving in).
 function renderToasts() {
   for (const b of babies) for (const ev of b.events.splice(0)) if (b.name) toast(t(ev.key, ev.vars));
+  for (const p of pets) for (const ev of p.events.splice(0)) if (p.name) toast(t(ev.key, ev.vars));
   for (const l of everyone)
     for (const ev of l.events.splice(0)) {
       if (!lives.includes(l) && !/date|movedIn/.test(ev.key)) continue;
@@ -2838,6 +3005,8 @@ function frame(now) {
   minding();
   townTick();
   for (const b of babies) b.tick(gameDt, (minutes % 1440) / 60);
+  petsTick(gameDt);
+  drawPets(gameDt);
   // Round 14: the blob shadow too (it was only hidden by a Sim's own update, which someone out of sight never gets: a
   // shadow lay in the middle of every floor).
   for (const l of everyone) if (!(l.sim.group.visible = inView(l)) && l.sim.blob) l.sim.blob.visible = false;
@@ -2891,6 +3060,7 @@ function advance(n) {
     minding();
     townTick();
     for (const b of babies) b.tick(1, (minutes % 1440) / 60);
+    petsTick(1);
     // Round 14: the blob shadow too (it was only hidden by a Sim's own update, which someone out of sight never gets: a
   // shadow lay in the middle of every floor).
   for (const l of everyone) if (!(l.sim.group.visible = inView(l)) && l.sim.blob) l.sim.blob.visible = false;
@@ -2911,6 +3081,7 @@ window.__life = {
   // Round 16, phase 3.
   eventsOn, deck, eventsTick, openEvent, eventCtx, eventPeople, EVENTS, eventById, lastEvent: null, openMenu, offerWhy,
   // Round 16, phase 5.
+  pets, adoptPet, drawPets, PETS, openPets,
   skillsOn, SKILLS, placeExtra, spotFor, shopItem, oddJobToday, EARNING, ODD_JOB, earnGain, careerPlace, workOf, openJobs, openStation,
   // Round 16, phase 4.
   townLifeOn, townLife, townLifeTick, playTownDay, TOWNLIFE, babiesAt, newsText, npcs, openNews, reachTick, REACH, DRAWN, lastReach: null,
