@@ -2020,6 +2020,8 @@ function wantsTick() {
 // Life `count` tells us what was done: a wish that was for it comes true.
 function wished(l, id) {
   if (id === 'buildSnowman') buildSnowman(l);
+  // Round 16, phase 6.4: up after a weekend lie-in.
+  if (id === 'sleep' && lives.includes(l) && offToday(l) && (minutes % 1440) >= WEEKEND.lieIn * 60 && (minutes % 1440) < (WEEKEND.lieIn + 1.5) * 60) l.addMoodlet('lieIn');
   // Round 16, phase 6.2: a birthday cake baked or bought, and a birthday party (the household's own: round 15).
   if (id === 'bakeCake' || id === 'orderCake') birthdayCake(l, id === 'bakeCake' ? 'baked' : 'bought');
   // Round 16, phase 6.3: the town event's contest.
@@ -2219,6 +2221,7 @@ function calendarTick() {
   const d = dateNow();
   birthdaysTick(d);
   townEventsTick(d);
+  weekendTick();
   if (d.season !== seasonShown) {
     seasonLook(d.season);
     household.crop = seasonById(d.season).crop;
@@ -2383,13 +2386,43 @@ function enterContest(l) {
   milestone('🏅', 'diary.rosette', { name: l.name, place: t(`townEvent.place.${place}`), contest, event: evName(e) });
   toast(t('townEvent.contest.won', { name: l.name, place: t(`townEvent.place.${place}`), contest, coins }));
 }
-// How much keener free will is on an offer now: the season's (calendar.mjs SEASONS `lean`).
+// ---- weekends (round 16, phase 6.4; calendar.mjs WEEKEND) ----
+// Saturday and Sunday, for whoever isn't working that day (a career's own days: work.mjs, the café and the vet work
+// Saturdays): a lie-in, free will keener on naps, the telly, reading, cooking and dancing (and less on study), an
+// outing in the late morning (the park, or round to a friend's), and the phone and the door busier (events.mjs).
+// The market and the kick-about in the park come up only then (events.mjs `days`).
+const worksToday = (l) => !!l.job && careerOf(l.job).days.includes(weekday(minutes));
+const offToday = (l) => weekendNow() && !worksToday(l);
+// How much keener free will is on an offer now: the season's (calendar.mjs SEASONS `lean`), and the weekend's.
 function leanOf(l, id, hour) {
-  return seasonById(seasonNow()).lean[id] ?? 1;
+  const k = seasonById(seasonNow()).lean[id] ?? 1;
+  return offToday(l) ? k * (WEEKEND.lean[id] ?? 1) : k;
 }
-// A lie-in (phase 6.4): not yet.
+// Asleep until WEEKEND.lieIn o'clock (Life: the night's sleep doesn't end before then, rested or not).
 function lieInNow(l) {
-  return false;
+  return offToday(l) && (minutes % 1440) < WEEKEND.lieIn * 60;
+}
+// The weekend's outing, once a weekend day at WEEKEND.outing.at: each one at home with free will on and nothing asked of
+// them may fancy the park, or a friend's (one they are Friends with who is in).
+function weekendTick() {
+  const day = Math.floor(minutes / 1440), hour = (minutes % 1440) / 60;
+  if (!weekendNow() || calendar.outing === day || hour < WEEKEND.outing.at || hour >= WEEKEND.outing.at + 2) return;
+  calendar.outing = day;
+  const wd = t(`day.${weekday(minutes)}`);
+  for (const l of lives) {
+    if (!l.freeWill || !l.present || l.place !== home || worksToday(l) || l.card || l.doing?.by === 'you' || l.queue.some((q) => q.by === 'you') || l.doing?.offer.act === 'sleep') continue;
+    const r = Math.random();
+    if (r < WEEKEND.outing.park) {
+      l.queue.push({ offer: offerById('Door_1', 'goPark'), by: 'self' });
+      toast(t('weekend.park', { name: l.name, day: wd }));
+    } else if (r < WEEKEND.outing.park + WEEKEND.outing.visit) {
+      const f = npcs().filter((o) => !lives.includes(o) && o.house && (peekBond(l, o)?.friendship ?? 0) >= WEEKEND.outing.friends && homeNow(o)).sort((a, b) => peekBond(l, b).friendship - peekBond(l, a).friendship)[0];
+      if (!f) continue;
+      housePlace(f.house).then(() => l.queue.push({ offer: goTo(f.house), by: 'self' }));
+      toast(t('weekend.visit', { name: l.name, other: f.name, day: wd }));
+    }
+    window.__life.lastOuting = { name: l.name, r, day };
+  }
 }
 // A snowman where they built it (the park's `buildSnowman`), three at most.
 function buildSnowman(l) {
@@ -2453,7 +2486,9 @@ function eventsTick() {
   const m = minutes % 1440;
   if (m < DECK.from || m >= DECK.to || deck.today >= DECK.most || minutes - (deck.last ?? -1e9) < DECK.gap) return;
   // The chance a look brings one: `perDay` over the looks in a day that aren't in the gap after one.
-  if (Math.random() >= DECK.perDay / ((DECK.to - DECK.from - DECK.perDay * DECK.gap) / DECK.every)) return;
+  // Round 16, phase 6.4: a few more at the weekend (events.mjs DECK `weekend`).
+  const perDay = DECK.perDay * (weekendNow() ? DECK.weekend.perDay : 1);
+  if (Math.random() >= perDay / ((DECK.to - DECK.from - perDay * DECK.gap) / DECK.every)) return;
   const got = pickEvent(eventCtx(sel), eventPeople(sel));
   if (got) openEvent(got.event, got.who);
 }
@@ -3334,7 +3369,7 @@ window.__life = {
   // Round 16, phase 4.
   townLifeOn, townLife, townLifeTick, playTownDay, TOWNLIFE, babiesAt, newsText, npcs, openNews, reachTick, REACH, DRAWN, lastReach: null,
   // Round 16, phase 6.
-  calendarOn, calendar, dateNow, seasonNow, weekendNow, calendarTick, SEASONS, TOWN_EVENTS, birthdayOf, birthdayToday, birthdayHere, npcBirthday, get fair() { return fair; }, townEventsTick,
+  calendarOn, calendar, dateNow, seasonNow, weekendNow, calendarTick, SEASONS, TOWN_EVENTS, birthdayOf, birthdayToday, birthdayHere, npcBirthday, get fair() { return fair; }, townEventsTick, weekendTick, leanOf, lieInNow, offToday,
   weatherNow, weatherTick, get weather() { return weather && { ...weather }; }, set weatherId(id) { weather = { day: Math.floor(minutes / 1440), id, told: true }; }, snowmen, weatherFx, ducks,
   folk, get extras() { return extras(); }, furniture, storage, save, snapshot, openShop, startPlacing, stopPlacing, turnPlacing, placeHere, hover, sell, beauty, openLook, get home() { return home; }, saving,
   get placing() { return placing; }, get start() { return start?.kind ?? null; },

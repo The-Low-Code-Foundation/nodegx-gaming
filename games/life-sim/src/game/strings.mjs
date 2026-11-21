@@ -1181,6 +1181,9 @@ const TABLES = {
     'moodlet.market.text': 'A nice morning out.',
     'moodlet.lieIn': 'A lie-in',
     'moodlet.lieIn.text': 'No alarm today.',
+    // Round 16, phase 6.4: weekends (calendar.mjs WEEKEND).
+    'weekend.park': '🌳 It’s {day}! {name} fancies a trip to the park.',
+    'weekend.visit': '🏡 It’s {day}: {name} pops round to see {other}.',
     // Round 16, phase 6.2: birthdays (calendar.mjs BIRTHDAY). Nobody gets older: cake, presents and friends.
     'birthday.today': '🎂 It’s {name}’s birthday! Bake a cake or order one, and ask friends round.',
     'birthday.present': '🎁 {a} brings {b} a birthday present.',
