@@ -49,7 +49,7 @@ import { GOALS, goalById, openGoals, rollGoal, stepsDone, STEP_POINTS, GOAL_POIN
 import { WANTS, WANT_SLOTS, WANT_LASTS, rollWant, wantById } from './wants.mjs';
 import { DECK, EVENTS, POWER_CUT, eventById, pickEvent, pickWho, outcomeOf } from './events.mjs';
 import { WEATHER, rollWeather } from './weather.mjs';
-import { TOWNLIFE, dayOfTown, startTown, priceFor, REACH, pickReach, sociable } from './townlife.mjs';
+import { TOWNLIFE, dayOfTown, startTown, priceFor, REACH, pickReach, sociable, DRAWN } from './townlife.mjs';
 
 const params = new URLSearchParams(location.search);
 const $ = (id) => document.getElementById(id);
@@ -1090,7 +1090,8 @@ function townTick() {
     const want = new Set();
     if (visitors.length) {
       for (const r of residentsOf(h.id)) if (homeNow(r)) want.add(r);
-      if (party) for (const g of partyGuests(h.id)) want.add(g);
+      // Round 16, phase 4.4: no more drawn in one place than DRAWN.most (townlife.mjs); the other guests stay data.
+      if (party) for (const g of partyGuests(h.id).slice(0, Math.max(0, DRAWN.most - visitors.length - want.size))) want.add(g);
     }
     for (const n of npcs()) {
       const here = n.present && n.place === p;
@@ -1275,7 +1276,9 @@ function guestsTick() {
       guests.splice(guests.indexOf(g), 1);
       continue;
     }
-    if (!g.arrived && minutes >= g.comesAt && someone && !l.shift && !(l.present && l.place !== home && lives.some((h) => h.present && h.place === l.place))) {
+    // Round 16, phase 4.4: not past DRAWN.most at home (they come in when someone goes).
+    const full = everyone.filter((o) => o.present && o.place === home).length >= DRAWN.most;
+    if (!g.arrived && !full && minutes >= g.comesAt && someone && !l.shift && !(l.present && l.place !== home && lives.some((h) => h.present && h.place === l.place))) {
       g.arrived = true;
       appear(l, home, false, !!homeParty);
       toast(t('ui.guest.here', { name: l.name }));
@@ -2820,7 +2823,7 @@ window.__life = {
   // Round 16, phase 3.
   eventsOn, deck, eventsTick, openEvent, eventCtx, eventPeople, EVENTS, eventById, lastEvent: null, openMenu, offerWhy,
   // Round 16, phase 4.
-  townLifeOn, townLife, townLifeTick, playTownDay, TOWNLIFE, babiesAt, newsText, npcs, openNews, reachTick, REACH, lastReach: null,
+  townLifeOn, townLife, townLifeTick, playTownDay, TOWNLIFE, babiesAt, newsText, npcs, openNews, reachTick, REACH, DRAWN, lastReach: null,
   weatherNow, weatherTick, get weather() { return weather && { ...weather }; }, set weatherId(id) { weather = { day: Math.floor(minutes / 1440), id, told: true }; }, snowmen, weatherFx, ducks,
   folk, get extras() { return extras(); }, furniture, storage, save, snapshot, openShop, startPlacing, stopPlacing, turnPlacing, placeHere, hover, sell, beauty, openLook, get home() { return home; }, saving,
   get placing() { return placing; }, get start() { return start?.kind ?? null; },

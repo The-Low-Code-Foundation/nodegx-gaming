@@ -276,3 +276,11 @@ export function pickReach(them, you, bond, { married, lockOf, interactionById },
   return options.at(-1)?.[0] ?? null;
 }
 export const sociable = (them) => (them.traits ?? []).reduce((k, t) => k * (REACH.sociable[t] ?? 1), 1);
+
+// ---- how many are drawn (the roadmap's 4.4) ----
+// At most this many Sims in one place at once (the household, who lives there, and guests); the others stay data only
+// (a party's extra guests and friends invited round wait: they come in as someone leaves, or not at all). Measured on
+// the Mac (tests/r16-phase4.md): each Sim drawn costs about 0.06 ms a frame, 3 draw calls and 8,000 triangles; ten at
+// a party take a frame from 1.6 to 2.1 ms. The tablet is to be measured the same way: if ten Sims there take a frame
+// past about 12 ms, lower `most` (8 still has a party: the household, two who live there and four guests).
+export const DRAWN = { most: 10 };
