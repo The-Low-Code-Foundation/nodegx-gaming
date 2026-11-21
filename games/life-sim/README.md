@@ -41,7 +41,12 @@ notice board on the street says what changed, and the town's people come over to
 seven skills learnt from things at home (cooking, fitness, painting, music, gardening, handiness, charm), faster or
 slower by trait; paintings, vegetables, busking and odd jobs bring in a little money; three new careers (café chef at a
 new café, scientist, vet at a new vet's); a cat or a dog to adopt (the stray cat at the door, or the shelter by phone),
-to feed, play with and cuddle; and the artist dream.
+to feed, play with and cuddle; and the artist dream. Phase 6: the calendar. Four seasons of a week each change the
+weather (snow in winter), the colours of the grass and trees, what grows in the planter, and what happens; everyone has
+a birthday (cake baked or bought, presents from friends, a party, and nobody gets older); the town has an event each
+season (a spring plant sale, a summer fair, an autumn bake-off, winter lights on the street) with stalls, the town's
+people and a contest for a rosette; and weekends bring lie-ins, trips to the park and friends, a market and a
+kick-about.
 
 ## Run it locally
 

@@ -66,7 +66,12 @@ Sizes: **S** is a few hours, **M** is about half a day, **L** is a day or more.
 
 ## Phase 6: the calendar
 
-Seasons, birthdays with cake (no ageing), town events, and weekends that feel different.
+| # | Size | Task |
+|---|---|---|
+| 6.1 | M | **Seasons**: a week each; they change the weather, the garden and park's colours, the planter's crop, events and wishes. |
+| 6.2 | M | **Birthdays with cake** (no ageing): presents from friends, a party, the notice board for townspeople. |
+| 6.3 | L | **Town events**: a spring plant sale, a summer fair, an autumn bake-off, winter lights, each with stalls and a contest. |
+| 6.4 | S | **Weekends that feel different**: lie-ins, outings, busier phone and door, a market and a kick-about. |
 
 ## Open questions
 
@@ -78,6 +83,17 @@ Each one has a default, so none of them blocks phase 1.
 - **Should a life goal finish?** Default: it ends in a celebration, and then you can pick another.
 
 ## Progress
+
+All six phases are built, each on its own branch cut from the one before (so `life-sim-calendar` has all of them):
+
+| Phase | Branch | Checks |
+|---|---|---|
+| 1. A different start every game | `life-sim-variety` | [tests/r16-variety.md](tests/r16-variety.md) |
+| 2. Something to aim for | `life-sim-goals` | [tests/r16-phase2.md](tests/r16-phase2.md) |
+| 3. Things happen | `life-sim-events` | [tests/r16-phase3.md](tests/r16-phase3.md) |
+| 4. A town that lives without you | `life-sim-town-life` | [tests/r16-phase4.md](tests/r16-phase4.md) |
+| 5. More ways to live | `life-sim-skills` | [tests/r16-phase5.md](tests/r16-phase5.md) |
+| 6. The calendar | `life-sim-calendar` | [tests/r16-phase6.md](tests/r16-phase6.md) |
 
 - Phase 1: built on branch `life-sim-variety` (one commit per task; 1.1 and 1.2 share one), checked in the browser.
   The checks are listed in [tests/r16-variety.md](tests/r16-variety.md).
@@ -100,3 +116,9 @@ Each one has a default, so none of them blocks phase 1.
   stray cat works now). The artist dream is back. Save v7 (with 5.2; pets added to it in 5.4). The cat and dog models
   are Quaternius's (CC0 as published on OpenGameArt in 2017; CREDITS.md). The checks are listed in
   [tests/r16-phase5.md](tests/r16-phase5.md).
+- Phase 6: built on branch `life-sim-calendar`, cut from `life-sim-skills` (one commit per task, then a fix for old
+  saves), checked in the browser on the Mac. A season is a week of game days (`CALENDAR.seasonDays`, data), so a year
+  is four weeks and a player sees a change within a week of play. Snow moved to winter (40% there, none otherwise: still
+  10% over a year). All four town events are built (6.3's "one per season if it's cheap"). Save v8 (with 6.2). The
+  season looks are a recolour of existing materials, and cost nothing measurable; a town event's stalls add about 40
+  draw calls on its day. The checks are listed in [tests/r16-phase6.md](tests/r16-phase6.md).

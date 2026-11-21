@@ -10,6 +10,9 @@
 //   ?goals=1 rolls them; a test's URL has no dreams, wants or happy points otherwise)
 //   ?story=savings|friend|sweetheart|broke|inherit (round 16: how the life begins, starts.mjs; a test's URL: as before)
 //   ?town=N (round 16: the town's seed; a test's URL has the classic Sunny Lane, 0, and a new game a town of its own)
+//   ?calendar=1 (round 16, phase 6: the seasons, birthdays, the town's events and weekends on a test URL)
+//   ?season=spring|summer|autumn|winter (today its first day) or ?date=1…28 (today that day of the year): the calendar on too
+//   ?birthday=today|1…28 (with the calendar on: the first Sim's birthday)
 // Round 10: a plain /life/ starts with "carry on, or a new game?" (a save in this browser) or the create-a-Sim screen,
 // and saves as it goes. A test's URL (?seed=, ?person= or ?flatmate=) starts straight in as before and saves nothing;
 // ?menu adds the start back (and saving) to a test's URL; ?save=1 saves without it.

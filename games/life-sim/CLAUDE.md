@@ -70,13 +70,17 @@ Time: one game minute a second at speed 1 (`SPEEDS` in `life.mjs`). Every need n
 - `pets.mjs`: a cat or a dog (round 16, phase 5.4): `PETS` (model, size, names), `PET_NEEDS` (hunger, play, love),
   `PET_OFFERS` at the basket (feed, play, stroke) and the phone (adopt), `addPets`, and `Pet` (its needs; it sulks,
   never comes to harm). The models are `assets/animals/` (CREDITS.md).
+- `calendar.mjs`: the calendar (round 16, phase 6): `SEASONS` (a week each: the weather's odds, the planter's crop, free
+  will's leanings), `dateOf`, `BIRTHDAY`, `TOWN_EVENTS` (one a season: place, hours, stalls, contest skill) and
+  `PRIZES`, `WEEKEND` (the lie-in, leanings, the outing). The season's look is dressing.mjs `seasonLook`.
 - `baby.mjs`, `childcare.mjs`: the baby's needs and names; the nanny and the nursery.
 - `create.mjs`, `looks.mjs`: make-your-Sim screen; a Sim's look as data and how it is dressed.
 - `props.mjs`: what is in a Sim's hands or on the table, the eating motion, wedding clothes.
-- `save.mjs`: the save in `localStorage` (`lifesim.save.v1` key, format v7 since round 16 phase 5; a v1 to v6 save
+- `save.mjs`: the save in `localStorage` (`lifesim.save.v1` key, format v8 since round 16 phase 6; a v1 to v7 save
   from an earlier round still loads and is upgraded: the classic town, traits and likes rolled for everyone, no dream
   yet (a "Pick a dream" button), new wishes, 0 happy points, a life story that starts with "before this story", a fresh
-  event deck and the day's weather rolled; the town as made, and town life starting that day; no side earnings).
+  event deck and the day's weather rolled; the town as made, and town life starting that day; no side earnings; the
+  calendar in spring's first week on the same weekday, and birthdays by the town's dice).
 - `strings.mjs`: every word, by key (`t('need.hunger')`). English only; a language is a new table with the same keys.
 
 Other files: `index.html` (the HUD's empty panels), `style.css` + `life.css`, `assets/` (models and clips, see
@@ -93,6 +97,9 @@ wishes and happy points on a test URL; a test URL has none otherwise). Phase 3: 
 has sunshine otherwise, and no weather icon). Phase 4: `?townlife=1` (the town lives, and its people come to you, on a
 test URL; the notice board is always on the street, and says town life is off otherwise). Phase 5: `?skills=1` (skills,
 earning from them, the four new things to buy, the café chef and scientist, and the artist dream on a test URL).
+Phase 6: `?calendar=1` (the seasons, birthdays, town events and weekends on a test URL; none otherwise: no date in the
+clock, the old weather odds), `?season=id` (and today its first day) or `?date=1…28` (today that day of the year; the
+weekday stays the game's own), `?birthday=today|1…28` (the first Sim's birthday).
 
 ## How to add a thing to buy
 
@@ -254,6 +261,39 @@ Walking clips); it goes to its basket when someone sees to it, and at night. One
 stray cat's "Keep it" (events.mjs `pets: true`) adopts it; the phone's "Adopt a pet" opens the shelter (40 coins).
 Save v7 keeps `side` and `pets` (each with its basket's index in the furniture). Checks and measurements:
 [tests/r16-phase5.md](tests/r16-phase5.md).
+
+## The calendar (round 16, phase 6)
+
+On in a game, off on a test URL unless switched on (`calendarOn`). `calendar.start` is the day of the year the game
+began on (a new game: the first day of a season, by the town's dice, so every season starts on a Monday); `dateNow()`
+gives the season and day. A year is four seasons of `CALENDAR.seasonDays` (7) game days. `calendarTick` (in `townTick`)
+does the rest:
+
+- Seasons (6.1): a new season recolours the grass and the trees' leaves in the garden, park and street (dressing.mjs
+  `seasonLook`: the materials marked by `seasonal` and world.mjs `seasonalScenery` get a multiply on their own colour,
+  and frost on the grass in winter; nothing new is drawn), sets `household.crop` (Life `earn`: how fast it grows and
+  what it sells for), and is told once. The weather rolls with the season's odds (snow 40% in winter, none otherwise).
+  Free will leans by `SEASONS.lean` (Life `lean`), wishes by wants.mjs `seasons`, and events with `seasons` or
+  `calendar: true` come up only with the calendar on (blossom, leaves, carols, the sprinkler; the market and the
+  kick-about at weekends).
+- Birthdays (6.2): `birthdayOf(l)` is a day of the year: the Sim you made picks it on the create screen; anyone else's
+  is `npcBirthday(who)`, from the town's dice. From `BIRTHDAY.at` (08:00) on the day: a moodlet, the life story, the
+  `birthdayCake` wish, and presents from up to three friends (one of the birthday Sim's likes each). The offers marked
+  `birthday` (actions.mjs: bake a cake at the oven, order one, a birthday party) show only then; the cake is eaten at the
+  table (props.mjs `cakePlate`). A townsperson's birthday goes on the notice board, and the birthday-party and
+  office-cake events pick only someone whose birthday it is (events.mjs `who.birthday`). Nobody gets older.
+- Town events (6.3): `TOWN_EVENTS`, one a season. On the board `TOWN_EVENT.ahead` days before, told on the morning with
+  the `townEvent` wish; `setUpFair` puts up its stalls (world.mjs `stallModel`, made in code; offers `stall_<kind>`)
+  round the park's plaza or along the street, with dressing.mjs `eventDecor`, and `takeDownFair` packs up at closing.
+  While someone from the household is there, `fairPeople` brings up to `TOWN_EVENT.people` of the town's people (each
+  to a stall first) and counts the visit; the show's `enterContest` scores the contest skill's level plus luck
+  (`contestPlace`) for a rosette, coins and happy points. The stalls are not saved: they are put up again on load.
+- Weekends (6.4): for someone not working that day (`worksToday`, by the career's days), Life `lieIn` keeps the night's
+  sleep going until `WEEKEND.lieIn`, `leanOf` adds `WEEKEND.lean`, and `weekendTick` may send them to the park or to a
+  friend's at 11:00. Events' calls and knocks are likelier and the deck a little busier (events.mjs `DECK.weekend`).
+
+Save v8 keeps `calendar` (start, the last day done, what was told and advertised, who went and entered) and each Sim's
+`birthday`. Checks and measurements: [tests/r16-phase6.md](tests/r16-phase6.md).
 
 ## How to add a house to the street (the nearest thing to a level)
 
