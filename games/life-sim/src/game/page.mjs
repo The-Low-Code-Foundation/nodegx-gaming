@@ -638,6 +638,14 @@ function petPlay(pet, which) {
   if (was) next.crossFadeFrom(was, 0.25, false);
   pet.playing = which;
 }
+// Its basket placed again (moved, or the household moved house: a new item each time). `jump`: it is there at once.
+function rebed(pet, item, jump = false) {
+  item.pet = pet;
+  pet.bed = item;
+  if (pet.proxy) pet.proxy.userData.petBed = item;
+  pet.path = [];
+  if (jump && pet.mesh) pet.mesh.position.copy(item.spot).setY(0);
+}
 // Where it lies in its basket.
 const basketAt = (pet) => pet.bed.obj.position.clone().setY(0);
 // Its basket, and its welcome card. `kind` null: the shelter's card (the cat or the dog, for the fee).
@@ -1512,7 +1520,7 @@ async function rehome(st) {
   const there = everyone.filter((l) => l.present && l.place === old);
   for (const l of there) if (l.doing && l.doing.by !== 'job') l.stop('move');
   for (const l of everyone) l.queue = l.queue.filter((e) => !e.item || !old.items.includes(e.item));
-  const van = furniture.splice(0).map((e) => ({ e, owner: e.item.owner ?? null, twinOwner: e.item.twin?.owner ?? null, baby: e.item.baby ?? null }));
+  const van = furniture.splice(0).map((e) => ({ e, owner: e.item.owner ?? null, twinOwner: e.item.twin?.owner ?? null, baby: e.item.baby ?? null, pet: e.item.pet ?? null }));
   for (const l of everyone) if (l.home && old.items.includes(l.home)) l.home = null;
   scene.remove(old.group);
   // The house bought may be the one they are looking round (bought at its own front door): whoever is in it comes into
@@ -1529,17 +1537,19 @@ async function rehome(st) {
   const boxed = [];
   // The cots first (a baby must have one), then the beds, then the rest.
   const order = [...van].sort((a, b) => (b.baby ? 2 : b.e.id.match(/bed/i) ? 1 : 0) - (a.baby ? 2 : a.e.id.match(/bed/i) ? 1 : 0));
-  for (const { e, owner, twinOwner, baby } of order) {
+  for (const { e, owner, twinOwner, baby, pet } of order) {
     const s = kindOf(e.id), want = { ...e, x: along(e.x, from.w / 2, to.w / 2), z: along(e.z, from.d / 2, to.d / 2) };
-    const spot = (await fitSpot(s, want)) ?? (baby || e.id === 'campBed' ? await fitSpot(s, { ...want, x: 0, z: 0 }, 6) : null);
+    // A cot, a camp bed or a pet's basket is never boxed: somewhere nearer the middle if not where it was.
+    const spot = (await fitSpot(s, want)) ?? (baby || pet || e.id === 'campBed' ? await fitSpot(s, { ...want, x: 0, z: 0 }, 6) : null);
     if (!spot) {
-      if (e.id !== 'campBed' && e.id !== 'cot') boxed.push(e.id), storage.push(e.id), e.base && boxedBase.push(e.id);
+      if (e.id !== 'campBed' && e.id !== 'cot' && e.id !== 'petBed') boxed.push(e.id), storage.push(e.id), e.base && boxedBase.push(e.id);
       continue;
     }
     const item = await placeExtra({ ...e, ...spot });
     if (owner) (item.owner = owner), (owner.home = item);
     if (twinOwner && item.twin) (item.twin.owner = twinOwner), (twinOwner.home = item.twin);
     if (baby) addBaby(baby, item), home.group.add(baby.mesh);
+    if (pet) rebed(pet, item, true);
   }
   for (const l of [...there, ...visitors]) l.arrive(p);
   if (view === old || view === looking || there.includes(sel) || visitors.includes(sel)) (view = null), setView(p);
@@ -2783,8 +2793,9 @@ async function placeHere(cx, cy) {
   const item = await placeExtra({ id: p.s.id, x, z, turn: p.turn, ...(was?.width ? { width: was.width } : {}), ...(base ? { base: true } : {}) });
   if (owner) (item.owner = owner), (owner.home = item);
   if (twinOwner && item.twin) (item.twin.owner = twinOwner), (twinOwner.home = item.twin);
-  // A cot moved keeps its baby.
+  // A cot moved keeps its baby; a basket its pet.
   if (p.move?.baby) addBaby(p.move.baby, item);
+  if (p.move?.pet) rebed(p.move.pet, item);
   // A new bed: for whoever slept on the camp bed (folded away), or anyone without a bed.
   if (!p.move && item.use?.act === 'sleep') {
     const camp = campBedNow();
