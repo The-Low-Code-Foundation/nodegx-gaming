@@ -47,6 +47,7 @@ import { REWARDS, rewardById, cantBuy } from './rewards.mjs';
 import { rollLikes, cleanLikes, GIFT } from './likes.mjs';
 import { GOALS, goalById, openGoals, rollGoal, stepsDone, STEP_POINTS, GOAL_POINTS } from './goals.mjs';
 import { WANTS, WANT_SLOTS, WANT_LASTS, rollWant, wantById } from './wants.mjs';
+import { DECK, EVENTS, eventById, pickEvent, pickWho, outcomeOf } from './events.mjs';
 
 const params = new URLSearchParams(location.search);
 const $ = (id) => document.getElementById(id);
@@ -160,6 +161,11 @@ const quick = ['seed', 'person', 'flatmate'].some((k) => params.has(k)) && !para
 const saving = !quick || params.has('save');
 // Round 16, phase 2: dreams, wishes and happy points (goals.mjs, wants.mjs). Off on a test's URL unless asked for.
 const aimsOn = !quick || params.has('goal') || params.has('goals');
+// Round 16, phase 3: things happen (events.mjs), not on a test URL unless `?events=1` (or `?event=<id>`: that one, at
+// once). The deck's state: when it is next looked at, what came up when, today's count, a party you were asked to.
+const eventsOn = !quick || params.has('events') || params.has('event');
+let forcedEvent = params.get('event');
+let neighboursIn = false;
 const template = await loadTemplate(CANDIDATES.find((c) => c.id === 'rocketbox'), { renderer, scene, camera });
 // Every Sim is a clone of their person; the person's own body stays aside to lend its hair and clothes (looks.mjs).
 const folk = people(template);
@@ -175,6 +181,8 @@ const YEAR_STORED = (() => {
 let start = null;
 if (!quick) start = await startScreen(readSave());
 const saved = start?.kind === 'continue' ? start.save : null;
+// The event deck's state (round 16, phase 3; `eventsOn` above).
+const deck = { next: null, last: null, seen: {}, day: null, today: 0, party: null, ...(saved?.deck ?? {}) };
 const person = start?.kind === 'new' ? start.who : saved ? saved.lives[0].who : Number(params.get('person') ?? 0);
 // Not in a saved game: everyone is who they were.
 // Round 16: how this life begins (starts.mjs): chosen after making the Sim, or ?story= on a test's URL.
@@ -979,9 +987,11 @@ function visitState(id) {
 }
 // The parties: an evening at one of the lived-in houses (town.mjs PARTY), and who is invited.
 const livedIn = () => HOUSES.filter((h) => h.kind === 'lived' && residentsOf(h.id).length).map((h) => h.id);
-const partyToday = () => (colleaguesIn ? partyHouse(minutes, livedIn()) : null);
+// Round 16, phase 3: a birthday party you said yes to (events.mjs) is tonight's party.
+const askedParty = () => (deck.party?.day === Math.floor(minutes / 1440) && residentsOf(deck.party.id).length ? deck.party.id : null);
+const partyToday = () => (colleaguesIn ? askedParty() ?? partyHouse(minutes, livedIn()) : null);
 const partyAt = (id) => partyNow(minutes) && partyToday() === id;
-const invited = (id) => residentsOf(id).some((r) => lives.some((l) => bondOf(l, r).friendship >= INVITED));
+const invited = (id) => askedParty() === id || residentsOf(id).some((r) => lives.some((l) => bondOf(l, r).friendship >= INVITED));
 // Who else comes: the household's best friends among everyone else who is free, a few of them.
 function partyGuests(id) {
   const best = (l) => Math.max(...lives.map((h) => bondOf(h, l).friendship));
@@ -1710,6 +1720,124 @@ function openDiary() {
     <div class="actions"><button id="card-close">${t('ui.close')}</button></div>`);
   $('card-close').onclick = closeCard;
 }
+// ---- things happen (round 16, phase 3: events.mjs) ----
+// Now and then a small event for the Sim you look after: a card with two or three choices, the dice, and what came of it
+// put into what the game already has (moodlets, needs, bonds, coins, happy points, the tally, the life story, a guest, a
+// party, a trip). Never while a card is open, at a work station, asleep, or on the way somewhere.
+const placeKey = (p) => (p === home ? 'home' : p === park ? 'park' : p === office ? 'office' : p === street ? 'street' : p?.house ? 'house' : null);
+const weatherNow = () => 'sun';
+const mateOf = (l) => lives.find((o) => o !== l && !o.carer && o.present && o.place === l.place) ?? null;
+function eventCtx(l) {
+  const f = factsOf(l);
+  return {
+    place: placeKey(l.place), hour: (minutes % 1440) / 60, day: Math.floor(minutes / 1440), weekday: weekday(minutes), weather: weatherNow(),
+    traits: l.traits, likes: l.likes, goal: l.goal?.id ?? null, money: household.money, job: f.job, friends: f.friends, romance: f.romance,
+    babies: f.babies, has: f.has, mate: mateOf(l)?.name ?? null, seen: deck.seen
+  };
+}
+// The town's people an event can be about, and how they stand with `l`.
+const eventPeople = (l) =>
+  npcs().filter((o) => !lives.includes(o) && !o.carer).map((o) => ({
+    life: o, friendship: peekBond(l, o)?.friendship ?? 0, traits: o.traits, neighbour: neighbours.includes(o), colleague: colleagues.includes(o),
+    house: !!o.house && HOUSES.some((h) => h.id === o.house && h.kind === 'lived')
+  }));
+const eventFree = (l) => l.present && !l.card && !l.doing?.offer.task && l.doing?.offer.act !== 'sleep' && l.doing?.offer.act !== 'travel';
+function eventsTick() {
+  if (!eventsOn || !colleaguesIn || card || placing || moving || !eventFree(sel)) return;
+  if (forcedEvent && neighboursIn) {
+    const e = eventById(forcedEvent);
+    forcedEvent = null;
+    if (e) return openEvent(e, pickWho(e, eventPeople(sel)));
+  }
+  const day = Math.floor(minutes / 1440);
+  if (deck.day !== day) Object.assign(deck, { day, today: 0 });
+  deck.next ??= minutes + 60;
+  if (minutes < deck.next) return;
+  deck.next = minutes + DECK.every;
+  const m = minutes % 1440;
+  if (m < DECK.from || m >= DECK.to || deck.today >= DECK.most || minutes - (deck.last ?? -1e9) < DECK.gap) return;
+  if (Math.random() >= DECK.perDay / ((DECK.to - DECK.from) / DECK.every)) return;
+  const got = pickEvent(eventCtx(sel), eventPeople(sel));
+  if (got) openEvent(got.event, got.who);
+}
+// The card. `who`: the person it is about (or null).
+function openEvent(e, who = null, l = sel) {
+  deck.seen[e.id] = Math.floor(minutes / 1440);
+  deck.today++;
+  deck.last = minutes;
+  const c = eventCtx(l), mate = mateOf(l);
+  const vars = { name: l.name, who: who?.name ?? '', mate: mate?.name ?? '', house: who?.house ? houseTitle(who.house) : '' };
+  const head = e.kind === 'call' ? `📞 ${t('event.ringing', vars)}` : e.kind === 'knock' ? `🚪 ${t('event.knock', vars)}` : '';
+  const shown = e.choices.filter((ch) => !ch.when || ch.when(c));
+  const buttons = shown
+    .map((ch, i) => {
+      const short = ch.cost && household.money < ch.cost;
+      return `<button data-i="${i}" ${short || ch.later ? 'disabled' : ''}>${ch.icon} ${t(`event.${e.id}.${ch.id}`, vars)}${ch.cost ? ` <span class="cost">${t('ui.cost', { cost: ch.cost })}</span>` : ''}${ch.later ? ` <small>${t('event.later')}</small>` : ''}</button>`;
+    })
+    .join('');
+  openCard(l, 'event', `<h2>${e.icon} ${t(`event.${e.id}`, vars)}</h2>${head ? `<p class="ring">${head}</p>` : ''}<p class="intro">${t(`event.${e.id}.text`, vars)}</p><div class="choices">${buttons}</div>`);
+  for (const b of $('card').querySelectorAll('.choices button'))
+    b.onclick = () => {
+      const ch = shown[b.dataset.i];
+      if (ch.cost) household.money -= ch.cost;
+      const { result, out } = outcomeOf(ch, l.kit);
+      const bits = eventOutcome(l, e, who, mate, out);
+      $('card').querySelector('.choices').outerHTML = `<div class="result ${result === 'bad' ? 'no' : 'yes'}"><b>${t(`event.${e.id}.${ch.id}.${result}`, vars)}</b>${bits.length ? `<div class="bits">${bits.join(' · ')}</div>` : ''}</div>
+        <div class="actions"><button id="card-close" class="go">${t('event.ok')}</button></div>`;
+      $('card-close').onclick = () => {
+        closeCard();
+        if (out.go === 'park' && l.place !== park) l.command(offerById('Door_1', 'goPark'));
+        if (out.go === 'whoHouse' && who?.house && l.place !== places[who.house]) goVisit(who.house);
+      };
+      window.__life.lastEvent = { id: e.id, choice: ch.id, result, who: who?.name ?? null };
+    };
+}
+// Friendship (and romance) between two, with the toast when it reaches a new level (Life's, for the life story too).
+function befriend(a, b, friendship = 0, romance = 0) {
+  const bond = bondOf(a, b);
+  const was = { friendship: friendshipLevel(bond).id, romance: romanceLevel(bond).id };
+  bond.friendship = Math.max(-100, Math.min(100, bond.friendship + friendship));
+  bond.romance = Math.max(0, Math.min(100, bond.romance + romance));
+  for (const kind of ['friendship', 'romance']) {
+    const now = (kind === 'friendship' ? friendshipLevel : romanceLevel)(bond).id;
+    if (now !== was[kind]) a.events.push({ key: `ui.bond.${kind}`, vars: { a: a.name, b: b.name, level: `${kind}.${now}` } });
+  }
+}
+// What came of a choice; returns what to say under it ("+20 🪙 · 🍰 Cake").
+function eventOutcome(l, e, who, mate, out) {
+  const bits = [];
+  if (out.money) {
+    household.money = Math.max(0, household.money + out.money);
+    bits.push(`${out.money > 0 ? '+' : ''}${out.money} 🪙`);
+  }
+  for (const [k, v] of Object.entries(out.needs ?? {})) l.needs[k] = Math.max(0, Math.min(100, l.needs[k] + v));
+  if (out.moodlet) {
+    l.addMoodlet(out.moodlet);
+    bits.push(`${MOODLETS[out.moodlet].icon} ${t(`moodlet.${out.moodlet}`)}`);
+  }
+  if (out.whoMoodlet && who) who.addMoodlet(out.whoMoodlet);
+  if (out.mateMoodlet && mate) mate.addMoodlet(out.mateMoodlet);
+  if (who && (out.friendship || out.romance)) {
+    befriend(l, who, out.friendship ?? 0, out.romance ?? 0);
+    bits.push(`${out.romance ? '💗' : '🤝'} ${who.name} ${out.friendship >= 0 || out.romance ? '+' : ''}${(out.friendship ?? 0) + (out.romance ?? 0)}`);
+  }
+  if (mate && (out.mateFriendship || out.mateRomance)) {
+    befriend(l, mate, out.mateFriendship ?? 0, out.mateRomance ?? 0);
+    bits.push(`${out.mateRomance ? '💗' : '🤝'} ${mate.name}`);
+  }
+  if (out.points && aimsOn) {
+    l.points += out.points;
+    bits.push(`+${out.points} 🌟`);
+  }
+  if (out.count) l.count(out.count);
+  if (out.diary) milestone(e.icon, `event.${e.id}.diary`, { name: l.name, who: who?.name ?? '' });
+  if (out.invite && who && inviteOver(who, true)) guests.at(-1).comesAt = minutes;
+  if (out.party && who?.house) deck.party = { id: who.house, day: Math.floor(minutes / 1440) };
+  if (out.date && who) l.planDate(who);
+  if (out.powerCut) deck.powerOff = minutes + out.powerCut;
+  return bits;
+}
+
 function renderPanels() {
   $('clock').textContent = clockText();
   renderAims();
@@ -1958,6 +2086,8 @@ function snapshot() {
     story: story?.id ?? saved?.story ?? null,
     // Round 16, phase 2: the life story.
     diary: diary.slice(),
+    // Round 16, phase 3: the event deck.
+    deck: { ...deck, seen: { ...deck.seen } },
     // Round 16: everyone else's traits, by person (the household's are in `lives`).
     traits: { ...(saved?.traits ?? {}), ...Object.fromEntries(npcs().map((l) => [l.who, [...(l.traits ?? [])]])) },
     likes: { ...(saved?.likes ?? {}), ...Object.fromEntries(npcs().filter((l) => l.likes).map((l) => [l.who, { ...l.likes }])) },
@@ -2408,6 +2538,7 @@ function frame(now) {
     shareBeds();
     checkGoals();
     wantsTick();
+    eventsTick();
     renderPeople();
     renderToasts();
     renderCards();
@@ -2421,6 +2552,7 @@ const colleaguesLoaded = loadColleagues().then(() => (colleaguesIn = true));
 colleaguesLoaded.then(() => household.childcare === 'nanny' && babies.length && nannyLife());
 // Round 14: the two neighbours, after the nanny (who must not be one of them).
 const neighboursLoaded = colleaguesLoaded.then(() => nannyMade).then(loadNeighbours);
+neighboursLoaded.then(() => (neighboursIn = true));
 
 // For tests: the game's own steps without drawing, `n` game minutes in steps of one (a headless Chrome draws a few
 // frames a second, and a day at work at ⏭ ran out of time in round 8). The cards still stop it: it waits for no one.
@@ -2449,6 +2581,8 @@ window.__life = {
   get sel() { return sel; }, colleaguesLoaded, town: TOWN, HOUSES, streetName, story,
   // Round 16, phase 2.
   factsOf, checkGoals, openGoalPicker, aimsOn, wantsTick, wantCtx, wished, openRewards, buyReward, diary, openDiary, milestone,
+  // Round 16, phase 3.
+  eventsOn, deck, eventsTick, openEvent, eventCtx, eventPeople, EVENTS, eventById, lastEvent: null,
   folk, get extras() { return extras(); }, furniture, storage, save, snapshot, openShop, startPlacing, stopPlacing, turnPlacing, placeHere, hover, sell, beauty, openLook, get home() { return home; }, saving,
   get placing() { return placing; }, get start() { return start?.kind ?? null; },
   setSpeed, advance, get minutes() { return minutes; }, set minutes(v) { minutes = v; },

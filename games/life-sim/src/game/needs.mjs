@@ -86,7 +86,12 @@ export const MOODLETS = {
   favouriteGift: { emotion: 'happy', weight: 2, icon: '🥰', minutes: 480 },
   // Round 16, phase 2: a dream come true (goals.mjs), a wish come true (wants.mjs).
   dreamComeTrue: { emotion: 'happy', weight: 3, icon: '🏆', minutes: 2880 },
-  wishCameTrue: { emotion: 'happy', weight: 1, icon: '✨', minutes: 120 }
+  wishCameTrue: { emotion: 'happy', weight: 1, icon: '✨', minutes: 120 },
+  // Round 16, phase 3: things that happen (events.mjs).
+  cake: { emotion: 'happy', weight: 1, icon: '🍰', minutes: 180 },
+  crunchy: { emotion: 'happy', weight: 1, icon: '🍞', minutes: 60 },
+  foundCoins: { emotion: 'happy', weight: 1, icon: '🪙', minutes: 120 },
+  goodDeed: { emotion: 'happy', weight: 1, icon: '😇', minutes: 240 }
 };
 
 export const EMOTIONS = {
