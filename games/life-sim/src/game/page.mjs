@@ -408,6 +408,8 @@ for (const [i, m] of members.entries()) {
   const startNeeds = params.get(i ? 'needs2' : 'needs');
   if (startNeeds) for (const kv of startNeeds.split(',')) life.needs[kv.split(':')[0]] = Number(kv.split(':')[1]);
   if (m.s) restoreLife(life, m.s, saved.minutes);
+  // Round 16, phase 5.3: a saved job somewhere else than the office (the café): that place built now, ready for the day.
+  if (life.job && CAREERS[life.job.career] && workPlaceOf(life.job) !== 'office') await careerPlace(workPlaceOf(life.job));
   if (m.year) life.year = m.year;
   // Round 16 (traits.mjs): who they are. A new game: the ones chosen on the make-your-Sim screen (or rolled), and any
   // three for the flatmate. A test's URL: none unless ?traits= (so a seeded test's free will chooses as it did).
