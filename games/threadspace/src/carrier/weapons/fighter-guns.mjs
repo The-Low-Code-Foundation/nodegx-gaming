@@ -23,7 +23,11 @@ export const fighterGunParts = {
     const F = this.W.fighter, fi = this.fighter;
     if (!F || !fi) return;
     if (this.rounds == null || !fi.flying) this.rounds = F.rounds; // rearmed on the pad
-    if (this.fhull == null || fi.phase === 'seated' || fi.phase === 'parked') (this.fhull = F.hull), (this.crippled = false), this.fdmg?.reset(); // and mended
+    // Her damage is her own (fighter-damage.mjs, kept on her model): on her pad the repair crews mend it
+    // (fighter-repair.mjs), and her hull is what it says.
+    const D = this.fdmg;
+    if (D && fi.obj) D.attach(fi.obj);
+    if (this.fhull == null || fi.phase === 'seated' || fi.phase === 'parked') (this.fhull = D ? D.total : F.hull), (this.crippled = D ? D.dead : false);
     this.jolt = Math.max(0, (this.jolt ?? 0) - dt * 3);
     this.cannonT = Math.max(0, (this.cannonT ?? 0) - dt);
     if (!this.fighterTrigger || !fi.flying || this.crippled || this.rounds <= 0 || this.cannonT > 0) return;

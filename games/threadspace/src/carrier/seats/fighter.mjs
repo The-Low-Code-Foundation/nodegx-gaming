@@ -34,6 +34,7 @@ export class FighterSeat {
   board(i) {
     const { fighter, approach, cockpit, setMode, doors } = this.G;
     fighter.board(i);
+    this.G.guns.fdmg?.attach(fighter.obj); // her own damage, clean or not (fighter-damage.mjs)
     approach.setPad(fighter.home.pos.z, fighter.out);
     cockpit.attach(fighter.obj);
     setMode('fighter');
@@ -83,7 +84,8 @@ export class FighterSeat {
     hud.helmEl.hidden = !(fighter.flying && (fighter.view === 'chase' || !blenderFighters));
     const fl = fighter.flight;
     hud.where(fighter.flying ? `Fighter · ${fl.assistOn ? 'attitude hold: the mouse moves the aim' : 'hold off: your hand on the valves'} · mouse ${fighter.mouseMode}` : ph === 'landing' ? 'Fighter · on approach' : ph === 'wrecked' ? 'Fighter · breaking up' : 'Fighter · in the hangar');
-    if (ph === 'seated') hud.use(fighter.refuelT > 0 ? { key: '', label: 'The deck crew are topping up your tanks' } : !fl.online ? { key: '', label: 'The drive is spinning up' } : doors.open ? { key: 'W', label: 'Launch (hold)' } : { key: '', label: 'Flight control is opening the bay doors' });
+    if (ph === 'seated' && fighter.held) hud.use({ key: '', label: `Under repair, no launch: ${fighter.held}` });
+    else if (ph === 'seated') hud.use(fighter.refuelT > 0 ? { key: '', label: 'The deck crew are topping up your tanks' } : !fl.online ? { key: '', label: 'The drive is spinning up' } : doors.open ? { key: 'W', label: 'Launch (hold)' } : { key: '', label: 'Flight control is opening the bay doors' });
     else if (ph === 'flying') hud.use(this.G.rescue?.prompt() ?? (fighter.canLand(body.vel) && !approach.state.inLane ? { label: 'Hand over: flight control brings you in' } : low(fl) ? { key: '1 / 2', label: `${fl.dryMain ? 'Fuel dry' : 'Fuel low'}: 1 calls the tanker, 2 a tug to tow you home` } : null));
     else if (ph === 'turn' && fighter.lastLanding?.manual) hud.use({ key: '', label: grade(fighter.lastLanding) });
     else hud.use(PROMPTS[ph] ?? null);

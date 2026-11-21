@@ -31,7 +31,12 @@
 // canopy's glass), a small blast and embers at the hit (blaze.mjs, in her frame), sparks off a badly damaged part, and
 // the gas venting out of each hole in a tank (gas.mjs, in the world, with her velocity). The cockpit's right-hand
 // screen shows the damage page (cockpit.mjs `dmg`, from `rows()`), and a hit sounds the caution or warning tones.
-// `reset()` mends her (on her pad, for now: session 3 brings repair crews).
+//
+// The damage is hers: each fighter keeps it on her model (`obj.userData.dmg`, the way she keeps her tanks in
+// `userData.prop`): her parts' health, her tank holes and her decals. `attach(obj)` (on boarding) makes it the one this
+// reads and writes; climbing into another fighter gives you hers, clean or not. On her pad the repair crews mend it
+// (fighter-repair.mjs, session 3): `mend()` a part, `plate()` a hole's decal, `seal()` a tank hole; `scrap()` is a
+// wreck's spare airframe, whole and unmarked.
 
 import * as THREE from 'three';
 import { MeshBVH } from '../../vendor/three-mesh-bvh/index.module.js';
@@ -108,7 +113,7 @@ function enter(s, o, d) {
 }
 
 /** The point of shape `s` nearest `q` (into `out`) and the way out of it there (into `n`); returns the distance. */
-function nearest(s, q, out, n) {
+export function nearest(s, q, out, n) {
   if (s.box) {
     const [cx, cy, cz, hx, hy, hz] = s.box;
     out.set(clamp(q.x, cx - hx, cx + hx), clamp(q.y, cy - hy, cy + hy), clamp(q.z, cz - hz, cz + hz));
@@ -149,7 +154,8 @@ let ATLAS = null;
 function atlas() {
   if (ATLAS) return ATLAS;
   const S = 256, cv = document.createElement('canvas');
-  cv.width = cv.height = S * 2;
+  cv.width = S * 3;
+  cv.height = S * 2;
   const g = cv.getContext('2d');
   const scorch = (ox, oy, k) => {
     const c = S / 2;
@@ -235,6 +241,55 @@ function atlas() {
   gr.addColorStop(1, 'rgba(240, 248, 255, 0)');
   g.fillStyle = gr;
   g.fillRect(cx - 16, cy - 16, 32, 32);
+  // A hull plate welded over a hole: a square of fresh grey plate with its corners cut, a scorch round it from the
+  // welding, a ring of tack marks along its edge (the bead itself is meshes, fighter-repair.mjs), the hole's shadow
+  // faintly through it. `k` the plate's half size in the cell.
+  const plate = (ox, oy, k, holeR) => {
+    scorch(ox, oy, 0.75);
+    const c = S / 2, h = S * k, cut = h * 0.22;
+    const path = () => {
+      g.beginPath();
+      g.moveTo(ox + c - h + cut, oy + c - h);
+      g.lineTo(ox + c + h - cut, oy + c - h);
+      g.lineTo(ox + c + h, oy + c - h + cut);
+      g.lineTo(ox + c + h, oy + c + h - cut);
+      g.lineTo(ox + c + h - cut, oy + c + h);
+      g.lineTo(ox + c - h + cut, oy + c + h);
+      g.lineTo(ox + c - h, oy + c + h - cut);
+      g.lineTo(ox + c - h, oy + c - h + cut);
+      g.closePath();
+    };
+    path();
+    const gr = g.createLinearGradient(ox + c - h, oy + c - h, ox + c + h, oy + c + h);
+    gr.addColorStop(0, 'rgba(168, 172, 176, 1)');
+    gr.addColorStop(1, 'rgba(128, 132, 138, 1)');
+    g.fillStyle = gr;
+    g.fill();
+    g.strokeStyle = 'rgba(40, 36, 32, 0.9)';
+    g.lineWidth = 5;
+    g.stroke();
+    // Brushed marks across it, and the hole's bulge under it.
+    g.strokeStyle = 'rgba(200, 204, 208, 0.25)';
+    g.lineWidth = 1;
+    for (let i = 0; i < 18; i++) {
+      const y = oy + c - h + rnd(4, 2 * h - 4);
+      g.beginPath();
+      g.moveTo(ox + c - h + 6, y);
+      g.lineTo(ox + c + h - 6, y + rnd(-3, 3));
+      g.stroke();
+    }
+    const sh = g.createRadialGradient(ox + c, oy + c, 0, ox + c, oy + c, holeR);
+    sh.addColorStop(0, 'rgba(60, 60, 64, 0.35)');
+    sh.addColorStop(1, 'rgba(60, 60, 64, 0)');
+    g.fillStyle = sh;
+    g.fillRect(ox + c - holeR, oy + c - holeR, holeR * 2, holeR * 2);
+    // A stencilled repair mark in one corner.
+    g.fillStyle = 'rgba(230, 170, 40, 0.85)';
+    g.fillRect(ox + c + h - 30, oy + c - h + 10, 18, 5);
+    g.fillRect(ox + c + h - 23.5, oy + c - h + 3.5, 5, 18);
+  };
+  plate(S * 2, 0, 0.3, 26);
+  plate(S * 2, S, 0.36, 48);
   const tex = new THREE.CanvasTexture(cv);
   tex.colorSpace = THREE.SRGBColorSpace;
   const skin = new THREE.MeshStandardMaterial({ map: tex, transparent: true, depthWrite: false, roughness: 0.9, metalness: 0.1, vertexColors: true, side: THREE.DoubleSide });
@@ -242,7 +297,9 @@ function atlas() {
   ATLAS = { tex, skin, glass };
   return ATLAS;
 }
-const CELL = { scorch: [0, 0], hole: [1, 0], big: [0, 1], crack: [1, 1] };
+const CELL = { scorch: [0, 0], hole: [1, 0], big: [0, 1], crack: [1, 1], plate: [2, 0], platebig: [2, 1] };
+/** The atlas cell's uv for grid point (u, v) in -0.5..0.5 (three columns, two rows). */
+const cellUV = ([cu, cv], u, v) => [(cu + u + 0.5) / 3, 1 - (cv + 0.5 - v) * 0.5];
 
 // --- the damage ------------------------------------------------------------------------------------------------------
 
@@ -258,13 +315,10 @@ export class FighterDamage {
     this.say = say;
     this.S = C.L.fighter.damage;
     this.hull = hull;
-    const sum = this.S.parts.reduce((s, p) => s + p.hp, 0);
-    this.parts = this.S.parts.map((p) => ({ ...p, max: (p.hp / sum) * hull, hp: (p.hp / sum) * hull, holes: [], at: null, n: null, band: 'ok' }));
-    this.by = Object.fromEntries(this.parts.map((p) => [p.id, p]));
+    this.sum = this.S.parts.reduce((s, p) => s + p.hp, 0);
     this.com = new THREE.Vector3(...C.L.fighter.flight.com);
-    this.harm = { drive: 1, blocks: C.L.fighter.flight.blocks.map(() => 1), leaks: [] };
-    this.clean = true;
-    this.decals = [];
+    this.obj = null; // the fighter whose damage this is now (`attach`)
+    this.st = this.fresh(); // hers: { parts, by, harm, decals, clean } (kept on her model, `userData.dmg`)
     this.hits = []; // the last twenty: { part, dmg, kind } (tests and the console)
     this.time = 0;
     this.lastHit = -99;
@@ -272,6 +326,52 @@ export class FighterDamage {
     this.remind = 0;
     this.acc = {};
     this.flicker = 0;
+  }
+
+  /** A whole fighter's damage: every part at full health, no holes, no decals. */
+  fresh() {
+    const parts = this.S.parts.map((p) => ({ ...p, max: (p.hp / this.sum) * this.hull, hp: (p.hp / this.sum) * this.hull, holes: [], at: null, n: null, band: 'ok', work: null }));
+    return { parts, by: Object.fromEntries(parts.map((p) => [p.id, p])), harm: { drive: 1, blocks: this.C.L.fighter.flight.blocks.map(() => 1), leaks: [] }, decals: [], clean: true };
+  }
+
+  /** Fighter `obj` is the one you are in (seats/fighter.mjs `board`, and each frame from the guns): her damage, kept on
+   *  her model, is what this reads and writes from now on, and her Flight is told what it does. */
+  attach(obj) {
+    if (!obj || this.obj === obj) return;
+    this.obj = obj;
+    this.st = obj.userData.dmg ??= this.fresh();
+    this.alarm = null;
+    this.flicker = 0;
+    this.lastHit = -99;
+    if (this.st.clean) this.harmOff();
+    else this.apply();
+  }
+
+  /** The damage kept on fighter `obj` (made whole if she has none yet). */
+  of(obj) {
+    return obj === this.obj ? this.st : (obj.userData.dmg ??= this.fresh());
+  }
+
+  get parts() {
+    return this.st.parts;
+  }
+  get by() {
+    return this.st.by;
+  }
+  get harm() {
+    return this.st.harm;
+  }
+  get decals() {
+    return this.st.decals;
+  }
+  set decals(v) {
+    this.st.decals = v;
+  }
+  get clean() {
+    return this.st.clean;
+  }
+  set clean(v) {
+    this.st.clean = v;
   }
 
   /** What is left of her, all parts together (`guns.fhull`). */
@@ -308,21 +408,100 @@ export class FighterDamage {
     return this.k('cockpit') < (this.S.cockpit?.crack ?? 0.75);
   }
 
-  /** Mended: every part whole, no holes, the decals gone (on her pad). Cheap when she is whole already. */
-  reset() {
-    if (this.clean) return;
-    this.clean = true;
-    for (const p of this.parts) (p.hp = p.max), (p.holes = []), (p.at = p.n = null), (p.band = 'ok');
-    this.harm.drive = 1;
-    this.harm.blocks.fill(1);
-    this.harm.leaks = [];
+  /** Her Flight told she is whole. */
+  harmOff() {
     const fl = this.fighter.flight;
+    if (!fl || fl.obj !== this.obj) return;
     fl.harm = null;
     fl.harmed();
-    for (const d of this.decals) d.mesh.removeFromParent(), d.mesh.geometry.dispose();
-    this.decals = [];
-    this.alarm = null;
-    this.flicker = 0;
+  }
+
+  /** Fighter `obj`'s damage `st` mended in full: every part whole and its holes sealed. The decals stay (scorch, and
+   *  plates where holes were welded); cracks in the glass go with the new canopy (`glass`). */
+  mended(st, { glass = true } = {}) {
+    for (const p of st.parts) (p.hp = p.max), (p.holes = []), (p.band = 'ok'), (p.work = null);
+    st.harm.drive = 1;
+    st.harm.blocks.fill(1);
+    st.harm.leaks = [];
+    st.clean = true;
+    if (glass) this.unglaze(st);
+    if (st === this.st) (this.alarm = null), (this.flicker = 0), this.harmOff();
+  }
+
+  /** The cracks in her canopy's glass gone (a new canopy, fighter-repair.mjs's deck crew). */
+  unglaze(st) {
+    st.decals = st.decals.filter((d) => {
+      if (d.cell !== 'crack') return true;
+      d.mesh.removeFromParent();
+      d.mesh.geometry.dispose();
+      return false;
+    });
+  }
+
+  /** Everything whole and every mark gone (the console; the old instant mend). */
+  reset() {
+    this.mended(this.st);
+    this.scrub(this.st);
+  }
+
+  /** A wreck's spare airframe on her pad (fighter.mjs `salvage`): `obj` whole and unmarked, nothing to repair. */
+  scrap(obj) {
+    const st = obj.userData.dmg;
+    if (!st) return;
+    this.mended(st);
+    this.scrub(st);
+  }
+
+  scrub(st) {
+    for (const d of st.decals) d.mesh.removeFromParent(), d.mesh.geometry.dispose();
+    st.decals = [];
+  }
+
+  /** Part `p` of damage `st` mended up to `hp` (fighter-repair.mjs, as the work goes); her Flight told if it is hers and
+   *  `tell`. */
+  mend(st, p, hp, tell = false) {
+    p.hp = Math.min(p.max, Math.max(p.hp, hp));
+    p.band = band(Math.max(0, p.hp) / p.max);
+    if (tell && st === this.st) this.apply();
+  }
+
+  /** Tank hole `h` of part `p` sealed (a plate welded over it): it leaks no more. */
+  seal(st, p, h) {
+    const i = p.holes.indexOf(h);
+    if (i < 0) return;
+    p.holes.splice(i, 1);
+    st.harm.leaks = st.parts.flatMap((q) => q.holes);
+    if (st === this.st) this.apply();
+  }
+
+  /** Whether every part of `st` is whole: then she is clean again. */
+  whole(st) {
+    return st.parts.every((p) => p.hp >= p.max - 1e-6 && !p.holes.length);
+  }
+
+  /** Decal `d` (a hole) turned into a plate welded over it: the same grid laid on her skin, the plate's cell. */
+  plate(d) {
+    if (!d || d.cell === 'plate' || d.cell === 'platebig') return;
+    d.cell = d.cell === 'big' ? 'platebig' : 'plate';
+    const uv = d.mesh.geometry.attributes.uv, N = 7;
+    for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) uv.setXY(j * N + i, ...cellUV(CELL[d.cell], i / (N - 1) - 0.5, j / (N - 1) - 0.5));
+    uv.needsUpdate = true;
+  }
+
+  /** A plate decal laid where a tank hole is that has no hole drawn (fighter-repair.mjs). Returns it, or null. */
+  platedAt(obj, at, out, size = 0.55) {
+    obj.updateWorldMatrix(true, true);
+    const st = this.of(obj), was = this.st;
+    this.st = st; // decal() lays it on `this.decals`
+    let d = null;
+    try {
+      d = this.decal(obj, at, _vv.copy(out).negate(), size, 'hole');
+      if (d) this.plate(d);
+    } catch (e) {
+      console.warn('fighter plate', e);
+    }
+    this.st = was;
+    return d ?? null;
   }
 
   // --- a hit (physics: no randoms) -------------------------------------------------------------------------------------
@@ -449,6 +628,7 @@ export class FighterDamage {
     H.drive = drive * Math.max(0, 1 - S.radiator.drive * lost);
     H.leaks = this.parts.flatMap((p) => p.holes);
     const fl = this.fighter.flight;
+    if (fl.obj && this.obj && fl.obj !== this.obj) return; // not the one you are in: told when you board her
     fl.harm = H;
     fl.harmed();
   }
@@ -490,6 +670,7 @@ export class FighterDamage {
       else if (p.does === 'guns') note = this.gunsK < this.S.guns.jam ? 'JAMMED' : this.gunsK < this.S.guns.one ? 'ONE BBL' : '';
       else if (p.does === 'cockpit') note = this.cracked ? 'CRACKED' : '';
       else if (p.does === 'radiator') note = k < 0.999 ? 'HEAT' : '';
+      if (p.work) note = note ? `${p.work} ${note}` : p.work; // on her pad: what the repair crew are doing to it
       return { id: p.id, short: p.short, name: p.name, does: p.does, k, band: band(k), note, shapes: p.shapes };
     });
   }
@@ -545,7 +726,7 @@ export class FighterDamage {
     const glass = /Glass/.test(mesh.material?.name ?? '');
     if (glass) (cell = 'crack'), (size = Math.min(size, 0.6));
     // Close to one already there: that one will do.
-    for (const e of this.decals) if (e.on === mesh && e.p.distanceTo(h.point) < e.size * 0.35) return;
+    for (const e of this.decals) if (e.on === mesh && e.p.distanceTo(h.point) < e.size * 0.35) return e;
     const scale = mesh.getWorldScale(_vs).x || 1, s = size / scale; // (after `size` is capped on glass)
     const nrm = h.face.normal.clone();
     if (nrm.dot(best.dir) > 0) nrm.negate();
@@ -554,7 +735,6 @@ export class FighterDamage {
     const t1 = _vu.cross(nrm).normalize(), t2 = _vw.crossVectors(nrm, t1);
     const a = R() * Math.PI * 2, ca = Math.cos(a), sa = Math.sin(a);
     const N = 7, pos = [], uv = [], col = [], idx = [];
-    const [cu, cv] = CELL[cell];
     for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
       const u = i / (N - 1) - 0.5, v = j / (N - 1) - 0.5;
       const x = (u * ca - v * sa) * s, y = (u * sa + v * ca) * s;
@@ -568,7 +748,7 @@ export class FighterDamage {
       else alpha = 0;
       q.addScaledVector(nrm, (glass ? 0.004 : 0.008) / scale);
       pos.push(q.x, q.y, q.z);
-      uv.push((cu + u + 0.5) * 0.5, 1 - (cv + 0.5 - v) * 0.5);
+      uv.push(...cellUV(CELL[cell], u, v));
       const edge = Math.max(Math.abs(u), Math.abs(v)) > 0.49 ? 0 : 1; // the rim fades out
       col.push(1, 1, 1, alpha * edge);
     }
@@ -588,13 +768,14 @@ export class FighterDamage {
     dm.renderOrder = glass ? 3 : 1;
     dm.frustumCulled = false;
     mesh.add(dm);
-    this.decals.push({ mesh: dm, on: mesh, p: h.point.clone(), size: s, t: this.time, at: obj.worldToLocal(h.point.clone().applyMatrix4(mesh.matrixWorld)), n: nrm.clone().transformDirection(mesh.matrixWorld).transformDirection(_vm.copy(obj.matrixWorld).invert()) });
+    this.decals.push({ mesh: dm, on: mesh, cell, p: h.point.clone(), size: s, world: size, t: this.time, at: obj.worldToLocal(h.point.clone().applyMatrix4(mesh.matrixWorld)), n: nrm.clone().transformDirection(mesh.matrixWorld).transformDirection(_vm.copy(obj.matrixWorld).invert()) });
     const max = this.S.decals ?? 28;
     while (this.decals.length > max) {
       const e = this.decals.shift();
       e.mesh.removeFromParent();
       e.mesh.geometry.dispose();
     }
+    return this.decals.at(-1);
   }
 
   /** Every frame (main.mjs, after the guns): sparks off a damaged part, embers in a fresh hole, the gas out of each

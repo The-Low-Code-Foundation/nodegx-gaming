@@ -10,6 +10,7 @@
 //   carrier.html?at=bridge&voice=0&crew=0&dc=0&hold=1&seed=7     → (await import('./tools/carrier-check.mjs')).run('raid')
 //   carrier.html?at=helm&voice=0&crew=0&dc=0&hold=1&seed=7       → run('helm')
 //   carrier.html?at=fighter&voice=0&crew=0&dc=0&hold=1&seed=7    → run('landing')
+//   carrier.html?at=fighter&voice=0&crew=0&dc=0&hold=1&seed=7    → run('repair')
 //   carrier.html?at=fighter&voice=0&crew=0&dc=0&hold=1&seed=7    → run('collide')
 //   carrier.html?at=fighter&voice=0&crew=0&dc=0&hold=1&seed=7    → run('bandits')
 //   carrier.html?at=fighter&voice=0&crew=0&dc=0&hold=1&seed=7    → run('missiles')
@@ -247,6 +248,51 @@ const scenarios = {
     step(400, () => f.phase === 'seated' || f.phase === 'turn' || f.phase === 'parked');
     step(30, () => f.phase === 'seated');
     return { ...out, phases, landing: f.lastLanding && { manual: !!f.lastLanding.manual, speed: r3(f.lastLanding.speed ?? 0), off: r3(f.lastLanding.off ?? 0) }, end: snap(c) };
+  },
+
+  /** A damaged fighter mended on her pad (fighter-repair.mjs): hits on her tank, cockpit, jets and radiator in flight,
+   *  she lands, the drones and deck crew go to her, she is held until they are done (she will not launch), then she
+   *  launches. The drones' flight and every task's time are seeded; the crew's walk is timed, not stepped. */
+  async repair(c) {
+    const f = c.fighter, R = c.repairs, THREE = await import('three');
+    const step = (secs, until) => run_(c, secs, until);
+    c.bayNow();
+    step(60, () => f.flight.online && f.refuelT <= 0);
+    c.input.keys.add('KeyW');
+    step(30, () => f.flying);
+    c.input.keys.delete('KeyW');
+    step(3);
+    const hit = (lp, dir, dmg) => {
+      const p = f.obj.localToWorld(new THREE.Vector3(...lp)), d = new THREE.Vector3(...dir).transformDirection(f.obj.matrixWorld);
+      c.guns.fighterHit(p, dmg, 0, d);
+    };
+    hit([-1.38, -0.12, 0.5], [1, 0, 0], 14);
+    hit([-1.38, -0.12, -1.0], [1, 0, 0], 9);
+    hit([0, 1.5, -2.0], [0, -1, 0], 20);
+    hit([3.2, 0.6, 2.1], [-1, 0, 0], 5);
+    hit([-1.7, 1.5, 2.1], [0, -1, 0], 6);
+    step(1);
+    const hurt = parts(c);
+    f.land();
+    step(400, () => f.phase === 'seated');
+    step(1);
+    const job = R.jobs.get(f.index);
+    const tasks = job ? job.tasks.map((t) => `${t.part.id}:${t.kind}:${r3(t.T)}`) : [];
+    const held = f.held;
+    // Held: W does not take her out.
+    c.input.keys.add('KeyW');
+    step(3);
+    c.input.keys.delete('KeyW');
+    const stayed = f.phase;
+    step(20);
+    const drones = R.drones.filter((d) => d.task).map((d) => `${d.id}:${d.task.part.id}:${d.state}:${v3(d.pos).join(',')}`);
+    const t = step(600, () => !R.jobs.size);
+    const st = f.obj.userData.dmg;
+    const mended = { t, held: f.held, refuelHold: f.refuelHold, log: R.log.map((l) => `${l.part}:${l.by}:${l.t}`), decals: st.decals.map((d) => d.cell).join(' '), parts: parts(c), prop: { ...f.obj.userData.prop } };
+    c.input.keys.add('KeyW');
+    step(30, () => f.flying);
+    c.input.keys.delete('KeyW');
+    return { hurt, tasks, held, stayed, drones, mended, launched: f.phase, end: snap(c) };
   },
 
   /** The fighter against the ship (collide.mjs): launched, then set going at the hull from a spot in the ship's
@@ -613,7 +659,7 @@ export async function run(name) {
 }
 
 const PAGES = {
-  raid: 'at=bridge', helm: 'at=helm', landing: 'at=fighter', collide: 'at=fighter', bandits: 'at=fighter', missiles: 'at=fighter', walk: 'at=bridge', float: 'at=bridge', brace: 'at=bridge', career: ''
+  raid: 'at=bridge', helm: 'at=helm', landing: 'at=fighter', repair: 'at=fighter', collide: 'at=fighter', bandits: 'at=fighter', missiles: 'at=fighter', walk: 'at=bridge', float: 'at=bridge', brace: 'at=bridge', career: ''
 };
 
 /** Every scenario, each in a fresh page of its own (an iframe), from any page of this site: `{ name: { hash, … } }`.

@@ -53,6 +53,7 @@ import { Drive } from './drive.mjs';
 import { Doors } from './doors.mjs';
 import { Collisions } from './collide.mjs';
 import { FighterDamage } from './fighter-damage.mjs';
+import { Repairs } from './fighter-repair.mjs';
 import { Rescue } from './rescue.mjs';
 import { loadLayout, fetchJson } from '../core/ship.mjs';
 import { loadPeople, peopleNamed, joinPeople } from '../core/people.mjs';
@@ -225,7 +226,9 @@ let wreckedAt = 0; // the speed of the crash that wrecked her
 C.bus.on('fighter-wrecked', (e) => (wreckedAt = e.speed));
 C.bus.on('fighter-wreck-over', () => fadeThen(() => {
   cockpit.detach();
+  const wreck = fighter.obj;
   const pad = fighter.salvage();
+  if (wreck) guns.fdmg?.scrap(wreck); // a spare airframe: whole and unmarked, not a repair job
   setMode('walk');
   const sick = [...C.rooms.values()].find((r) => r.system === 'medical') ?? C.rooms.get('hangar');
   walk.goDeck(sick.deck, (sick.x[0] + sick.x[1]) / 2, (sick.z[0] + sick.z[1]) / 2, walker.yaw, sick.seg);
@@ -324,6 +327,8 @@ Object.assign(G, {
 });
 const walk = (G.walk = new WalkSeat(G));
 const rescue = (G.rescue = new Rescue(G)); // the tanker and the tug, called from the cockpit (rescue.mjs)
+// A damaged fighter on her pad is mended by drones and the deck crew, and held until she is (fighter-repair.mjs).
+const repairs = (G.repairs = guns.fdmg && L.fighter.repair ? new Repairs(G, { crew: q.get('crew') !== '0' }) : null);
 walker.floater = new Floater(G); // weightless: the handholds, pushing off, drifting, the puffer (weightless.mjs)
 const helmSeat = new HelmSeat(G);
 const fighterSeat = new FighterSeat(G);
@@ -427,6 +432,7 @@ function tick(dt) {
   guns.fly(fighter, mode === 'fighter' && !fading && f.trigger); // her cannon: the mouse button, out in space
   guns.frame(dt, mode === 'gun' ? f : IDLE, mode, camera);
   guns.fdmg?.frame(dt, { cockpit: mode === 'fighter' && !fading }); // her damage seen and heard: looks only
+  repairs?.frame(dt, f, walker, mode); // the repair crews on the damaged fighters' pads; holds the one you are in
 
   // Which decks are drawn: the one you stand on; the bridge from the helm; none from the chase view; the hangar deck
   // from a fighter (you are in it, or you can see into it through the open bay); all in the cutaway.
@@ -453,6 +459,7 @@ function tick(dt) {
   const drawnDeck = (d) => (C.isDrum(d) ? mode === 'walk' && walk.drumNow?.I.deck.id === d : C.decks.get(d).group.visible);
   tickCrew(crew, dt, drawnDeck);
   if (hands) tickCrew(hands.crew, dt, drawnDeck);
+  if (repairs) tickCrew(repairs.crew, dt, drawnDeck);
   career.tickPeople(dt, (p) => drawnDeck(p.deck) && (!C.isDrum(p.deck) || p.I.group.visible));
 
   // The main drive's push, what it does to you, and the seat's camera and HUD.
@@ -593,7 +600,7 @@ window.addEventListener('keydown', wake, { once: true });
 
 window.__carrier = {
   C, L, K, W, crew, routine, hands, body, helm, thrusters, walker, renderer, camera, cut, fighter, dc, ship, guns, plant, helmSight, sfx, approach, cockpit, career, voices, announcer,
-  gas, carrierGas, blazes, feel, flightAudio, composer, bloom, ABOARD, ambience, input, G, seats, drive, doors, rescue,
+  gas, carrierGas, blazes, feel, flightAudio, composer, bloom, ABOARD, ambience, input, G, seats, drive, doors, rescue, repairs,
   mode: () => mode,
   tick: (n = 1, dt = 1 / 60) => {
     for (let i = 0; i < n; i++) tick(dt);

@@ -751,6 +751,25 @@ fighter.damage = {
   ]
 };
 
+// Mending a damaged fighter on her pad (src/carrier/fighter-repair.mjs, ROADMAP phase 9 session 3). Places are in the
+// hangar deck's frame (x starboard, z aft, y up from the hangar floor).
+fighter.repair = {
+  about: 'Mending a damaged fighter on her pad (src/carrier/fighter-repair.mjs). Each damaged part is one job: `min` s plus `per[does]` s for a part from nothing to whole, times what it has lost, plus `hole` s for each hole in a tank (plated and welded before the rest of the tank\'s work). The deck crew do what is `inside` (in her open frame, from foot restraints by her flank), the drones the rest (plates and welding, outside); each takes the waiting job first in `order`, the most damaged first within a kind. She cannot launch until every job is done. `help` is what your welding adds to a drone job (a drone is 1); you can weld a part within `reach` m of your eye. `drones`: `racks` on the hangar\'s walls (`at` [x, y above the floor, z] the first slot, `n` slots `gap` m apart along z, `into` the way out of the wall), flown weightless and Newtonian: up to the `lane` (m above the floor, over everything) and along it, down to a point `standoff` m off the part, at up to `cruise` m/s and `accel` m/s², steering with time constant `tau`; `radius` is the clearance they keep from the gangway and the fighters. `crew`: their `posts` on the gangway [x, z] where they wait, `speed` (m/s along their way, for the timing: they push off and glide), `setup` s at the job before the work starts, the foot restraint\'s height `h` and how far off her flank they stand (`flank`). `board`: the pad\'s board (width and height, m).',
+  min: 6,
+  per: { tank: 40, cockpit: 60, drive: 70, jets: 35, guns: 40, radiator: 30 },
+  hole: 10,
+  inside: ['cockpit', 'guns', 'drive'],
+  order: ['tank', 'cockpit', 'drive', 'jets', 'guns', 'radiator'],
+  help: 1,
+  reach: 2.6,
+  drones: {
+    racks: [{ at: [-17.1, 2.4, 56], n: 3, into: [1, 0, 0] }, { at: [17.1, 2.4, 56], n: 3, into: [-1, 0, 0] }],
+    gap: 1.0, lane: 5, cruise: 2.4, accel: 0.8, tau: 0.6, standoff: 1.0, radius: 0.32
+  },
+  crew: { posts: [[0, 28], [0, 40]], speed: 0.75, setup: 4, h: 1.1, flank: 0.6 },
+  board: { w: 1.1, h: 0.78 }
+};
+
 const L = {
   about: 'The spin-drum carrier as data, built by tools/carrier-v2.mjs from design/carrier-v2.design.json (see design/SHIP-DESIGN.md and design/CARRIER-REBUILD.md). Metres, the ship\'s frame (x starboard, y up, -z the bow), the ship\'s axis at x = 0, y = 0. `compartments` are the fixed, weightless hull (grip shoes; down is -y); `drum` holds the spinning rooms, each in its own segment\'s frame. Do not edit by hand: change the design or the generator and run it again. The first carrier is archived in archive/carrier-v1/.',
   name: design.name, version: 2, length: T, mass: Math.round(M), com: [0, 0, r1(comZ)],

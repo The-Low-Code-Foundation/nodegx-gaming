@@ -88,6 +88,8 @@ export class Fighter {
     this.inside = null;
     this.towed = false; // on a rescue tug's tow bar (rescue.mjs): hands off
     this.disabled = false; // shot dead in space (main.mjs, `fighter-down`): hands off until she is in
+    this.held = null; // why she may not launch: under repair on her pad (fighter-repair.mjs sets it each frame)
+    this.refuelHold = false; // a tank holed: no topping up until it is sealed
   }
 
   get aboard() {
@@ -186,7 +188,7 @@ export class Fighter {
   // --- launch and landing --------------------------------------------------------------------------------------------
 
   launch() {
-    if (this.phase !== 'seated') return;
+    if (this.phase !== 'seated' || this.held) return; // under repair on her pad (fighter-repair.mjs): not until she is cleared
     this.phase = 'launch';
     this.t = 0;
     this.vLocal.set(0, 0, 0);
@@ -230,7 +232,7 @@ export class Fighter {
   /** Hands her to flight control: back into the carrier's frame and along a path that goes round the hull. */
   land() {
     if (this.phase !== 'flying') return;
-    this.disabled = false; // flight control has her: she is mended on her pad
+    this.disabled = false; // flight control has her: the repair crews mend her on her pad (fighter-repair.mjs)
     const w = this.obj;
     this.C.obj.updateMatrixWorld(true);
     this.berth.attach(w); // keeps where she is; her position is now in the carrier's frame (and drawn with the hangar)
@@ -338,7 +340,8 @@ export class Fighter {
       // The drive spins up (the power-up's sound runs for the same time); after a landing the tanks are topped up.
       this.powerT += dt;
       if (this.powerT >= POWER_T) fl.online = true;
-      if (this.refuelT > 0 && (this.refuelT -= dt) <= 0) fl.refill();
+      // Not while a tank is holed (fighter-repair.mjs seals the holes first).
+      if (this.refuelT > 0 && !this.refuelHold && (this.refuelT -= dt) <= 0) fl.refill();
       fl.carried(dt);
       if (hands && env.bayOpen && fl.online && f.keys.has('KeyW')) this.launch();
     } else if (this.phase === 'launch') {

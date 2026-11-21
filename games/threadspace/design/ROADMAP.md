@@ -491,6 +491,27 @@ thrust lost, gas leaking, systems out, rooms losing air. The rescue craft are in
   the hangar's racks for the outside (plates and welding, as the player's tools), deck crew for the inside, the time
   depending on the damage. The pad's board shows what is being done. You can help: the same tools. A fighter under
   repair cannot launch.
+  **Built (session 3, 21 November 2026):** `fighter-repair.mjs` and the layout's `fighter.repair` (set in
+  `tools/carrier-v2.mjs`). Damage now belongs to each fighter (`userData.dmg`, as her tanks are): her parts' health,
+  holes, leaks and decals stay on her on the pad, and boarding another fighter gives you hers. The instant mend on
+  landing is gone. A fighter set down damaged gets a job: a task per damaged part, leaks and the cockpit first, each
+  `min + per × health lost + hole × tank holes` seconds. Six drones, racked three to a side in the hangar's walls, do
+  the outside: they fly weightless on a braking profile with capped thrust (seeded), up to a lane, along it and down,
+  hold off the part clear of the gangway, the boards and every fighter's parts (her radiators folded, coming in from
+  the side under an overhang), and fit and weld plates as your welder does (the hole decal becomes a plate, a bead
+  creeps round it and cools, sparks, an arc light in bursts). Two suited deck hands do the inside (cockpit and canopy,
+  guns, drive): along the gangway and her spur, timed by the way's length, then in a foot restraint at her flank, the
+  canopy up, sparks from inside; the holes they back are plated too. Each pad has a board on her spur: each part's
+  health, what is being done to it, the time left, and NO LAUNCH UNTIL CLEARED. Her seat refuses the launch and says
+  why ("2 jobs left (propellant tank leaking), about 0:56"), and she is not refuelled while a tank leaks; when the job
+  is done her tanks are topped up. You can help: hold E at a drone's part with the welder and plates, which doubles
+  its rate. A wreck is still salvage, its state scrapped with it.
+  Fingerprints: all ten unchanged (an undamaged landing starts no job; the bandits' fighter waits for the tug). A new
+  `repair` scenario: five hits in flight, she lands, five tasks (three drones, two crew), W does not take her out,
+  mended in 66 s, then she launches (cc5866f3, the same on every run).
+  Not done: not yet played by hand; the sound of the work (only the cue when she is cleared); the drones ignore
+  each other (they work different parts, and their lanes are stacked); from the next pad's spur end, the boarding
+  handle there is nearer than a hole, so you float to the hole to weld it.
 - **Session 4: the carrier's physical consequences.** Hits do what they hit: a radiator holed loses heat rejection
   (the plant already models this), a thruster quad hit loses thrust, a tank holed leaks propellant (and the leak
   pushes her), a turret hit is out until mended, a hangar door jammed, a drum bearing hit makes the drum shudder. The
