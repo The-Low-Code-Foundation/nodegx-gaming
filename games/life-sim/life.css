@@ -231,6 +231,9 @@ h3 button.small { margin-left: 8px; padding: 2px 8px; font-size: 12px; border-ra
 #aims #aims-diary { margin-top: 6px; width: 100%; }
 .diary-row { display: flex; gap: 8px; align-items: baseline; padding: 4px 0; border-bottom: 1px solid rgba(0,0,0,0.06); font-size: 13.5px; }
 .diary-row .when { font-size: 11px; opacity: 0.6; min-width: 82px; }
+/* Round 16, phase 4.2: news on the street's notice board not read yet. */
+#card .diary-row.new { font-weight: 600; }
+#card .diary-row.new .when::after { content: ' •'; color: #b5473c; }
 /* Round 16, phase 3: an event's card (events.mjs) */
 #card .ring { margin: 0 0 4px; font-weight: 600; }
 #card .choices { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }

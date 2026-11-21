@@ -4,7 +4,7 @@
 // and the room, the Sims' "walls down"), the things a Sim can use and where it stands to use them, and a walk grid.
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { dressHome, dressHouse, dressOffice, dressPark, dressStreet, pondLife, lampGlow } from './dressing.mjs';
+import { dressHome, dressHouse, dressOffice, dressPark, dressStreet, pondLife, lampGlow, streetLabel } from './dressing.mjs';
 import { kindOf } from './game/shop.mjs';
 
 const loader = new GLTFLoader();
@@ -143,6 +143,15 @@ const PHONE_BOX = madeModel([
 const blue = new THREE.MeshStandardMaterial({ color: 0x2b6cc4, roughness: 0.5 });
 const BUS_STOP = madeModel([cyl(0.04, 2.4, 0, 1.2, 0, metal), box(0.5, 0.5, 0.04, 0, 2.2, 0.02, blue), box(0.06, 2.1, 0.06, 0.9, 1.05, -0.3, metal), box(1.4, 0.05, 0.7, 0.55, 2.1, -0.1, new THREE.MeshStandardMaterial({ color: 0xd8ecf6, roughness: 0.1, transparent: true, opacity: 0.25, depthWrite: false }))], 2.45);
 // (Round 11: the roof was 80% opaque and hid a couple arriving by bus from the camera above; now clear glass.)
+// Round 16, phase 4.2: the street's notice board, by the bus stop: two posts, a little roof, a cork board with notes
+// pinned to it (what has changed in the town: the page's).
+const cork = new THREE.MeshStandardMaterial({ color: 0xb5835a, roughness: 0.95 });
+const NOTICE_BOARD = madeModel([
+  box(0.08, 2.0, 0.08, -0.7, 1.0, 0, wood), box(0.08, 2.0, 0.08, 0.7, 1.0, 0, wood), box(1.7, 0.06, 0.4, 0, 2.03, 0, wood),
+  box(1.4, 0.9, 0.05, 0, 1.45, 0.02, cork),
+  box(0.34, 0.26, 0.01, -0.42, 1.62, 0.05, paper), box(0.3, 0.36, 0.01, 0.02, 1.52, 0.05, paper), box(0.34, 0.24, 0.01, 0.44, 1.66, 0.05, paper),
+  box(0.3, 0.22, 0.01, -0.36, 1.24, 0.05, paper), box(0.36, 0.2, 0.01, 0.4, 1.22, 0.05, paper), box(0.06, 0.06, 0.012, 0.02, 1.7, 0.056, red)
+], 2.06);
 // A camp bed: where someone who moves in sleeps (the flat has two beds; round 9).
 const CAMP_BED = madeModel([box(0.85, 0.06, 1.9, 0, 0.3, 0, metal), box(0.8, 0.12, 1.85, 0, 0.39, 0, glassMat(0x4a6fa5)), box(0.6, 0.08, 0.3, 0, 0.49, -0.75, paper), ...[[-0.38, -0.88], [0.38, -0.88], [-0.38, 0.88], [0.38, 0.88]].map(([x, z]) => box(0.04, 0.3, 0.04, x, 0.15, z, metal))], 0.53);
 
@@ -747,10 +756,19 @@ async function lifeStreet(group, { w, d, fronts, name }) {
   // The bus stop on the far pavement, halfway along (no Sim walks the whole street to catch the bus), facing the road.
   const mid = (fronts[0].x + fronts[fronts.length - 1].x) / 2;
   P.push([BUS_STOP, mid, z0 + 11.4, Math.PI, 2.45, { act: 'door', label: 'Bus stop', offers: 'streetBus' }]);
+  // Round 16, phase 4.2: the notice board beside it, facing the houses, with a name board over it (the page's).
+  P.push([NOTICE_BOARD, mid + 3.2, z0 + 11.2, Math.PI, 2.06, { act: 'look', label: 'Notice board', offers: 'streetBoard', board: true }]);
   const items = await furnish(group, P);
   const dressed = await dressStreet(group, furnish, S, { w, d, fronts, name });
+  const boardLabel = typeof document === 'undefined' ? null : streetLabel();
+  if (boardLabel) {
+    boardLabel.sprite.position.set(mid + 3.2, 3.0, z0 + 11.2);
+    boardLabel.sprite.scale.multiplyScalar(0.7);
+    boardLabel.sprite.userData.board = true;
+    group.add(boardLabel.sprite);
+  }
   return {
-    w, d, walls: [], items, cell: 0.5, starts: [], shadow: 12, fade: dressed.fade, street: { fronts, labels: dressed.labels, balloons: dressed.balloons, signs: dressed.signs, hits: dressed.hits },
+    w, d, walls: [], items, cell: 0.5, starts: [], shadow: 12, fade: dressed.fade, street: { fronts, labels: dressed.labels, balloons: dressed.balloons, signs: dressed.signs, hits: [...dressed.hits, ...(boardLabel ? [boardLabel.sprite] : [])], board: boardLabel },
     view: { target: [0, 3, -4], camera: [5, 13.5, 22], max: 34, fog: [44, 120] }
   };
 }

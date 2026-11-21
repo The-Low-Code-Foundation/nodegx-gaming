@@ -955,6 +955,8 @@ function streetTick() {
     else if (h.kind === 'sale') label.set(`🪧 ${f.no} · ${houseName(h)} · ${t('ui.cost', { cost: h.price })}`, '#b5473c');
     else label.set(`${party ? '🎉' : '🏡'} ${f.no} · ${houseTitle(f.id)}`, party ? '#7a4ab0' : '#3a6a9a');
   }
+  // Round 16, phase 4.2: the notice board's, with how much is new.
+  street.street.board?.set(`📰 ${t('news.board')}${townLife.unread ? ` · ${t('news.unread', { n: townLife.unread })}` : ''}`, townLife.unread ? '#b5473c' : '#56636e');
 }
 // What a house's door offers, for the one you look after (who may be at home, or anywhere: they walk round).
 function openDoorMenu(item, x, y) {
@@ -1448,6 +1450,8 @@ renderer.domElement.addEventListener('pointerup', (e) => {
     if (who) return who === sel ? undefined : openSocialMenu(who, e.clientX, e.clientY);
     const item = h.object.isInstancedMesh ? h.object.userData.items[h.instanceId] : h.object.userData.front ? frontDoor(h.object.userData.front) : null;
     if (item?.gone) continue;
+    // Round 16, phase 4.2: the notice board (or its name board): what has changed in the town. Read from anywhere.
+    if (item?.use?.board || h.object.userData.board) return openNews();
     if (item?.use?.front) return openDoorMenu(item, e.clientX, e.clientY);
     if (away && item?.use?.offers !== 'streetBus') continue;
     if (item && offersFor(item).length) return openMenu(item, e.clientX, e.clientY);
@@ -1838,6 +1842,16 @@ const MILESTONES = {
   'ui.levelUp': { icon: '🔬', when: (v) => v.level % 3 === 0 }
 };
 const keyVars = (vars) => Object.fromEntries(Object.entries(vars ?? {}).map(([k, v]) => [k, typeof v === 'string' && v.includes('.') ? t(v) : v]));
+// Round 16, phase 4.2: the street's notice board, the town's news (townlife.mjs), newest first.
+function openNews() {
+  if (card || placing) return;
+  const rows = townLife.news.map((n, k) => `<div class="diary-row${k < townLife.unread ? ' new' : ''}"><span class="when">${t('ui.day.short', { day: n.day })}</span><span class="icon">${n.icon}</span><span>${newsText(n)}</span></div>`).join('');
+  townLife.unread = 0;
+  openCard(sel, 'news', `<h2>📰 ${t('news.title', { street: streetName() })}</h2>${rows || `<p class="intro">${t(townLifeOn ? 'news.empty' : 'news.quiet')}</p>`}
+    <div class="actions"><button id="card-close">${t('ui.close')}</button></div>`);
+  $('card-close').onclick = closeCard;
+  save();
+}
 function openDiary() {
   if (card || placing) return;
   const rows = [...diary].reverse().map((d) => `<div class="diary-row"><span class="when">${t('ui.day.short', { day: Math.floor(d.at / 1440) + 1 })} · ${hhmm(d.at)}</span><span class="icon">${d.icon}</span><span>${t(d.key, keyVars(d.vars))}</span></div>`).join('');
@@ -2768,7 +2782,7 @@ window.__life = {
   // Round 16, phase 3.
   eventsOn, deck, eventsTick, openEvent, eventCtx, eventPeople, EVENTS, eventById, lastEvent: null, openMenu, offerWhy,
   // Round 16, phase 4.
-  townLifeOn, townLife, townLifeTick, playTownDay, TOWNLIFE, babiesAt, newsText, npcs,
+  townLifeOn, townLife, townLifeTick, playTownDay, TOWNLIFE, babiesAt, newsText, npcs, openNews,
   weatherNow, weatherTick, get weather() { return weather && { ...weather }; }, set weatherId(id) { weather = { day: Math.floor(minutes / 1440), id, told: true }; }, snowmen, weatherFx, ducks,
   folk, get extras() { return extras(); }, furniture, storage, save, snapshot, openShop, startPlacing, stopPlacing, turnPlacing, placeHere, hover, sell, beauty, openLook, get home() { return home; }, saving,
   get placing() { return placing; }, get start() { return start?.kind ?? null; },
