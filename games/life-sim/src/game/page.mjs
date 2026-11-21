@@ -317,7 +317,7 @@ for (const [i, m] of members.entries()) {
   if (m.year) life.year = m.year;
   // Round 16 (traits.mjs): who they are. A new game: the ones chosen on the make-your-Sim screen (or rolled), and any
   // three for the flatmate. A test's URL: none unless ?traits= (so a seeded test's free will chooses as it did).
-  if (!m.s) life.traits = params.has(i ? 'traits2' : 'traits') ? cleanTraits(params.get(i ? 'traits2' : 'traits').split(',')) : quick ? [] : cleanTraits(m.traits).length === 3 ? cleanTraits(m.traits) : rollTraits();
+  if (!m.s) life.traits = params.has(i ? 'traits2' : 'traits') ? cleanTraits(params.get(i ? 'traits2' : 'traits').split(',')) : quick ? [] : rollTraits(Math.random, cleanTraits(m.traits));
   life.freeWill = params.get('freewill') !== '0';
   lives.push(life);
 }
@@ -1343,7 +1343,7 @@ function openSocialMenu(other, x, y) {
   const shown = INTERACTIONS.filter((ix) =>
     ix.only === 'notHousehold' ? !lives.includes(other) : ix.only === 'household' ? lives.includes(other) : ix.only === 'unmarried' ? !spouseOf(sel, everyone) && !spouseOf(other, everyone) : true
   );
-  const head = `<div class="with">${t('ui.menu.with', { name: other.name })}<small>${t(`friendship.${friendshipLevel(bond).id}`)}${bond.married ? ` · 💍 ${t('ui.married.short')}` : bond.romance > 0 ? ` · 💗 ${t(`romance.${romanceLevel(bond).id}`)}` : ''}</small></div>`;
+  const head = `<div class="with">${t('ui.menu.with', { name: other.name })}<small>${t(`friendship.${friendshipLevel(bond).id}`)}${bond.married ? ` · 💍 ${t('ui.married.short')}` : bond.romance > 0 ? ` · 💗 ${t(`romance.${romanceLevel(bond).id}`)}` : ''}</small>${traitLine(other)}</div>`;
   const rows = asleep
     ? `<div class="note">${t(`ui.busy.${busy}`, { name: other.name })}</div>`
     : shown
@@ -1398,6 +1398,8 @@ const bondRows = (a, b) => {
     : '';
   return `<div class="pair">${a.name} & ${b.name}${bond.married ? ` · 💍 ${t('ui.married.short')}` : ''}</div><div class="bond"><span>🤝</span><span>${t('ui.friendship')}</span><b>${t(`friendship.${friendshipLevel(bond).id}`)}</b>${fBar}</div>${romance}`;
 };
+// Round 16: someone's traits in a line (the friends card, the Sim you look after, the menu over someone).
+const traitLine = (l) => (l?.traits?.length ? `<div class="traitline" title="${l.traits.map((id) => t(`trait.${id}.does`)).join(' · ')}">${l.traits.map((id) => `${TRAITS[id].icon} ${t(`trait.${id}`)}`).join(' · ')}</div>` : '');
 let friendsShown = null;
 function renderPeople() {
   $('who').innerHTML = lives.map((l, i) => `<button data-i="${i}" class="${l === sel ? 'on' : ''}" title="${t('ui.people.hint')}"><span class="face">${EMOTIONS[l.mood.emotion].icon}</span>${l.name}</button>`).join('');
@@ -1417,13 +1419,14 @@ function renderPeople() {
       if (b.dataset.care === 'nanny') nannyLife();
       save();
     };
-  $('bonds').innerHTML = lives.flatMap((a, i) => lives.slice(i + 1).map((b) => bondRows(a, b))).join('');
+  const bondsHtml = traitLine(sel) + lives.flatMap((a, i) => lives.slice(i + 1).map((b) => bondRows(a, b))).join('');
+  if ($('bonds').innerHTML !== bondsHtml) $('bonds').innerHTML = bondsHtml;
   // The colleagues and neighbours the one you look after has got to know (talked to at least once). Round 14 (the brief:
   // "everyone they work with is accessible as a 'friend' to go hang out with"): go round to theirs 🏡, or ask them
   // round 📞.
   const known = npcs().filter((c) => { const b = bondOf(sel, c); return b.friendship !== 5 || b.romance > 0; });
   const friendsHtml = known.length
-    ? `<h3>${t('ui.friends')}</h3>${known.map((c) => `<div class="friend">${bondRows(sel, c)}<div class="friend-go"><small>${t(c.job ? 'ui.friend.colleague' : 'ui.friend.neighbour')}</small><button data-visit="${c.house}" title="${t('ui.friend.visit', { name: c.name })}" ${visitState(c.house).ok ? '' : 'disabled'}>🏡 ${t('ui.friend.visitShort')}</button><button data-invite="${c.name}" title="${t('ui.friend.invite', { name: c.name })}" ${homeNow(c) && !guests.some((g) => g.life === c) ? '' : 'disabled'}>📞 ${t('ui.friend.inviteShort')}</button></div></div>`).join('')}`
+    ? `<h3>${t('ui.friends')}</h3>${known.map((c) => `<div class="friend">${bondRows(sel, c)}${traitLine(c)}<div class="friend-go"><small>${t(c.job ? 'ui.friend.colleague' : 'ui.friend.neighbour')}</small><button data-visit="${c.house}" title="${t('ui.friend.visit', { name: c.name })}" ${visitState(c.house).ok ? '' : 'disabled'}>🏡 ${t('ui.friend.visitShort')}</button><button data-invite="${c.name}" title="${t('ui.friend.invite', { name: c.name })}" ${homeNow(c) && !guests.some((g) => g.life === c) ? '' : 'disabled'}>📞 ${t('ui.friend.inviteShort')}</button></div></div>`).join('')}`
     : '';
   if (friendsShown !== friendsHtml) {
     $('workmates').innerHTML = friendsShown = friendsHtml;

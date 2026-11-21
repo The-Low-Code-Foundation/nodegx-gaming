@@ -399,6 +399,10 @@ const TABLES = {
     'moodlet.oops': 'Oops!',
     'moodlet.oops.text': 'Oops! Butterfingers.',
     // Round 16: traits (traits.mjs).
+    'ui.create.traits': 'Personality (pick {n})',
+    'ui.create.traitsRoll': 'Roll',
+    'ui.create.traitsMore': '(pick {n} more, or the dice will)',
+    'ui.friends.traits': 'Personality',
     'trait.cheerful': 'Cheerful',
     'trait.cheerful.does': 'Always sees the bright side',
     'trait.grumpy': 'Grumpy',

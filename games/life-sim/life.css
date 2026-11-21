@@ -211,3 +211,7 @@ body.creating #hud, body.creating #right, body.creating #places, body.creating #
 #card .town .btns button small { font-size: 11px; opacity: 0.85; }
 #card .town b small { font-weight: 400; color: var(--muted); font-size: 11px; }
 #card .actions small { font-size: 12px; }
+/* Round 16: the traits on the make-your-Sim screen (one that can't go with those chosen is faded) and the friends card. */
+.chips.traits button.off { opacity: 0.4; }
+h3 button.small { margin-left: 8px; padding: 2px 8px; font-size: 12px; border-radius: 8px; vertical-align: middle; }
+.traitline { font-size: 12px; opacity: 0.85; margin-top: 2px; }

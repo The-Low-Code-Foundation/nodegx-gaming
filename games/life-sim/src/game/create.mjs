@@ -5,6 +5,7 @@
 import * as THREE from 'three';
 import { Face } from '../face.mjs';
 import { HAIR_COLOURS, CLOTH_COLOURS, blankLook, randomLook } from './looks.mjs';
+import { TRAITS, TRAIT_IDS, PER_SIM, rollTraits, fits } from './traits.mjs';
 
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 
@@ -102,6 +103,8 @@ export function createSim({ renderer, scene, camera, controls, folk, t, names, y
   frame();
 
   let who = person, name = names[person], look = blankLook(), chosenYear = year;
+  // Round 16 (traits.mjs): three to begin with, rolled; a click takes one off or puts one on.
+  let traits = rollTraits();
   let shown = null, mixer = null, face = null, loading = 0, fabricsNow = [];
   const looks = new Map(); // each person's look, kept while you flip between them
 
@@ -141,6 +144,9 @@ export function createSim({ renderer, scene, camera, controls, folk, t, names, y
       <h3>${t('ui.create.name')}</h3>
       <input id="create-name" maxlength="14" value="${esc(name)}" autocomplete="off">
       <p class="note warn">${bad ? t(bad, { name: esc(name.trim()) }) : ''}</p>
+      <h3>${t('ui.create.traits', { n: PER_SIM })} <button id="create-roll" class="small">🎲 ${t('ui.create.traitsRoll')}</button></h3>
+      <div class="chips traits">${TRAIT_IDS.map((id) => `<button data-trait="${id}" class="${traits.includes(id) ? 'on' : fits(traits, id) ? '' : 'off'}" title="${t(`trait.${id}.does`)}">${TRAITS[id].icon} ${t(`trait.${id}`)}</button>`).join('')}</div>
+      <p class="note">${traits.length ? traits.map((id) => `${TRAITS[id].icon} ${t(`trait.${id}.does`)}`).join(' · ') : ''}${traits.length < PER_SIM ? ` ${t('ui.create.traitsMore', { n: PER_SIM - traits.length })}` : ''}</p>
       <div id="create-look"></div>
       <h3>${t('ui.create.year')}</h3>
       <div class="levels">${years.map((y) => `<button data-year="${y}" class="${y === chosenYear ? 'on' : ''}">${y}</button>`).join('')}</div>
@@ -168,6 +174,14 @@ export function createSim({ renderer, scene, camera, controls, folk, t, names, y
       $('create-name').setSelectionRange(at, at);
     };
     for (const b of root.querySelectorAll('[data-year]')) b.onclick = () => ((chosenYear = b.dataset.year), render());
+    for (const b of root.querySelectorAll('[data-trait]'))
+      b.onclick = () => {
+        const id = b.dataset.trait;
+        if (traits.includes(id)) traits = traits.filter((x) => x !== id);
+        else if (fits(traits, id)) traits = [...traits, id];
+        render();
+      };
+    $('create-roll').onclick = () => ((traits = rollTraits()), render());
     $('create-random').onclick = async () => {
       status(t('ui.look.loading'));
       look = await randomLook(folk, who);
@@ -210,9 +224,9 @@ export function createSim({ renderer, scene, camera, controls, folk, t, names, y
       Object.assign(controls, { minDistance: was.min, maxDistance: was.max, maxPolarAngle: was.polar });
       controls.target.copy(was.target);
       camera.position.copy(was.camera);
-      resolve({ who, name: name.trim(), look, year: chosenYear, body: shown });
+      resolve({ who, name: name.trim(), look, year: chosenYear, body: shown, traits: [...traits] });
     });
     // For tests: the screen's state, and a way to set the name without typing.
-    window.__create = { get who() { return who; }, get look() { return look; }, get name() { return name; }, setName: (n) => ((name = n), render()), pick: (j) => root.querySelector(`#create-people [data-j="${j}"]`)?.click(), get shown() { return shown; } };
+    window.__create = { get who() { return who; }, get look() { return look; }, get name() { return name; }, setName: (n) => ((name = n), render()), pick: (j) => root.querySelector(`#create-people [data-j="${j}"]`)?.click(), get shown() { return shown; }, get traits() { return traits; } };
   });
 }
