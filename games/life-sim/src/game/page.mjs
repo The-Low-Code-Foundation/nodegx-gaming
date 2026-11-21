@@ -5,6 +5,7 @@
 //   ?needs=hunger:10,energy:80 (start values; ?needs2= for the flatmate)  ?freewill=0  ?start=07:30 (the clock)
 //   ?seed=1 (free will's dice, for tests)  ?year=CE2 (the school year the work questions are pitched at)
 //   ?colleagues=2,3,4,5 (who works at the office; default four others, at random) | none
+//   ?traits=lazy,joker,neat (round 16: the first Sim's traits; ?traits2= the flatmate's; a test's URL has none otherwise)
 //   ?story=savings|friend|sweetheart|broke|inherit (round 16: how the life begins, starts.mjs; a test's URL: as before)
 //   ?town=N (round 16: the town's seed; a test's URL has the classic Sunny Lane, 0, and a new game a town of its own)
 // Round 10: a plain /life/ starts with "carry on, or a new game?" (a save in this browser) or the create-a-Sim screen,
@@ -39,6 +40,7 @@ import { makeProp, wear } from './props.mjs';
 import { Baby, BABY_NEEDS, BABY_NAMES, BLANKETS, MAX_BABIES } from './baby.mjs';
 import { CHILDCARE, NURSERY_CARED, careNow, careCost, nurseryOpen } from './childcare.mjs';
 import { STARTS, startById, surprise } from './starts.mjs';
+import { TRAITS, rollTraits, cleanTraits } from './traits.mjs';
 
 const params = new URLSearchParams(location.search);
 const $ = (id) => document.getElementById(id);
@@ -304,7 +306,7 @@ async function makeSim(who, at, i, { name = null, look = null, body = null, ...o
 // seeded choices.
 const members = saved
   ? saved.lives.map((s) => ({ who: s.who, name: s.name, look: s.look, s }))
-  : [{ who: person, name: start?.name, look: start?.look ?? null, body: start?.body ?? null, year: start?.year }, ...(mate != null ? [{ who: mate }] : [])];
+  : [{ who: person, name: start?.name, look: start?.look ?? null, body: start?.body ?? null, year: start?.year, traits: start?.traits }, ...(mate != null ? [{ who: mate }] : [])];
 for (const [i, m] of members.entries()) {
   const life = await makeSim(m.who, home, i, { household, name: m.name, look: m.look, body: m.body });
   // The flatmate starts on the rug (the second start spot is behind the TV in this flat).
@@ -313,6 +315,9 @@ for (const [i, m] of members.entries()) {
   if (startNeeds) for (const kv of startNeeds.split(',')) life.needs[kv.split(':')[0]] = Number(kv.split(':')[1]);
   if (m.s) restoreLife(life, m.s, saved.minutes);
   if (m.year) life.year = m.year;
+  // Round 16 (traits.mjs): who they are. A new game: the ones chosen on the make-your-Sim screen (or rolled), and any
+  // three for the flatmate. A test's URL: none unless ?traits= (so a seeded test's free will chooses as it did).
+  if (!m.s) life.traits = params.has(i ? 'traits2' : 'traits') ? cleanTraits(params.get(i ? 'traits2' : 'traits').split(',')) : quick ? [] : cleanTraits(m.traits).length === 3 ? cleanTraits(m.traits) : rollTraits();
   life.freeWill = params.get('freewill') !== '0';
   lives.push(life);
 }
@@ -685,6 +690,12 @@ const giveDesk = (l) => {
   if (free) free.owner = l;
 };
 
+// Round 16: someone else's traits: as saved, or rolled (in a seeded town by its dice, so they are the same people
+// every time the town is played).
+const npcTraits = (who) => {
+  const was = cleanTraits(saved?.traits?.[who]);
+  return was.length ? was : rollTraits(TOWN.seed ? townDice(TOWN.seed, 100 + who) : Math.random);
+};
 // The colleagues (round 9): four other people who work at the office, there on work days from 08:30 to 15:00, each
 // with free will. Loaded once the flat is up (they are not needed before the first work day). Math.random picks them,
 // never the seeded dice. ?colleagues=2,3 pins them; ?colleagues=none: nobody.
@@ -715,6 +726,7 @@ async function loadColleagues() {
     c.lateBy = 4 + k * 9;
     c.sim.group.visible = false;
     c.freeWill = true;
+    c.traits = npcTraits(n);
     // They have worked there a while: some higher up than others.
     c.job = { career: 'office', level: Math.floor((TOWN.seed ? townDice(TOWN.seed, 10 + k) : Math.random)() * 4), performance: 0, lastDay: -1 };
     const was = saved?.colleagues?.find((x) => x.who === n);
@@ -808,7 +820,7 @@ function loadNeighbours() {
     }
     for (const [k, n] of who.entries()) {
       const l = await makeSim(n, park, 30 + k, { household: { money: 0 } });
-      Object.assign(l, { homePlace: null, present: false, house: 'h4', freeWill: true });
+      Object.assign(l, { homePlace: null, present: false, house: 'h4', freeWill: true, traits: npcTraits(n) });
       l.sim.group.visible = false;
       makeBubble(l);
       neighbours.push(l);
@@ -1669,6 +1681,8 @@ function snapshot() {
     home: { ...homeState },
     town: { seed: TOWN.seed, neighbours: neighbours.map((n) => n.who) },
     story: story?.id ?? saved?.story ?? null,
+    // Round 16: everyone else's traits, by person (the household's are in `lives`).
+    traits: { ...(saved?.traits ?? {}), ...Object.fromEntries(npcs().map((l) => [l.who, [...(l.traits ?? [])]])) },
     // Each baby, with the cot they lie in (its place in `furniture`).
     babies: babies.filter((b) => b.cot).map((b) => ({ ...b.saved(), cot: furniture.findIndex((e) => e.item === b.cot) }))
   };

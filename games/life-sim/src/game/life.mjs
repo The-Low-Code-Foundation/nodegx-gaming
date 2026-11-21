@@ -20,6 +20,7 @@ import { NEEDS, NEED_IDS, MOODLETS, EMOTIONS, moodOf, urge, needIcon } from './n
 import { OFFERS, offersFor, offerById, offerIcon } from './actions.mjs';
 import { INTERACTIONS, bondOf, lockOf, chanceOf, applyOutcome } from './social.mjs';
 import { CAREERS, MOOD_AT_WORK, TASK, careerOf, levelOfJob, nextLevel, timeForWork } from './work.mjs';
+import { decayOf, likingOf, chanceBonus, alwaysOf, ignoredBy, afterOf, learnOf } from './traits.mjs';
 
 // Game minutes a real second at each speed: paused, normal, fast, very fast.
 export const SPEEDS = [0, 1, 4, 12];
@@ -63,6 +64,7 @@ export class Life {
     this.card = null; // a card for the page to show: 'jobs' (the jobs going), { kind: 'station', station } (a task)
     this.today = { tasks: {}, coins: 0, right: 0 }; // what they did at work today, for the page
     this.carer = false; // a nanny (round 13): here only for the babies
+    this.traits = []; // round 16 (traits.mjs): three ids, who they are
     sim.freeWill = false;
   }
 
@@ -308,7 +310,10 @@ export class Life {
     const d = this.doing;
     const active = d?.started;
     const workSlows = this.shift && this.job ? careerOf(this.job).work.slows : null;
-    if (!this.carer) for (const n of NEEDS) this.needs[n.id] -= (n.decay * (active ? d.offer.slows?.[n.id] ?? 1 : 1) * (workSlows?.[n.id] ?? 1) * min) / 60;
+    // Round 16: their traits make some needs fall faster or slower (a foodie is hungry sooner; a night owl wide awake at
+    // midnight). Read every tick, so a trait changed is felt at once.
+    const hour = (now % 1440) / 60;
+    if (!this.carer) for (const n of NEEDS) this.needs[n.id] -= (n.decay * decayOf(this.traits, n.id, hour) * (active ? d.offer.slows?.[n.id] ?? 1 : 1) * (workSlows?.[n.id] ?? 1) * min) / 60;
     if (d?.other) this.faceThem(d, min);
     if (active) {
       d.minutes += min;
@@ -340,7 +345,13 @@ export class Life {
 
     for (const [id, left] of [...this.timed]) left - min <= 0 ? this.timed.delete(id) : this.timed.set(id, left - min);
     const had = new Set(this.moodlets);
-    this.moodlets = [...Object.keys(MOODLETS).filter((id) => MOODLETS[id].when?.(this.needs, had.has(id))), ...this.timed.keys()];
+    // Round 16: a trait's own moodlet (`trait`: only for them, while its `when` holds), and the need ones it ignores.
+    const ignored = ignoredBy(this.traits);
+    this.moodlets = [
+      ...Object.keys(MOODLETS).filter((id) => !MOODLETS[id].trait && !ignored.has(id) && MOODLETS[id].when?.(this.needs, had.has(id))),
+      ...alwaysOf(this.traits).filter((id) => MOODLETS[id] && (!MOODLETS[id].when || MOODLETS[id].when(this.needs, had.has(id)))),
+      ...this.timed.keys()
+    ];
     for (const id of this.moodlets) if (!had.has(id) && MOODLETS[id].when) this.think(MOODLETS[id].icon, `moodlet.${id}.text`);
     this.mood = moodOf(this.moodlets);
 
@@ -410,6 +421,8 @@ export class Life {
     const o = d.offer;
     if (o.opens) this.card = o.opens;
     if (o.moodlet && (!o.moodletIf || o.moodletIf(d.before))) this.addMoodlet(o.moodlet);
+    // Round 16: what their traits make of it (a foodie's "yum", a clumsy Sim's "oops").
+    for (const a of afterOf(this.traits, o.id)) if (MOODLETS[a.moodlet] && (a.chance >= 1 || this.random() < a.chance)) this.addMoodlet(a.moodlet);
     if (o.babyAfter === 'sleep') d.item?.baby?.fallAsleep();
     if (o.then) {
       // Round 14: a stool or another chair will do, when there is no Chair_1 (anything that offers the same thing).
@@ -511,7 +524,9 @@ export class Life {
     d.started = p.started = true;
     d.before = { ...this.needs };
     p.before = { ...d.other.needs };
-    d.ok = this.random() < chanceOf(d.offer, bondOf(this, d.other), d.other.mood.emotion);
+    // Round 16: and their traits (a joker's jokes land; a grumpy Sim is hard to please), within the usual bounds.
+    const base = chanceOf(d.offer, bondOf(this, d.other), d.other.mood.emotion);
+    d.ok = this.random() < (base >= 1 ? 1 : Math.max(0.05, Math.min(0.97, base + chanceBonus(this.traits, d.other.traits ?? [], d.offer.id))));
     // Wedding clothes on (round 12), for as long as it goes on.
     if (d.offer.dressUp) this.onDressUp?.([this, d.other], true);
     d.beat = 0;
@@ -627,6 +642,8 @@ export class Life {
         }
         // Studying gives nothing a body needs; a Sim in a good mood with nothing pressing likes to.
         if (offer.skill && this.mood.emotion.endsWith('appy')) score += 0.04;
+        // Round 16: what they like doing (traits.mjs `likes`).
+        score *= likingOf(this.traits, offer.id);
         const far = item ? item.spot.distanceTo(this.sim.position) : 0;
         options.push({ offer, item, score: score / (1 + far / 8) });
       }
@@ -646,6 +663,7 @@ export class Life {
         // Better with someone they like (and worth it however long it takes: a chat is not "far"); on a date, with them.
         score *= 1 + Math.max(0, bond.friendship) / 100;
         if (this.date?.with === other) score *= 2;
+        score *= likingOf(this.traits, ix.id, true);
         options.push({ offer: ix, other, score: score / (1 + other.sim.position.distanceTo(this.sim.position) / 8) });
       }
     }
@@ -704,6 +722,7 @@ export class Life {
   }
 
   learn(skill, points) {
+    points *= learnOf(this.traits);
     const was = skillLevel(this.skills[skill] ?? 0);
     this.skills[skill] = (this.skills[skill] ?? 0) + points;
     const now = skillLevel(this.skills[skill]);

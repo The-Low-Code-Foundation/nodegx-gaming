@@ -34,7 +34,8 @@ export function lifeState(l) {
   return {
     who: l.who, name: l.name, look: l.look ?? null, year: l.year ?? null,
     needs: { ...l.needs }, skills: { ...l.skills }, timed: [...l.timed],
-    job: l.job ? { ...l.job } : null
+    job: l.job ? { ...l.job } : null,
+    traits: [...(l.traits ?? [])]
   };
 }
 // And back onto a Life just made for them. A work day they had started (`lastDay` today, not yet over) they go back to.
@@ -44,6 +45,8 @@ export function restoreLife(l, s, minutes) {
   l.timed = new Map((s.timed ?? []).filter(([, left]) => left > 0));
   l.year = s.year ?? undefined;
   l.look = s.look ?? null;
+  // Round 16: traits (a save from before has none, and gets three: page.mjs).
+  l.traits = Array.isArray(s.traits) ? [...s.traits] : [];
   if (s.job) {
     l.job = { ...s.job };
     if (l.job.lastDay === Math.floor(minutes / 1440)) l.job.lastDay = -1;

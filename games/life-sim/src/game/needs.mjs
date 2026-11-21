@@ -67,7 +67,19 @@ export const MOODLETS = {
   justMarried: { emotion: 'happy', weight: 3, icon: '💍', minutes: 2880 },
   // Round 14: a party (at a friend's, or yours), and turning up at one nobody asked you to.
   party: { emotion: 'happy', weight: 2, icon: '🎉', minutes: 300 },
-  gatecrasher: { emotion: 'happy', weight: 1, icon: '🙊', minutes: 240 }
+  gatecrasher: { emotion: 'happy', weight: 1, icon: '🙊', minutes: 240 },
+  // Round 16: from a Sim's traits (traits.mjs). `trait`: only someone with the trait has it (`always`, while `when`
+  // holds); the rest come after doing something they love (`after`).
+  sunny: { emotion: 'happy', weight: 1, icon: '☀️', trait: true },
+  grumbly: { emotion: 'cross', weight: 1, icon: '😒', trait: true, when: (n) => n.fun < 45 },
+  yum: { emotion: 'happy', weight: 1, icon: '🤤', minutes: 180 },
+  cosyNap: { emotion: 'happy', weight: 1, icon: '😪', minutes: 120 },
+  pumped: { emotion: 'happy', weight: 1, icon: '💪', minutes: 180 },
+  goodBook: { emotion: 'happy', weight: 1, icon: '📖', minutes: 180 },
+  quietTime: { emotion: 'happy', weight: 1, icon: '🤫', minutes: 120 },
+  spotless: { emotion: 'happy', weight: 1, icon: '✨', minutes: 180 },
+  starry: { emotion: 'happy', weight: 1, icon: '🌠', minutes: 180 },
+  oops: { emotion: 'uncomfortable', weight: 1, icon: '🤭', minutes: 30 }
 };
 
 export const EMOTIONS = {
