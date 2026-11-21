@@ -3,7 +3,10 @@
 // The screens are canvases drawn onto the model's screen quads (fighter-model.mjs), a few times a second:
 //   left    THR   her jets seen from above, each nozzle lit while its valve is open, the drive, the hold, the tanks;
 //   centre  NAV   a plot round her, nose up: the carrier's outline, the approach lane and where she is drifting;
-//   right   APP   the approach: where she is against the lane's line, her closing speed against the speed it wants.
+//   right   APP   the approach: where she is against the lane's line, her closing speed against the speed it wants;
+//                 once she is hit, DMG instead (out of the lane, or for a few seconds after each hit): her parts from
+//                 above coloured by health, and what is wrong (fighter-damage.mjs `rows()`).
+// A cracked canopy makes the HUD flicker (fighter-damage.mjs `flicker`), and dead jets are red on THR.
 //
 // The HUD is a 2D canvas over the view (#c-fhud), drawn every frame in the HUD's green, as if focused at infinity:
 // the nose (the W), the pitch ladder and the course tape against the carrier (her deck is the horizon, her bow 000), speed
@@ -82,6 +85,7 @@ export class Cockpit {
     if (!this.on) return;
     this.on = false;
     this.g.clearRect(0, 0, this.cv.width, this.cv.height);
+    this.cv.style.opacity = '';
   }
 
   /** One frame. `s`: { fighter, carrier (Rigid), C, lane (approach state), approach, camera, cockpit (bool), aim
@@ -98,12 +102,21 @@ export class Cockpit {
     this.wasFlying = f.flying;
     this.lastVel.copy(f.body.vel);
     this.drawHud(s);
+    // A cracked canopy: the HUD's projector flickers and drops out (looks only).
+    const fl = s.cockpit ? s.damage?.flicker ?? 0 : 0;
+    if (fl > 0) {
+      if (Math.random() < dt * 10 * fl) this.flick = Math.random() < 0.4 * fl ? 0 : 0.35 + 0.5 * Math.random();
+      else this.flick = (this.flick ?? 1) + (1 - (this.flick ?? 1)) * Math.min(1, dt * 12);
+      this.cv.style.opacity = this.flick.toFixed(2);
+    } else if (this.cv.style.opacity) this.cv.style.opacity = '';
     this.mfdT -= dt;
     if (this.screens && s.cockpit && this.mfdT <= 0) {
       this.mfdT = 0.12;
       this.thr(this.screens[0], s);
       this.nav(this.screens[1], s);
-      this.app(this.screens[2], s);
+      const D = s.damage;
+      if (D && !D.clean && (!s.lane?.inLane || D.time - D.lastHit < 6)) this.dmg(this.screens[2], s);
+      else this.app(this.screens[2], s);
     }
   }
 
@@ -538,6 +551,18 @@ export class Cockpit {
       g.fillText(s.hull > 0 ? `HULL ${Math.round(s.hull * 100)}%` : 'DEAD IN SPACE', 24, H - 84);
       g.fillStyle = GREEN;
     }
+    // What is out or leaking, over the hull (fighter-damage.mjs).
+    if (s.damage && !s.damage.clean && f.flying) {
+      const warn = s.damage.rows().filter((r) => r.band === 'out' || /LEAK|JAMMED/.test(r.note)).slice(0, 3);
+      if (s.jammed && !warn.some((r) => r.note === 'JAMMED')) warn.unshift({ short: 'GUNS', note: 'JAMMED', band: 'out' });
+      g.font = font(13);
+      g.textAlign = 'left';
+      warn.forEach((r, i) => {
+        g.fillStyle = r.band === 'out' ? RED : AMBER;
+        g.fillText(`${r.short} ${r.note || 'OUT'}`, 24, H - 148 - i * 18); // over the seeker and missile lines
+      });
+      g.fillStyle = GREEN;
+    }
     if (s.aim) {
       const dir = s.aim.point.clone().sub(cam.position).normalize();
       let p = project(dir);
@@ -618,6 +643,8 @@ export class Cockpit {
       const p = t.at;
       const X = ox + p.x * sc, Y = oy + p.z * sc;
       x.fillStyle = k > 0.02 ? `rgba(141, 255, 180, ${0.35 + 0.65 * k})` : '#1f4a30';
+      // A dead jet block, or the drive out (fighter-damage.mjs): red.
+      if ((t.kind === 'main' ? f.flight.harm?.drive : t.k) <= 0) x.fillStyle = '#a02a20';
       if (t.kind === 'main') {
         x.fillRect(X - 10, Y + 4, 20, 6 + 40 * k);
       } else if (t.dir.y !== 0) {
@@ -724,6 +751,53 @@ export class Cockpit {
     x.fillText(range(rng), 246, 34);
     x.textAlign = 'left';
     x.fillText(`BAY ${range(s.bayDist)}`, 10, 244);
+    S.tex.needsUpdate = true;
+  }
+
+  /** Right, once she is hit: her parts from above, each coloured by its health, and what is wrong. */
+  dmg(S, s) {
+    const x = S.x, D = s.damage, rows = D.rows();
+    screen(x, 'DMG');
+    const fresh = D.time - D.lastHit < 1.5;
+    if (fresh && Math.floor(D.time * 6) % 2 === 0) {
+      x.strokeStyle = RED;
+      x.lineWidth = 3;
+      x.strokeRect(3, 3, 250, 250);
+    }
+    const BAND = { ok: '#1f6a40', scuffed: '#3fae6a', hit: AMBER, bad: RED, out: '#5a1410' };
+    const sc = 12, ox = 128, oy = 90; // her from above, nose up
+    const paint = (r) => {
+      x.fillStyle = BAND[r.band];
+      x.strokeStyle = r.band === 'out' ? RED : '#04100a';
+      x.lineWidth = 1;
+      for (const sh of r.shapes) {
+        x.beginPath();
+        if (r.does === 'guns') for (const gx of [-0.2, 0.2]) x.rect(ox + (gx - 0.07) * sc, oy + (sh.box[2] - sh.box[5]) * sc, 0.14 * sc * 2, sh.box[5] * 2 * sc);
+        else if (sh.box) x.rect(ox + (sh.box[0] - sh.box[3]) * sc, oy + (sh.box[2] - sh.box[5]) * sc, sh.box[3] * 2 * sc, sh.box[5] * 2 * sc);
+        else if (sh.cyl) x.rect(ox + (sh.cyl[0] - sh.cyl[4]) * sc, oy + sh.cyl[2] * sc, sh.cyl[4] * 2 * sc, (sh.cyl[3] - sh.cyl[2]) * sc);
+        else if (sh.ball) x.arc(ox + sh.ball[0] * sc, oy + sh.ball[2] * sc, sh.ball[3] * sc, 0, Math.PI * 2);
+        x.fill();
+        x.stroke();
+      }
+    };
+    for (const r of rows) if (r.does !== 'guns') paint(r);
+    for (const r of rows) if (r.does === 'guns') paint(r);
+    // What is wrong, worst first.
+    const bad = rows.filter((r) => r.band !== 'ok').sort((a, b) => a.k - b.k).slice(0, 6);
+    x.font = '13px ui-monospace, Menlo, monospace';
+    bad.forEach((r, i) => {
+      const y = 166 + i * 15;
+      x.fillStyle = r.band === 'out' || r.band === 'bad' ? RED : r.band === 'hit' ? AMBER : GREEN;
+      x.textAlign = 'left';
+      x.fillText(r.short, 10, y);
+      x.textAlign = 'right';
+      x.fillText(r.band === 'out' ? 'OUT' : `${Math.round(r.k * 100)}%`, 112, y);
+      x.textAlign = 'left';
+      x.fillText(r.note, 122, y);
+    });
+    x.textAlign = 'right';
+    x.fillStyle = D.dead ? RED : GREEN;
+    x.fillText(D.dead ? 'DEAD IN SPACE' : `HULL ${Math.round((D.total / D.hull) * 100)}%`, 246, 20);
     S.tex.needsUpdate = true;
   }
 

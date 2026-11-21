@@ -5,6 +5,7 @@ import { THREE, at, clamp, _a, _b, _c, _d, _m, Z, _k1, _k2, _kq, FLASH_GEO, turn
 import { lookOf } from './tracers.mjs';
 
 const _w = new THREE.Vector3(), _n = new THREE.Vector3(), _bd = new THREE.Vector3(), _bv = new THREE.Vector3();
+const _hd = new THREE.Vector3(); // a round's way through your fighter (fighterHit)
 
 /** Mixed into `Weapons` (weapons.mjs). */
 export const projectileParts = {
@@ -69,7 +70,7 @@ export const projectileParts = {
           // She moves too: test against where she was at that moment of the frame.
           ap.addScaledVector(fi.body.vel, -(1 - k) * dt).addScaledVector(ab, -k);
           if (ap.length() < ((s.bandit ? this.W.bandit.gun.radius : this.W.raider.flak?.radius) ?? 4)) {
-            this.fighterHit(_d.copy(prev).addScaledVector(ab, k), s.dmg);
+            this.fighterHit(_d.copy(prev).addScaledVector(ab, k), s.dmg, 0, _hd.copy(s.vel).sub(fi.body.vel));
             s.life = 0;
           }
         }

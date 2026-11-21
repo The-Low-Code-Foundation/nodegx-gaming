@@ -455,6 +455,38 @@ thrust lost, gas leaking, systems out, rooms losing air. The rescue craft are in
   of its own, so she starts to turn), the guns jammed, the canopy cracked (the HUD flickers). Drawn on her: scorch and
   holes on the model as decals, sparks, a gas leak. When she is dead in space the tug brings her in (built). The
   cockpit's displays show what is hit.
+  **Built (session 2, 21 November 2026):** `fighter-damage.mjs` and the layout's `fighter.damage` (set in
+  `tools/carrier-v2.mjs`): eleven parts in her frame (cockpit and canopy, an armoured capsule; the drive; the
+  propellant tank to port and the jet gas tank to starboard; the bow, stern and two wingtip jet blocks; two radiators;
+  the chin guns), each with its own health, their shares adding up to her hull. Every hit is placed: a shot (the
+  raider's flak, a bandit's round) on the first part along its line through her, what it cannot take going on to the
+  next; a missile's burst on the part nearest and the rest by share and distance; a crash on the part struck and the
+  rest over the whole airframe. `guns.fhull` is the sum; she is dead in space (`fighter-down`, the tug) when the cockpit
+  is gone, the sum is gone, or the drive and three jet blocks are out. Through flight.mjs's `harm`: the drive's thrust
+  falls with its health and with each lost radiator; a jet block pushes at its health and a dead one leaves her
+  turning and sliding crooked when you ask for a turn, the hold fighting it with what is left (the bow block also
+  carries the retro jet); a holed tank leaks (up to 30 kg/s of propellant, 12 of jet gas) and the gas out of the hole
+  pushes her, so with the hold off she turns (a holed jet gas tank turned her 33° in 5 s), and with it on the hold
+  spends gas holding her; hit guns fire one barrel at half the rate, then jam; a cracked canopy flickers the HUD. Seen:
+  a small blast at the hit, a scorch, hole or big hole laid onto her model where the hit met it (a grid cast onto the
+  mesh, parented to it, so it folds with a radiator), cracks on the canopy's glass from inside, sparks off a badly hit
+  part, embers in a fresh hole, a frosty jet and gas streaming off each tank hole. The cockpit: the right screen shows
+  DMG (her parts from above by health, and what is wrong) out of the lane or for a few seconds after a hit, dead jets
+  red on THR, what is out or leaking on the HUD, caution and warning tones, and a line on the card. Mended on her pad
+  (session 3 brings the crews). Looks are Math.random with their own scratch; the hits' placing is seeded physics.
+  Fingerprints: raid, helm, landing, walk, float, brace and career unchanged. Bandits moved (the same three flak hits
+  at the same moments, but on her parts, a wingtip block taking 4 of a 21-point shell and the rest flying on through,
+  so she is dead in space at 50 s, to a second missile's burst on her cockpit, not at 42 s: the fight lasts longer, the
+  flak gets a bandit at 71 s and the raid is over at 75 s, not 91, with her waiting for the tug rather than home).
+  Missiles moved only in her hull (85.8 to 88.2) and the new `parts` field: every missile's fate and time is the same.
+  Collide moved: a crash spreads over her parts and the cockpit is armoured (the 14 m/s crash leaves 85, not 79; the
+  glance 61 with her stern jets out, not 47), and with her jets a little weaker the hold's pops fall on other frames, so
+  after the crash she misses the second 3 m/s scrape (16 contacts, not 17) and the later cases start a hair apart
+  (150 m/s meets the hull at 138.4, not 137.9; the bay a few centimetres off); bump, door, swing and holed end where
+  they did. (A crash's shock through her no longer holes a tank: at first a 0.2-point scrape left pinholes leaking
+  forever and nudging her.)
+  Not done: the warning tones were not heard (tests ran with sound off); the bandits do not take part damage (they keep
+  a single hull); not yet played by hand.
 - **Session 3: mending fighters in the hangar.** A damaged fighter landed on her pad gets a repair crew: drones from
   the hangar's racks for the outside (plates and welding, as the player's tools), deck crew for the inside, the time
   depending on the damage. The pad's board shows what is being done. You can help: the same tools. A fighter under

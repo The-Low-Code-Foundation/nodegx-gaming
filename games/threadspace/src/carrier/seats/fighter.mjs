@@ -104,7 +104,7 @@ export class FighterSeat {
       cockpit: fighter.view === 'cockpit', bayOpen: doors.open, pad: fighter.index + 1,
       foe: fighter.flying ? guns.foe(FOE) : null, marks: fighter.flying ? guns.foeMarks(MARKS) : null, rounds: guns.rounds, roundsMax: L.weapons.fighter?.rounds,
       missiles: guns.rails, flares: guns.myFlares, lock: fighter.flying ? guns.lock : null, lockName: guns.lockName(), seeing: guns.seeing, warn: fighter.flying ? guns.warn : null,
-      hull: guns.fhull != null ? guns.fhull / L.weapons.fighter.hull : 1,
+      hull: guns.fhull != null ? guns.fhull / L.weapons.fighter.hull : 1, damage: guns.fdmg, jammed: guns.time - (guns.jammedT ?? -9) < 0.6,
       rescue: fighter.flying ? this.G.rescue?.mark(RESCUE) : null
     });
   }

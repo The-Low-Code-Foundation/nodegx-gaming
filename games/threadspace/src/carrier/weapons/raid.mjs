@@ -209,17 +209,24 @@ export const raidParts = {
     this.sfx?.play('turbolaser', this.ear ? this.ear.distanceTo(muzzle) * 0.8 : 900);
   },
 
-  /** The fighter is hit: her hull takes it (the layout's `weapons.fighter.hull`), she is thrown about, and at nothing
-   *  she is dead in space: hands off, and the tug goes out to tow her in (`fighter-down`; main.mjs, rescue.mjs). She is mended on her
-   *  pad. `crash` (collide.mjs): the speed she hit something at; if that finishes her she breaks up instead, a fireball
+  /** The fighter is hit at `p` (world). With her damage map (`fdmg`, fighter-damage.mjs) the hit lands on a part of her
+   *  and does what that part does, and her hull (`fhull`) is what is left of all of them; without it, her hull takes
+   *  it (the layout's `weapons.fighter.hull`). She is thrown about, and dead in space (`fdmg.dead`, or nothing left) she
+   *  says `fighter-down`: hands off, and the tug goes out to tow her in (main.mjs, rescue.mjs). She is mended on her
+   *  pad. `dir` (world): the way the shot was going relative to her (a crash: into her); `blast` a missile's burst.
+   *  `crash` (collide.mjs): the speed she hit something at; if that finishes her she breaks up instead, a fireball
    *  and her pieces, and says `fighter-wrecked` (main.mjs: you come round in the sick bay, the spare on her pad). */
-  fighterHit(p, dmg, crash = 0) {
-    this.fhull = Math.max(0, this.fhull - dmg);
+  fighterHit(p, dmg, crash = 0, dir = null, blast = false) {
+    const D = this.fdmg;
+    if (D) {
+      D.hit(p, dmg, { dir, crash, blast });
+      this.fhull = D.total;
+    } else this.fhull = Math.max(0, this.fhull - dmg);
     this.jolt = 1;
     this.flash(p, 3, '#ffb070', 0.3);
     this.flash(p, 1.5, '#ffffff', 0.1);
     this.sfx?.play('boom', 30, 12);
-    if (this.fhull > 0 || this.crippled) return;
+    if ((D ? !D.dead : this.fhull > 0) || this.crippled) return;
     this.crippled = true;
     if (crash) {
       const fi = this.fighter, c = fi.obj.getWorldPosition(new THREE.Vector3());

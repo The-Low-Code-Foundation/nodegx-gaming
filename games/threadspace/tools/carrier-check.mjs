@@ -77,6 +77,12 @@ function snap(c) {
 }
 
 /** Counts what a raid does, by wrapping the guns' own calls. */
+/** Your fighter's parts that a hit has reached (fighter-damage.mjs): `id:health` (0..1), worst first. */
+function parts(c) {
+  const D = c.guns.fdmg;
+  return D ? D.rows().filter((r) => r.k < 0.9995).sort((a, b) => a.k - b.k).map((r) => `${r.id}:${r3(r.k)}`).join(' ') : '';
+}
+
 function counters(c) {
   const g = c.guns, n = { theirLaunched: 0, torpHits: 0, shotDown: 0, shellHits: 0 };
   const wrap = (name, fn) => { const f = g[name].bind(g); g[name] = (...a) => fn(f, ...a); };
@@ -130,7 +136,7 @@ const scenarios = {
     }
     return {
       t: r3(t), ...n, strafed, states: states.join(' '), kills: (g.kills ?? []).map((k) => `${k.who}@${r3(k.t)}`), near: r3(near),
-      pdcHp: g.pdcs.map((p) => r3(p.hp)), fhull: r3(g.fhull), raiderDead: !!g.raider?.dead, ...snap(c)
+      pdcHp: g.pdcs.map((p) => r3(p.hp)), fhull: r3(g.fhull), parts: parts(c), raiderDead: !!g.raider?.dead, ...snap(c)
     };
   },
 
@@ -188,7 +194,7 @@ const scenarios = {
     }
     const missiles = [...fate.values()].map((e) => `${e.side}:${e.on}>${e.end}@${e.at}`);
     return {
-      t: r3(t), fired, flared, missiles, rails: g.rails, flaresLeft: g.myFlares, fhull: r3(g.fhull), crippled: !!g.crippled,
+      t: r3(t), fired, flared, missiles, rails: g.rails, flaresLeft: g.myFlares, fhull: r3(g.fhull), parts: parts(c), crippled: !!g.crippled,
       bandits: g.bandits.map((B) => (B.dead ? 'x' : B.gone ? '-' : B.state[0])).join(''), kills: (g.kills ?? []).map((k) => `${k.who}@${r3(k.t)}`),
       banditFlares: g.bandits.map((B) => B.flareState?.left ?? '-'), raiderFlares: g.raider?.flareState?.left ?? '-', carrierFlares: g.carrierFlares?.left ?? '-', ...snap(c)
     };
@@ -268,12 +274,13 @@ const scenarios = {
       c.collide.prev = null;
       c.guns.fhull = 100;
       c.guns.crippled = false;
+      c.guns.fdmg?.reset(); // every part whole again
       const n0 = c.collide.hits.length;
       step(secs, () => !f.flying);
       const rel = f.body.vel.clone().sub(c.body.vel).applyQuaternion(cq.invert());
       return {
         hits: c.collide.hits.slice(n0, n0 + 4).map((h) => `${h.what}:${r3(h.speed)}:${r3(h.damage)}${h.hole ? `:${h.hole.join('/')}` : ''}`),
-        at: v3(C.obj.worldToLocal(f.obj.position.clone())), rel: v3(rel), hull: r3(c.guns.fhull), phase: f.phase
+        at: v3(C.obj.worldToLocal(f.obj.position.clone())), rel: v3(rel), hull: r3(c.guns.fhull), parts: parts(c), phase: f.phase
       };
     };
     const port = -Math.PI / 2; // nose to starboard: in at her port side

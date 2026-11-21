@@ -720,6 +720,37 @@ fighter.rescue = {
   }
 };
 
+// Where a hit on her lands and what it does (src/carrier/fighter-damage.mjs, ROADMAP phase 9 session 2). Each part is
+// shapes in her own frame (the Blender model's: x starboard, y up, -z the nose; fighter_build.py): `box` [cx, cy, cz,
+// hx, hy, hz] (centre and half sizes), `ball` [x, y, z, r], `cyl` [x, y, z0, z1, r] (along z). `hp` is its share of the
+// hull (`weapons.fighter.hull`; the shares are scaled to add up to it). `does` is what it is: `drive`, `jets` (with
+// `block`, the index of its jet block in `flight.blocks`), `tank` (with `tank`: `main` or `rcs`), `radiator`, `cockpit`,
+// `guns`. The port tank holds the drive's propellant, the starboard one the jets' cold gas.
+fighter.damage = {
+  about: 'Her parts and what a hit on each does (src/carrier/fighter-damage.mjs). `parts`: each `id`, `name` (the cockpit\'s damage page), `short`, `does` (what it is), `hp` (its share of `weapons.fighter.hull`; the shares are scaled to add up to it) and `shapes` in her frame (`box` [cx, cy, cz, hx, hy, hz], `ball` [x, y, z, r], `cyl` [x, y, z0, z1, r] along z). A shot is placed on the first part its line meets (nearest the line if none), and what that part cannot take goes `pass` of it on to the next part along the line. A missile\'s burst gives `blast` of it to the part nearest the burst and the rest (and what that part could not take) to every part by its share and its distance (`reach` m); a crash gives `crash` of it to the part it struck and the rest to every part by its share; what a part cannot take of that share is lost. A part with `armour` takes that fraction of what reaches it (the cockpit is an armoured capsule). `guns.fhull` is the sum of the parts. She is dead in space when the cockpit is gone, the sum is gone, or the drive and `dead.jets` of the jet blocks are out. `drive`: thrust is `floor` + her health of full (nothing at 0). `radiator`: each lost one takes `drive` of the drive\'s full push (no waste heat shed, no full power). `jets`: a block\'s nozzles push at its health, nothing at 0. `tank`: a shot or a burst that does it `hole` or more holes it (a crash\'s shock through her does not; the part it strikes can be holed), and a hole leaks `leak[tank].rate` kg/s × the damage, and the leaking gas pushes her at `leak[tank].ve` m/s out of the hole. `guns`: under `one` one barrel fires at half the rate, under `jam` both are jammed. `cockpit`: under `crack` the canopy is cracked and the HUD flickers. `decals`: at most that many scorch marks and holes drawn on her.',
+  pass: 0.5, blast: 0.5, reach: 6, crash: 0.4, hole: 0.5,
+  dead: { jets: 3 },
+  drive: { floor: 0.15 },
+  radiator: { drive: 0.25 },
+  leak: { main: { rate: 30, ve: 220 }, rcs: { rate: 12, ve: 300 } },
+  guns: { one: 0.6, jam: 0.25 },
+  cockpit: { crack: 0.75 },
+  decals: 28,
+  parts: [
+    { id: 'cockpit', name: 'Cockpit and canopy', short: 'CKPT', does: 'cockpit', hp: 26, armour: 0.5, shapes: [{ box: [0, 0.44, -2.3, 0.95, 1.06, 3.5] }] },
+    { id: 'drive', name: 'Main drive', short: 'DRIVE', does: 'drive', hp: 18, shapes: [{ box: [0, 0.1, 3.15, 0.8, 0.9, 1.95] }] },
+    { id: 'tank-main', name: 'Propellant tank (port)', short: 'FUEL', does: 'tank', tank: 'main', hp: 12, shapes: [{ cyl: [-1.38, -0.12, -1.86, 3.46, 0.56] }] },
+    { id: 'tank-rcs', name: 'Jet gas tank (starboard)', short: 'GAS', does: 'tank', tank: 'rcs', hp: 10, shapes: [{ cyl: [1.38, -0.12, -1.86, 3.46, 0.56] }] },
+    { id: 'jets-bow', name: 'Bow jets', short: 'J-BOW', does: 'jets', block: 0, hp: 4, shapes: [{ box: [-1.15, 0, -3.4, 0.3, 0.8, 0.35] }, { box: [1.15, 0, -3.4, 0.3, 0.8, 0.35] }] },
+    { id: 'jets-stern', name: 'Stern jets', short: 'J-AFT', does: 'jets', block: 1, hp: 4, shapes: [{ box: [-1.15, 0, 3.4, 0.3, 0.8, 0.35] }, { box: [1.15, 0, 3.4, 0.3, 0.8, 0.35] }] },
+    { id: 'jets-port', name: 'Port wingtip jets', short: 'J-L', does: 'jets', block: 2, hp: 4, shapes: [{ box: [-3.2, 0.6, 2.1, 0.6, 0.45, 1] }] },
+    { id: 'jets-stbd', name: 'Starboard wingtip jets', short: 'J-R', does: 'jets', block: 3, hp: 4, shapes: [{ box: [3.2, 0.6, 2.1, 0.6, 0.45, 1] }] },
+    { id: 'rad-port', name: 'Port radiator', short: 'RAD-L', does: 'radiator', hp: 5, shapes: [{ box: [-1.73, 0.82, 2.1, 0.87, 0.16, 1] }] },
+    { id: 'rad-stbd', name: 'Starboard radiator', short: 'RAD-R', does: 'radiator', hp: 5, shapes: [{ box: [1.73, 0.82, 2.1, 0.87, 0.16, 1] }] },
+    { id: 'guns', name: 'Chin guns', short: 'GUNS', does: 'guns', hp: 8, shapes: [{ box: [0, -0.8, -3.0, 0.45, 0.2, 2.6] }] }
+  ]
+};
+
 const L = {
   about: 'The spin-drum carrier as data, built by tools/carrier-v2.mjs from design/carrier-v2.design.json (see design/SHIP-DESIGN.md and design/CARRIER-REBUILD.md). Metres, the ship\'s frame (x starboard, y up, -z the bow), the ship\'s axis at x = 0, y = 0. `compartments` are the fixed, weightless hull (grip shoes; down is -y); `drum` holds the spinning rooms, each in its own segment\'s frame. Do not edit by hand: change the design or the generator and run it again. The first carrier is archived in archive/carrier-v1/.',
   name: design.name, version: 2, length: T, mass: Math.round(M), com: [0, 0, r1(comZ)],

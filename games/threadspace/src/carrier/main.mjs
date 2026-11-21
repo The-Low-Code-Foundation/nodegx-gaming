@@ -52,6 +52,7 @@ import { View } from './render.mjs';
 import { Drive } from './drive.mjs';
 import { Doors } from './doors.mjs';
 import { Collisions } from './collide.mjs';
+import { FighterDamage } from './fighter-damage.mjs';
 import { Rescue } from './rescue.mjs';
 import { loadLayout, fetchJson } from '../core/ship.mjs';
 import { loadPeople, peopleNamed, joinPeople } from '../core/people.mjs';
@@ -197,6 +198,9 @@ const guns = new Weapons(C, world, {
 const feel = new Feel(sfx);
 guns.feel = ship.feel = feel;
 guns.gas = carrierGas;
+// Where a hit on your fighter lands and what it does (fighter-damage.mjs): her parts, the damage drawn on her, the
+// cockpit's damage page and tones. `guns.fhull` is what is left of them all.
+guns.fdmg = C.L.fighter.damage ? new FighterDamage(C, fighter, { gas, blazes, sfx, hull: L.weapons.fighter?.hull ?? 100, say: (t) => dc.say(null, t, 0, 4) }) : null;
 ship.knock = (p, dir, kind) => guns.struck(p, dir, kind);
 // A torpedo hit's streaking debris, in the world (weapons/tracers.mjs), on top of integrity.mjs's fireball and dust in
 // her own frame. No ring: there is no air out there to carry a shock. A shell's own spatter is already drawn where it
@@ -422,6 +426,7 @@ function tick(dt) {
   collide?.frame(dt); // the fighter against the ship: after everything has moved, before her guns fire
   guns.fly(fighter, mode === 'fighter' && !fading && f.trigger); // her cannon: the mouse button, out in space
   guns.frame(dt, mode === 'gun' ? f : IDLE, mode, camera);
+  guns.fdmg?.frame(dt, { cockpit: mode === 'fighter' && !fading }); // her damage seen and heard: looks only
 
   // Which decks are drawn: the one you stand on; the bridge from the helm; none from the chase view; the hangar deck
   // from a fighter (you are in it, or you can see into it through the open bay); all in the cutaway.

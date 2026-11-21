@@ -360,7 +360,7 @@ export class Collisions {
       st.crashes++;
       const dmg = S.damage.k * (speed - S.scrape.speed) ** 2;
       hit.damage = +dmg.toFixed(1);
-      if (guns.fhull != null) guns.fighterHit(P, dmg, speed);
+      if (guns.fhull != null) guns.fighterHit(P, dmg, speed, N); // N: out of the surface, into her
       // Hard enough, she holes the compartment she hit (a short, shallow strike; in the ship's frame).
       if (c.s.hull && speed >= S.hole.speed && this.ship) {
         const inv = this.C.obj.matrixWorld.clone().invert();

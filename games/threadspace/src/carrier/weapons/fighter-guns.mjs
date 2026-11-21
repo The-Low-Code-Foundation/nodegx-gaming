@@ -23,15 +23,19 @@ export const fighterGunParts = {
     const F = this.W.fighter, fi = this.fighter;
     if (!F || !fi) return;
     if (this.rounds == null || !fi.flying) this.rounds = F.rounds; // rearmed on the pad
-    if (this.fhull == null || fi.phase === 'seated' || fi.phase === 'parked') (this.fhull = F.hull), (this.crippled = false); // and mended
+    if (this.fhull == null || fi.phase === 'seated' || fi.phase === 'parked') (this.fhull = F.hull), (this.crippled = false), this.fdmg?.reset(); // and mended
     this.jolt = Math.max(0, (this.jolt ?? 0) - dt * 3);
     this.cannonT = Math.max(0, (this.cannonT ?? 0) - dt);
     if (!this.fighterTrigger || !fi.flying || this.crippled || this.rounds <= 0 || this.cannonT > 0) return;
-    this.cannonT = F.every;
+    // Hit guns (fighter-damage.mjs): under `one` only one barrel fires, at half the rate; under `jam` none does.
+    const gk = this.fdmg?.gunsK ?? 1, GD = this.fdmg?.S.guns;
+    if (GD && gk < GD.jam) return void (this.cannonT = 0.25, this.jammedT = this.time);
+    const one = GD && gk < GD.one;
+    this.cannonT = one ? F.every * 2 : F.every;
     this.rounds--;
     const w = fi.obj, r = this.rand;
     w.updateWorldMatrix(true, false);
-    const i = (this.cannonBarrel = 1 - (this.cannonBarrel ?? 0));
+    const i = one ? (this.cannonBarrel = 0) : (this.cannonBarrel = 1 - (this.cannonBarrel ?? 0));
     const muzzles = w.userData.muzzles ?? [];
     const p = w.localToWorld((muzzles[i] ?? new THREE.Vector3(0, -0.8, -5.6)).clone());
     const d = _b.set((r() - 0.5) * 2 * F.spread, (r() - 0.5) * 2 * F.spread, -1).normalize().transformDirection(w.matrixWorld);

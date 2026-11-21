@@ -314,7 +314,7 @@ export const missileParts = {
     this.missileGone(m, true);
     const you = m.from === this.fighter;
     const ref = h.ref;
-    if (ref === this.fighter) this.fighterHit(p, dmg);
+    if (ref === this.fighter) this.fighterHit(p, dmg, 0, null, true); // a burst: fighter-damage.mjs spreads it
     else if (ref?.kind === 'bandit') this.banditHit(ref, p, dmg, you);
     else if (ref === this.raider) {
       if (you && !ref.target) ref.byYou = (ref.byYou ?? 0) + 1;

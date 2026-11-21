@@ -11,6 +11,11 @@
 //   push, and nothing stops a spin but you. Space toggles them.
 // - Propellant is finite, burned through an exhaust velocity (Isp): the gauges are honest.
 //
+// Damage (fighter-damage.mjs sets `harm`, then calls `harmed()`): the drive's push scaled by `harm.drive` (0: it will
+// not light), each jet block's nozzles by `harm.blocks[i]` (0: dead, its valves never open, so a turn or a slide that
+// needs it pushes her crooked and the hold fights the rest with what is left), and `harm.leaks`, gas out of a holed
+// tank: a small thrust of its own at the hole, draining that tank. `harm` null is a whole fighter (the AI's always are).
+//
 // A `Flight` knows nothing about keys. It flies from a control frame (`ctl`, below), so the player (fighter.mjs) and
 // any AI pilot fly exactly the same ship: same thrust, same tanks, same pops. An AI sets `ctl.aim` (a quaternion) and
 // `ctl.burn` instead of moving a mouse.
@@ -29,6 +34,8 @@ const _eu = new THREE.Euler();
 const _w = new THREE.Vector3();
 const _a = new THREE.Vector3();
 const _t = new THREE.Vector3();
+const _l = new THREE.Vector3();
+const _r = new THREE.Vector3();
 
 
 /** A control frame: what the pilot (or an AI) asks for this instant. */
@@ -76,11 +83,9 @@ export class Flight {
     this.list = [...this.noz, this.main];
     this.alloc = spec.alloc;
     // What each command can do flat out: the accelerations its nozzles make together (m/s², rad/s²).
-    this.cap = this.alloc.map((pair, k) => pair.map((ids) => {
-      let s = 0;
-      for (const id of ids) s += Math.abs(k < 3 ? this.nz[id].lin.getComponent(k) : this.nz[id].ang.getComponent(k - 3));
-      return s || 1e-6;
-    }));
+    this.harm = null; // damage (fighter-damage.mjs): { drive, blocks, leaks }
+    this.com = com;
+    this.harmed();
     this.T = 0;
     this.assist = 0;
     this.aim = new THREE.Quaternion();
@@ -101,6 +106,17 @@ export class Flight {
     this.servo = 0;
     this.blockState = this.blocks.map((b) => ({ open: 0, p: 0, pan: b.pan }));
     this.on = { ignite: null, cutoff: null }; // sound hooks
+  }
+
+  /** What each command can do flat out, from the nozzles that still work (after `harm` changes). */
+  harmed() {
+    const B = this.harm?.blocks;
+    for (const n of this.noz) n.k = B ? Math.max(0, B[n.block] ?? 1) : 1;
+    this.cap = this.alloc.map((pair, k) => pair.map((ids) => {
+      let s = 0;
+      for (const id of ids) s += Math.abs(k < 3 ? this.nz[id].lin.getComponent(k) : this.nz[id].ang.getComponent(k - 3)) * this.nz[id].k;
+      return s || 1e-6;
+    }));
   }
 
   get assistName() {
@@ -150,7 +166,7 @@ export class Flight {
 
   /** Valves follow their timers. Two opposed nozzles on one block would cancel exactly, so neither opens. Dry, no jets. */
   valves() {
-    for (const n of this.noz) (n.was = n.open), (n.open = this.T < n.until && this.prop.rcs > 0);
+    for (const n of this.noz) (n.was = n.open), (n.open = this.T < n.until && this.prop.rcs > 0 && n.k > 0);
     for (const [a, b] of this.S.opposed) if (this.nz[a].open && this.nz[b].open) this.nz[a].open = this.nz[b].open = false;
     for (const n of this.noz) n.throttle = n.open ? 1 : 0;
     this.blocks.forEach((b, i) => {
@@ -225,7 +241,7 @@ export class Flight {
     this.T += dt;
     const P = this.P, obj = this.obj, b = this.body;
     // The main drive. Held: it lights, and the longer it is held the harder it pushes. Let go: it cuts.
-    this.drive(!!ctl.burn && this.online && this.prop.main > 0, dt);
+    this.drive(!!ctl.burn && this.online && this.prop.main > 0 && (this.harm?.drive ?? 1) > 0, dt);
 
     // The hand. Direct mouse moves the aim; a virtual stick (or the keys) asks for a turn rate.
     const mx = ctl.mouse?.dx ?? 0, my = ctl.mouse?.dy ?? 0;
@@ -284,11 +300,12 @@ export class Flight {
     const B = this.boostSpec;
     const hard = !!ctl.boost && this.burning;
     this.boostK = B ? clamp((this.boostK ?? 0) + (hard ? dt / B.spool : -dt * 3), 0, 1) : 0;
-    const push = this.power * this.mainAcc * (1 + (B ? (B.boost - 1) * this.boostK : 0));
+    const push = this.power * this.mainAcc * (1 + (B ? (B.boost - 1) * this.boostK : 0)) * (this.harm?.drive ?? 1);
     // The pushes: the open nozzles, and the main drive along the axis. Each costs propellant.
     const la = _a.set(0, 0, -push), aa = _t.set(0, 0, 0);
     let flow = 0;
-    for (const n of this.noz) if (n.open) (la.add(n.lin), aa.add(n.ang), (flow += n.F / (this.S.isp.rcs * G0)));
+    for (const n of this.noz) if (n.open) (la.addScaledVector(n.lin, n.k), aa.addScaledVector(n.ang, n.k), (flow += (n.F * n.k) / (this.S.isp.rcs * G0)));
+    this.leak(dt, la, aa);
     this.prop.rcs = Math.max(0, this.prop.rcs - flow * dt);
     this.prop.main = Math.max(0, this.prop.main - ((push * b.mass) / (this.S.isp.main * G0)) * dt);
     this.acc.copy(la);
@@ -301,6 +318,31 @@ export class Flight {
     this.feel(dt);
   }
 
+  /** Gas out of each holed tank (`harm.leaks`: { tank, at, out (unit, her frame), rate kg/s, ve m/s }): it drains
+   *  that tank, and, when `la` and `aa` are given, pushes her from the hole the other way (m/s², rad/s², her frame). */
+  leak(dt, la = null, aa = null) {
+    const list = this.harm?.leaks;
+    if (!list?.length) return;
+    for (const h of list) {
+      const left = this.prop[h.tank];
+      if (!(left > 0) || !(h.rate > 0)) {
+        h.flow = 0;
+        continue;
+      }
+      const m = Math.min(left, h.rate * dt);
+      this.prop[h.tank] = left - m;
+      h.flow = m / Math.max(dt, 1e-6); // kg/s this frame (what is seen venting)
+      if (!la) continue;
+      const F = h.flow * h.ve; // newtons, along -out
+      _l.copy(h.out).multiplyScalar(-F);
+      la.addScaledVector(_l, 1 / this.body.mass);
+      _r.copy(h.at).sub(this.com).cross(_l);
+      aa.x += _r.x / this.I.x;
+      aa.y += _r.y / this.I.y;
+      aa.z += _r.z / this.I.z;
+    }
+  }
+
   /** A step with someone else flying her (the launch run, flight control's path, the pad): the drive at `power`, and
    *  short lift pops from the belly jets every `hover` seconds (0: none). No physics: the caller moves her. */
   carried(dt, { power = 0, hover = 0 } = {}) {
@@ -308,6 +350,7 @@ export class Flight {
     this.drive(power > 0.01, dt, power > 0.01 ? power : null);
     if (hover > 0 && this.T % hover < dt) this.openFor(this.alloc[1][0], 0.08);
     this.valves();
+    this.leak(dt); // a holed tank still drains while she is carried
     this.acc.set(0, 0, -this.power * this.mainAcc);
     this.angAcc.set(0, 0, 0);
     this.feel(dt);
