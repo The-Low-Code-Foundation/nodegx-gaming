@@ -308,6 +308,20 @@ No physics engine. The ship already has its own Newtonian code (`newton.mjs`, `f
   penetration). Gentle contacts in the bay are a scrape, not a crash.
 - Later the same code does ship against ship, debris, and you against the hangar in a suit.
 
+  **Built (phase 6's first session):** `src/carrier/collide.mjs`. Instead of boxes from the layout, every opaque
+  mesh of the ship's outside is solid as it is drawn (about 31,000 triangles in 230 meshes, a bounding volume tree
+  each, three-mesh-bvh vendored), each tested in its own frame, so turrets and radiators are solid where they are and
+  a moving surface hits with its own speed. The hangar is solid from inside with its bay openings as far as the doors
+  are open, and the parked fighters are balls. The fighter is five balls swept every frame. A touch puts her back where
+  she touched and gives her an impulse there (bounce, friction, spin from where she hit). Under 4 m/s it is a scrape;
+  above, her hull takes 0.2 × (speed − 4)², so about 26 m/s kills her, and from 30 m/s she holes the compartment she
+  hit as well. It costs about 0.1–0.2 ms a frame near the ship and nothing farther out. `tools/carrier-check.mjs`
+  has a `collide` scenario: a bump, a crash, 150 m/s (no tunnelling), a glancing pass, in through the open bay over a
+  parked fighter, a shut bay door, the turning bow swinging into a fighter at rest, and a crash that holes her.
+  Not done: the drums (inside the sleeve, which is solid, so out of reach), the gangway, pads and the airlock door as
+  solids, a sound of its own for a scrape, and anything but your fighter hitting anything (the raider, torpedoes,
+  you in a suit). A crash that kills her hands her to flight control like a flak kill, which is kind.
+
 ## Phase 7. Fighting from the cockpit (two sessions) [9, 11]
 
 - **Enemies become a list**, and the first new kind is an enemy fighter, flown by the same `Flight` with an AI frame

@@ -575,6 +575,18 @@ const fighter = structuredClone(v1.fighter);
   fighter.launch.wings = r1(hw + 2);
   fighter.landing.gate = [r1(hw + 28), floor + 4];
 }
+// What is solid about her and what a touch does (src/carrier/collide.mjs). `spheres` [x, y, z, r] in her own frame
+// (the model is 4 m across, 10.5 m long, nose at -z): nose, capsule, body, drive, and the fin over the body.
+// Slower than `scrape.speed` (m/s, against the surface) a touch is a scrape; faster, her hull takes
+// `damage.k × (speed − scrape.speed)²` (100 is all of it: about 26 m/s kills her), and from `hole.speed` up she holes
+// the compartment she hit (`pen` metres, `damage`, `area` m², each scaled by speed / hole.speed).
+fighter.collide = {
+  spheres: [[0, 0.3, -4.6, 1.2], [0, 0.6, -2.2, 1.7], [0, 0.6, 0.8, 1.9], [0, 0.4, 3.4, 1.4], [0, 2.6, 1.2, 1.1]],
+  bounce: 0.3,
+  scrape: { speed: 4, mu: 0.4 },
+  damage: { k: 0.2 },
+  hole: { speed: 30, pen: 3.5, damage: 20, area: 0.1 },
+};
 
 const L = {
   about: 'The spin-drum carrier as data, built by tools/carrier-v2.mjs from design/carrier-v2.design.json (see design/SHIP-DESIGN.md and design/CARRIER-REBUILD.md). Metres, the ship\'s frame (x starboard, y up, -z the bow), the ship\'s axis at x = 0, y = 0. `compartments` are the fixed, weightless hull (grip shoes; down is -y); `drum` holds the spinning rooms, each in its own segment\'s frame. Do not edit by hand: change the design or the generator and run it again. The first carrier is archived in archive/carrier-v1/.',

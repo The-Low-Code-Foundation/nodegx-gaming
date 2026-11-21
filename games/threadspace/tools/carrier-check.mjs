@@ -10,6 +10,7 @@
 //   carrier.html?at=bridge&voice=0&crew=0&dc=0&hold=1&seed=7     → (await import('./tools/carrier-check.mjs')).run('raid')
 //   carrier.html?at=helm&voice=0&crew=0&dc=0&hold=1&seed=7       → run('helm')
 //   carrier.html?at=fighter&voice=0&crew=0&dc=0&hold=1&seed=7    → run('landing')
+//   carrier.html?at=fighter&voice=0&crew=0&dc=0&hold=1&seed=7    → run('collide')
 //   carrier.html?at=bridge&voice=0&crew=0&dc=0&hold=1&seed=7     → run('walk')
 //   carrier.html?at=bridge&voice=0&crew=0&dc=0&hold=1&seed=7     → run('float')
 //   carrier.html?at=bridge&voice=0&crew=0&dc=0&hold=1&seed=7     → run('brace')
@@ -142,6 +143,59 @@ const scenarios = {
     step(400, () => f.phase === 'seated' || f.phase === 'turn' || f.phase === 'parked');
     step(30, () => f.phase === 'seated');
     return { ...out, phases, landing: f.lastLanding && { manual: !!f.lastLanding.manual, speed: r3(f.lastLanding.speed ?? 0), off: r3(f.lastLanding.off ?? 0) }, end: snap(c) };
+  },
+
+  /** The fighter against the ship (collide.mjs): launched, then set going at the hull from a spot in the ship's
+   *  frame each time: a slow bump, a crash, 150 m/s (she must not pass through), a glancing pass, into the open bay
+   *  over a parked fighter, into a shut bay door, the turning bow swinging into her, and a crash that holes her. */
+  async collide(c) {
+    const f = c.fighter, C = c.C, THREE = await import('three');
+    const step = (secs, until) => run_(c, secs, until);
+    c.bayNow();
+    step(60, () => f.flight.online && f.refuelT <= 0);
+    c.input.keys.add('KeyW');
+    step(30, () => f.flying);
+    c.input.keys.delete('KeyW');
+    step(1);
+    const cq = new THREE.Quaternion();
+    const shoot = (p, d, speed, yaw, secs) => {
+      if (!f.flying) (f.scene.attach(f.obj), (f.phase = 'flying')); // back out after flight control took her
+      C.obj.updateMatrixWorld(true);
+      C.obj.getWorldQuaternion(cq);
+      f.obj.position.copy(C.obj.localToWorld(new THREE.Vector3(...p)));
+      f.obj.quaternion.copy(cq).multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(0, yaw, 0)));
+      f.flight.aim.copy(f.obj.quaternion);
+      f.body.vel.copy(c.body.vel).add(new THREE.Vector3(...d).normalize().multiplyScalar(speed).applyQuaternion(cq));
+      f.body.ang.set(0, 0, 0);
+      c.collide.prev = null;
+      c.guns.fhull = 100;
+      c.guns.crippled = false;
+      const n0 = c.collide.hits.length;
+      step(secs, () => !f.flying);
+      const rel = f.body.vel.clone().sub(c.body.vel).applyQuaternion(cq.invert());
+      return {
+        hits: c.collide.hits.slice(n0, n0 + 4).map((h) => `${h.what}:${r3(h.speed)}:${r3(h.damage)}${h.hole ? `:${h.hole.join('/')}` : ''}`),
+        at: v3(C.obj.worldToLocal(f.obj.position.clone())), rel: v3(rel), hull: r3(c.guns.fhull), phase: f.phase
+      };
+    };
+    const port = -Math.PI / 2; // nose to starboard: in at her port side
+    const out = {};
+    out.bump = shoot([-40, 0, -100], [1, 0, 0], 3, port, 5);
+    out.crash = shoot([-45, 0, -100], [1, 0, 0], 15, port, 3);
+    out.fast = shoot([-200, 0, -100], [1, 0, 0], 150, port, 2);
+    out.glance = shoot([-50, 0, -160], [0.34, 0, 0.94], 30, Math.PI - 0.35, 3);
+    out.bay = shoot([-50, -6, 33], [1, -0.08, 0], 6, port, 14);
+    c.doors.setBay(0);
+    c.doors.k = 0;
+    c.doors.frame(0);
+    out.door = shoot([-40, -4, 33], [1, 0, 0], 5, port, 6);
+    c.bayNow();
+    c.body.ang.set(0, 0.06, 0);
+    out.swing = shoot([-31, 0, -110], [1, 0, 0], 0.0001, port, 5);
+    c.body.ang.set(0, 0, 0);
+    out.holed = shoot([-60, 0, -100], [1, 0, 0], 40, port, 2);
+    out.stats = { ...c.collide.stats, ms: undefined, last: undefined };
+    return out;
   },
 
   /** Ladders, a drum's lift down and up, the hub ring and pushing off it into the spine, a drum ladder. */
@@ -447,7 +501,7 @@ export async function run(name) {
 }
 
 const PAGES = {
-  raid: 'at=bridge', helm: 'at=helm', landing: 'at=fighter', walk: 'at=bridge', float: 'at=bridge', brace: 'at=bridge', career: ''
+  raid: 'at=bridge', helm: 'at=helm', landing: 'at=fighter', collide: 'at=fighter', walk: 'at=bridge', float: 'at=bridge', brace: 'at=bridge', career: ''
 };
 
 /** Every scenario, each in a fresh page of its own (an iframe), from any page of this site: `{ name: { hash, … } }`.

@@ -18,6 +18,7 @@
 //   jolt       integrity.mjs  a hit kicked her structure                { at, dir, kind }  (ship frame; 'kick', 'shell', 'glance')
 //   brace      weapons.mjs    a torpedo is seconds out, or no longer    { on }
 //   fighter-down weapons.mjs  your fighter is shot dead in space        {}
+//   fighter-contact collide.mjs your fighter touched the ship (a scrape or a crash) { what, kind, speed, damage, hole }
 //   launch     fighter.mjs    a fighter starts her launch run           { pad }
 //   landed     fighter.mjs    back on her pad, turned round             { pad, manual }
 //   talk       career.mjs     you spoke to one of the officers          { who }

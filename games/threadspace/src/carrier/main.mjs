@@ -49,6 +49,7 @@ import { Bus } from '../core/events.mjs';
 import { View } from './render.mjs';
 import { Drive } from './drive.mjs';
 import { Doors } from './doors.mjs';
+import { Collisions } from './collide.mjs';
 import { loadLayout, fetchJson } from '../core/ship.mjs';
 import { loadPeople, peopleNamed, joinPeople } from '../core/people.mjs';
 import { Announcer, loadCalls, DEPTS } from '../core/announcer.mjs';
@@ -329,6 +330,7 @@ function fadeThen(fn) {
 
 const IDLE = { keys: new Set(), dx: 0, dy: 0, wheel: 0, clicked: false, trigger: false };
 let last = performance.now(), time = 0, avgDt = 1 / 60, saveT = 15;
+let collide = null; // made once the ship's outside is gathered, at the end of this file
 
 function frame() {
   const now = performance.now();
@@ -372,6 +374,8 @@ function tick(dt) {
   helmSeat.fire(f);
   doors.frame(dt);
   C.obj.updateMatrixWorld(true);
+  collide?.tick(dt);
+  collide?.frame(dt); // the fighter against the ship: after everything has moved, before her guns fire
   guns.fly(fighter, mode === 'fighter' && !fading && f.trigger); // her cannon: the mouse button, out in space
   guns.frame(dt, mode === 'gun' ? f : IDLE, mode, camera);
 
@@ -579,6 +583,9 @@ C.exterior = new THREE.Group();
 C.exterior.name = 'exterior';
 for (const o of [...C.frame.children]) if (![C.machinery, C.overlay, C.drums?.group, ...[...C.decks.values()].map((I) => I.group)].includes(o)) C.exterior.add(o);
 C.frame.add(C.exterior);
+// What the fighter can hit (collide.mjs): the outside's meshes, the hangar from inside, the parked fighters.
+collide = new Collisions(C, { fighter, guns, ship, doors, spec: L.fighter.collide });
+window.__carrier.collide = collide;
 
 // ?hold=1: no frames until a script steps them with `__carrier.tick()` (tools/carrier-check.mjs).
 if (q.get('hold') !== '1') frame();
