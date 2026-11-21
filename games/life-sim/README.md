@@ -37,7 +37,10 @@ trait, and a Life story of the big moments. Phase 3: things happen (a few small 
 the loo breaks, a cat at the door, a birthday party, a talent show), the town's people phone and knock, and every day
 has its weather (rain hides the ducks; snow brings snowmen). Phase 4: the town lives without you (its people make
 friends, fall in love, marry, have babies and move house; houses go on and off the market; new people move in), a
-notice board on the street says what changed, and the town's people come over to chat, joke, flirt or tease.
+notice board on the street says what changed, and the town's people come over to chat, joke, flirt or tease. Phase 5:
+seven skills learnt from things at home (cooking, fitness, painting, music, gardening, handiness, charm), faster or
+slower by trait; paintings, vegetables, busking and odd jobs bring in a little money; two new careers (café chef at a
+new café, scientist); and the artist dream. Pets are not in yet.
 
 ## Run it locally
 

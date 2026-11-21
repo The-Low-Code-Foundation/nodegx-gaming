@@ -64,13 +64,16 @@ Time: one game minute a second at speed 1 (`SPEEDS` in `life.mjs`). Every need n
 - `weather.mjs`: `WEATHER`, the day's sun, rain or snow and what each takes off the menu (its look is dressing.mjs's).
 - `townlife.mjs`: the town lives without you (round 16, phase 4): `TOWNLIFE` (how often things happen), `dayOfTown`
   (one town day as data), `REACH` (the town's people starting things with you), `DRAWN` (how many Sims in one place).
+- `skills.mjs`: the skills from objects (round 16, phase 5): `SKILLS` (cooking, fitness, painting, music, gardening,
+  handiness, charm), the gains added to things already in the game and the new things to do (`addSkills`), and
+  `EARNING` (paintings, vegetables, busking, odd jobs). How fast a trait learns each is `traits.mjs` `skills`.
 - `baby.mjs`, `childcare.mjs`: the baby's needs and names; the nanny and the nursery.
 - `create.mjs`, `looks.mjs`: make-your-Sim screen; a Sim's look as data and how it is dressed.
 - `props.mjs`: what is in a Sim's hands or on the table, the eating motion, wedding clothes.
-- `save.mjs`: the save in `localStorage` (`lifesim.save.v1` key, format v6 since round 16 phase 4; a v1 to v5 save
+- `save.mjs`: the save in `localStorage` (`lifesim.save.v1` key, format v7 since round 16 phase 5; a v1 to v6 save
   from an earlier round still loads and is upgraded: the classic town, traits and likes rolled for everyone, no dream
   yet (a "Pick a dream" button), new wishes, 0 happy points, a life story that starts with "before this story", a fresh
-  event deck and the day's weather rolled; the town as made, and town life starting that day).
+  event deck and the day's weather rolled; the town as made, and town life starting that day; no side earnings).
 - `strings.mjs`: every word, by key (`t('need.hunger')`). English only; a language is a new table with the same keys.
 
 Other files: `index.html` (the HUD's empty panels), `style.css` + `life.css`, `assets/` (models and clips, see
@@ -85,7 +88,8 @@ chooses as it did before round 16). Phase 2: `?goal=id` and `?goal2=id` (the hou
 wishes and happy points on a test URL; a test URL has none otherwise). Phase 3: `?events=1` (things happen on a test URL),
 `?event=id` (that event at once, then the deck as usual), `?weather=sun|rain|snow` (that weather, all game; a test URL
 has sunshine otherwise, and no weather icon). Phase 4: `?townlife=1` (the town lives, and its people come to you, on a
-test URL; the notice board is always on the street, and says town life is off otherwise).
+test URL; the notice board is always on the street, and says town life is off otherwise). Phase 5: `?skills=1` (skills,
+earning from them, the four new things to buy, the café chef and scientist, and the artist dream on a test URL).
 
 ## How to add a thing to buy
 
@@ -218,6 +222,25 @@ The notice board (world.mjs `NOTICE_BOARD`, by the bus stop, with a name board s
 `openNews`. `reachTick` (in `townTick`) lets the town's people start things with the household (`REACH`, `pickReach`).
 `DRAWN.most` caps the Sims in one place: a party's extra guests and friends invited round stay data. Save v6 keeps
 `town.houses`, `town.homes`, `town.dreams` and `town.life`. Checks and measurements: [tests/r16-phase4.md](tests/r16-phase4.md).
+
+## More ways to live (round 16, phase 5)
+
+Skills (`skills.mjs`) are points, read as levels by life.mjs `SKILL_LEVELS`; an offer's `skill` field gives points a
+game hour, times the Sim's traits (`learnOf`: a trait's `skills`). `addSkills` (the page, when `skillsOn`) adds
+cooking to the oven, fitness to dancing and stretching, charm to chats, and the new things to do: a workout on the rug,
+charm in the drawers' mirror, and the four things to buy (shop.mjs `skills: true`; world.mjs `MADE` EASEL, KEYBOARD,
+PLANTER, WORKBENCH, made in code and merged per material). Handiness makes the home fixes likelier (events.mjs
+choices' `skill`, `FIXING`). The master chef climbs the cooking skill; the artist (goals.mjs `skills: true`) paints and
+sells. Earning (`EARNING`, Life `earn`): a `paint` finished goes on the household's pile (`household.side.paintings`),
+sold at the easel; tending the planter grows the crop once a day, picked and sold when ripe; busking in the park pays
+by the hour from music level 2; the notice board offers one neighbour's odd job a day (`oddJobToday`), from handiness
+level 2: the Sim goes round (`goVisit`) and does `ODD_JOB` there. Why something can't be done is `earnWhy` (greyed).
+
+Careers (work.mjs `CAREERS`) say where they work (`place`, default the office) and at which stations (`stations`, by
+school subject; their names `station.<career>.<subject>`). The café (world.mjs `lifeCafe`) is built the first time
+someone has that job (`careerPlace`), or as a save with it loads; `goToWork` asks for it (`needPlace`). The scientist
+works in the office building. A right answer also teaches the career's `learns` (a café chef: cooking). Save v7 keeps
+`side`. Checks and measurements: [tests/r16-phase5.md](tests/r16-phase5.md). Pets (5.4) wait for an animal model.
 
 ## How to add a house to the street (the nearest thing to a level)
 

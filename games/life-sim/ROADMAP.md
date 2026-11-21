@@ -94,3 +94,8 @@ Each one has a default, so none of them blocks phase 1.
   met, like the neighbours) when they move in, and nobody else is added. Save v6 (4.1). 4.4 was measured on the Mac
   only: ten Sims at a party take a frame from 1.6 to 2.1 ms, and `DRAWN.most` is 10 until the Surface is measured
   with the script in [tests/r16-phase4.md](tests/r16-phase4.md), where the checks are listed too.
+- Phase 5: built on branch `life-sim-skills`, cut from `life-sim-town-life` (one commit per task), checked in the
+  browser on the Mac. 5.1, 5.2 and two careers of 5.3 are done: the café chef (a new café) and the scientist (in the
+  office building). The artist dream is back. Save v7 (with 5.2). Not done: the vet and pets (5.4): there is no animal
+  model in the project, and one would have to be downloaded. The checks are listed in
+  [tests/r16-phase5.md](tests/r16-phase5.md).
