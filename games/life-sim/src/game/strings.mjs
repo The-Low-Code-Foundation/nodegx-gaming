@@ -508,6 +508,7 @@ const TABLES = {
     'diary.button': 'Life story',
     'diary.title': 'The life story of {names}',
     'diary.empty': 'Nothing yet: the story is just beginning.',
+    'diary.before': 'The story so far: {names}, at home. (The life story starts here.)',
     'diary.start': '{name} begins a new life: {story}.',
     'diary.startPlain': '{name} moves into the flat.',
     'diary.newGoal': '{name} dreams of: {goal}.',

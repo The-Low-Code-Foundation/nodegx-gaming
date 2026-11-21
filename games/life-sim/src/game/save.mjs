@@ -13,14 +13,17 @@ export function readSave() {
     // v3 (round 16): the town's seed (`town.seed`), how the life began (`story`), each Sim's traits and likes, and
     // everyone else's by person (`traits`, `likes`). A v1 or v2 save is upgraded as it loads (page.mjs): the classic
     // Sunny Lane (town seed 0, which it was), and traits and likes rolled for everyone.
-    return [1, 2, 3].includes(s?.v) && Array.isArray(s.lives) && s.lives.length ? s : null;
+    // v4 (round 16, phase 2): each Sim's dream, dreams come true, wishes, happy points, perks and tally, and the
+    // household's life story (`diary`). A v3 save or older loads with no dream yet (the panel offers to pick one),
+    // fresh wishes, no points, and a life story that begins on loading.
+    return [1, 2, 3, 4].includes(s?.v) && Array.isArray(s.lives) && s.lives.length ? s : null;
   } catch {
     return null;
   }
 }
 export function writeSave(state) {
   try {
-    localStorage.setItem(KEY, JSON.stringify({ v: 3, savedAt: Date.now(), ...state }));
+    localStorage.setItem(KEY, JSON.stringify({ v: 4, savedAt: Date.now(), ...state }));
     return true;
   } catch {
     return false;

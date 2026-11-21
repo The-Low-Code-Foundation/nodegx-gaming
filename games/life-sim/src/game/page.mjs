@@ -191,8 +191,10 @@ function goalCard(name) {
     $('goal-surprise').onclick = () => done(rollGoal());
   });
 }
-const goalRows = (list) =>
-  list.map((g) => `<div class="offer"><div class="big">${g.icon}</div><div><b>${t(`goal.${g.id}`)}</b><div>${t(`goal.${g.id}.does`)}</div></div><button class="go" data-goal="${g.id}">${t('start.pick')}</button></div>`).join('');
+// (A function, not a const: the start screen asks before this line has run.)
+function goalRows(list) {
+  return list.map((g) => `<div class="offer"><div class="big">${g.icon}</div><div><b>${t(`goal.${g.id}`)}</b><div>${t(`goal.${g.id}.does`)}</div></div><button class="go" data-goal="${g.id}">${t('start.pick')}</button></div>`).join('');
+}
 // How does it begin? The game's starts, one card each, and "surprise me".
 function storyCard() {
   return new Promise((resolve) => {
@@ -2461,7 +2463,9 @@ window.__life = {
   ready: true
 };
 colleaguesLoaded.then(() => (window.__life.colleaguesReady = true));
-// Round 16, phase 2: the life story begins (a new game): who, how, and their dreams.
+// Round 16, phase 2: a save from before the life story (v3 or older) starts one now.
+if (saved && !Array.isArray(saved.diary)) milestone('📖', 'diary.before', { names: lives.map((l) => l.name).join(', ') });
+// The life story begins (a new game): who, how, and their dreams.
 if (!saved) {
   milestone(story?.icon ?? '🏠', story ? 'diary.start' : 'diary.startPlain', { name: life.name, mate: lives[1]?.name ?? '', story: story ? `start.${story.id}` : '' });
   for (const l of lives) if (l.goal) milestone(goalById(l.goal.id).icon, 'diary.newGoal', { name: l.name, goal: `goal.${l.goal.id}` });

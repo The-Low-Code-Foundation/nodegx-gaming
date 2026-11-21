@@ -56,11 +56,15 @@ Time: one game minute a second at speed 1 (`SPEEDS` in `life.mjs`). Every need n
 - `starts.mjs`: `STARTS`, the ways a new life begins (round 16).
 - `traits.mjs`: `TRAITS`, 14 personality traits, three a Sim, and what Life asks of them (round 16).
 - `likes.mjs`: `LIKES`, favourite food, colour and activity and one dislike (round 16).
+- `goals.mjs`: `GOALS`, the life goals (dreams), each a chain of steps tested on a Sim's facts (round 16, phase 2).
+- `wants.mjs`: `WANTS`, the small wishes on screen and how likely each is for a Sim (`weightOf`, `rollWant`).
+- `rewards.mjs`: `REWARDS`, what happy points buy: perks (`traits.mjs` `PERKS`), things for the home, a new trait.
 - `baby.mjs`, `childcare.mjs`: the baby's needs and names; the nanny and the nursery.
 - `create.mjs`, `looks.mjs`: make-your-Sim screen; a Sim's look as data and how it is dressed.
 - `props.mjs`: what is in a Sim's hands or on the table, the eating motion, wedding clothes.
-- `save.mjs`: the save in `localStorage` (`lifesim.save.v1` key, format v3 since round 16; a v1 or v2 save from an
-  earlier round still loads and is upgraded: the classic town, and traits and likes rolled for everyone).
+- `save.mjs`: the save in `localStorage` (`lifesim.save.v1` key, format v4 since round 16 phase 2; a v1, v2 or v3 save
+  from an earlier round still loads and is upgraded: the classic town, traits and likes rolled for everyone, no dream
+  yet (a "Pick a dream" button), new wishes, 0 happy points, a life story that starts with "before this story").
 - `strings.mjs`: every word, by key (`t('need.hunger')`). English only; a language is a new table with the same keys.
 
 Other files: `index.html` (the HUD's empty panels), `style.css` + `life.css`, `assets/` (models and clips, see
@@ -71,7 +75,8 @@ URL switches (top of `page.mjs`): `?seed=5` (repeatable dice; starts straight in
 `?menu` (the start screen and saving on a test URL). Round 16: `?town=N` (the town's seed; test URLs get the classic
 town, 0), `?story=savings|friend|sweetheart|broke|inherit` (how the life begins), `?traits=a,b,c` and `?traits2=`
 (the household's traits; a test's URL gives the household no traits and no likes otherwise, so seeded free will
-chooses as it did before round 16).
+chooses as it did before round 16). Phase 2: `?goal=id` and `?goal2=id` (the household's dreams), `?goals=1` (dreams,
+wishes and happy points on a test URL; a test URL has none otherwise).
 
 ## How to add a thing to buy
 
@@ -137,6 +142,29 @@ interactions (social.mjs `likes`) end in `Life.likeOutcome`. An interaction may 
 
 To add a trait: an entry in `TRAITS` (fields at the top of the file), `trait.<id>` and `trait.<id>.does` in strings,
 and any moodlet it adds in `needs.mjs` `MOODLETS` (with `trait: true` for an always-on one) and its strings.
+
+## Dreams, wishes and happy points (round 16, phase 2)
+
+A Sim has a dream (`life.goal = { id, step }`, goals.mjs), chosen on the start screen after the story card, or rolled.
+`page.mjs` `factsOf(l)` gathers what the steps test (friends, romance, job level, the home, `life.tally`); `checkGoals`
+runs in the UI tick and pays `STEP_POINTS` per step and `GOAL_POINTS` at the end, with a celebration card and a choice
+of the next dream (`openGoalPicker`). A goal set when the steps are already true (`quiet`) ticks them off without
+points. Phase 5 adds skills: the artist waits for it (`later: 5`), and the chef's steps count meals cooked.
+
+`Life.count(id)` keeps the tally and tells the page (`wished`), which pays a wish that comes true. What is counted:
+an offer's id when it finishes, an interaction's id when it goes well, `go.park|office|street|home|house`, `party`,
+`hostParty`, `buy`, `promoted`. Wishes (`life.wants`, three) are rolled with `Math.random`, never the seeded dice, by
+`weightOf`: the want's `base`, ×traits, ×goal, ×3 for a loved activity, ×0.1 for the disliked one, more when its need
+is low, 0 when its `when` says not now; one lasts a game day (`WANT_LASTS`). ✖ swaps one.
+
+Happy points (`life.points`) are each Sim's own. The 🎁 card lists `REWARDS`: a perk (same fields as a trait; Life's
+`kit` is traits plus perks), a thing put in storage, or a trait swap. The 📖 card is `diary` (saved, last 300 entries),
+written by `milestone()`: the `MILESTONES` table turns toasts (a job, a promotion, a wedding, a baby, a bond level…)
+into entries, and goals, rewards, moves and parties add their own.
+
+To add a dream: an entry in `GOALS` and its strings (`goal.<id>`, `.does`, `.<step>`). A wish: an entry in `WANTS`
+whose `did` is something counted, and `want.<id>`. A reward: an entry in `REWARDS` (and a perk in `PERKS`), and its
+strings. Checks: [tests/r16-phase2.md](tests/r16-phase2.md).
 
 ## How to add a house to the street (the nearest thing to a level)
 

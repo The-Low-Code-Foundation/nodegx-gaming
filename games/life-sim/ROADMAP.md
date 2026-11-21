@@ -81,3 +81,6 @@ Each one has a default, so none of them blocks phase 1.
 
 - Phase 1: built on branch `life-sim-variety` (one commit per task; 1.1 and 1.2 share one), checked in the browser.
   The checks are listed in [tests/r16-variety.md](tests/r16-variety.md).
+- Phase 2: built on branch `life-sim-goals`, cut from `life-sim-variety` (one commit per task, then save v4 and the
+  checks), checked in the browser. Five dreams can be chosen; the artist waits for phase 5 (painting), and the master
+  chef counts meals cooked until cooking is a skill. The checks are listed in [tests/r16-phase2.md](tests/r16-phase2.md).

@@ -31,7 +31,9 @@ as a street to walk down. Not done: the tablet needs a measured performance pass
 inside walls for bigger houses, a walk-round furniture shop. A couple who live together share a double bed (from the
 shop) and sleep side by side. Round 16 (see [ROADMAP.md](ROADMAP.md)): every new game has its own town (street name,
 houses, prices, neighbours), a choice of five ways to begin (or "surprise me"), and Sims with three personality traits
-and favourite things.
+and favourite things. Phase 2: each Sim has a dream to work towards (a big family, the top of the career, a dream
+house, the most friends, master chef), three small wishes on screen, happy points to spend on perks, things and a new
+trait, and a Life story of the big moments.
 
 ## Run it locally
 
