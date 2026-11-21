@@ -123,6 +123,7 @@ export const banditParts = {
       B.acc.copy(B.flight.acc).applyQuaternion(B.obj.quaternion);
       B.obj.updateMatrixWorld(true);
       this.banditGun(B, dt);
+      this.banditMissile(B, dt);
       // Burning once it is badly hurt.
       if (B.hull < K.hull * 0.5 && (B.smokeT -= dt) <= 0) {
         B.smokeT = 0.12;
@@ -235,6 +236,8 @@ export const banditParts = {
       if (B.shoot?.on && Math.abs(local.x) > K.trim) c.slide[0] = Math.sign(local.x);
       if (B.shoot?.on && Math.abs(local.y) > K.trim) c.slide[1] = Math.sign(local.y);
     }
+    // A missile after it: it cuts its drive for a few seconds while its flares go (weapons/missiles.mjs `flareAI`).
+    if ((B.coastT = Math.max(0, (B.coastT ?? 0) - dt)) > 0) c.burn = false;
     // Firing: a burst while the nose is on the lead.
     if (B.shoot?.on && !c.burn) {
       const err = nose.angleTo(_o.subVectors(B.shoot.lead, B.obj.position));

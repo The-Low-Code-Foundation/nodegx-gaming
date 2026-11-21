@@ -419,6 +419,75 @@ export class Cockpit {
       g.shadowColor = 'rgba(80, 255, 150, 0.6)';
       g.strokeStyle = g.fillStyle = GREEN;
     }
+    // Her missiles' seeker: a circle round what it has locked (amber, with its name, when that is one of ours, a flare
+    // or anything but the enemy: it has no friend or foe), or, searching, how much heat it sees.
+    if (f.flying && s.missiles > 0) {
+      if (s.lock) {
+        const p = project(s.lock.pos.clone().sub(cam.position).normalize());
+        if (!p.behind) {
+          const foe = s.lock.side === 'theirs';
+          g.strokeStyle = g.fillStyle = foe ? RED : AMBER;
+          g.shadowColor = foe ? 'rgba(255, 90, 70, 0.6)' : 'rgba(255, 190, 70, 0.6)';
+          g.lineWidth = 2;
+          g.beginPath();
+          g.arc(p.x, p.y, 24, 0, Math.PI * 2);
+          g.stroke();
+          g.lineWidth = 1.6;
+          g.font = font(12, 600);
+          g.textAlign = 'center';
+          g.fillText(foe ? 'LOCK' : `LOCK ${s.lockName}`, p.x, p.y - 36);
+        }
+      }
+      g.font = font(12);
+      g.textAlign = 'left';
+      g.fillStyle = s.lock ? (s.lock.side === 'theirs' ? RED : AMBER) : GREEN;
+      g.fillText(s.lock ? `SEEKER LOCK  ${s.lockName}` : `SEEKER ${'▮'.repeat(Math.round((s.seeing ?? 0) * 5)).padEnd(5, '·')}`, 24, H - 124);
+      g.shadowColor = 'rgba(80, 255, 150, 0.6)';
+      g.strokeStyle = g.fillStyle = GREEN;
+    }
+    if (f.flying && s.missiles != null) {
+      g.font = font(13);
+      g.textAlign = 'left';
+      g.fillStyle = s.missiles > 0 ? GREEN : AMBER;
+      g.fillText(`MSL ${s.missiles}   FLR ${s.flares ?? 0}`, 24, H - 104);
+      g.fillStyle = GREEN;
+    }
+    // A missile tracking her: MISSILE, its range and closing speed, flashing, and where it is.
+    if (s.warn) {
+      const on = (performance.now() / 180) % 2 < 1.3;
+      g.strokeStyle = g.fillStyle = RED;
+      g.shadowColor = 'rgba(255, 90, 70, 0.8)';
+      if (on) {
+        g.font = font(22, 700);
+        g.textAlign = 'center';
+        g.fillText('MISSILE', W / 2, 70);
+        g.font = font(12);
+        g.fillText(`${Math.round(s.warn.range)} m · closing ${Math.round(s.warn.closing)} m/s · cut drive, flares G`, W / 2, 94);
+      }
+      const p = project(s.warn.pos.clone().sub(cam.position).normalize());
+      const m = 30;
+      if (p.behind || p.x < m || p.x > W - m || p.y < m || p.y > H - m) {
+        let dx = p.x - W / 2, dy = p.y - H / 2;
+        if (p.behind) (dx = -dx), (dy = -dy);
+        const k = Math.min((W / 2 - m) / Math.max(Math.abs(dx), 1e-6), (H / 2 - m) / Math.max(Math.abs(dy), 1e-6));
+        g.save();
+        g.translate(W / 2 + dx * k, H / 2 + dy * k);
+        g.rotate(Math.atan2(dy, dx));
+        g.beginPath();
+        g.moveTo(16, 0);
+        g.lineTo(-8, -11);
+        g.lineTo(-8, 11);
+        g.closePath();
+        g.fill();
+        g.restore();
+      } else {
+        g.beginPath();
+        g.moveTo(p.x, p.y - 12), g.lineTo(p.x + 12, p.y), g.lineTo(p.x, p.y + 12), g.lineTo(p.x - 12, p.y), g.closePath();
+        g.stroke();
+      }
+      g.shadowColor = 'rgba(80, 255, 150, 0.6)';
+      g.strokeStyle = g.fillStyle = GREEN;
+    }
     // Her cannon's drum, while there is something to shoot at or it is not full.
     if (f.flying && s.rounds != null && (s.foe || s.rounds < s.roundsMax)) {
       g.font = font(13);

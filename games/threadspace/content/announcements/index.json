@@ -46,6 +46,7 @@
     "pipe",
     "bandits",
     "splash-bandit",
-    "pdc-down"
+    "pdc-down",
+    "missile-warning"
   ]
 }

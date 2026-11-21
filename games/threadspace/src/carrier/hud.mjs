@@ -13,7 +13,7 @@ export const KEYS = {
   float: '<b>weightless</b> · <b>push off</b> hold and let go W (Shift: hard) · <b>along the hold</b> A D S · <b>take hold / brake</b> Space · <b>puffer</b> W A S D adrift · <b>look</b> mouse · <b>use</b> E · <b>cutaway</b> Tab',
   helm: '<b>thrust</b> W S · <b>slide</b> A D · <b>rise / sink</b> R F · <b>pitch / yaw</b> mouse or arrows · <b>roll</b> Z C · <b>flight assist</b> Space · <b>all stop</b> hold X · <b>broadside</b> click · <b>railgun</b> Q · <b>radiators</b> G · <b>nav plot</b> N · <b>view</b> V · <b>stand up</b> E · <b>cutaway</b> Tab',
   pad: '<b>launch</b> hold W (once the bay is open) · <b>climb out</b> E · <b>view</b> V · <b>cutaway</b> Tab',
-  fighter: '<b>burn</b> hold W (Shift: hard burn) · <b>retro jet</b> S · <b>slide</b> A D · <b>rise / sink</b> R F · <b>aim</b> mouse (M: stick) or arrows · <b>roll</b> Z C · <b>guns</b> hold click · <b>next contact</b> X · <b>hold</b> Space · <b>stop</b> flip onto ⊗ and burn · <b>view</b> V · <b>land</b> fly down the lane, or E near the bay · <b>cutaway</b> Tab',
+  fighter: '<b>burn</b> hold W (Shift: hard burn) · <b>retro jet</b> S · <b>slide</b> A D · <b>rise / sink</b> R F · <b>aim</b> mouse (M: stick) or arrows · <b>roll</b> Z C · <b>guns</b> hold click · <b>next contact</b> X · <b>missile</b> Q · <b>flares</b> G · <b>hold</b> Space · <b>stop</b> flip onto ⊗ and burn · <b>view</b> V · <b>land</b> fly down the lane, or E near the bay · <b>cutaway</b> Tab',
   gun: '<b>lay the guns</b> mouse or arrows · <b>fire</b> hold click · <b>sight</b> Z or wheel · <b>leave</b> E · <b>cutaway</b> Tab',
   cutaway: '<b>orbit</b> drag · <b>pan</b> right-drag · <b>zoom</b> wheel · <b>levels</b> 1 – 4 · <b>section</b> M · <b>back</b> Tab'
 };

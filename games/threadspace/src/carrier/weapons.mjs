@@ -42,6 +42,9 @@
 // the rest). The raider's turrets fire back at her (`flakShot`): her hull is `fhull`, and at nothing she is dead in
 // space and flight control brings her in.
 //
+// Heat-seekers and flares (weapons/missiles.mjs): your fighter's missiles (Q) and flares (G), the bandits' missiles
+// at her, and every ship's flares against them.
+//
 // The raider brings escorts (weapons/bandits.mjs): enemy fighters flown on the same `Flight` as yours by an AI pilot,
 // which strafe her point defence guns and go for your fighter. `foes()` is every live enemy craft; `foeHit()` hits one.
 //
@@ -58,6 +61,7 @@ import { railgunParts } from './weapons/railgun.mjs';
 import { turretParts } from './weapons/turrets.mjs';
 import { fighterGunParts } from './weapons/fighter-guns.mjs';
 import { banditParts } from './weapons/bandits.mjs';
+import { missileParts } from './weapons/missiles.mjs';
 
 export class Weapons {
   /** `ship` the integrity (holes, health, `inHull`), `body` the carrier's rigid body (her world velocity), `hooks.man(t)`
@@ -80,6 +84,8 @@ export class Weapons {
     this.fx = [];
     this.raider = null;
     this.bandits = []; // the raider's escort fighters (weapons/bandits.mjs)
+    this.missiles = []; // heat-seekers in flight, either side's (weapons/missiles.mjs)
+    this.flares = []; // flares burning, anyone's
     this.log = []; // torpedoes shot down: { t, kill (whose), by }
     this.manned = null;
     this.zoom = 0;
@@ -214,6 +220,10 @@ export class Weapons {
     this.pdcFrame(dt);
     this.turretsFrame(dt, f, mode);
     this.cannonFrame(dt);
+    this.railsFrame(dt);
+    this.missilesFrame(dt);
+    this.flareAI(dt);
+    this.flaresFrame(dt);
     this.railFrame(dt);
     this.shellsFrame(dt);
     this.roundsFrame(dt);
@@ -225,4 +235,4 @@ export class Weapons {
 
 // The rest of `Weapons` lives in weapons/, a file per kind of gun (design/ROADMAP.md, phase 2). Each is a set of
 // methods mixed in here, so `this` is the one `Weapons` everywhere and the methods call each other as before.
-Object.assign(Weapons.prototype, raidParts, projectileParts, torpedoParts, broadsideParts, pdcParts, railgunParts, turretParts, fighterGunParts, banditParts);
+Object.assign(Weapons.prototype, raidParts, projectileParts, torpedoParts, broadsideParts, pdcParts, railgunParts, turretParts, fighterGunParts, banditParts, missileParts);

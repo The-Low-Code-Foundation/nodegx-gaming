@@ -1,0 +1,12 @@
+{
+  "id": "missile-warning",
+  "about": "A bandit fires a heat-seeker at your fighter (weapons/missiles.mjs).",
+  "who": "flight",
+  "say": [
+    "Flight control. Missile launch, it's tracking you. Cut your drive and flare."
+  ],
+  "to": {
+    "you": "radio"
+  },
+  "priority": 4
+}

@@ -12,6 +12,7 @@
 //   carrier.html?at=fighter&voice=0&crew=0&dc=0&hold=1&seed=7    → run('landing')
 //   carrier.html?at=fighter&voice=0&crew=0&dc=0&hold=1&seed=7    → run('collide')
 //   carrier.html?at=fighter&voice=0&crew=0&dc=0&hold=1&seed=7    → run('bandits')
+//   carrier.html?at=fighter&voice=0&crew=0&dc=0&hold=1&seed=7    → run('missiles')
 //   carrier.html?at=bridge&voice=0&crew=0&dc=0&hold=1&seed=7     → run('walk')
 //   carrier.html?at=bridge&voice=0&crew=0&dc=0&hold=1&seed=7     → run('float')
 //   carrier.html?at=bridge&voice=0&crew=0&dc=0&hold=1&seed=7     → run('brace')
@@ -130,6 +131,66 @@ const scenarios = {
     return {
       t: r3(t), ...n, strafed, states: states.join(' '), kills: (g.kills ?? []).map((k) => `${k.who}@${r3(k.t)}`), near: r3(near),
       pdcHp: g.pdcs.map((p) => r3(p.hp)), fhull: r3(g.fhull), raiderDead: !!g.raider?.dead, ...snap(c)
+    };
+  },
+
+  /** Heat-seekers and flares (weapons/missiles.mjs): the bandits' setup, but you fight back. Your fighter turns its nose
+   *  on the bandit fighting it and fires a missile whenever the seeker locks it (the bandit flares); when a missile is
+   *  tracking you, you cut the drive and flare. What each missile did: hit what, or decoyed (spent on a flare, or lost). */
+  async missiles(c) {
+    const f = c.fighter, g = c.guns, C = c.C, THREE = await import('three');
+    c.bayNow();
+    run_(c, 60, () => f.flight.online && f.refuelT <= 0);
+    c.input.keys.add('KeyW');
+    run_(c, 30, () => f.flying);
+    c.input.keys.delete('KeyW');
+    run_(c, 1);
+    C.obj.updateMatrixWorld(true);
+    const cq = C.obj.getWorldQuaternion(new THREE.Quaternion());
+    f.obj.position.copy(C.obj.localToWorld(new THREE.Vector3(-1500, 0, -300)));
+    f.obj.quaternion.copy(cq).multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(0, Math.PI / 2, 0)));
+    f.flight.aim.copy(f.obj.quaternion);
+    f.body.vel.copy(c.body.vel);
+    f.body.ang.set(0, 0, 0);
+    // What each missile does.
+    const log = [], fate = new Map();
+    const lm = g.launchMissile.bind(g), mh = g.missileHit.bind(g), mg = g.missileGone.bind(g);
+    g.launchMissile = (p, v, d, side, track, from) => {
+      const m = lm(p, v, d, side, track, from);
+      fate.set(m, { side, at: r3(g.time), on: track === f ? 'you' : track?.label ?? (track ? 'heat' : 'none'), end: 'flying' });
+      return m;
+    };
+    g.missileHit = (m, h) => {
+      const e = fate.get(m), ref = h.ref;
+      if (e) e.end = ref === f ? 'hit you' : ref === 'carrier' ? 'hit carrier' : g.flares.includes(ref) ? 'flare' : ref === g.raider ? 'hit raider' : ref?.kind === 'bandit' ? 'hit bandit' : 'torpedo';
+      return mh(m, h);
+    };
+    g.missileGone = (m, burst) => {
+      const e = fate.get(m);
+      if (e && e.end === 'flying') e.end = burst ? 'shot down' : 'lost';
+      return mg(m, burst);
+    };
+    c.ship.attack('port');
+    const _q = new THREE.Matrix4(), up = new THREE.Vector3(0, 1, 0);
+    let t = 0, flared = 0, fired = 0, coast = 0;
+    while (t < 200 && !(g.raider?.gone && !g.bandits.length) && f.flying && !g.crippled) {
+      // Turn on the bandit fighting you.
+      const B = g.bandits.find((b) => !b.dead && !b.gone && b.state === 'fight');
+      if (B && coast <= 0) {
+        if (g.selected?.() !== B) for (let i = 0; i < 6 && g.selected?.() !== B; i++) g.nextFoe();
+        f.flight.aim.setFromRotationMatrix(_q.lookAt(f.obj.position, B.obj.position, up));
+        if (g.lockRef === B && g.rails > 0 && !g.missiles.some((m) => m.side === 'ours')) fired += g.fireMissile() ? 1 : 0;
+      }
+      // A missile on you: cut the drive (no burn: the seat is not held) and flare every second while it closes.
+      coast -= 1 / 30;
+      if (g.warn && g.warn.range < 2500 && coast <= 0) (coast = 1), (flared += g.dropFlares() ? 1 : 0);
+      t += run_(c, 1 / 30);
+    }
+    const missiles = [...fate.values()].map((e) => `${e.side}:${e.on}>${e.end}@${e.at}`);
+    return {
+      t: r3(t), fired, flared, missiles, rails: g.rails, flaresLeft: g.myFlares, fhull: r3(g.fhull), crippled: !!g.crippled,
+      bandits: g.bandits.map((B) => (B.dead ? 'x' : B.gone ? '-' : B.state[0])).join(''), kills: (g.kills ?? []).map((k) => `${k.who}@${r3(k.t)}`),
+      banditFlares: g.bandits.map((B) => B.flareState?.left ?? '-'), raiderFlares: g.raider?.flareState?.left ?? '-', carrierFlares: g.carrierFlares?.left ?? '-', ...snap(c)
     };
   },
 
@@ -538,7 +599,7 @@ export async function run(name) {
 }
 
 const PAGES = {
-  raid: 'at=bridge', helm: 'at=helm', landing: 'at=fighter', collide: 'at=fighter', bandits: 'at=fighter', walk: 'at=bridge', float: 'at=bridge', brace: 'at=bridge', career: ''
+  raid: 'at=bridge', helm: 'at=helm', landing: 'at=fighter', collide: 'at=fighter', bandits: 'at=fighter', missiles: 'at=fighter', walk: 'at=bridge', float: 'at=bridge', brace: 'at=bridge', career: ''
 };
 
 /** Every scenario, each in a fresh page of its own (an iframe), from any page of this site: `{ name: { hash, … } }`.

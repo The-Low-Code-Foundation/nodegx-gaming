@@ -481,7 +481,58 @@ weapons.bandit = {
   clear: 6000,
   jink: { every: [0.6, 1.6], pop: 0.3, near: 2200 },
   trim: 4,
-  gun: { shell: 1100, every: 0.11, burst: [0.6, 1.4], pause: [0.8, 2], spread: 0.004, err: 0.006, range: 1800, radius: 3, damage: [2, 4], pdcRadius: 7, pdcDamage: [10, 16], radiator: 0.01, cone: 0.03 }
+  gun: { shell: 1100, every: 0.11, burst: [0.6, 1.4], pause: [0.8, 2], spread: 0.004, err: 0.006, range: 1800, radius: 3, damage: [2, 4], pdcRadius: 7, pdcDamage: [10, 16], radiator: 0.01, cone: 0.03 },
+  missiles: 2,
+  missileFirst: 6,
+  missileRange: [600, 3500],
+  missileEvery: 8,
+};
+weapons.bandit.about += ' `missiles`: heat-seekers it carries (the layout\'s `missile`), the first not before `missileFirst` s into its fight, then one every `missileEvery` s at most, fired at your fighter when the seeker on its nose has locked her inside `missileRange` m.';
+// Heat-seekers and flares (ROADMAP phase 7, weapons/missiles.mjs). A seeker sees I / r² and locks above `sense`
+// (I in these units over r² in km²): a fighter coasting (I 8) only inside about 2.8 km, burning (68) from 8 km; the
+// raider from 14 km; the carrier, radiators out, from 25 km or more. A fighter's flare (50) outshines her coasting, not
+// burning: cut the drive and flare. A seeker sees through one flare in two (`reject`).
+weapons.heat = {
+  about: 'How bright each thing is in the infrared, for the heat-seekers (weapons/missiles.mjs heatSources). A fighter (yours or a bandit): `base`, plus `drive` × its main drive\'s power, plus `jets` while any side jet fires. The raider: `base`, plus `drive` while it burns on its passes. The carrier: `base`, plus `radiators` × how far her radiators are spread × (0.3 + the heat in her sinks), plus `drive` × her push. A torpedo while its motor burns: `torpedo`. A seeker sees I / r², r in km.',
+  fighter: { base: 8, drive: 60, jets: 3 },
+  raider: { base: 40, drive: 160 },
+  carrier: { base: 150, radiators: 600, drive: 300 },
+  torpedo: 30,
+};
+weapons.missile = {
+  about: 'The fighters\' heat-seeking missiles (weapons/missiles.mjs). `rails` on each fighter, yours reloaded on the pad. On the rail the seeker looks along the nose, or at the selected contact when it is within `offBore` radians of the nose, and locks the brightest thing in a `gate`-radian cone above `sense` (I / r², r in km). Fired (Q), it leaves at `push` m/s down off the rail, lights after `drop` s and burns at `accel` m/s² for `burn` s, steering by proportional navigation; then its divert jets turn it at up to `divert` m/s² until `divertDv` m/s is spent. In flight the seeker keeps to its `gate` round what it tracks, which counts `hold` times as bright as it is; with nothing in the gate it looks over `fov` radians. Each flare it takes for the brightest thing in view it judges once: `reject` of the time it sees it for a flare and looks past it from then on. Armed after `arm` s, it goes off within `fuse` m of anything hot but its launcher (a flare too), and is gone after `life` s. A point defence round (the carrier\'s or the raider\'s) that passes within `hitBy` m of it shoots it down. It does `damage` to a fighter, `ship` × that to the raider, and on the carrier hits like a shell of `carrier.pen` armour, `carrier.damage` to the room and `carrier.hole` to its hull.',
+  rails: 4,
+  offBore: 0.5,
+  gate: 0.07,
+  fov: 0.6,
+  sense: 1,
+  hold: 1.3,
+  push: 5,
+  drop: 0.3,
+  accel: 300,
+  burn: 3.5,
+  divert: 40,
+  divertDv: 150,
+  arm: 1,
+  reject: 0.5,
+  fuse: 8,
+  life: 20,
+  hitBy: 1,
+  damage: [70, 100],
+  ship: 1,
+  carrier: { pen: 2, damage: 6, hole: 0.03 },
+};
+weapons.flares = {
+  about: 'Flares, on every ship (weapons/missiles.mjs). Each is thrown out at `eject` m/s on top of the ship\'s velocity and burns for `life` s at its kind\'s `heat`, fading. Your fighter drops `fighter.salvo` a press of G, from `fighter.count`, refilled on the pad. The AI ships (`bandit`, `raider`, `carrier`) flare when a missile tracking them is inside `react` m, after `notice` s to see it: `salvo` at a time, one salvo every `every` s, while their `count` lasts; a bandit also cuts its drive for `coast` s.',
+  eject: 25,
+  life: 4,
+  react: 2500,
+  notice: [0.5, 1.5],
+  coast: 3,
+  fighter: { count: 24, salvo: 2, every: 1.2, heat: 50 },
+  bandit: { count: 12, salvo: 2, every: 1.2, heat: 50 },
+  raider: { count: 40, salvo: 4, every: 0.8, heat: 400 },
+  carrier: { count: 120, salvo: 4, every: 0.8, heat: 1500 },
 };
 weapons.gun = { ...weapons.gun, shellMass: design.ship.shell, barrels: design.ship.barrels, calibreNote: `${design.ship.barrel} m barrels; muzzle speed ${design.ship.vel} m/s in the design (the game's gun.shell is still tuned for play).` };
 weapons.tubes = { ...weapons.tubes, magazine: 'missile-mag', at: [-1, 1].flatMap((s) => [[s * 6, 2.5, bow.z[0] + 2], [s * 6, -2.5, bow.z[0] + 2], [s * 2, 0, bow.z[0] + 2]]).slice(0, bs.tubes), dir: [0, 0, -1] };

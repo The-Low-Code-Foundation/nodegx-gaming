@@ -52,6 +52,8 @@ export class FighterSeat {
     else if (code === 'KeyM') fighter.toggleMouse();
     else if (code === 'KeyT') fighter.debugRefill();
     else if (code === 'KeyX' && fighter.flying) this.G.guns.nextFoe(); // the next contact on her sight
+    else if (code === 'KeyQ' && fighter.flying) this.G.guns.fireMissile(); // a heat-seeker off the rail
+    else if (code === 'KeyG' && fighter.flying) this.G.guns.dropFlares(); // a pair of flares
     else if (code === 'KeyE') {
       if (fighter.phase === 'seated') this.G.fadeThen(() => this.leave());
       else if (fighter.canLand(body.vel)) {
@@ -95,6 +97,7 @@ export class FighterSeat {
       fighter, carrier: body, C, lane, approach, camera, aim, bayDist: dist, closing, entryDist,
       cockpit: fighter.view === 'cockpit', bayOpen: doors.open, pad: fighter.index + 1,
       foe: fighter.flying ? guns.foe(FOE) : null, marks: fighter.flying ? guns.foeMarks(MARKS) : null, rounds: guns.rounds, roundsMax: L.weapons.fighter?.rounds,
+      missiles: guns.rails, flares: guns.myFlares, lock: fighter.flying ? guns.lock : null, lockName: guns.lockName(), seeing: guns.seeing, warn: fighter.flying ? guns.warn : null,
       hull: guns.fhull != null ? guns.fhull / L.weapons.fighter.hull : 1
     });
   }

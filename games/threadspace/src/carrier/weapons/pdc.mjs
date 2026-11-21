@@ -44,6 +44,11 @@ export const pdcParts = {
           const d = t.pos.distanceTo(pivot);
           if (d < P.range && d < bd && _c.subVectors(t.pos, pivot).normalize().dot(up) > cosArc) (best = t), (bd = d);
         }
+        for (const t of this.missiles) {
+          if (t.dead || t.track !== 'carrier') continue; // a heat-seeker homing on her, whoever fired it
+          const d = t.pos.distanceTo(pivot);
+          if (d < P.range && d < bd && _c.subVectors(t.pos, pivot).normalize().dot(up) > cosArc) (best = t), (bd = d);
+        }
         if (!best)
           for (const B of this.bandits) {
             if (B.dead || B.gone) continue;
@@ -105,12 +110,13 @@ export const pdcParts = {
     }
   },
 
-  /** The raider's point defence: its turrets hose the carrier's torpedoes when they come within reach. */
+  /** The raider's point defence: its turrets hose the carrier's torpedoes, and your fighter's missiles, when they
+   *  come within reach. */
   raiderPdc(R, dt) {
     const P = R.K.pdc;
     const guns = R.obj.userData.turrets ?? [];
     let best = null, bd = Infinity;
-    for (const t of this.torps) {
+    for (const t of [...this.torps, ...this.missiles]) {
       if (t.dead || t.side !== 'ours') continue;
       const d = t.pos.distanceTo(R.obj.position);
       if (d < P.range && d < bd) (best = t), (bd = d);
@@ -143,8 +149,12 @@ export const pdcParts = {
       r.pos.addScaledVector(r.vel, dt);
       r.life -= dt;
       const t = this.torpHit(r.prev, r.pos, r.side === 'ours' ? 'theirs' : 'ours', radius);
+      const mi = !t && this.missiles.length ? this.missileHitBy(r.prev, r.pos, r.side, this.W.missile.hitBy) : null;
       if (t) {
         this.killTorp(t, r.side === 'ours' ? 'pdc' : 'raider');
+        r.life = 0;
+      } else if (mi) {
+        this.missileGone(mi, true); // shot down
         r.life = 0;
       } else if (r.side === 'ours' && raiderLive && r.dmg && r.pos.distanceTo(R.obj.position) < 80 && this.hitsRaider(r.prev, r.pos, _b)) {
         this.raiderHit(_b, r.dmg, false, true);

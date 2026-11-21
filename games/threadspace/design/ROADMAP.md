@@ -347,6 +347,20 @@ No physics engine. The ship already has its own Newtonian code (`newton.mjs`, `f
   Not done: point defence in kinds, heat-seekers (the second session); a Blender model of the enemy fighter (it is the
   main game's code-built Rook); bandits colliding with anything; the turrets' crews never lay on a bandit.
 
+  **Built (phase 7's second session):** heat-seekers and flares (`src/carrier/weapons/missiles.mjs`, numbers in the
+  layout's `weapons.heat`, `missile` and `flares`). Everything glows by how hot it is (a fighter's hull, more with her
+  drive lit; the raider; the carrier most, by her radiators and sink heat; burning torpedoes; flares), and a seeker sees
+  I / r² in its cone, with no friend or foe. Your fighter has four on the rails, reloaded on the pad: the seeker looks
+  along the nose or at the contact picked with X, the HUD circles what it locks with a tone, Q fires; they fly by
+  proportional navigation, then divert jets. The bandits carry two each and fire when their nose seeker locks you: a
+  MISSILE warning with range and closing speed, a beeping tone and the `missile-warning` call. Every ship carries flares
+  (yours: G, a pair); a flare outshines a coasting fighter, not a burning one, so cut the drive and flare, and a seeker
+  sees through one flare in two. The AI ships flare against missiles tracking them (a bandit also cuts its drive). The
+  raider's point defence shoots at our missiles, the carrier's at any homing on her. A `missiles` scenario in
+  `tools/carrier-check.mjs`. The new call is not recorded yet.
+  Not done: point defence in kinds (close-in guns and flak); missiles on the carrier or the raider; the cockpit's own
+  missile and flare sounds (it uses the existing ones and a synthesised tone).
+
 ## Phase 8. Talking to people (three or more sessions) [13]
 
 - **The story first, by Gemini, with you as editor.** A story bible before any dialogue: the ship's name and history,

@@ -395,7 +395,7 @@
    }
   },
   "bandit": {
-   "about": "The raider's escort fighters (weapons/bandits.mjs): Rook fighters flown on the same `Flight` as yours (the layout's `fighter`: mass, thrust, tanks, jets) by an AI pilot. `count` come with each raid, in `slots` (metres in the raider's frame; a third and fourth go twice as far out). `hull` (the cannon does `fighter.damage` a round) and the hit ellipsoid `size` about `centre`. Once the raider is on its firing passes and the carrier is inside `start` m they strafe her point defence: runs along her side `pass` m out, at `run` m/s past her (closing on the line at up to `close` m/s, `gain` per metre off it), each started `fire` + `lead` m short of the gun, firing from `fire` m, turning for the next `extend` m past the gun; `look` s ahead they keep `clearance` m off her hull. The nearest to your fighter inside `engage` m (and any you have hit) fights you, holding at about `stand` m. With a target in reach it only turns away to burn when its velocity is `shootSlack` m/s off what it wants; less than that its side jets take out. `bingo` (a fraction of either tank, the drive's or the jets') sends one back to the raider; at `clear` m from the carrier, leaving, it is gone. `jink`: inside `near` m of the carrier or your fighter, a `pop` s random pop on the side jets every `every` s (the jets' tank is small: held, they would empty it in a minute). Shooting, the side jets take out more than `trim` m/s of the velocity it wants across the nose. `gun`: rounds at `shell` m/s on top of its own velocity, one every `every` s in bursts of `burst` s with `pause` s between, `spread` per round and `err` (radians) per burst, gone after `range` m; a round within `radius` m of your fighter does `damage`, within `pdcRadius` m of a point defence gun takes `pdcDamage` off its 100, and through a spread radiator hurts it by `radiator`; the nose must be within `cone` radians of the lead to fire.",
+   "about": "The raider's escort fighters (weapons/bandits.mjs): Rook fighters flown on the same `Flight` as yours (the layout's `fighter`: mass, thrust, tanks, jets) by an AI pilot. `count` come with each raid, in `slots` (metres in the raider's frame; a third and fourth go twice as far out). `hull` (the cannon does `fighter.damage` a round) and the hit ellipsoid `size` about `centre`. Once the raider is on its firing passes and the carrier is inside `start` m they strafe her point defence: runs along her side `pass` m out, at `run` m/s past her (closing on the line at up to `close` m/s, `gain` per metre off it), each started `fire` + `lead` m short of the gun, firing from `fire` m, turning for the next `extend` m past the gun; `look` s ahead they keep `clearance` m off her hull. The nearest to your fighter inside `engage` m (and any you have hit) fights you, holding at about `stand` m. With a target in reach it only turns away to burn when its velocity is `shootSlack` m/s off what it wants; less than that its side jets take out. `bingo` (a fraction of either tank, the drive's or the jets') sends one back to the raider; at `clear` m from the carrier, leaving, it is gone. `jink`: inside `near` m of the carrier or your fighter, a `pop` s random pop on the side jets every `every` s (the jets' tank is small: held, they would empty it in a minute). Shooting, the side jets take out more than `trim` m/s of the velocity it wants across the nose. `gun`: rounds at `shell` m/s on top of its own velocity, one every `every` s in bursts of `burst` s with `pause` s between, `spread` per round and `err` (radians) per burst, gone after `range` m; a round within `radius` m of your fighter does `damage`, within `pdcRadius` m of a point defence gun takes `pdcDamage` off its 100, and through a spread radiator hurts it by `radiator`; the nose must be within `cone` radians of the lead to fire. `missiles`: heat-seekers it carries (the layout's `missile`), the first not before `missileFirst` s into its fight, then one every `missileEvery` s at most, fired at your fighter when the seeker on its nose has locked her inside `missileRange` m.",
    "count": 2,
    "hull": 90,
    "size": [
@@ -470,6 +470,96 @@
     ],
     "radiator": 0.01,
     "cone": 0.03
+   },
+   "missiles": 2,
+   "missileFirst": 6,
+   "missileRange": [
+    600,
+    3500
+   ],
+   "missileEvery": 8
+  },
+  "heat": {
+   "about": "How bright each thing is in the infrared, for the heat-seekers (weapons/missiles.mjs heatSources). A fighter (yours or a bandit): `base`, plus `drive` × its main drive's power, plus `jets` while any side jet fires. The raider: `base`, plus `drive` while it burns on its passes. The carrier: `base`, plus `radiators` × how far her radiators are spread × (0.3 + the heat in her sinks), plus `drive` × her push. A torpedo while its motor burns: `torpedo`. A seeker sees I / r², r in km.",
+   "fighter": {
+    "base": 8,
+    "drive": 60,
+    "jets": 3
+   },
+   "raider": {
+    "base": 40,
+    "drive": 160
+   },
+   "carrier": {
+    "base": 150,
+    "radiators": 600,
+    "drive": 300
+   },
+   "torpedo": 30
+  },
+  "missile": {
+   "about": "The fighters' heat-seeking missiles (weapons/missiles.mjs). `rails` on each fighter, yours reloaded on the pad. On the rail the seeker looks along the nose, or at the selected contact when it is within `offBore` radians of the nose, and locks the brightest thing in a `gate`-radian cone above `sense` (I / r², r in km). Fired (Q), it leaves at `push` m/s down off the rail, lights after `drop` s and burns at `accel` m/s² for `burn` s, steering by proportional navigation; then its divert jets turn it at up to `divert` m/s² until `divertDv` m/s is spent. In flight the seeker keeps to its `gate` round what it tracks, which counts `hold` times as bright as it is; with nothing in the gate it looks over `fov` radians. Each flare it takes for the brightest thing in view it judges once: `reject` of the time it sees it for a flare and looks past it from then on. Armed after `arm` s, it goes off within `fuse` m of anything hot but its launcher (a flare too), and is gone after `life` s. A point defence round (the carrier's or the raider's) that passes within `hitBy` m of it shoots it down. It does `damage` to a fighter, `ship` × that to the raider, and on the carrier hits like a shell of `carrier.pen` armour, `carrier.damage` to the room and `carrier.hole` to its hull.",
+   "rails": 4,
+   "offBore": 0.5,
+   "gate": 0.07,
+   "fov": 0.6,
+   "sense": 1,
+   "hold": 1.3,
+   "push": 5,
+   "drop": 0.3,
+   "accel": 300,
+   "burn": 3.5,
+   "divert": 40,
+   "divertDv": 150,
+   "arm": 1,
+   "reject": 0.5,
+   "fuse": 8,
+   "life": 20,
+   "hitBy": 1,
+   "damage": [
+    70,
+    100
+   ],
+   "ship": 1,
+   "carrier": {
+    "pen": 2,
+    "damage": 6,
+    "hole": 0.03
+   }
+  },
+  "flares": {
+   "about": "Flares, on every ship (weapons/missiles.mjs). Each is thrown out at `eject` m/s on top of the ship's velocity and burns for `life` s at its kind's `heat`, fading. Your fighter drops `fighter.salvo` a press of G, from `fighter.count`, refilled on the pad. The AI ships (`bandit`, `raider`, `carrier`) flare when a missile tracking them is inside `react` m, after `notice` s to see it: `salvo` at a time, one salvo every `every` s, while their `count` lasts; a bandit also cuts its drive for `coast` s.",
+   "eject": 25,
+   "life": 4,
+   "react": 2500,
+   "notice": [
+    0.5,
+    1.5
+   ],
+   "coast": 3,
+   "fighter": {
+    "count": 24,
+    "salvo": 2,
+    "every": 1.2,
+    "heat": 50
+   },
+   "bandit": {
+    "count": 12,
+    "salvo": 2,
+    "every": 1.2,
+    "heat": 50
+   },
+   "raider": {
+    "count": 40,
+    "salvo": 4,
+    "every": 0.8,
+    "heat": 400
+   },
+   "carrier": {
+    "count": 120,
+    "salvo": 4,
+    "every": 0.8,
+    "heat": 1500
    }
   },
   "brace": {
