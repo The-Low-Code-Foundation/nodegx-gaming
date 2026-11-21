@@ -257,8 +257,11 @@ export function room(I, c, open, holes = []) {
       if (o.kind === 'door') I.doorFrame(alongX, line, o.a, o.b, y, h, 2.5);
       else if (o.kind === 'window') {
         const head = o.head ?? h;
-        solid(o.a, o.b, 0, o.sill, true);
+        solid(o.a, o.b, 0, o.sill, false);
         solid(o.a, o.b, head, h, false);
+        // The glass is as solid as the wall: one collider from the deck to the deckhead (weightless, your eye can be
+        // anywhere up the wall, and a sill-high one let you float out through the pane).
+        alongX ? I.collider(o.a, y, line - 0.1, o.b, y + h, line + 0.1) : I.collider(line - 0.1, y, o.a, line + 0.1, y + h, o.b);
         I.window(alongX, line, o.a, o.b, y + o.sill, y + head);
       } else if (o.kind === 'bay') {
         solid(o.a, o.b, o.head, h, false);
@@ -584,6 +587,10 @@ function drone() {
 function hangar(C, I, c, hooks) {
   const [x1, x2] = c.x, [z1, z2] = c.z;
   // Launch lanes: a painted strip from each fighter to the bay door on the side she faces (yaw +90° is port, -x).
+  // Where you board a fighter, metres forward of her centre: in the weightless hangar, half way to the next fighter's
+  // pad, where her spur of the gangway runs (sets/hangar.mjs), clear of both fighters' flanks.
+  const gapZ = C.L.fighters.length > 1 ? Math.abs(C.L.fighters[1].at[1] - C.L.fighters[0].at[1]) : 6.3;
+  C.boardAt = c.vacuum ? Math.min(4.6, gapZ / 2) : 4.6;
   C.L.fighters.forEach((f, i) => {
     const out = f.yaw >= 0 ? -1 : 1, wall = out < 0 ? x1 : x2, tail = f.at[0] - out * 3;
     const lane = at(box(Math.abs(wall - tail), 0.02, 0.4, glow('#4fd0e0', 0.35)), (wall + tail) / 2, I.floorY + 0.01, f.at[1]);
@@ -596,12 +603,14 @@ function hangar(C, I, c, hooks) {
     for (const p of [...w.userData.plumes, ...w.userData.halos]) p.visible = false;
     I.group.add(w);
     C.fighters.push(w);
-    I.collider(Math.min(f.at[0] + out * 3, f.at[0] - out * 6), I.floorY, f.at[1] - 3.8, Math.max(f.at[0] + out * 3, f.at[0] - out * 6), I.floorY + 3, f.at[1] + 3.8);
+    // Her bulk: her own width (radiators folded) where you float past her on the gangway's spurs; walking, a wider berth.
+    const half = c.vacuum ? 1.9 : 3.8;
+    I.collider(Math.min(f.at[0] + out * 3, f.at[0] - out * 6), I.floorY, f.at[1] - half, Math.max(f.at[0] + out * 3, f.at[0] - out * 6), I.floorY + 3, f.at[1] + half);
     // Her ladder, on her port side: E climbs in (main.mjs, fighter.mjs). In an airless, weightless hangar it is a frame
     // of grab bars you pull yourself up, not a ladder you climb, at the end of her spur of the gangway (sets/hangar.mjs,
     // which makes its bars holds).
-    if (c.vacuum) I.group.add(grabFrame(f.at[0] + 1, I.floorY, f.at[1] - 4.0));
-    I.use(`fighter-${i}`, c.vacuum ? 'Pull yourself up into the cockpit' : 'Climb into the fighter', f.at[0] + 1, f.at[1] - 4.6, () => hooks.fighter?.(i), { r: 2.8 });
+    if (c.vacuum) I.group.add(grabFrame(f.at[0] + 1, I.floorY, f.at[1] - C.boardAt + 0.6));
+    I.use(`fighter-${i}`, c.vacuum ? 'Pull yourself up into the cockpit' : 'Climb into the fighter', f.at[0] + 1, f.at[1] - C.boardAt, () => hooks.fighter?.(i), { r: c.vacuum ? 3.4 : 2.8 });
   });
   // Crates and a fuel cart along the inboard wall, gantries overhead.
   // Crates and a fuel cart along a wall with no door in it, gantries overhead.

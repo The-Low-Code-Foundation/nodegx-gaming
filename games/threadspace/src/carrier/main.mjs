@@ -194,6 +194,19 @@ C.bus.on('fighter-down', () => {
   doors.setBay(1);
   fighter.land();
 });
+// A crash that finishes her: she breaks up (weapons/raid.mjs `fighterHit`), you see the fireball for a moment (fighter.mjs
+// `WRECK_T`), then come round in the sick bay, hurt; the spare airframe is on her pad under her number (fighter.mjs `salvage`).
+let wreckedAt = 0; // the speed of the crash that wrecked her
+C.bus.on('fighter-wrecked', (e) => (wreckedAt = e.speed));
+C.bus.on('fighter-wreck-over', () => fadeThen(() => {
+  cockpit.detach();
+  const pad = fighter.salvage();
+  setMode('walk');
+  const sick = [...C.rooms.values()].find((r) => r.system === 'medical') ?? C.rooms.get('hangar');
+  walk.goDeck(sick.deck, (sick.x[0] + sick.x[1]) / 2, (sick.z[0] + sick.z[1]) / 2, walker.yaw, sick.seg);
+  if (walker.floater) walker.floater.hurt = Math.max(walker.floater.hurt, 0.5);
+  dc.say(null, `You hit the carrier at ${Math.round(wreckedAt)} m/s and she broke up. The crash and rescue team cut you out of what was left: you are in the ${sick.name.toLowerCase()}, bruised. The spare airframe is on pad ${pad + 1}.`, 0, 9);
+}));
 // Her heat and her reaction mass (plant.mjs): the guns put heat in, the radiators take it out, the drive burns
 // propellant. The status board in the cutaway shows them with the guns.
 const plant = new Plant(C, { ship, thrusters: thrusterList, dc, sfx });

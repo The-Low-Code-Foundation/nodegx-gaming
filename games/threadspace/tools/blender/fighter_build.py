@@ -20,13 +20,13 @@
 #   canopy           the canopy and its frame; origin on the hinge, rotation about x opens it
 #   wing_l, wing_r   the radiator panels; origin on the fold hinge, rotation about z folds them up
 #   gear             the landing gear, raised into the belly in flight
-#   pilot            hidden from the cockpit camera
+#   legs             your legs, boots and kneeboard: drawn only from the seat, so a parked fighter's seat is empty
 #   mfd_l, mfd_c, mfd_r   the cockpit screens (UV-mapped quads; the game draws on them)
 #   hud              the head-up display's glass
 #   strobe           the anti-collision light, blinked by the game
 #   eye, nozzle, decal_l, decal_r, muzzle_l, muzzle_r   empties: the pilot's eye, the drive's mouth, where the side
 #                    number goes, the cannon muzzles
-# Not looked up, but there: `cockpit` (the tub, panel, consoles, stick, throttle and the pilot's legs) and
+# Not looked up, but there: `cockpit` (the tub, panel, consoles, stick, throttle and pedals) and
 # `cockpit-labels` (its placards and lit legends, on one texture this script draws: see label_atlas()).
 import sys, os, json, math, random
 
@@ -897,17 +897,19 @@ for s in (-1, 1):
     for i in range(6):
         ck.append(K.box(f'eject-side-{s}-{i}', (s * 0.262, 0.12, SZ - 0.46 + i * 0.026), (0.024, 0.024, 0.026), M['hazard'] if i % 2 == 0 else M['dark']))
 
-# Your legs, in the flight suit, boots on the pedals; a kneeboard strapped to the left thigh. They are part of the
-# cockpit (seen from the seat); the `pilot` (the outside view only) has no legs, so they do not double up.
+# Your legs, in the flight suit, boots on the pedals; a kneeboard strapped to the left thigh. Their own object, `legs`,
+# which the game draws only when you are in the seat: a parked fighter's seat is empty. (There is no outside pilot.)
+lg = []
+LEG_LABELS = set()  # indices into LABELS that ride on the legs (the kneeboard's card)
 for s in (-1, 1):
     hip, knee, ankle = Vector((s * 0.11, 0.21, 0.06)), Vector((s * 0.15, 0.36, -0.56)), Vector((s * 0.2, -0.06, -1.1))
-    ck.append(smooth(K.cyl(f'thigh-{s}', tuple(hip), tuple(knee), 0.088, 0.066, M['suit'], segs=10, cap=False)))
-    ck.append(smooth(solid(K.lathe(f'knee-{s}', [(0, 0.03), (0.2, 0.058), (0.5, 0.07), (0.8, 0.058), (1, 0.03)], tuple(knee - Vector((0.07, 0, 0))), tuple(knee + Vector((0.07, 0, 0))), M['suit'], segs=10), 0.004)))
-    ck.append(smooth(K.cyl(f'shin-{s}', tuple(knee), tuple(ankle), 0.064, 0.05, M['suit'], segs=10, cap=False)))
+    lg.append(smooth(K.cyl(f'thigh-{s}', tuple(hip), tuple(knee), 0.088, 0.066, M['suit'], segs=10, cap=False)))
+    lg.append(smooth(solid(K.lathe(f'knee-{s}', [(0, 0.03), (0.2, 0.058), (0.5, 0.07), (0.8, 0.058), (1, 0.03)], tuple(knee - Vector((0.07, 0, 0))), tuple(knee + Vector((0.07, 0, 0))), M['suit'], segs=10), 0.004)))
+    lg.append(smooth(K.cyl(f'shin-{s}', tuple(knee), tuple(ankle), 0.064, 0.05, M['suit'], segs=10, cap=False)))
     up = Vector((0, 1, 0.3)).normalized()
     bc = ankle + Vector((0, -0.05, -0.08))
-    ck.append(obox(f'boot-{s}', tuple(bc), (1, 0, 0), up, (0.1, 0.11, 0.28), M['pad'], bevel=0.018))
-    ck.append(K.cyl(f'cuff-{s}', tuple(ankle + Vector((0, -0.02, 0))), tuple(ankle + Vector((0, 0.06, -0.02))), 0.058, 0.056, M['pad'], segs=10))
+    lg.append(obox(f'boot-{s}', tuple(bc), (1, 0, 0), up, (0.1, 0.11, 0.28), M['pad'], bevel=0.018))
+    lg.append(K.cyl(f'cuff-{s}', tuple(ankle + Vector((0, -0.02, 0))), tuple(ankle + Vector((0, 0.06, -0.02))), 0.058, 0.056, M['pad'], segs=10))
     ck.append(obox(f'pedal-{s}', tuple(bc - up * 0.064), (1, 0, 0), up, (0.12, 0.014, 0.3), M['trim']))
     if s < 0:
         d = (knee - hip).normalized()
@@ -915,13 +917,14 @@ for s in (-1, 1):
         nrm = Vector((1, 0, 0)).cross(ay)
         t = 0.6
         c = hip + (knee - hip) * t + nrm * (0.088 + (0.066 - 0.088) * t + 0.004)
-        ck.append(obox('kneeboard', tuple(c), (1, 0, 0), ay, (0.13, 0.18, 0.006), M['knob']))
-        ck.append(obox('kneeboard-clip', tuple(c + ay * 0.082 + nrm * 0.005), (1, 0, 0), ay, (0.06, 0.016, 0.008), M['switch']))
+        lg.append(obox('kneeboard', tuple(c), (1, 0, 0), ay, (0.13, 0.18, 0.006), M['knob']))
+        lg.append(obox('kneeboard-clip', tuple(c + ay * 0.082 + nrm * 0.005), (1, 0, 0), ay, (0.06, 0.016, 0.008), M['switch']))
+        LEG_LABELS.add(len(LABELS))
         placard('CVS-1 RECOVERY\nCASE I    CH 02\nLANE 4 M/S  4 KM\nJOKER 30  BINGO 15', 'paper', tuple(c + nrm * 0.0032 - ay * 0.012), (1, 0, 0), ay, 0.02, maxw=0.115)
         for k_, tt in enumerate((0.42, 0.8)):
             p = hip + (knee - hip) * tt
             r_ = 0.088 + (0.066 - 0.088) * tt + 0.003
-            ck.append(K.cyl(f'kb-strap-{k_}', tuple(p - d * 0.012), tuple(p + d * 0.012), r_, r_, M['knob'], segs=10))
+            lg.append(K.cyl(f'kb-strap-{k_}', tuple(p - d * 0.012), tuple(p + d * 0.012), r_, r_, M['knob'], segs=10))
 
 # The stick between your knees: a rubber boot, the shaft, and a grip with its hat switch, trigger and red button.
 ck.append(K.cyl('stick-boot-0', (0, FLOOR + 0.02, -0.6), (0, FLOOR + 0.07, -0.6), 0.085, 0.065, M['pad'], segs=10))
@@ -936,21 +939,10 @@ ck.append(K.cyl('stick-pickle', tuple(sg + sy * 0.058 + Vector((-0.012, 0, -0.01
 ck.append(obox('stick-trigger', tuple(sg + sy * 0.03 + Vector((0, 0, -0.032))), (1, 0, 0), sy, (0.012, 0.03, 0.012), M['switch']))
 
 cockpit = K.join(ck, 'cockpit')
-cockpit_labels = K.join(labels(), 'cockpit-labels')
+lab = labels()
+cockpit_labels = K.join([o for i, o in enumerate(lab) if i not in LEG_LABELS], 'cockpit-labels')
+legs = K.join(lg + [lab[i] for i in sorted(LEG_LABELS)], 'legs')
 
-# --- the pilot, for the outside view (the cockpit camera does not draw them; the legs are the cockpit's) ----------------
-
-pl = []
-pl.append(K.box('torso', (0, 0.5, SZ - 0.02), (0.4, 0.55, 0.26), M['suit'], bevel=0.06))
-for s in (-1, 1):
-    sh, el = (s * 0.2, 0.68, 0.12), ((0.22, 0.44, -0.12) if s > 0 else (-0.28, 0.46, -0.1))
-    hand = (0.02, 0.42, -0.5) if s > 0 else (-0.37, 0.55, -0.42)
-    pl.append(K.cyl(f'arm-{s}', sh, el, 0.06, 0.05, M['suit'], segs=8))
-    pl.append(K.cyl(f'fore-{s}', el, hand, 0.05, 0.042, M['suit'], segs=8))
-    pl.append(K.box(f'glove-{s}', hand, (0.06, 0.07, 0.08), M['suit']))
-pl.append(solid(K.lathe('helmet', [(0, 0.02), (0.12, 0.1), (0.4, 0.15), (0.75, 0.14), (0.92, 0.09), (1, 0.0)], (0, 0.86, -0.2), (0, 1.18, -0.2), M['helmet'], segs=16), 0.02))
-pl.append(K.box('visor', (0, 1.0, -0.33), (0.2, 0.09, 0.04), M['visor'], bevel=0.02))
-pilot = K.join(pl, 'pilot')
 
 empty('eye', EYE)
 for s, nm in ((-1, 'decal_l'), (1, 'decal_r')):

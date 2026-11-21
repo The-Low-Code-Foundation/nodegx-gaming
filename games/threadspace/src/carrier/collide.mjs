@@ -18,7 +18,7 @@
 // What happens (`resolve()`): she is put back where the ball first touched, then given an impulse at that point,
 // along the surface's normal (restitution `bounce`) and against her slide along it (friction `scrape`). The impulse is
 // applied off her centre of mass, so a hit on the nose spins her. Coming in slower than `scrape.speed` it is only a
-// scrape: sparks and a shudder. Faster, her hull (`guns.fhull`, weapons/raid.mjs `fighterHit`) takes
+// scrape: sparks and a shudder. Faster, her hull (`guns.fhull`, weapons/raid.mjs `fighterHit`; a crash that finishes her wrecks her) takes
 // `damage.k × (speed − scrape.speed)²`, and from `hole.speed` up she holes the compartment she hit as well
 // (integrity.mjs `arrive`, a short, shallow strike). Everything is measured against the surface she hit, so a slow
 // bump into a carrier coming the other way at 20 m/s is a 20 m/s crash.
@@ -360,7 +360,7 @@ export class Collisions {
       st.crashes++;
       const dmg = S.damage.k * (speed - S.scrape.speed) ** 2;
       hit.damage = +dmg.toFixed(1);
-      if (guns.fhull != null) guns.fighterHit(P, dmg);
+      if (guns.fhull != null) guns.fighterHit(P, dmg, speed);
       // Hard enough, she holes the compartment she hit (a short, shallow strike; in the ship's frame).
       if (c.s.hull && speed >= S.hole.speed && this.ship) {
         const inv = this.C.obj.matrixWorld.clone().invert();

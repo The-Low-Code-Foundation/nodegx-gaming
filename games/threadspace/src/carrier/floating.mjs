@@ -9,7 +9,11 @@
 //   upper body is Rocketbox's own capture (working at a table, talking, looking round) over keyed legs, so the hands
 //   still work and the gestures still read: `railWork`, `railTalk`, `railLook`; `railIdle` has the floating arms.
 // - `railBrace`: in the foot rail, hunched, both fists on the console's edge: braced for a hit.
-// - `floatMove`: hand over hand, head first along a rail (the body is laid along the way by `floatStep`, not the clip).
+// - Getting about, as people really do it in orbit: not swimming, but a push off, a glide and a catch, then a moment
+//   holding on before the next push. `floatHold`: one hand on a hold beside them, the body loose, feet off the deck.
+//   `floatPush`: crouched against the hold, then the legs and arms straighten. `floatGlide`: laid out head first, one
+//   arm reaching ahead, the other along the body, legs trailing loose. `floatCatch`: both hands out ahead and the knees
+//   coming up to take the stop. (`floatStep` lays the body along the way and brings it upright; the clips are the limbs.)
 // - `floatBrace`: tucked and holding on hard, at a wall.
 //
 // A pose is a rotation per bone in the body's own frame (x the person's right, y up, -z forward), applied to that
@@ -197,13 +201,38 @@ export const POSES = {
       { at: 0.5, b: { thighL: [33, 0, -3], footL: [25, 0, 0], spine1: [-13, 0, 0], spine2: [-10, 0, 0], neck: [-13, 0, 0], armL: [57, 0, 34], clavL: [0, 0, 6] }, bend: { calfL: -60, foreL: -42 }, curl: 1.25 }
     ]
   },
-  floatMove: {
-    period: 2.4,
+  floatHold: {
+    period: 4.8,
     keys: [
-      // The left hand reaching ahead along the rail (overhead, in the body's frame), the right pulled back to the hip.
-      // (Raised that far, an elbow's flex folds the hand back behind the head: the reaching one is straightened.)
-      { at: 0, b: { armL: [165, 0, 44], armR: [-4, 0, -40], clavL: [0, 0, -8], neck: [24, 0, 0], head: [10, 0, 0], thighL: [8, 0, -3], thighR: [4, 0, 3], footL: [-28, 0, 0] }, bend: { foreL: 22, foreR: -30, calfL: -22, calfR: -14 }, curl: [0.9, 0.5] },
-      { at: 0.5, b: { armR: [165, 0, -44], armL: [-4, 0, 40], clavR: [0, 0, 8], neck: [24, 0, 0], head: [10, 0, 0], thighL: [4, 0, -3], thighR: [8, 0, 3], footL: [-28, 0, 0] }, bend: { foreR: 22, foreL: -30, calfL: -14, calfR: -22 }, curl: [0.5, 0.9] }
+      // The right hand on a hold out to the side at chest height, gripping; the left arm floating; the legs loose.
+      { at: 0, b: { armR: [40, 0, 22], clavR: [0, 0, -2], armL: [26, 0, 22], spine1: [-4, 0, 2], neck: [-6, 0, 0], head: [-4, 10, 0], thighL: [34, 0, -6], thighR: [24, 0, 4], footL: [-16, 0, 0] }, bend: { foreR: -16, foreL: -38, calfL: -48, calfR: -38 }, curl: [0.3, 1.15] },
+      { at: 0.5, b: { armR: [38, 0, 22], clavR: [0, 0, -2], armL: [30, 0, 20], spine1: [-2, 0, 1], neck: [-4, 0, 0], head: [-2, -6, 0], thighL: [38, 0, -5], thighR: [28, 0, 5], footL: [-18, 0, 0] }, bend: { foreR: -20, foreL: -42, calfL: -54, calfR: -44 }, curl: [0.35, 1.15] }
+    ]
+  },
+  floatPush: {
+    period: 1,
+    keys: [
+      // Gathered against the hold: knees and hips bent, both hands at the chest on it, the head down.
+      { at: 0, b: { armL: [36, 0, 34], armR: [36, 0, -34], spine1: [-14, 0, 0], spine2: [-8, 0, 0], neck: [-10, 0, 0], thighL: [62, 0, -6], footL: [14, 0, 0] }, bend: { foreL: -110, foreR: -110, calfL: -96 }, curl: 1.1 },
+      // Straightened: the push is through the legs and the arms; the right hand already reaching on ahead.
+      { at: 0.7, b: { armR: [150, 0, -38], armL: [-10, 0, 38], spine1: [2, 0, 0], neck: [40, 0, 0], head: [16, 0, 0], thighL: [-4, 0, -3], footL: [-26, 0, 0] }, bend: { foreR: -12, foreL: -16, calfL: -10 }, curl: [0.3, 0.4] }
+    ]
+  },
+  floatGlide: {
+    period: 3.6,
+    keys: [
+      // Laid out head first (floatStep pitches the body): one arm ahead, the other along the side, the head up to
+      // look where they are going, the legs trailing, one knee a little more bent than the other, toes pointed.
+      { at: 0, b: { armR: [156, 0, -40], armL: [-12, 0, 40], clavR: [0, 0, -6], spine1: [3, 0, 0], neck: [44, 0, 0], head: [18, 0, 0], thighL: [-6, 0, -3], thighR: [4, 0, 2], footL: [-30, 0, 0], footR: [-24, 0, 0] }, bend: { foreR: -14, foreL: -14, calfL: -16, calfR: -34 }, curl: [0.3, 0.45] },
+      { at: 0.5, b: { armR: [160, 0, -38], armL: [-8, 0, 38], clavR: [0, 0, -6], spine1: [4, 0, 1], neck: [42, 0, 0], head: [18, 0, 0], thighL: [-2, 0, -4], thighR: [0, 0, 3], footL: [-28, 0, 0], footR: [-26, 0, 0] }, bend: { foreR: -18, foreL: -18, calfL: -24, calfR: -28 }, curl: [0.35, 0.45] }
+    ]
+  },
+  floatCatch: {
+    period: 1.2,
+    keys: [
+      // Both hands out ahead for the hold, elbows soft, the knees coming up and the head up: taking the stop.
+      { at: 0, b: { armL: [82, 0, 26], armR: [86, 0, -26], spine1: [-6, 0, 0], neck: [20, 0, 0], thighL: [40, 0, -6], footL: [-6, 0, 0] }, bend: { foreL: -24, foreR: -20, calfL: -64 }, curl: 0.6 },
+      { at: 0.5, b: { armL: [78, 0, 26], armR: [82, 0, -26], spine1: [-8, 0, 0], neck: [18, 0, 0], thighL: [46, 0, -6], footL: [-6, 0, 0] }, bend: { foreL: -30, foreR: -26, calfL: -72 }, curl: 0.8 }
     ]
   },
   floatBrace: {
@@ -230,9 +259,9 @@ export function floatClips(rig, clips) {
 }
 
 /** The clip a standing pose becomes weightless: a seat is an acceleration couch (strapped in, as it was). */
-export const FLOATING = { idle: 'railIdle', lookAround: 'railLook', talk: 'railTalk', workTable: 'railWork', walk: 'floatMove', sitChair: 'sitChair', drift: 'nbp' };
+export const FLOATING = { idle: 'railIdle', lookAround: 'railLook', talk: 'railTalk', workTable: 'railWork', walk: 'floatHold', sitChair: 'sitChair', drift: 'nbp' };
 /** And braced for a hit. */
-const BRACED = { railIdle: 'railBrace', railLook: 'railBrace', railTalk: 'railBrace', railWork: 'railBrace', floatMove: 'floatBrace', nbp: 'floatBrace', sitChair: 'sitChair' };
+const BRACED = { railIdle: 'railBrace', railLook: 'railBrace', railTalk: 'railBrace', railWork: 'railBrace', floatHold: 'floatBrace', floatPush: 'floatBrace', floatGlide: 'floatBrace', floatCatch: 'floatBrace', nbp: 'floatBrace', sitChair: 'sitChair' };
 
 // --- moving them ----------------------------------------------------------------------------------------------------
 
@@ -249,7 +278,11 @@ export function crewJolt({ at, dir, kind }) {
 
 /** The body's centre over the feet, where a weightless crew member turns (`m.lean`, crew.mjs). */
 export const HC = 0.95;
-const TRAVEL = { y: 1.25, speed: 0.85, turn: 1.6, ease: 1.6 };
+/** How the crew get about weightless (`floatStep`): a push off (`push` s), a glide at `glide` m/s head first and up
+ *  off the deck (`y`, the body's centre), a catch over the last `catch` m, then a hold (`touch` s between the strokes
+ *  of a long way, `rest` at a stop on their round). A way longer than `stroke` m is taken in strokes. Upright holding on,
+ *  the body is `hold` m off the deck, a little bent over (`holdPitch`). */
+const TRAVEL = { y: 1.25, glide: 1.1, push: 0.7, catch: 1.3, stroke: 6, touch: [0.5, 0.9], rest: [1.6, 3.4], turn: 2.2, hold: 0.22, holdPitch: -8, glidePitch: -80, catchPitch: -30 };
 
 /** Makes crew member `m` weightless if `room` floats: its poses become `FLOATING`'s, and it moves by `floatStep`. */
 export function floatIn(m, room) {
@@ -257,10 +290,14 @@ export function floatIn(m, room) {
   m.room = room;
   m.att = { pitch: 0, y: HC, kick: new THREE.Vector3(), kv: new THREE.Vector3(), n: STATE.n };
   m.fv = 0;
+  m.go = null; // a way being travelled: { phase, t, wait, sub, v }
 }
 
-/** Each frame for a weightless crew member: their clip (braced or not), a route flown head first along it, and the
- *  kick of a hit. */
+const smooth = (k) => k * k * (3 - 2 * k);
+const _to = new THREE.Vector3();
+
+/** Each frame for a weightless crew member: their clip (braced or not), a way travelled push by push along their
+ *  route, settling into their work at its end, and the kick of a hit. */
 export function floatStep(m, dt) {
   const A = m.att, root = m.root;
   const base = FLOATING[m.pose] ?? m.pose;
@@ -268,39 +305,26 @@ export function floatStep(m, dt) {
   // A brace: a traveller stops and gets to the nearest wall; everyone holds on hard.
   if (STATE.brace && moving && !m.wall) m.wall = wallPoint(m);
   if (!STATE.brace) m.wall = null;
-  m.clip(STATE.brace ? BRACED[moving ? 'floatMove' : base] ?? base : moving ? 'floatMove' : base);
   let pitch = 0, y = HC;
+  if (STATE.brace) m.clip(BRACED[moving ? 'floatHold' : base] ?? base, 0.25);
   if (m.wall) {
     _v.subVectors(m.wall, root.position).setY(0);
     const d = _v.length();
     if (d > 0.02) root.position.addScaledVector(_v.normalize(), Math.min(d, dt * 1.2));
+    m.go = null;
     m.fv = 0;
   } else if (moving) {
-    const goal = m.route[m.leg];
-    _v.subVectors(goal, root.position).setY(0);
-    const d = _v.length();
-    if (d < 0.35) {
-      if (m.once && m.leg === m.route.length - 1) {
-        m.arrived = true;
-        m.play('idle', 0.8);
-      } else m.leg = (m.leg + 1) % m.route.length;
-    } else {
-      const want = Math.atan2(-_v.x, -_v.z);
-      let turn = want - root.rotation.y;
-      turn = Math.atan2(Math.sin(turn), Math.cos(turn));
-      root.rotation.y += Math.sign(turn) * Math.min(Math.abs(turn), dt * TRAVEL.turn);
-      // A pull on the rail every half stroke of the clip: the speed surges and fades with it. Slow to turn, and slow
-      // coming in to the end of a leg.
-      const stroke = 1 + 0.25 * Math.cos((m.mixerTime?.() ?? 0) * ((2 * Math.PI) / 1.2));
-      const v = TRAVEL.speed * (m.hurry ?? 1) * stroke * (Math.abs(turn) > 0.5 ? 0.25 : 1) * Math.min(1, 0.35 + d / 1.5);
-      m.fv += (v - m.fv) * Math.min(1, dt * TRAVEL.ease);
-      root.position.addScaledVector(_v.normalize(), Math.min(d, m.fv * dt));
-      pitch = -84 * D;
-      y = TRAVEL.y;
-    }
-  }
-  A.pitch += (pitch - A.pitch) * Math.min(1, dt * 1.8);
-  A.y += (y - A.y) * Math.min(1, dt * 1.8);
+    [pitch, y] = travel(m, dt);
+  } else if (m.settle > 0) {
+    // At the end of the way: from holding on, down into the foot rail and into their work.
+    m.settle = Math.max(0, m.settle - dt);
+    const k = smooth(1 - m.settle / 1.2);
+    pitch = TRAVEL.holdPitch * D * (1 - k);
+    y = HC + TRAVEL.hold * (1 - k);
+    if (!STATE.brace) m.clip(base, 1);
+  } else if (!STATE.brace) m.clip(base);
+  A.pitch += (pitch - A.pitch) * Math.min(1, dt * 2.4);
+  A.y += (y - A.y) * Math.min(1, dt * 2.4);
   // A hit: the structure jumps along the blast and the body, held only by a hand or the feet, lags and swings back.
   if (STATE.n !== A.n) {
     A.n = STATE.n;
@@ -315,6 +339,100 @@ export function floatStep(m, dt) {
   m.lean.position.set(A.kick.x, A.y + A.kick.y * 0.5, A.kick.z);
   m.lean.rotation.x = A.pitch + A.kick.z * 0.4;
   m.lean.rotation.z = -A.kick.x * 0.4;
+}
+
+/** One frame along a route: hold → push → glide → catch → hold. Returns the body's [pitch, centre height]. */
+function travel(m, dt) {
+  const root = m.root, T = TRAVEL, hurry = m.hurry ?? 1;
+  const rnd = (r) => r[0] + Math.random() * (r[1] - r[0]);
+  const g = (m.go ??= { phase: 'hold', t: 0, wait: rnd(T.touch), sub: null, v: 0 });
+  g.t += dt;
+  const goal = m.route[m.leg];
+  // Where this stroke ends: the route's next point, or `stroke` metres on toward it.
+  if (!g.sub) {
+    _to.subVectors(goal, root.position).setY(0);
+    const d = _to.length();
+    g.sub = d > T.stroke * 1.3 ? root.position.clone().addScaledVector(_to.normalize(), T.stroke) : goal.clone();
+    g.last = g.sub.distanceToSquared(goal) < 1e-4;
+  }
+  _to.subVectors(g.sub, root.position).setY(0);
+  const d = _to.length();
+  // Face the way (they turn while holding on, and hold the line while they glide).
+  if (d > 0.05) {
+    let turn = Math.atan2(-_to.x, -_to.z) - root.rotation.y;
+    turn = Math.atan2(Math.sin(turn), Math.cos(turn));
+    root.rotation.y += Math.sign(turn) * Math.min(Math.abs(turn), dt * T.turn * (g.phase === 'hold' ? 1 : 0.4));
+    g.turn = Math.abs(turn);
+  }
+  const glide = T.glide * hurry;
+  if (g.phase === 'hold') {
+    if (!STATE.brace) m.clip('floatHold', 0.5);
+    g.v = 0;
+    if (g.t >= g.wait && (g.turn ?? 0) < 0.35 && d > 0.2) (g.phase = 'push'), (g.t = 0), STATE.brace || m.clip('floatPush', 0.25);
+    if (d <= 0.2) arrive(m, g, rnd);
+    return [T.holdPitch * D, HC + T.hold];
+  }
+  if (g.phase === 'push') {
+    const k = Math.min(1, g.t / T.push);
+    g.v = glide * smooth(k);
+    if (k >= 1) g.phase = 'glide';
+  } else if (g.phase === 'glide') {
+    if (!STATE.brace) m.clip('floatGlide', 0.45);
+    g.v = glide;
+    if (d < T.catch) g.phase = 'catch';
+  } else if (g.phase === 'catch') {
+    if (!STATE.brace) m.clip('floatCatch', 0.4);
+    g.v = Math.max(0.12, glide * (d / T.catch));
+  }
+  root.position.addScaledVector(_to.normalize(), Math.min(d, g.v * dt));
+  if (g.phase !== 'push' && d - g.v * dt <= 0.05) {
+    g.phase = 'hold';
+    g.t = 0;
+    arrive(m, g, rnd);
+  }
+  // The body: laid out by the end of the push, coming up as they catch.
+  const k = g.phase === 'push' ? smooth(Math.min(1, g.t / T.push)) : 1;
+  const pitch = g.phase === 'catch' ? T.catchPitch + (T.glidePitch - T.catchPitch) * Math.min(1, d / T.catch) : T.holdPitch + (T.glidePitch - T.holdPitch) * k;
+  const y = HC + T.hold + (T.y - HC - T.hold) * (g.phase === 'catch' ? Math.min(1, d / T.catch) : k);
+  return [pitch * D, y];
+}
+
+/** The end of a stroke: on along the way (a touch and on), or at a point of the route (a rest, the next leg), or at
+ *  the end of a `once` route (into their work: `settle`). */
+function arrive(m, g, rnd) {
+  g.t = 0;
+  const end = g.last;
+  g.sub = null;
+  if (!end) return void (g.wait = rnd(TRAVEL.touch));
+  if (m.once && m.leg === m.route.length - 1) {
+    m.arrived = true;
+    m.go = null;
+    m.settle = 1.2;
+    m.play(m.restPose ?? 'idle', 1);
+    return;
+  }
+  m.leg = (m.leg + 1) % m.route.length;
+  g.wait = rnd(TRAVEL.rest);
+}
+
+/** A portable foot restraint for crew member `m` standing at work where there is no foot rail (the airless hangar):
+ *  a short post clamped to the deck (or the gangway's grating) with a plate on top and two toe loops, their feet in
+ *  it. Lifts them onto it. */
+const PFR = { post: new THREE.MeshLambertMaterial({ color: '#3a4048' }), plate: new THREE.MeshLambertMaterial({ color: '#d8a530' }), loop: new THREE.MeshLambertMaterial({ color: '#202428' }) };
+export function footRestraint(m, h = 0.38) {
+  const g = new THREE.Group();
+  const add = (w, hh, d, mat, x, y, z) => {
+    const b = new THREE.Mesh(new THREE.BoxGeometry(w, hh, d), mat);
+    b.position.set(x, y, z);
+    g.add(b);
+  };
+  add(0.12, h - 0.04, 0.12, PFR.post, 0, -(h + 0.04) / 2, 0);
+  add(0.36, 0.03, 0.36, PFR.post, 0, -h + 0.015, 0);
+  add(0.5, 0.04, 0.42, PFR.plate, 0, -0.02, 0);
+  for (const x of [-0.12, 0.12]) add(0.13, 0.05, 0.05, PFR.loop, x, 0.03, -0.1);
+  m.root.add(g);
+  m.root.position.y += h;
+  m.footPlate = g;
 }
 
 /** The nearest point a little in from a wall of the room they are in, to hold on at in a brace. */

@@ -7,7 +7,8 @@ import * as THREE from 'three';
 const PROMPTS = {
   launch: { key: '', label: 'Launching: the lane runs you out through the bay' },
   landing: { key: '', label: 'Flight control has you: bringing you in' },
-  turn: { key: '', label: 'On the pad: turning you round for the next launch' }
+  turn: { key: '', label: 'On the pad: turning you round for the next launch' },
+  wrecked: { key: '', label: 'She is breaking up' }
 };
 const _p = new THREE.Vector3();
 const _f = new THREE.Vector3();
@@ -76,7 +77,7 @@ export class FighterSeat {
     // From the cockpit the HUD and the screens carry it all; from behind her, the panel at the side does.
     hud.helmEl.hidden = !(fighter.flying && (fighter.view === 'chase' || !blenderFighters));
     const fl = fighter.flight;
-    hud.where(fighter.flying ? `Fighter · ${fl.assistOn ? 'attitude hold: the mouse moves the aim' : 'hold off: your hand on the valves'} · mouse ${fighter.mouseMode}` : ph === 'landing' ? 'Fighter · on approach' : 'Fighter · in the hangar');
+    hud.where(fighter.flying ? `Fighter · ${fl.assistOn ? 'attitude hold: the mouse moves the aim' : 'hold off: your hand on the valves'} · mouse ${fighter.mouseMode}` : ph === 'landing' ? 'Fighter · on approach' : ph === 'wrecked' ? 'Fighter · breaking up' : 'Fighter · in the hangar');
     if (ph === 'seated') hud.use(fighter.refuelT > 0 ? { key: '', label: 'The deck crew are topping up your tanks' } : !fl.online ? { key: '', label: 'The drive is spinning up' } : doors.open ? { key: 'W', label: 'Launch (hold)' } : { key: '', label: 'Flight control is opening the bay doors' });
     else if (ph === 'flying') hud.use(fighter.canLand(body.vel) && !approach.state.inLane ? { label: 'Hand over: flight control brings you in' } : null);
     else if (ph === 'turn' && fighter.lastLanding?.manual) hud.use({ key: '', label: grade(fighter.lastLanding) });

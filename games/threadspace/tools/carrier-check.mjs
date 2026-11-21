@@ -257,7 +257,7 @@ const scenarios = {
     step(1);
     const cq = new THREE.Quaternion();
     const shoot = (p, d, speed, yaw, secs) => {
-      if (!f.flying) (f.scene.attach(f.obj), (f.phase = 'flying')); // back out after flight control took her
+      if (!f.flying) (f.scene.attach(f.obj), (f.phase = 'flying'), (f.obj.visible = true)); // back out after flight control took her, or the wreck
       C.obj.updateMatrixWorld(true);
       C.obj.getWorldQuaternion(cq);
       f.obj.position.copy(C.obj.localToWorld(new THREE.Vector3(...p)));
@@ -378,9 +378,10 @@ const scenarios = {
     hold('KeyW', 1);
     out.puffed = at();
     out.caught = { t: run_(c, 5, () => F.held), ...at() };
+    if (!F.held) (K.add('Space'), (out.caught.space = run_(c, 1, () => F.held)), K.delete('Space'), run_(c, 0.2)); // take the rail you met
     w.yaw = 0;
     w.pitch = 0;
-    hold('KeyW', 1);
+    hold('Space', 0.6); // charge, and let go: off the hold where you look
     run_(c, 1 / 30);
     out.pushed = at();
     run_(c, 2);
@@ -392,7 +393,7 @@ const scenarios = {
     out.pulled = at();
     w.pitch = 1.2;
     K.add('ShiftLeft');
-    hold('KeyW', 1 / 30);
+    hold('Space', 1 / 30); // Shift+Space: a hard push
     K.delete('ShiftLeft');
     run_(c, 1.5);
     out.up = at();

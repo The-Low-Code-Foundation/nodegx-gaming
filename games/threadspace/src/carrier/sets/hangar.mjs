@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import { box, cyl, at, mat } from '../../util.mjs';
 import { P, G, place } from './parts.mjs';
 import { poster } from './paper.mjs';
-import { hold } from '../weightless.mjs';
+import { hold, refillPoint } from '../weightless.mjs';
 
 /** The hangar's dressing, after layout.mjs has put the fighters, the lanes, the bay door and the crates in. */
 export function dressHangar(C, I, c) {
@@ -171,11 +171,11 @@ function gangway(C, I, c, { yellow, tether }) {
   const V = (x, yy, z) => new THREE.Vector3(x, yy, z);
   const lock = C.L.doors.find((d) => d.between.includes(c.id) && d.between.some((id) => C.rooms.get(id)?.airlock));
   const gx = lock?.at ?? 0; // the airlock's door is in the forward bulkhead: its `at` is the x
-  // Each fighter's spur: from the gangway's side out to her grab frame (layout.mjs: at her x + 1, 4 m forward of her),
-  // along her flank 4.6 m forward of her centre, where E boards her.
+  // Each fighter's spur: from the gangway's side out to her grab frame (layout.mjs: at her x + 1, beside her flank),
+  // `C.boardAt` forward of her centre (half way to the next pad), where E boards her.
   const spurs = C.L.fighters.map((f) => {
-    const s = Math.sign(f.at[0] - gx) || 1, fx = f.at[0] + 1;
-    return { s, z: f.at[1] - 4.6, x0: gx + s * HW, x1: fx + s * 0.7, fx, fz: f.at[1] - 4.0 };
+    const s = Math.sign(f.at[0] - gx) || 1, fx = f.at[0] + 1, b = C.boardAt ?? 4.6;
+    return { s, z: f.at[1] - b, x0: gx + s * HW, x1: fx + s * 0.7, fx, fz: f.at[1] - b + 0.6 };
   });
   const za = z1 + 0.15, zb = Math.max(...spurs.map((p) => p.z)) + 2.5;
   const add = (...m) => I.group.add(...m);
@@ -240,6 +240,14 @@ function gangway(C, I, c, { yellow, tether }) {
     wireTo(V(gx, wy, p.z), V(p.x1 - p.s * 0.3, wy, p.z));
     const n = Math.max(1, Math.round(Math.abs(p.x1 - p.x0) / 3));
     for (let k = 1; k <= n; k++) hoop(p.x0 + ((p.x1 - p.x0) * (k - 0.5)) / n, p.z, true);
+  }
+  // Puffer refill points: one on the bulkhead beside the airlock's door, and one on a post half way out each spur, on
+  // its forward rail, facing along it.
+  refillPoint(C, I, c, V(gx + 1.5, gy + 1.25, z1 + 0.12), V(0, 0, 1));
+  for (const p of spurs) {
+    const x = (p.x0 + p.x1) / 2, z = p.z - SW - 0.06;
+    add(at(box(0.06, ry + 0.75 - gy, 0.06, steel), x, (gy + ry + 0.75) / 2, z - 0.04));
+    refillPoint(C, I, c, V(x, ry + 0.45, z), V(0, 0, 1));
   }
   // A coil of spare lanyard hung on the rail at every other spur, as before on the walkway's rails.
   spurs.forEach((p, k) => k % 2 || add(at(new THREE.Mesh(new THREE.TorusGeometry(0.18, 0.025, 4, 14), wire), gx + p.s * HW, ry - 0.18, p.z + 2, 0, Math.PI / 2, 0)));

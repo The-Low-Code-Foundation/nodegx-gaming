@@ -289,6 +289,7 @@ export class WalkSeat {
     this.climb = { kind: 'fixed', to, t: 0, dur: 0.5 + Math.min(3.5, rise / speed), // a long trunk goes quicker than life: no more than 4 s
       y0, y1, x0: walker.pos.x, z0: walker.pos.z, x: x + Math.sin(yaw) * 0.7, z: z + Math.cos(yaw) * 0.7, yaw, trunk, anchor, lit: { lights: [lamp] }, I1, lids: C.hatchLids?.get(l.id) ?? [] };
     if (walker.float) this.climb.y0 = walker.pos.y; // weightless, from wherever you were floating by it
+    this.climb.float = !!roomAt(C, to.deck, to.at[0], to.at[1])?.float; // where you come out is weightless
     for (const lid of this.climb.lids) lid.want = 1; // the hatches open (layout.mjs `hatches`), and shut behind you
     sfx.cue('clunk', { vol: 0.3 });
   }
@@ -353,9 +354,12 @@ export class WalkSeat {
     const pulls = Math.abs(c.y1 - c.y0) / 0.6;
     const e = m - Math.sin(m * pulls * 2 * Math.PI) / (pulls * 2 * Math.PI); // each pull quick, then a pause
     walker.pos.y = c.y0 + (c.y1 - c.y0) * Math.min(1, Math.max(0, e));
-    let d = c.yaw - walker.yaw;
+    // Facing the ladder on it; weightless, turning round to face the room over the last of the climb, so you come out
+    // of the trunk looking where you are going.
+    const turnRound = c.kind === 'fixed' && c.float && u > 0.6;
+    let d = c.yaw + (turnRound ? Math.PI : 0) - walker.yaw;
     d = Math.atan2(Math.sin(d), Math.cos(d));
-    walker.yaw += d * Math.min(1, dt * 6);
+    walker.yaw += d * Math.min(1, dt * (turnRound ? 4 : 6));
     // Look the way you climb, up or down the ladder, and level again as you step off.
     const look = (c.y1 > c.y0 ? 0.55 : -0.55) * Math.sin(Math.PI * Math.min(1, u * 1.1));
     walker.pitch += (look - walker.pitch) * Math.min(1, dt * 4);
@@ -374,6 +378,7 @@ export class WalkSeat {
       for (const lid of c.lids) lid.want = 0;
       const off = c.to.at;
       this.goDeck(c.to.deck, off[0] + Math.sin(c.yaw) * 0.9, off[1] + Math.cos(c.yaw) * 0.9, walker.yaw);
+      if (c.float) walker.floater?.arrive(); // a hand on the nearest hold as you come out
     } else {
       c.trunk.removeFromParent();
       for (const lid of c.lids) lid.want = 0;

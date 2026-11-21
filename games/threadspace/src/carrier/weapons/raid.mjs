@@ -209,8 +209,10 @@ export const raidParts = {
   },
 
   /** The fighter is hit: her hull takes it (the layout's `weapons.fighter.hull`), she is thrown about, and at nothing
-   *  she is dead in space: flight control takes her and brings her in (`hooks.crippled`). She is mended on her pad. */
-  fighterHit(p, dmg) {
+   *  she is dead in space: flight control takes her and brings her in (`fighter-down`; main.mjs). She is mended on her
+   *  pad. `crash` (collide.mjs): the speed she hit something at; if that finishes her she breaks up instead, a fireball
+   *  and her pieces, and says `fighter-wrecked` (main.mjs: you come round in the sick bay, the spare on her pad). */
+  fighterHit(p, dmg, crash = 0) {
     this.fhull = Math.max(0, this.fhull - dmg);
     this.jolt = 1;
     this.flash(p, 3, '#ffb070', 0.3);
@@ -218,6 +220,22 @@ export const raidParts = {
     this.sfx?.play('boom', 30, 12);
     if (this.fhull > 0 || this.crippled) return;
     this.crippled = true;
+    if (crash) {
+      const fi = this.fighter, c = fi.obj.getWorldPosition(new THREE.Vector3());
+      this.flash(c, 14, '#ffb050', 1.2);
+      this.flash(c, 7, '#ffffff', 0.25);
+      const wreck = metal('#8d897e', { rough: 0.6 });
+      for (let i = 0; i < 6; i++) {
+        const piece = box(0.4 + this.rand() * 1.6, 0.2 + this.rand() * 0.6, 0.6 + this.rand() * 2.2, wreck);
+        piece.position.copy(c);
+        this.scene.add(piece);
+        this.fx.push({ kind: 'debris', mesh: piece, t: 0, life: 12, vel: fi.body.vel.clone().multiplyScalar(0.3).add(new THREE.Vector3((this.rand() - 0.5) * 24, (this.rand() - 0.5) * 24, (this.rand() - 0.5) * 24)), spin: new THREE.Vector3(this.rand() - 0.5, this.rand() - 0.5, this.rand() - 0.5).multiplyScalar(5) });
+      }
+      this.sfx?.play('boom', 20, 25);
+      fi.wreck();
+      this.C.bus?.emit('fighter-wrecked', { speed: crash, pad: fi.index });
+      return;
+    }
     this.C.bus?.emit('call', { id: 'fighter-down' });
     this.dc?.say(null, 'You are hit and dead in space: flight control is bringing you in.', 0, 8);
     this.C.bus?.emit('fighter-down');

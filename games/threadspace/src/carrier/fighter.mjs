@@ -37,6 +37,7 @@ import { clamp } from '../util.mjs';
 const LIFT_T = 1.6; // seconds to rise off the pad
 const TURN_T = 2.6; // seconds for the pad to turn her round
 const POWER_T = 3; // seconds for the drive to spin up after you climb in (the power-up)
+const WRECK_T = 2.2; // seconds you watch her fireball before the crash and rescue team's fade (main.mjs)
 const REFUEL_T = 4; // seconds on the pad to top the tanks up after a landing
 const IDLE = { keys: new Set(), dx: 0, dy: 0 };
 const smooth = (k) => k * k * (3 - 2 * k);
@@ -53,7 +54,7 @@ export class Fighter {
     this.C = C;
     this.scene = scene;
     this.S = C.L.fighter;
-    this.deck = C.decks.get(3);
+    this.berth = null; // what she is parked in (the hangar deck's group): she goes back into it to land
     this.body = new Rigid({ mass: this.S.mass, size: this.S.size });
     this.flight = new Flight(this.S.flight, this.body, this.S.thrusters.main[0].force);
     this.flight.boostSpec = this.S.g ?? null; // hard burn (Shift with W)
@@ -107,6 +108,7 @@ export class Fighter {
     const w = this.C.fighters[i];
     this.index = i;
     this.obj = w;
+    this.berth = w.parent;
     this.home = { pos: w.position.clone(), quat: w.quaternion.clone() }; // the pad, in the carrier's frame
     this.out = Math.sign(_v.set(0, 0, -1).applyQuaternion(w.quaternion).x) || -1; // the side she launches to and lands from
     // Each fighter keeps her own tanks: what you leave in her is what the next sortie starts with.
@@ -135,14 +137,46 @@ export class Fighter {
     const w = this.obj;
     this.fx.detach();
     this.audio?.powerDown();
-    w.traverse((m) => m.userData.cockpitHidden && (m.visible = true));
+    w.traverse((m) => (m.userData.cockpitHidden && (m.visible = true), m.userData.cockpitOnly && (m.visible = false)));
     if (w.userData.strobe) w.userData.strobe.visible = false;
     openCanopy(w, 1);
-    const spot = { x: this.home.pos.x + 1, z: this.home.pos.z - 4.6, yaw: Math.PI };
+    const spot = { x: this.home.pos.x + 1, z: this.home.pos.z - (this.C.boardAt ?? 4.6), yaw: Math.PI };
     this.phase = 'parked';
     this.index = -1;
     this.obj = null;
     return spot;
+  }
+
+  /** She hit the carrier hard enough to break up (weapons/raid.mjs `fighterHit`, a crash): gone from where she was, out
+   *  of your hands, still while the fireball burns (after `WRECK_T` she says `fighter-wreck-over`, and main.mjs fades you out to the
+   *  sick bay with `salvage`). */
+  wreck() {
+    if (!this.obj) return;
+    this.phase = 'wrecked';
+    this.t = 0;
+    this.salvaging = false;
+    this.obj.visible = false;
+    this.fx.detach();
+    this.audio?.powerDown();
+    this.body.vel.set(0, 0, 0);
+    this.body.ang.set(0, 0, 0);
+  }
+
+  /** After a wreck: the spare airframe on her pad, under her side number, tanks full, radiators folded. You are out of
+   *  her; returns her pad's index. */
+  salvage() {
+    const w = this.obj, i = this.index;
+    if (!w) return i;
+    this.berth.add(w);
+    w.position.copy(this.home.pos);
+    w.quaternion.copy(this.home.quat);
+    w.visible = true;
+    w.userData.prop = { ...this.S.flight.tank };
+    w.userData.folded = 1;
+    foldWings(w, 1);
+    setGear(w, 1);
+    this.leave();
+    return i;
   }
 
   // --- launch and landing --------------------------------------------------------------------------------------------
@@ -194,7 +228,7 @@ export class Fighter {
     if (this.phase !== 'flying') return;
     const w = this.obj;
     this.C.obj.updateMatrixWorld(true);
-    this.deck.group.attach(w); // keeps where she is; her position is now in the carrier's frame
+    this.berth.attach(w); // keeps where she is; her position is now in the carrier's frame (and drawn with the hangar)
     const p0 = w.position.clone();
     const pad = this.home.pos;
     const hover = pad.y + this.S.launch.lift;
@@ -231,7 +265,7 @@ export class Fighter {
     if (this.phase !== 'flying') return;
     const w = this.obj;
     this.C.obj.updateMatrixWorld(true);
-    this.deck.group.attach(w);
+    this.berth.attach(w);
     const p0 = w.position.clone();
     const pad = this.home.pos;
     const hover = pad.y + this.S.launch.lift;
@@ -277,6 +311,14 @@ export class Fighter {
     this.time += dt;
     if (!this.obj) return;
     const w = this.obj;
+    if (this.phase === 'wrecked') {
+      // In game time, so a run stepped by hand (tools/carrier-check.mjs) sees the same thing.
+      if ((this.t += dt) >= WRECK_T && !this.salvaging) {
+        this.salvaging = true;
+        this.C.bus?.emit('fighter-wreck-over', { pad: this.index });
+      }
+      return;
+    }
     this.canopy += clamp(this.canopyWant - this.canopy, -dt / 1.2, dt / 1.2);
     openCanopy(w, this.canopy);
     this.wings += clamp(this.wingsWant - this.wings, -dt / 1.6, dt / 1.6);
@@ -403,7 +445,7 @@ export class Fighter {
     const inside = this.view === 'cockpit';
     if (this.inside !== inside) {
       this.inside = inside;
-      w.traverse((m) => m.userData.cockpitHidden && (m.visible = !inside));
+      w.traverse((m) => (m.userData.cockpitHidden && (m.visible = !inside), m.userData.cockpitOnly && (m.visible = inside)));
       this.chasePos.set(0, 0, 0);
     }
     w.updateWorldMatrix(true, false);

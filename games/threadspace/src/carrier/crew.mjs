@@ -18,7 +18,7 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { makeDressable, dress, partsOf } from './wardrobe.mjs';
 import { loadMocap, fitMocap, byKey, genderOf } from './mocap.mjs';
 import { at } from '../util.mjs';
-import { rigOf, floatClips, FLOATING, floatIn, floatStep, HC } from './floating.mjs';
+import { rigOf, floatClips, FLOATING, floatIn, floatStep, footRestraint, HC } from './floating.mjs';
 
 /** Each department's colour: the off-duty uniform's jacket, and the band under the duty suit's collar ring. */
 export const DEPTS = {
@@ -34,8 +34,9 @@ export const OUTFITS = {
   duty: { from: { f: 'Military_Female_01', m: 'Military_Male_01' }, colours: () => ['#3b4350', '#3b4350', '#1c1e22'], parts: 'duty' },
   /** The off-duty uniform, in the drums: a shirt in the department's colour, dark trousers, boots. */
   uniform: { from: { f: 'Military_Female_01', m: 'Military_Male_01' }, colours: (d) => [d, '#2a2e34', '#17191c'], parts: null },
-  /** The heavy vac suit (the airless hangar): white, the department only on the pack's band. */
-  vac: { from: { f: 'Military_Female_01', m: 'Military_Male_01' }, colours: () => ['#d6d3ca', '#c6c2b6', '#2a2c30'], parts: 'vac' },
+  /** The heavy vac suit (the airless hangar): dark olive green with a darker helmet and pack, the department only on
+   *  the pack's band. */
+  vac: { from: { f: 'Military_Female_01', m: 'Military_Male_01' }, colours: () => ['#36452f', '#2e3b29', '#191c17'], parts: 'vac' },
   /** The person's own clothes, in the department's colours (the old look; nothing aboard uses it now). */
   own: { from: null, colours: (d) => [d, '#262b33', '#141619'], parts: null }
 };
@@ -188,10 +189,10 @@ export async function crewMember(nameOrIndex, dept = 'crew', { suit: suited = fa
 }
 
 const SUIT = {
-  shell: new THREE.MeshPhongMaterial({ color: '#e4e1d8', shininess: 30, specular: 0x333333 }),
+  shell: new THREE.MeshPhongMaterial({ color: '#3b4a35', shininess: 30, specular: 0x333333 }),
   visor: new THREE.MeshPhongMaterial({ color: '#1a2230', shininess: 90, specular: 0xaaaaaa, emissive: '#05070a' }),
   ring: new THREE.MeshPhongMaterial({ color: '#3a3e44', shininess: 20 }),
-  pack: new THREE.MeshPhongMaterial({ color: '#cfcbc0', shininess: 15 }),
+  pack: new THREE.MeshPhongMaterial({ color: '#2c3628', shininess: 15 }),
   lamp: new THREE.MeshBasicMaterial({ color: '#ffe6b0', toneMapped: false })
 };
 const deptMats = new Map();
@@ -290,6 +291,8 @@ export function placeCrew(C, s, k) {
     floatIn(m, room); // a weightless room (floating.mjs)
     m.route = s.route ? s.route.map(([x, z]) => new THREE.Vector3(x, I.floorY, z)) : null;
     m.leg = 1;
+    // At work where nothing has weight and there is no foot rail (the airless hangar): their feet in a foot restraint.
+    if (m.float && room.vacuum && !m.route && s.pose !== 'sitChair') footRestraint(m);
     m.play(m.route ? 'walk' : s.pose);
     return m;
   }).catch((e) => {

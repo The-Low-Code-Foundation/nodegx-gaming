@@ -2,12 +2,13 @@
 // craft, not a jet: an armoured crew capsule under a framed canopy, propellant tanks along her flanks, radiators that
 // fold up for stowage where a plane would have wings, the drive on its gimbal, a thruster quad at every manoeuvring
 // cluster the physics fires, chin guns, missiles, landing gear, navigation lights and a strobe, and a cockpit with its
-// seat, panel, three screens, the head-up display's glass, side consoles, stick and throttle, the pilot's legs, and the
+// seat, panel, three screens, the head-up display's glass, side consoles, stick and throttle, your legs (their own node, `legs`), and the
 // placards and lit legends (one texture, `Placard` / `LampLegend`). Each fighter in the hangar is a copy with its own side
 // number. (The radiators are `wingFolds` to the code: they fold the same way.)
 //
 // The copy carries what the rest of the code expects of a fighter (ships.mjs `fighter()`): `canopyHinge`, `wingFolds`,
-// `plumes` and `halos` (empty: the drive is drawn by gas.mjs `DriveFx` at `nozzle`), `eye`, `muzzles`, parts marked `cockpitHidden` (the pilot), plus `gear`, `strobe`, `screens` and
+// `plumes` and `halos` (empty: the drive is drawn by gas.mjs `DriveFx` at `nozzle`), `eye`, `muzzles`, parts marked `cockpitHidden` (drawn only from outside) and
+// `cockpitOnly` (your legs, drawn only from the seat), plus `gear`, `strobe`, `screens` and
 // `hud` for the cockpit (cockpit.mjs). If the GLB is missing, the hangar keeps the code-built Wrens.
 
 import * as THREE from 'three';
@@ -83,7 +84,12 @@ export function makeFighter(n) {
   u.strobe.visible = false;
   u.eye = get('eye').position.clone();
   u.muzzles = ['muzzle_l', 'muzzle_r'].map((k) => get(k)?.position.clone() ?? new THREE.Vector3(0, -0.8, -5.6));
-  get('pilot').userData.cockpitHidden = true;
+  // Your legs, boots and kneeboard: drawn only from the seat (`cockpitOnly`), so a parked fighter's seat is empty.
+  const legs = get('legs');
+  if (legs) {
+    legs.userData.cockpitOnly = true;
+    legs.visible = false;
+  }
   // Each screen gets its own material, so only the fighter you are in shows yours.
   u.screens = ['mfd_l', 'mfd_c', 'mfd_r'].map((k) => {
     const m = get(k);
