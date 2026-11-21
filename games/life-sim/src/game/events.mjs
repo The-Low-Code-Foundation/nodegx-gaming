@@ -147,7 +147,7 @@ export const EVENTS = [
   },
   // A busker.
   {
-    id: 'busker', icon: '🎸', where: ['park', 'street'], hours: [10, 19],
+    id: 'busker', icon: '🎸', where: ['park', 'street'], hours: [10, 19], weather: ['sun'],
     choices: [
       { id: 'coin', icon: '🪙', cost: 2, done: { moodlet: 'music', needs: { fun: 15 } } },
       { id: 'dance', icon: '💃', done: { moodlet: 'danced', needs: { fun: 30, energy: -5 }, count: 'dance' } },
@@ -182,7 +182,7 @@ export const EVENTS = [
   },
   // A kite stuck in a tree.
   {
-    id: 'kite', icon: '🪁', where: ['park'], hours: [10, 18], traits: { sporty: 1.5 },
+    id: 'kite', icon: '🪁', where: ['park'], hours: [10, 18], weather: ['sun'], traits: { sporty: 1.5 },
     choices: [
       { id: 'climb', icon: '🧗', chance: 0.55, traits: { sporty: 0.25, lazy: -0.15, clumsy: -0.2 }, good: { moodlet: 'goodDeed', points: 50, needs: { energy: -5 } }, bad: { moodlet: 'oops', needs: { energy: -5 } } },
       { id: 'keeper', icon: '🧑‍🌾', done: { moodlet: 'goodDeed' } }
@@ -217,7 +217,7 @@ export const EVENTS = [
   },
   // Birds singing in the park.
   {
-    id: 'birds', icon: '🐦', where: ['park'], hours: [6, 11], weight: 0.8, traits: { cheerful: 1.5, nightOwl: 0.5 },
+    id: 'birds', icon: '🐦', where: ['park'], hours: [6, 11], weather: ['sun', 'snow'], weight: 0.8, traits: { cheerful: 1.5, nightOwl: 0.5 },
     choices: [
       { id: 'whistle', icon: '🎶', chance: 0.6, good: { moodlet: 'birdsong', needs: { fun: 15 } }, bad: { needs: { fun: 10 } } },
       { id: 'listen', icon: '👂', done: { moodlet: 'birdsong' } }
@@ -248,7 +248,7 @@ export const EVENTS = [
   },
   // A talent show at the park (weekends).
   {
-    id: 'talent', icon: '🎤', where: ['home', 'street', 'park'], hours: [10, 17], days: [5, 6], weight: 0.9, traits: { joker: 2, chatty: 1.5, shy: 0.5 }, again: 3,
+    id: 'talent', icon: '🎤', where: ['home', 'street', 'park'], hours: [10, 17], days: [5, 6], weather: ['sun'], weight: 0.9, traits: { joker: 2, chatty: 1.5, shy: 0.5 }, again: 3,
     choices: [
       { id: 'perform', icon: '🎤', chance: 0.5, traits: { joker: 0.2, chatty: 0.1, cheerful: 0.1, shy: -0.2 }, good: { moodlet: 'standingOvation', points: 100, money: 50, go: 'park', diary: true }, bad: { moodlet: 'gaveItAGo', points: 30, go: 'park' } },
       { id: 'watch', icon: '👏', done: { needs: { fun: 30 }, moodlet: 'laughed', go: 'park' } },
@@ -257,7 +257,7 @@ export const EVENTS = [
   },
   // A picnic in the park.
   {
-    id: 'picnic', icon: '🧺', where: ['home', 'street'], hours: [10, 15], weight: 0.8,
+    id: 'picnic', icon: '🧺', where: ['home', 'street'], hours: [10, 15], weather: ['sun'], weight: 0.8,
     who: { from: 'anyone', friendship: 25, traits: { foodie: 1.5, cheerful: 1.3 } },
     choices: [
       { id: 'go', icon: '🧺', done: { friendship: 6, needs: { hunger: 30, social: 20 }, moodlet: 'picnic', go: 'park' } },
@@ -334,6 +334,45 @@ export const EVENTS = [
       { id: 'give', icon: '🥄', done: { friendship: 5, moodlet: 'goodDeed' } },
       { id: 'bake', icon: '🧁', done: { friendship: 8, needs: { fun: 20, social: 20, hunger: 15 }, moodlet: 'cake', count: 'cook' } },
       { id: 'out', icon: '🤷', done: { friendship: 1 } }
+    ]
+  },
+  // ---- 3.4: the weather's (weather.mjs). The kite, the picnic, the busker and the talent show want sunshine. ----
+  // Caught in the rain.
+  {
+    id: 'caughtInRain', icon: '☔', where: ['park', 'street'], hours: [8, 21], weather: ['rain'], weight: 1.5,
+    who: { from: 'anyone', free: true, traits: { cheerful: 1.5 } },
+    choices: [
+      { id: 'run', icon: '🏃', done: { needs: { energy: -5, hygiene: -5 } } },
+      { id: 'dance', icon: '💃', done: { needs: { fun: 30, hygiene: -15 }, moodlet: 'singingInRain', count: 'dance' } },
+      { id: 'umbrella', icon: '☂️', done: { friendship: 5, needs: { social: 15 } } }
+    ]
+  },
+  // A rainbow.
+  {
+    id: 'rainbow', icon: '🌈', where: ['park', 'street', 'home'], hours: [12, 19], weather: ['rain'], weight: 0.8,
+    choices: [
+      { id: 'wish', icon: '✨', done: { moodlet: 'rainbow', points: 30 } },
+      { id: 'show', icon: '👀', when: (c) => !!c.mate, done: { moodlet: 'rainbow', mateMoodlet: 'rainbow', mateFriendship: 3 } },
+      { id: 'look', icon: '😊', done: { moodlet: 'rainbow' } }
+    ]
+  },
+  // A snowball fight (or a snowman together: it stands in the park until the snow goes).
+  {
+    id: 'snowballs', icon: '❄️', where: ['park', 'street'], hours: [9, 18], weather: ['snow'], weight: 1.6,
+    who: { from: 'anyone', free: true, traits: { joker: 2, sporty: 1.5, grumpy: 0.4 } },
+    choices: [
+      { id: 'fight', icon: '⛄', chance: 0.6, traits: { sporty: 0.2, lazy: -0.1 }, good: { friendship: 6, needs: { fun: 35 }, moodlet: 'laughed' }, bad: { friendship: 3, needs: { fun: 15 }, moodlet: 'brrr' } },
+      { id: 'snowman', icon: '☃️', done: { friendship: 5, needs: { fun: 25 }, moodlet: 'snowman', count: 'buildSnowman' } },
+      { id: 'no', icon: '🧣', done: {} }
+    ]
+  },
+  // The ice-cream van.
+  {
+    id: 'iceCream', icon: '🍦', where: ['park', 'street'], hours: [12, 18], weather: ['sun'],
+    choices: [
+      { id: 'buy', icon: '🍦', cost: 3, done: { needs: { hunger: 15, fun: 10 }, moodlet: 'iceCream' } },
+      { id: 'mate', icon: '🍨', cost: 6, when: (c) => !!c.mate, done: { needs: { hunger: 15 }, moodlet: 'iceCream', mateMoodlet: 'iceCream', mateFriendship: 3 } },
+      { id: 'no', icon: '🙂', done: {} }
     ]
   },
   // Someone they hardly know drops by to say hello.

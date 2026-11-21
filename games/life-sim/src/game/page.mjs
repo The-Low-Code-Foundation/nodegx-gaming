@@ -20,7 +20,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { makeSky, tick as tickDressing, daylight, partyDecor } from '../dressing.mjs';
+import { makeSky, tick as tickDressing, daylight, partyDecor, weatherLook, greySky, snowman } from '../dressing.mjs';
 import { CANDIDATES, loadTemplate } from '../characters.mjs';
 import { buildPlace, STATIONS, MADE, measure, ghost, placementOf, houseFurniture } from '../world.mjs';
 import { Sim } from '../sim.mjs';
@@ -48,6 +48,7 @@ import { rollLikes, cleanLikes, GIFT } from './likes.mjs';
 import { GOALS, goalById, openGoals, rollGoal, stepsDone, STEP_POINTS, GOAL_POINTS } from './goals.mjs';
 import { WANTS, WANT_SLOTS, WANT_LASTS, rollWant, wantById } from './wants.mjs';
 import { DECK, EVENTS, POWER_CUT, eventById, pickEvent, pickWho, outcomeOf } from './events.mjs';
+import { WEATHER, rollWeather } from './weather.mjs';
 
 const params = new URLSearchParams(location.search);
 const $ = (id) => document.getElementById(id);
@@ -181,6 +182,11 @@ const YEAR_STORED = (() => {
 let start = null;
 if (!quick) start = await startScreen(readSave());
 const saved = start?.kind === 'continue' ? start.save : null;
+// Round 16, phase 3.4: the day's weather ({ day, id }: weather.mjs), rolled each morning; a test URL has sunshine unless
+// `?weather=rain|snow|sun` (which keeps it so).
+const weatherForced = WEATHER[params.get('weather')] ? params.get('weather') : null;
+const weatherOn = !quick || !!weatherForced;
+let weather = saved?.weather ?? null;
 // The event deck's state (round 16, phase 3; `eventsOn` above).
 const deck = { next: null, last: null, seen: {}, day: null, today: 0, party: null, ...(saved?.deck ?? {}) };
 const person = start?.kind === 'new' ? start.who : saved ? saved.lives[0].who : Number(params.get('person') ?? 0);
@@ -329,7 +335,7 @@ async function makeSim(who, at, i, { name = null, look = null, body = null, ...o
   life.partnerOf = (other) => partners(life, other);
   life.onArrive = arrived;
   life.onDid = wished;
-  life.offerOk = (offer) => !offerWhy(life, offer);
+  life.offerOk = (offer) => inWeather(offer) && !offerWhy(life, offer);
   life.titleOf = (p) => titleOf(p);
   everyone.push(life);
   return life;
@@ -1259,10 +1265,13 @@ function light() {
   const arc = THREE.MathUtils.clamp((hour - 6) / 15, 0, 1) * Math.PI; // 0 at 06:00, π at 21:00
   const high = Math.sin(arc);
   sunOffset.set(Math.cos(arc) * 7, 6 + 5 * high, 6);
-  const s = skyDome.update(hour, camera, sunOffset);
-  scene.fog.color.copy(s.horizon);
+  skyDome.update(hour, camera, sunOffset);
+  // Round 16, phase 3.4: grey for rain and snow (not at night: it is dark anyway), and less sun.
+  const wl = WEATHER[weatherNow()].look;
+  greySky(skyDome.uniforms, wl.grey * day, wl.grey);
+  scene.fog.color.copy(skyDome.uniforms.horizon.value);
   sky.intensity = 0.45 + 0.95 * day;
-  sun.intensity = 2.2 * day;
+  sun.intensity = 2.2 * day * wl.sun;
   sun.color.copy(sunWarm).lerp(sunNoon, Math.min(1, high * 1.6));
   for (const m of shiny) m.envMapIntensity = 0.25 + 0.6 * day;
   lamp.intensity = view.house ? 6 * (1 - day) : 0;
@@ -1347,7 +1356,7 @@ renderer.domElement.addEventListener('pointerup', (e) => {
 function openMenu(item, x, y, point = null) {
   const atHome = view === home;
   // Round 14: a front door's "Go home" is for anyone's door but your own.
-  const offers = item ? offersFor(item).filter((o) => o.offered !== false && !(o.baby && item.baby?.away) && !(o.away && atHome)) : [{ id: 'goHere', act: 'walk' }];
+  const offers = item ? offersFor(item).filter((o) => o.offered !== false && !(o.baby && item.baby?.away) && !(o.away && atHome) && inWeather(o)) : [{ id: 'goHere', act: 'walk' }];
   const gain = (o) =>
     Object.entries(o.advertises ?? o.gives ?? {})
       .filter(([, v]) => v > 0)
@@ -1588,7 +1597,7 @@ function openGoalPicker(l, done = null) {
 // after a day. Math.random rolls them, never the seeded dice (a test's free will must choose as it did).
 function wantCtx(l) {
   const f = factsOf(l);
-  return { traits: l.traits, likes: l.likes, goal: l.goal?.id ?? null, needs: l.needs, hour: (minutes % 1440) / 60, money: household.money, job: f.job, friends: f.friends, romance: f.romance, babies: f.babies, has: f.has };
+  return { traits: l.traits, likes: l.likes, goal: l.goal?.id ?? null, needs: l.needs, hour: (minutes % 1440) / 60, money: household.money, job: f.job, friends: f.friends, romance: f.romance, babies: f.babies, has: f.has, weather: weatherNow(), off: offNow() };
 }
 function wantsTick() {
   if (!aimsOn) return;
@@ -1605,6 +1614,7 @@ function wantsTick() {
 }
 // Life `count` tells us what was done: a wish that was for it comes true.
 function wished(l, id) {
+  if (id === 'buildSnowman') buildSnowman(l);
   if (!aimsOn || !lives.includes(l)) return;
   const k = l.wants.findIndex((w) => wantById(w.id)?.did === id);
   if (k < 0) return;
@@ -1730,7 +1740,36 @@ function openDiary() {
 // put into what the game already has (moodlets, needs, bonds, coins, happy points, the tally, the life story, a guest, a
 // party, a trip). Never while a card is open, at a work station, asleep, or on the way somewhere.
 const placeKey = (p) => (p === home ? 'home' : p === park ? 'park' : p === office ? 'office' : p === street ? 'street' : p?.house ? 'house' : null);
-const weatherNow = () => 'sun';
+function weatherNow() {
+  if (weatherForced) return weatherForced;
+  if (!weatherOn) return 'sun';
+  const day = Math.floor(minutes / 1440);
+  if (weather?.day !== day) weather = { day, id: rollWeather(), told: false };
+  return weather.id;
+}
+// Once a day, what the weather is (a toast), and how it looks: rain or snow outdoors, no ducks on the pond in the rain;
+// the snowmen melt when the snow goes.
+const weatherFx = weatherLook();
+if (weatherFx) scene.add(weatherFx.group);
+const ducks = park.moving.find((m) => m.kind === 'ducks')?.pond.ducks ?? [];
+const snowmen = [];
+function weatherTick() {
+  const id = weatherNow();
+  if (weatherOn && weather && !weather.told && (minutes % 1440) >= 6 * 60) (weather.told = true), toast(t('weather.today', { icon: WEATHER[id].icon, weather: t(`weather.${id}`) }));
+  weatherFx?.set(WEATHER[id].look, view === park || (!!street && view === street));
+  for (const m of ducks) m.visible = id !== 'rain';
+  if (id !== 'snow') for (const s of snowmen.splice(0)) s.removeFromParent();
+}
+// A snowman where they built it (the park's `buildSnowman`), three at most.
+function buildSnowman(l) {
+  if (l.place !== park || weatherNow() !== 'snow') return;
+  const s = snowman();
+  s.position.copy(l.sim.position).add(new THREE.Vector3(0, 0, 0.75).applyQuaternion(l.sim.group.quaternion)).setY(0);
+  s.rotation.y = l.sim.group.rotation.y + Math.PI;
+  park.group.add(s);
+  snowmen.push(s);
+  if (snowmen.length > 3) snowmen.shift().removeFromParent();
+}
 const mateOf = (l) => lives.find((o) => o !== l && !o.carer && o.present && o.place === l.place) ?? null;
 function eventCtx(l) {
   const f = factsOf(l);
@@ -1751,8 +1790,15 @@ const eventPeople = (l) =>
 // and the oven.
 function offerWhy(l, offer) {
   if (deck.powerOff > minutes && l.place === home && POWER_CUT.off.includes(offer.id)) return 'event.powerOff';
+  // Round 16, phase 3.4: the weather's (no ducks to feed in the rain).
+  const w = weatherNow();
+  if (WEATHER[w].off.includes(offer.id)) return `weather.${w}.off`;
   return null;
 }
+// An offer only in one weather (actions.mjs `weather`: a snowman) isn't there at all in another.
+const inWeather = (offer) => !offer.weather || offer.weather === weatherNow();
+// What isn't on offer now, by id (wishes for them don't come up).
+const offNow = () => [...WEATHER[weatherNow()].off, ...(deck.powerOff > minutes ? POWER_CUT.off : [])];
 const eventFree = (l) => l.present && !l.card && !l.doing?.offer.task && l.doing?.offer.act !== 'sleep' && l.doing?.offer.act !== 'travel';
 function eventsTick() {
   if (!eventsOn || !colleaguesIn || card || placing || moving || !eventFree(sel)) return;
@@ -1852,7 +1898,7 @@ function eventOutcome(l, e, who, mate, out) {
 }
 
 function renderPanels() {
-  $('clock').textContent = clockText();
+  $('clock').textContent = weatherOn ? `${clockText()} · ${WEATHER[weatherNow()].icon}` : clockText();
   renderAims();
   $('money').textContent = t('ui.coins', { n: household.money });
   renderJob();
@@ -2101,6 +2147,7 @@ function snapshot() {
     diary: diary.slice(),
     // Round 16, phase 3: the event deck.
     deck: { ...deck, seen: { ...deck.seen } },
+    weather: weather && { ...weather },
     // Round 16: everyone else's traits, by person (the household's are in `lives`).
     traits: { ...(saved?.traits ?? {}), ...Object.fromEntries(npcs().map((l) => [l.who, [...(l.traits ?? [])]])) },
     likes: { ...(saved?.likes ?? {}), ...Object.fromEntries(npcs().filter((l) => l.likes).map((l) => [l.who, { ...l.likes }])) },
@@ -2540,6 +2587,7 @@ function frame(now) {
   sun.target.position.copy(controls.target).setY(0);
   sun.position.copy(sun.target.position).add(sunOffset);
   tickDressing(dt, { minutes, hour: (minutes % 1440) / 60 });
+  weatherFx?.tick(dt, controls.target);
   renderer.render(scene, camera);
   renderBubbles(now);
   if (now - uiAt > 250) {
@@ -2552,6 +2600,7 @@ function frame(now) {
     checkGoals();
     wantsTick();
     eventsTick();
+    weatherTick();
     renderPeople();
     renderToasts();
     renderCards();
@@ -2596,6 +2645,7 @@ window.__life = {
   factsOf, checkGoals, openGoalPicker, aimsOn, wantsTick, wantCtx, wished, openRewards, buyReward, diary, openDiary, milestone,
   // Round 16, phase 3.
   eventsOn, deck, eventsTick, openEvent, eventCtx, eventPeople, EVENTS, eventById, lastEvent: null, openMenu, offerWhy,
+  weatherNow, weatherTick, get weather() { return weather && { ...weather }; }, set weatherId(id) { weather = { day: Math.floor(minutes / 1440), id, told: true }; }, snowmen, weatherFx, ducks,
   folk, get extras() { return extras(); }, furniture, storage, save, snapshot, openShop, startPlacing, stopPlacing, turnPlacing, placeHere, hover, sell, beauty, openLook, get home() { return home; }, saving,
   get placing() { return placing; }, get start() { return start?.kind ?? null; },
   setSpeed, advance, get minutes() { return minutes; }, set minutes(v) { minutes = v; },

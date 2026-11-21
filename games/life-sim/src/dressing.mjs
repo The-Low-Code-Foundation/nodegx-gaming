@@ -1150,6 +1150,8 @@ export function pondLife(group, [px, pz, pr]) {
   return {
     water,
     birds,
+    // Round 16, phase 3: the ducks' meshes (they shelter out of sight in the rain).
+    ducks: meshes,
     // `feeding`: the point on the bank someone feeds from, or null. The ducks paddle about; when fed, they come over
     // and gather in front of the feeder, each a little apart.
     update(dt, feeding) {
@@ -1400,3 +1402,113 @@ export async function dressStreet(group, furnish, S, { w, d, fronts, name = 'Sun
   // `hits`: a click on a house's front or its name board is a click on its door (the page's).
   return { fade: await scenery(group, furnish, P), labels, balloons, signs, hits };
 }
+
+// ---- the weather (round 16, phase 3.4; game/weather.mjs says which, and its `look`) ----
+// Rain or snow falling round where the camera looks, and snow lying on the ground. One draw call for what falls: the
+// drops are points whose place the vertex shader works out from the time (no work on the CPU each frame), fixed in the
+// world as they fall so they don't slide with the camera, and wrapped into a box round the view. One more for the snow
+// on the ground. Outdoors only (the page says where: the park, the street).
+export function weatherLook() {
+  if (!DOM) return null;
+  const N = 1400;
+  const r = rand(11);
+  const seeds = new Float32Array(N * 3);
+  for (let i = 0; i < N * 3; i++) seeds[i] = r();
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(seeds, 3));
+  const uniforms = {
+    time: { value: 0 }, centre: { value: new THREE.Vector3() }, box: { value: new THREE.Vector3(34, 12, 34) },
+    fall: { value: 9 }, sway: { value: 0 }, size: { value: 1 }, most: { value: 18 }, streak: { value: 1 }, colour: { value: new THREE.Color(0xcfd8e6) }, opacity: { value: 0.55 }
+  };
+  const material = new THREE.ShaderMaterial({
+    uniforms,
+    transparent: true,
+    depthWrite: false,
+    fog: false,
+    vertexShader: `uniform float time, fall, sway, size, most; uniform vec3 centre, box;
+      void main() {
+        vec3 s = position * box;
+        vec3 t = s + vec3(sin(time * 0.8 + position.y * 30.0) * sway, -time * fall, cos(time * 0.6 + position.x * 30.0) * sway);
+        vec3 lo = centre - box * 0.5;
+        vec3 w = lo + mod(t - lo, box);
+        vec4 mv = modelViewMatrix * vec4(w, 1.0);
+        gl_Position = projectionMatrix * mv;
+        // Not too big up close (a drop on the lens), and none right in front of the camera.
+        gl_PointSize = -mv.z < 2.5 ? 0.0 : min(size * 260.0 / -mv.z, most);
+      }`,
+    fragmentShader: `uniform float streak, opacity; uniform vec3 colour;
+      void main() {
+        vec2 c = gl_PointCoord - 0.5;
+        float a = streak > 0.5 ? step(abs(c.x), 0.04) * (0.3 + 0.7 * (0.5 - c.y)) : smoothstep(0.5, 0.15, length(c));
+        if (a < 0.02) discard;
+        gl_FragColor = vec4(colour, a * opacity);
+        #include <colorspace_fragment>
+      }`
+  });
+  const falling = new THREE.Points(geo, material);
+  falling.frustumCulled = false;
+  falling.renderOrder = 5;
+  falling.visible = false;
+  // Snow on the ground: a white sheet just above the paths (the pond freezes over under it). The cheapest lit material,
+  // and no shadows of its own (the tablet: it covers the whole screen); the shadows on the grass show through it.
+  const cover = new THREE.Mesh(new THREE.CircleGeometry(70, 48).rotateX(-Math.PI / 2), new THREE.MeshLambertMaterial({ color: 0xf4f7fb, transparent: true, opacity: 0.7, depthWrite: false }));
+  cover.position.y = 0.009;
+  cover.visible = false;
+  const group = new THREE.Group();
+  group.name = 'weather';
+  group.add(falling, cover);
+  let falls = null;
+  return {
+    group,
+    // `look`: weather.mjs's; `outdoors`: the view is the park or the street.
+    set(look, outdoors) {
+      falls = look?.falls ?? null;
+      falling.visible = outdoors && !!falls;
+      cover.visible = outdoors && falls === 'snow';
+      if (falls === 'rain') Object.assign(uniforms.fall, { value: 11 }), (uniforms.sway.value = 0.05), (uniforms.size.value = 1.6), (uniforms.most.value = 16), (uniforms.streak.value = 1), uniforms.colour.value.set(0xc9d4e3), (uniforms.opacity.value = 0.5);
+      if (falls === 'snow') (uniforms.fall.value = 1.1), (uniforms.sway.value = 0.6), (uniforms.size.value = 0.55), (uniforms.most.value = 7), (uniforms.streak.value = 0), uniforms.colour.value.set(0xffffff), (uniforms.opacity.value = 0.9);
+    },
+    // Every frame: `at` is where the camera looks (the box goes with it).
+    tick(dt, at) {
+      if (!falling.visible) return;
+      uniforms.time.value += dt;
+      uniforms.centre.value.set(at.x, uniforms.box.value.y / 2, at.z);
+      cover.position.x = at.x, cover.position.z = at.z;
+    }
+  };
+}
+// A grey sky for cloud and rain: the sky's colours (makeSky's uniforms, after its update) toward grey by `k` (0 to 1;
+// the page scales it by the daylight, so a cloudy night stays dark), and the stars behind the clouds (`cloud`).
+const GREY_TOP = new THREE.Color(0x8d96a3), GREY_LOW = new THREE.Color(0xb7bdc4);
+export function greySky(uniforms, k, cloud = k) {
+  uniforms.stars.value *= 1 - cloud;
+  uniforms.glow.value *= 1 - cloud;
+  if (!k) return;
+  uniforms.top.value.lerp(GREY_TOP, k);
+  uniforms.horizon.value.lerp(GREY_LOW, k);
+  uniforms.below.value.lerp(GREY_LOW, k);
+}
+// A snowman (round 16, phase 3.4: built in the park in the snow), about a metre tall.
+export function snowman() {
+  const g = new THREE.Group();
+  const snow = mat(0xf7f9fc, { roughness: 0.85 });
+  for (const [r, y] of [[0.32, 0.28], [0.23, 0.7], [0.16, 1.0]]) {
+    const ball = new THREE.Mesh(new THREE.SphereGeometry(r, 18, 12), snow);
+    ball.position.y = y;
+    ball.castShadow = true;
+    g.add(ball);
+  }
+  const coal = mat(0x202020);
+  for (const x of [-0.055, 0.055]) {
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.022, 8, 6), coal);
+    eye.position.set(x, 1.04, 0.145);
+    g.add(eye);
+  }
+  const nose = new THREE.Mesh(new THREE.ConeGeometry(0.03, 0.14, 8).rotateX(Math.PI / 2), mat(0xe87a2a));
+  nose.position.set(0, 1.0, 0.2);
+  const scarf = new THREE.Mesh(new THREE.TorusGeometry(0.17, 0.04, 8, 20).rotateX(Math.PI / 2), mat(0xc23b3b, { roughness: 0.95 }));
+  scarf.position.y = 0.86;
+  g.add(nose, scarf);
+  return g;
+}
+

@@ -12,7 +12,7 @@
 //   traits   { trait: ×n }   goals { goal: ×n }   need: a need that makes it likelier the lower it is
 //   when     (c) → false: not now (no telescope to want to look through, no sweetheart to kiss)
 // Liking it (likes.mjs `activity`) makes it three times as likely; disliking it, almost never.
-// `c`: { traits, likes, goal, needs, hour, money, job, friends, romance, babies, has: { shop id: true } }
+// `c`: { traits, likes, goal, needs, hour, money, job, friends, romance, babies, has: { shop id: true }, weather, off: [ids] }
 export const WANTS = [
   { id: 'cook', icon: '🍳', did: 'cook', points: 25, traits: { foodie: 3, lazy: 0.6 }, goals: { chef: 4 }, need: 'hunger' },
   { id: 'eat', icon: '🍽️', did: 'eat', points: 15, need: 'hunger', when: (c) => c.needs.hunger < 70 },
@@ -46,7 +46,10 @@ export const WANTS = [
   { id: 'buy', icon: '🛒', did: 'buy', points: 40, goals: { dreamHouse: 4 }, when: (c) => c.money >= 60 },
   { id: 'workTask', icon: '📝', did: 'doTask', points: 30, goals: { career: 3 }, when: (c) => c.job > 0 },
   { id: 'promotion', icon: '🎖️', did: 'promoted', points: 80, base: 0.6, goals: { career: 3 }, when: (c) => c.job > 0 && c.job < 6 },
-  { id: 'cuddleBaby', icon: '👶', did: 'cuddleBaby', points: 30, goals: { family: 3 }, when: (c) => c.babies > 0 }
+  { id: 'cuddleBaby', icon: '👶', did: 'cuddleBaby', points: 30, goals: { family: 3 }, when: (c) => c.babies > 0 },
+  // Round 16, phase 3.4: the weather's (weather.mjs).
+  { id: 'snowman', icon: '⛄', did: 'buildSnowman', points: 40, base: 4, when: (c) => c.weather === 'snow' },
+  { id: 'puddles', icon: '💦', did: 'splashPuddles', points: 25, base: 2, traits: { sporty: 1.5, neat: 0.4 }, when: (c) => c.weather === 'rain' }
 ];
 export const WANT_SLOTS = 3;
 // How long a want waits to come true before another takes its place (game minutes).
@@ -55,6 +58,8 @@ export const WANT_LASTS = 1440;
 // How likely each want is now, for `c`.
 export function weightOf(w, c) {
   if (w.when && !w.when(c)) return 0;
+  // Round 16, phase 3: not something that can't be done now (the weather's, a power cut's).
+  if (c.off?.includes(w.did)) return 0;
   let k = w.base ?? 1;
   for (const t of c.traits) k *= w.traits?.[t] ?? 1;
   if (c.goal) k *= w.goals?.[c.goal] ?? 1;

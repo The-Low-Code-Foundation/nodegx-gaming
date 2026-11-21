@@ -107,7 +107,14 @@ export const MOODLETS = {
   picnic: { emotion: 'happy', weight: 2, icon: '🧺', minutes: 300 },
   birdsong: { emotion: 'happy', weight: 1, icon: '🐦', minutes: 120 },
   helpedOut: { emotion: 'happy', weight: 2, icon: '🤝', minutes: 360 },
-  juicyNews: { emotion: 'happy', weight: 1, icon: '🗞️', minutes: 120 }
+  juicyNews: { emotion: 'happy', weight: 1, icon: '🗞️', minutes: 120 },
+  // Round 16, phase 3.4: the weather's.
+  snowman: { emotion: 'happy', weight: 2, icon: '⛄', minutes: 300 },
+  splashy: { emotion: 'happy', weight: 1, icon: '💦', minutes: 120 },
+  singingInRain: { emotion: 'happy', weight: 2, icon: '☔', minutes: 180 },
+  rainbow: { emotion: 'happy', weight: 2, icon: '🌈', minutes: 240 },
+  brrr: { emotion: 'uncomfortable', weight: 1, icon: '🥶', minutes: 30 },
+  iceCream: { emotion: 'happy', weight: 1, icon: '🍦', minutes: 120 }
 };
 
 export const EMOTIONS = {

@@ -86,7 +86,12 @@ Object.assign(OFFERS, {
   bench: [{ id: 'sitBench', act: 'sit', minutes: 30, gives: { energy: 4, fun: 20 } }],
   ducks: [{ id: 'feedDucks', act: 'interact', minutes: 20, gives: { fun: 90 }, moodlet: 'ducks', hand: 'bread' }],
   flowers: [{ id: 'smellFlowers', act: 'interact', minutes: 5, gives: { fun: 60 } }],
-  parkDance: [{ id: 'dance', act: 'dance', minutes: 45, gives: { fun: 70, energy: -8 }, until: 'fun', moodlet: 'danced' }],
+  parkDance: [
+    { id: 'dance', act: 'dance', minutes: 45, gives: { fun: 70, energy: -8 }, until: 'fun', moodlet: 'danced' },
+    // Round 16, phase 3.4: only in that weather (`weather`, weather.mjs): a snowman (it stays until the snow goes), puddles.
+    { id: 'buildSnowman', act: 'interact', clip: 'Interact', minutes: 40, gives: { fun: 85, energy: -6 }, moodlet: 'snowman', weather: 'snow', icon: '⛄' },
+    { id: 'splashPuddles', act: 'dance', minutes: 20, gives: { fun: 75, hygiene: -12 }, moodlet: 'splashy', weather: 'rain', icon: '💦' }
+  ],
   // Round 10: what can be bought (shop.mjs). The telescope: fun, and science at the same rate as studying. The chest of
   // drawers: a new look (clothes and hair; the page's card, `opens: 'look'`), never free will's.
   telescope: [{ id: 'stargaze', act: 'interact', minutes: 45, gives: { fun: 50 }, skill: { science: 1 }, icon: '🔭' }],
