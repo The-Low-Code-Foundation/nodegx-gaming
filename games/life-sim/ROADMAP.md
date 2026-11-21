@@ -95,7 +95,8 @@ Each one has a default, so none of them blocks phase 1.
   only: ten Sims at a party take a frame from 1.6 to 2.1 ms, and `DRAWN.most` is 10 until the Surface is measured
   with the script in [tests/r16-phase4.md](tests/r16-phase4.md), where the checks are listed too.
 - Phase 5: built on branch `life-sim-skills`, cut from `life-sim-town-life` (one commit per task), checked in the
-  browser on the Mac. 5.1, 5.2 and two careers of 5.3 are done: the café chef (a new café) and the scientist (in the
-  office building). The artist dream is back. Save v7 (with 5.2). Not done: the vet and pets (5.4): there is no animal
-  model in the project, and one would have to be downloaded. The checks are listed in
+  browser on the Mac. All of it is done: 5.1, 5.2, three careers for 5.3 (the café chef at a new café, the scientist
+  in the office building, the vet at a new vet's) and pets for 5.4 (a cat or a dog, one a household; adopting the
+  stray cat works now). The artist dream is back. Save v7 (with 5.2; pets added to it in 5.4). The cat and dog models
+  are Quaternius's (CC0 as published on OpenGameArt in 2017; CREDITS.md). The checks are listed in
   [tests/r16-phase5.md](tests/r16-phase5.md).

@@ -67,6 +67,9 @@ Time: one game minute a second at speed 1 (`SPEEDS` in `life.mjs`). Every need n
 - `skills.mjs`: the skills from objects (round 16, phase 5): `SKILLS` (cooking, fitness, painting, music, gardening,
   handiness, charm), the gains added to things already in the game and the new things to do (`addSkills`), and
   `EARNING` (paintings, vegetables, busking, odd jobs). How fast a trait learns each is `traits.mjs` `skills`.
+- `pets.mjs`: a cat or a dog (round 16, phase 5.4): `PETS` (model, size, names), `PET_NEEDS` (hunger, play, love),
+  `PET_OFFERS` at the basket (feed, play, stroke) and the phone (adopt), `addPets`, and `Pet` (its needs; it sulks,
+  never comes to harm). The models are `assets/animals/` (CREDITS.md).
 - `baby.mjs`, `childcare.mjs`: the baby's needs and names; the nanny and the nursery.
 - `create.mjs`, `looks.mjs`: make-your-Sim screen; a Sim's look as data and how it is dressed.
 - `props.mjs`: what is in a Sim's hands or on the table, the eating motion, wedding clothes.
@@ -239,8 +242,18 @@ level 2: the Sim goes round (`goVisit`) and does `ODD_JOB` there. Why something 
 Careers (work.mjs `CAREERS`) say where they work (`place`, default the office) and at which stations (`stations`, by
 school subject; their names `station.<career>.<subject>`). The café (world.mjs `lifeCafe`) is built the first time
 someone has that job (`careerPlace`), or as a save with it loads; `goToWork` asks for it (`needPlace`). The scientist
-works in the office building. A right answer also teaches the career's `learns` (a café chef: cooking). Save v7 keeps
-`side`. Checks and measurements: [tests/r16-phase5.md](tests/r16-phase5.md). Pets (5.4) wait for an animal model.
+works in the office building. The vet (world.mjs `lifeVet`) is built as the café is; its patients are the pets'
+models, only looked at (placed with `furnish` like furniture, so they stand in their rest pose). A right answer also
+teaches the career's `learns` (a café chef: cooking; a vet: charm).
+
+Pets (`pets.mjs`) are cared for the way babies are: the basket (shop.mjs `PET_BED`, made in code) carries the pet
+(`item.pet`), its offers carry `pet` (need points a game hour) and `petUntil`; Life calls `item.pet.care` while
+doing one, and free will scores `item.pet.relief(offer)`. The page (`adoptPet`, `drawPets`, `petsTick`) places the
+basket, names the pet on a card, and walks it about the home on the floor grid (a clone of the GLB with its Idle and
+Walking clips); it goes to its basket when someone sees to it, and at night. One pet a household (`MAX_PETS`). The
+stray cat's "Keep it" (events.mjs `pets: true`) adopts it; the phone's "Adopt a pet" opens the shelter (40 coins).
+Save v7 keeps `side` and `pets` (each with its basket's index in the furniture). Checks and measurements:
+[tests/r16-phase5.md](tests/r16-phase5.md).
 
 ## How to add a house to the street (the nearest thing to a level)
 
