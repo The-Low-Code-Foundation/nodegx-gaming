@@ -32,11 +32,11 @@
    "voice": "voice_nm8fatgcnafz",
    "secs": 11.83
   },
-  "guns|Before you shoot at anything that shoots back, you shoot at a sled. A tug is streaming a target down our starboard side. First, draw a vac suit from one of the grey VAC SUITS lockers, in the spine, at damage control or in the flight gear room: at general quarters this ship sets condition one and pumps the air out of the fixed hull, so a hole cannot blow anyone out with it. The drums keep theirs. Then climb up into the dorsal turret. Lay your sight on the amber diamond, not on the sled: that is where the sled will be when your shell gets there. Three hits.": {
-   "file": "guns-before-you-shoot-at-anything-that-sh-d36be4.mp3",
-   "hash": "d36be4e2b7",
+  "guns|Before you shoot at anything that shoots back, you shoot at a sled. A tug is streaming a target down our starboard side. First, fresh bottles in your suit and a seal check, from one of the grey SUIT AIR lockers, in the spine, at damage control or in the flight gear room: at general quarters this ship sets condition one and pumps the air out of the fixed hull, so a hole cannot blow anyone out with it, and your visor shuts on you. The drums keep theirs. Then climb up into the dorsal turret. Lay your sight on the amber diamond, not on the sled: that is where the sled will be when your shell gets there. Three hits.": {
+   "file": "guns-before-you-shoot-at-anything-that-sh-2bc1de.mp3",
+   "hash": "2bc1de00f1",
    "voice": "voice_3uge17k0jmq0",
-   "secs": 35.42
+   "secs": 37.16
   },
   "guns|Hits under fire. You're a gunner. From now on, at general quarters, you have a turret. And the flight officer has asked for you: Lieutenant Moss, in the pilots' ready room.": {
    "file": "guns-hits-under-fire-you-re-a-gunner-from-754d76.mp3",
@@ -44,11 +44,11 @@
    "voice": "voice_3uge17k0jmq0",
    "secs": 10.89
   },
-  "flight|Every gunner gets a go in a fighter. The hangar has no air: go down a boarding tube from the crew tunnel into any of them. Launch, fly about, then fly yourself home down the lane of rings. Don't call flight control to bring you in: fly it.": {
-   "file": "flight-every-gunner-gets-a-go-in-a-fighter-6e3a3f.mp3",
-   "hash": "6e3a3f49c7",
+  "flight|Every gunner gets a go in a fighter. The hangar has no air: go down the forward trunk to the hangar airlock, keep your visor down, and pull yourself along the gangway to any of them. Launch, fly about, then fly yourself home down the lane of rings. Don't call flight control to bring you in: fly it.": {
+   "file": "flight-every-gunner-gets-a-go-in-a-fighter-86a20b.mp3",
+   "hash": "86a20bb494",
    "voice": "voice_y99kim4gm369",
-   "secs": 15.44
+   "secs": 18.48
   },
   "flight|You'll make a pilot. Not this week. Commander Reyes wants you on the bridge: she says anyone who can land a fighter can learn to steer a ship.": {
    "file": "flight-you-ll-make-a-pilot-not-this-week-co-372e07.mp3",
@@ -1538,6 +1538,12 @@
    "voice": "voice_86u1detsknuf",
    "secs": 4.19
   },
+  "ai|Brace, brace, brace. Torpedo impact imminent.": {
+   "file": "ai-brace-brace-brace-torpedo-impact-imm-0df91e.mp3",
+   "hash": "0df91e4f2d",
+   "voice": "voice_86u1detsknuf",
+   "secs": 4.1
+  },
   "ship|Tubes one and two, fire. Birds away.": {
    "file": "ship-tubes-one-and-two-fire-birds-away-c3d7ce.mp3",
    "hash": "c3d7cec08b",
@@ -1717,6 +1723,18 @@
    "hash": "43247868dc",
    "voice": "voice_av0j47o3r5ps",
    "secs": 3.02
+  },
+  "guns|Before you shoot at anything that shoots back, you shoot at a sled. A tug is streaming a target down our starboard side. First, draw a vac suit from one of the grey VAC SUITS lockers, in the spine, at damage control or in the flight gear room: at general quarters this ship sets condition one and pumps the air out of the fixed hull, so a hole cannot blow anyone out with it. The drums keep theirs. Then climb up into the dorsal turret. Lay your sight on the amber diamond, not on the sled: that is where the sled will be when your shell gets there. Three hits.": {
+   "file": "guns-before-you-shoot-at-anything-that-sh-d36be4.mp3",
+   "hash": "d36be4e2b7",
+   "voice": "voice_3uge17k0jmq0",
+   "secs": 35.42
+  },
+  "flight|Every gunner gets a go in a fighter. The hangar has no air: go down a boarding tube from the crew tunnel into any of them. Launch, fly about, then fly yourself home down the lane of rings. Don't call flight control to bring you in: fly it.": {
+   "file": "flight-every-gunner-gets-a-go-in-a-fighter-6e3a3f.mp3",
+   "hash": "6e3a3f49c7",
+   "voice": "voice_y99kim4gm369",
+   "secs": 15.44
   }
  }
 }
