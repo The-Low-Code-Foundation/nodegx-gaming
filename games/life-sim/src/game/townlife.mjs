@@ -225,7 +225,8 @@ export function dayOfTown(w, random) {
   if (pool.length && spare() && since >= T.newcomer.gap && random() < T.newcomer.chance) {
     const who = pool[Math.floor(random() * pool.length)], h = forSale()[0];
     takeHouse(h);
-    newcomer = { who, house: h.id, traits: rollTraits(random), likes: rollLikes(random), dream: rollGoal([], random) };
+    // Phase 5: a newcomer's dream is rolled as before (the artist left out), so the town's dice fall as they did.
+    newcomer = { who, house: h.id, traits: rollTraits(random), likes: rollLikes(random), dream: rollGoal([], random, false) };
     say('👋', 'news.welcome', { a: w.nameOf(who), no: h.no }, [w.nameOf(who)]);
   }
   return { news, moved, houses: changed, newcomer };

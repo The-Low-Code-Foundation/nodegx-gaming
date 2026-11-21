@@ -7,7 +7,7 @@
 // Seasons come with the calendar (phase 6): until then, snow is just rare.
 export const WEATHER = {
   sun: { icon: '☀️', chance: 0.6, off: [], look: { grey: 0, sun: 1, falls: null } },
-  rain: { icon: '🌧️', chance: 0.3, off: ['feedDucks', 'sitBench', 'stargaze'], look: { grey: 0.65, sun: 0.35, falls: 'rain' } },
+  rain: { icon: '🌧️', chance: 0.3, off: ['feedDucks', 'sitBench', 'stargaze', 'busk'], look: { grey: 0.65, sun: 0.35, falls: 'rain' } },
   snow: { icon: '❄️', chance: 0.1, off: ['feedDucks', 'smellFlowers'], look: { grey: 0.45, sun: 0.6, falls: 'snow' } }
 };
 export const WEATHER_IDS = Object.keys(WEATHER);

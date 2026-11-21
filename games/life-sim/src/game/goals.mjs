@@ -67,18 +67,29 @@ export const GOALS = [
       { id: 'masterChef', icon: '⭐', test: (f) => (f.skills?.cooking ?? 0) >= 8 }
     ]
   },
-  // Waits for phase 5 (skills from objects: an easel, painting): not offered until then.
-  { id: 'artist', icon: '🎨', later: 5, steps: [] }
+  // Phase 5 (skills.mjs): an easel bought, paintings finished and sold. Only offered when skills are on (`skills`).
+  {
+    id: 'artist', icon: '🎨', skills: true,
+    steps: [
+      { id: 'firstPainting', icon: '🖌️', test: (f) => (f.tally.paint ?? 0) >= 1 },
+      { id: 'paintingThree', icon: '🎨', test: (f) => (f.skills?.painting ?? 0) >= 3 },
+      { id: 'firstSale', icon: '🖼️', test: (f) => (f.tally.paintingSold ?? 0) >= 1 },
+      { id: 'paintingFive', icon: '🎨', test: (f) => (f.skills?.painting ?? 0) >= 5 },
+      { id: 'tenSold', icon: '💰', test: (f) => (f.tally.paintingSold ?? 0) >= 10 },
+      { id: 'masterpiece', icon: '⭐', test: (f) => (f.skills?.painting ?? 0) >= 8 }
+    ]
+  }
 ];
 export const goalById = (id) => GOALS.find((g) => g.id === id) ?? null;
 // The ones that can be chosen now (not waiting for a later phase, not already done).
-export const openGoals = (done = []) => GOALS.filter((g) => !g.later && !done.includes(g.id));
+// `skills`: whether skills are on (phase 5); the artist needs them.
+export const openGoals = (done = [], skills = true) => GOALS.filter((g) => !g.later && (skills || !g.skills) && !done.includes(g.id));
 // Happy points for each step, and for the dream come true (its celebration).
 export const STEP_POINTS = 150;
 export const GOAL_POINTS = 1000;
 // A dream at random.
-export const rollGoal = (done = [], random = Math.random) => {
-  const open = openGoals(done);
+export const rollGoal = (done = [], random = Math.random, skills = true) => {
+  const open = openGoals(done, skills);
   return open.length ? open[Math.floor(random() * open.length)].id : null;
 };
 // Where a Sim is with their goal ({ id, step }): the steps done, given their facts. Returns how many steps are done

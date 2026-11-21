@@ -22,14 +22,16 @@ export function readSave() {
     // v6 (round 16, phase 4): the town as it has changed (`town.houses`: lived in or for sale, the price and name;
     // `town.homes`: who lives where; `town.dreams`: the newcomers' dreams; `town.life`: town life's state, its babies and
     // the notice board's news). A v5 save or older loads with the town as made, and town life starts from that day.
-    return [1, 2, 3, 4, 5, 6].includes(s?.v) && Array.isArray(s.lives) && s.lives.length ? s : null;
+    // v7 (round 16, phase 5): the household's side earnings (`side`: paintings to sell, the vegetables, today's odd
+    // job, all earned so far); skills were in `lives` already. A v6 save or older loads with none (skills.mjs freshSide).
+    return [1, 2, 3, 4, 5, 6, 7].includes(s?.v) && Array.isArray(s.lives) && s.lives.length ? s : null;
   } catch {
     return null;
   }
 }
 export function writeSave(state) {
   try {
-    localStorage.setItem(KEY, JSON.stringify({ v: 6, savedAt: Date.now(), ...state }));
+    localStorage.setItem(KEY, JSON.stringify({ v: 7, savedAt: Date.now(), ...state }));
     return true;
   } catch {
     return false;

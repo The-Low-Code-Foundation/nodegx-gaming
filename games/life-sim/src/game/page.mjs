@@ -49,7 +49,7 @@ import { GOALS, goalById, openGoals, rollGoal, stepsDone, STEP_POINTS, GOAL_POIN
 import { WANTS, WANT_SLOTS, WANT_LASTS, rollWant, wantById } from './wants.mjs';
 import { DECK, EVENTS, POWER_CUT, eventById, pickEvent, pickWho, outcomeOf } from './events.mjs';
 import { WEATHER, rollWeather } from './weather.mjs';
-import { SKILLS, SKILL_IDS, addSkills, levelsOf, FIXING } from './skills.mjs';
+import { SKILLS, SKILL_IDS, addSkills, levelsOf, FIXING, EARNING, ODD_JOB, freshSide, earnWhy } from './skills.mjs';
 import { TOWNLIFE, dayOfTown, startTown, priceFor, REACH, pickReach, sociable, DRAWN } from './townlife.mjs';
 
 const params = new URLSearchParams(location.search);
@@ -208,12 +208,12 @@ const mate = saved ? null : params.get('flatmate') === 'none' ? null : params.ha
 // Round 16, phase 2: and what do they dream of? (goals.mjs) One card each, and "surprise me".
 function goalCard(name) {
   return new Promise((resolve) => {
-    $('card').innerHTML = `<h2>${t('goal.title', { name })}</h2><p class="intro">${t('goal.intro')}</p>${goalRows(openGoals())}
+    $('card').innerHTML = `<h2>${t('goal.title', { name })}</h2><p class="intro">${t('goal.intro')}</p>${goalRows(openGoals([], skillsOn))}
       <div class="actions"><button class="go" id="goal-surprise">🎲 ${t('start.surprise')}</button></div>`;
     $('card').hidden = $('card-back').hidden = false;
     const done = (id) => (($('card').hidden = $('card-back').hidden = true), resolve(id));
     for (const b of $('card').querySelectorAll('[data-goal]')) b.onclick = () => done(b.dataset.goal);
-    $('goal-surprise').onclick = () => done(rollGoal());
+    $('goal-surprise').onclick = () => done(rollGoal([], Math.random, skillsOn));
   });
 }
 // (A function, not a const: the start screen asks before this line has run.)
@@ -330,6 +330,8 @@ if (homeState.id !== 'flat' || homeState.size) {
 // The money is the household's: whoever earns it, anyone can spend it.
 // `childcare` (round 13): who looks after the babies while everyone is out, 'nanny' or 'nursery' (null: ask).
 const household = { money: saved?.money ?? story?.money ?? START_MONEY, childcare: saved?.childcare ?? null };
+// Round 16, phase 5.2: the side earnings (skills.mjs): paintings not yet sold, the vegetables, today's odd job.
+household.side = skillsOn ? { ...freshSide(), ...(saved?.side ?? {}) } : null;
 async function makeSim(who, at, i, { name = null, look = null, body = null, ...opts } = {}) {
   const sim = new Sim(body ?? (await folk.body(who, look)), at);
   scene.add(sim.group);
@@ -387,7 +389,7 @@ for (const [i, m] of members.entries()) {
   // are already true when it begins are ticked off without points (a Team member's first career steps).
   if (!m.s && aimsOn) {
     const asked = i === 0 ? start?.goal ?? params.get('goal') : params.get('goal2');
-    const id = goalById(asked) && !goalById(asked).later ? asked : rollGoal();
+    const id = goalById(asked) && !goalById(asked).later && (skillsOn || !goalById(asked).skills) ? asked : rollGoal([], Math.random, skillsOn);
     life.goal = id ? { id, step: 0, quiet: true } : null;
   }
   if (!m.s) life.traits = params.has(i ? 'traits2' : 'traits') ? cleanTraits(params.get(i ? 'traits2' : 'traits').split(',')) : quick ? [] : rollTraits(Math.random, cleanTraits(m.traits));
@@ -1063,6 +1065,9 @@ function arrived(l, p) {
   if (h.kind === 'sale') return toast(t('ui.sale.look', { name: l.name, house: houseTitle(id), price: h.price }));
   const host = residentsOf(id).find(homeNow) ?? residentsOf(id)[0];
   if (!host) return;
+  // Round 16, phase 5.2: come to do the odd job.
+  if (l.oddJob === id && household.side?.oddJob?.house === id && !household.side.oddJob.done) l.queue.unshift({ offer: ODD_JOB, by: 'you' });
+  l.oddJob = null;
   // Round 16, phase 4: saying hello to someone new in the street (a wish the news gives).
   if (residentsOf(id).some((r) => r.newcomer != null && Math.floor(minutes / 1440) + 1 - r.newcomer <= 7)) l.count('welcome');
   if (partyAt(id)) {
@@ -1542,7 +1547,7 @@ function openMenu(item, x, y, point = null) {
   const doorRows = out ? `<button data-town>🗺️ ${t('ui.town.go')}</button>${sale ? `<button data-buyhouse>🏡 ${t('ui.sale.buy')}<span class="gain">${t('ui.cost', { cost: sale.price })}</span></button>` : ''}` : '';
   // Round 16, phase 3: greyed when it can't be done now (a power cut), with why.
   const why = (o) => offerWhy(sel, o);
-  $('menu').innerHTML = head + offers.map((o, i) => `<button data-i="${i}" ${why(o) ? 'disabled' : ''}>${o.baby ? `${o.icon} ` : ''}${t(`action.${o.id}`)}<span class="gain">${why(o) ? t(why(o)) : o.task ? '🪙' : gain(o)}</span></button>`).join('') + extra + doorRows;
+  $('menu').innerHTML = head + offers.map((o, i) => `<button data-i="${i}" ${why(o) ? 'disabled' : ''}>${o.baby ? `${o.icon} ` : ''}${t(`action.${o.id}`)}<span class="gain">${why(o) ? t(why(o)) : o.task ? '🪙' : o.earn ? earnGain(o) : gain(o)}</span></button>`).join('') + extra + doorRows;
   for (const b of $('menu').querySelectorAll('button[data-i]'))
     b.onclick = () => {
       sel.command(offers[b.dataset.i], sideFor(sel, item), point);
@@ -1558,6 +1563,14 @@ function openMenu(item, x, y, point = null) {
   if (out) $('menu').querySelector('[data-town]').onclick = () => (($('menu').hidden = true), openTown());
   if (sale) $('menu').querySelector('[data-buyhouse]').onclick = () => (($('menu').hidden = true), openBuy(sale.id));
   showMenu(x, y, offers.length + (head ? 1 : 0) + (bought ? (bought.price ? 3 : 1) : 0) + (out ? (sale ? 2 : 1) : 0));
+}
+// Round 16, phase 5.2: what an earning thing would bring in now.
+function earnGain(o) {
+  const side = household.side, lv = (id) => skillLevel(sel.skills[id] ?? 0);
+  if (o.earn === 'paintings') return `+${t('ui.cost', { cost: side.paintings.reduce((a, b) => a + b, 0) })}`;
+  if (o.earn === 'veg') return `+${t('ui.cost', { cost: EARNING.veg.worth(lv('gardening')) })}`;
+  if (o.earn === 'busk') return t('earn.perHour', { coins: EARNING.busk.tips(lv('music')) });
+  return '🪙';
 }
 function showMenu(x, y, rows) {
   Object.assign($('menu').style, { left: `${Math.min(x, innerWidth - 240)}px`, top: `${Math.max(8, Math.min(y, innerHeight - 46 * rows - 40))}px` });
@@ -1738,7 +1751,7 @@ function dreamComeTrue(l, g) {
 }
 function openGoalPicker(l, done = null) {
   if (card) closeCard();
-  const open = openGoals(l.goalsDone);
+  const open = openGoals(l.goalsDone, skillsOn);
   const head = done ? `<h2>🎉 ${t('goal.cameTrue', { name: l.name, goal: t(`goal.${done.id}`) })}</h2><p class="intro">${t('goal.cameTrueText', { name: l.name, points: GOAL_POINTS })}</p>` : `<h2>${t('goal.title', { name: l.name })}</h2>`;
   openCard(l, 'goal', `${head}${open.length ? `<p class="intro">${t('goal.next', { name: l.name })}</p>${goalRows(open)}` : `<p class="intro">${t('goal.allDone', { name: l.name })}</p>`}
     <div class="actions"><button id="goal-later">${t('goal.later')}</button>${open.length ? `<button class="go" id="goal-roll">🎲 ${t('start.surprise')}</button>` : ''}</div>`);
@@ -1751,7 +1764,7 @@ function openGoalPicker(l, done = null) {
     save();
   };
   for (const b of $('card').querySelectorAll('[data-goal]')) b.onclick = () => pick(b.dataset.goal);
-  $('goal-roll')?.addEventListener('click', () => pick(rollGoal(l.goalsDone)));
+  $('goal-roll')?.addEventListener('click', () => pick(rollGoal(l.goalsDone, Math.random, skillsOn)));
   $('goal-later').onclick = closeCard;
 }
 // ---- wishes (round 16, phase 2: wants.mjs) ----
@@ -1777,6 +1790,8 @@ function wantsTick() {
 // Life `count` tells us what was done: a wish that was for it comes true.
 function wished(l, id) {
   if (id === 'buildSnowman') buildSnowman(l);
+  // Round 16, phase 5.2: the neighbour helped is glad of it.
+  if (id === 'oddJob' && l.place?.house) for (const r of residentsOf(l.place.house)) bondOf(l, r).friendship += 6;
   if (!aimsOn || !lives.includes(l)) return;
   const k = l.wants.findIndex((w) => wantById(w.id)?.did === id);
   if (k < 0) return;
@@ -1895,10 +1910,34 @@ function openNews() {
   if (card || placing) return;
   const rows = townLife.news.map((n, k) => `<div class="diary-row${k < townLife.unread ? ' new' : ''}"><span class="when">${t('ui.day.short', { day: n.day })}</span><span class="icon">${n.icon}</span><span>${newsText(n)}</span></div>`).join('');
   townLife.unread = 0;
-  openCard(sel, 'news', `<h2>📰 ${t('news.title', { street: streetName() })}</h2>${rows || `<p class="intro">${t(townLifeOn ? 'news.empty' : 'news.quiet')}</p>`}
+  const job = skillsOn ? oddJobRow() : '';
+  openCard(sel, 'news', `<h2>📰 ${t('news.title', { street: streetName() })}</h2>${job}${rows || `<p class="intro">${t(townLifeOn ? 'news.empty' : 'news.quiet')}</p>`}
     <div class="actions"><button id="card-close">${t('ui.close')}</button></div>`);
   $('card-close').onclick = closeCard;
+  $('card').querySelector('[data-oddjob]')?.addEventListener('click', () => {
+    sel.oddJob = household.side.oddJob.house;
+    goVisit(household.side.oddJob.house);
+  });
   save();
+}
+// Round 16, phase 5.2: today's odd job on the board, a neighbour's (one a day, whoever is at home to be helped), and
+// the button to go and do it: greyed with why (handiness too low, done, nobody in).
+function oddJobToday() {
+  const side = household.side, day = Math.floor(minutes / 1440);
+  if (side.oddJob?.day !== day) {
+    const homes = livedIn().filter((id) => !owned(id));
+    const jobs = EARNING.oddJob.jobs;
+    side.oddJob = homes.length ? { day, house: homes[Math.floor(Math.random() * homes.length)], job: jobs[Math.floor(Math.random() * jobs.length)], done: false } : { day, house: null };
+  }
+  return side.oddJob;
+}
+function oddJobRow() {
+  const job = oddJobToday();
+  if (!job.house) return '';
+  const host = residentsOf(job.house)[0], level = skillLevel(sel.skills.handiness ?? 0), v = visitState(job.house);
+  const why = job.done ? t('earn.oddJob.done') : level < EARNING.oddJob.from ? t('earn.why.oddJob', { level: EARNING.oddJob.from }) : !v.ok ? t(`town.why.${v.why}`) : '';
+  return `<div class="diary-row new"><span class="icon">🔨</span><span>${t('earn.oddJob.ask', { name: host?.name ?? '', house: houseTitle(job.house), job: t(`earn.job.${job.job}`), coins: EARNING.oddJob.pay(level) })}</span></div>
+    <div class="actions"><button class="go" data-oddjob ${why ? 'disabled' : ''}>🔨 ${t('earn.oddJob.go', { name: sel.name })}${why ? ` <small>${why}</small>` : ''}</button></div>`;
 }
 function openDiary() {
   if (card || placing) return;
@@ -1965,6 +2004,8 @@ function offerWhy(l, offer) {
   // Round 16, phase 3.4: the weather's (no ducks to feed in the rain).
   const w = weatherNow();
   if (WEATHER[w].off.includes(offer.id)) return `weather.${w}.off`;
+  // Round 16, phase 5.2: no paintings to sell yet, the vegetables not ripe, not good enough at music to busk.
+  if (offer.earn && household.side && lives.includes(l)) return earnWhy(offer, household.side, levelsOf(l.skills, skillLevel));
   return null;
 }
 // An offer only in one weather (actions.mjs `weather`: a snowman) isn't there at all in another.
@@ -2102,7 +2143,7 @@ function renderPanels() {
       const into = lvl >= 10 ? 1 : (v - SKILL_LEVELS[lvl]) / (SKILL_LEVELS[lvl + 1] - SKILL_LEVELS[lvl]);
       return `<div class="skill" data-skill="${id}"><span>${SKILL_ICONS[id]}</span><span>${t(`skill.${id}`)}</span><b>${lvl}</b><div class="bar"><i style="width:${into * 100}%"></i></div></div>`;
     })
-    .join('');
+    .join('') + (household.side && (household.side.paintings.length || household.side.veg || household.side.earned) ? `<div class="traitline">${t('earn.panel', { n: household.side.paintings.length, veg: Math.round(household.side.veg), coins: household.side.earned })}</div>` : '');
   const plan = sel.plan;
   $('todo').innerHTML = plan.length
     ? plan
@@ -2333,6 +2374,8 @@ function snapshot() {
     // Round 16, phase 3: the event deck.
     deck: { ...deck, seen: { ...deck.seen } },
     weather: weather && { ...weather },
+    // Round 16, phase 5 (v7): the side earnings.
+    side: household.side && { ...household.side, paintings: [...household.side.paintings], oddJob: household.side.oddJob && { ...household.side.oddJob } },
     // Round 16: everyone else's traits, by person (the household's are in `lives`).
     traits: { ...(saved?.traits ?? {}), ...Object.fromEntries(npcs().map((l) => [l.who, [...(l.traits ?? [])]])), ...Object.fromEntries([...arriving].map(([n, a]) => [n, [...a.traits]])) },
     likes: { ...(saved?.likes ?? {}), ...Object.fromEntries(npcs().filter((l) => l.likes).map((l) => [l.who, { ...l.likes }])), ...Object.fromEntries([...arriving].map(([n, a]) => [n, { ...a.likes }])) },
@@ -2832,7 +2875,7 @@ window.__life = {
   // Round 16, phase 3.
   eventsOn, deck, eventsTick, openEvent, eventCtx, eventPeople, EVENTS, eventById, lastEvent: null, openMenu, offerWhy,
   // Round 16, phase 5.
-  skillsOn, SKILLS, placeExtra, spotFor, shopItem,
+  skillsOn, SKILLS, placeExtra, spotFor, shopItem, oddJobToday, EARNING, ODD_JOB, earnGain,
   // Round 16, phase 4.
   townLifeOn, townLife, townLifeTick, playTownDay, TOWNLIFE, babiesAt, newsText, npcs, openNews, reachTick, REACH, DRAWN, lastReach: null,
   weatherNow, weatherTick, get weather() { return weather && { ...weather }; }, set weatherId(id) { weather = { day: Math.floor(minutes / 1440), id, told: true }; }, snowmen, weatherFx, ducks,

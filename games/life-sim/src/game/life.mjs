@@ -22,6 +22,7 @@ import { INTERACTIONS, bondOf, lockOf, chanceOf, applyOutcome } from './social.m
 import { CAREERS, MOOD_AT_WORK, TASK, careerOf, levelOfJob, nextLevel, timeForWork } from './work.mjs';
 import { decayOf, likingOf, chanceBonus, alwaysOf, ignoredBy, afterOf, learnOf } from './traits.mjs';
 import { keenOn, shared, GIFT, SHARED } from './likes.mjs';
+import { EARNING } from './skills.mjs';
 
 // Game minutes a real second at each speed: paused, normal, fast, very fast.
 export const SPEEDS = [0, 1, 4, 12];
@@ -437,6 +438,8 @@ export class Life {
     const o = d.offer;
     if (o.opens) this.card = o.opens;
     if (o.moodlet && (!o.moodletIf || o.moodletIf(d.before))) this.addMoodlet(o.moodlet);
+    // Round 16, phase 5.2: a painting finished, a crop grown, coins earned (skills.mjs EARNING).
+    if (o.makes || o.grows || o.earn) this.earn(o, 1);
     this.count(o.id);
     // Round 16: what their traits make of it (a foodie's "yum", a clumsy Sim's "oops").
     for (const a of afterOf(this.traits, o.id)) if (MOODLETS[a.moodlet] && (a.chance >= 1 || this.random() < a.chance)) this.addMoodlet(a.moodlet);
@@ -452,12 +455,56 @@ export class Life {
     this.sim.leave(() => this.sim.finish());
   }
 
+  // Round 16, phase 5.2: earning from skills (skills.mjs EARNING). The household's side earnings (`household.side`):
+  // the paintings not yet sold, the vegetables' growth, today's odd job, and all that has been earned so.
+  earn(o, share = 1) {
+    const side = this.household.side;
+    if (!side) return;
+    const lv = (id) => skillLevel(this.skills[id] ?? 0), today = Math.floor((this.clock?.() ?? 0) / 1440);
+    let coins = 0;
+    if (o.makes === 'painting') {
+      const worth = EARNING.paintings.worth(lv('painting'));
+      if (side.paintings.length < EARNING.paintings.most) side.paintings.push(worth);
+      this.events.push({ key: 'ui.earn.painted', vars: { name: this.name, n: side.paintings.length } });
+    }
+    if (o.grows && side.veg < 100 && side.vegDay !== today) {
+      side.veg = Math.min(100, side.veg + EARNING.veg.grow(lv('gardening')));
+      side.vegDay = today;
+      if (side.veg >= 100) this.events.push({ key: 'ui.earn.ripe', vars: { name: this.name } });
+    }
+    if (o.earn === 'paintings' && side.paintings.length) {
+      const n = side.paintings.length;
+      coins = side.paintings.reduce((a, b) => a + b, 0);
+      side.paintings = [];
+      for (let k = 0; k < n; k++) this.count('paintingSold');
+      this.events.push({ key: 'ui.earn.sold', vars: { name: this.name, n, coins } });
+    }
+    if (o.earn === 'veg' && side.veg >= 100) {
+      coins = EARNING.veg.worth(lv('gardening'));
+      side.veg = 0;
+      this.events.push({ key: 'ui.earn.veg', vars: { name: this.name, coins } });
+    }
+    if (o.earn === 'busk') {
+      coins = Math.round(EARNING.busk.tips(lv('music')) * (o.minutes / 60) * Math.min(1, share));
+      if (coins) this.events.push({ key: 'ui.earn.busk', vars: { name: this.name, coins } });
+    }
+    if (o.earn === 'oddJob' && side.oddJob && !side.oddJob.done) {
+      coins = EARNING.oddJob.pay(lv('handiness'));
+      side.oddJob.done = true;
+      this.events.push({ key: 'ui.earn.oddJob', vars: { name: this.name, coins } });
+    }
+    this.household.money += coins;
+    side.earned += coins;
+  }
+
   stop(reason) {
     const d = this.doing;
     if (!d) return;
     // An interaction cut short: what they managed so far counts, and the other one is let go too.
     if (d.other) return this.endTogether(d, d.started ? d.minutes / d.offer.minutes : 0, reason);
     this.doing = null;
+    // Busking cut short: the tips for the time played.
+    if (d.offer.earn === 'busk' && d.started) this.earn(d.offer, d.minutes / d.offer.minutes);
     // Woken before they had slept enough (not by the alarm for work).
     if (d.offer.act === 'sleep' && d.started && this.needs.energy < 70 && reason !== 'work') this.addMoodlet('wokenUp');
     // A station's task given up (the card closed by a need that can't wait): the card goes too.
