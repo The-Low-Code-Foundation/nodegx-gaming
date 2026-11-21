@@ -1743,7 +1743,8 @@ function eventCtx(l) {
 // The town's people an event can be about, and how they stand with `l`.
 const eventPeople = (l) =>
   npcs().filter((o) => !lives.includes(o) && !o.carer).map((o) => ({
-    life: o, friendship: peekBond(l, o)?.friendship ?? 0, traits: o.traits, neighbour: neighbours.includes(o), colleague: colleagues.includes(o),
+    life: o, friendship: peekBond(l, o)?.friendship ?? 0, romance: peekBond(l, o)?.romance ?? 0, traits: o.traits, neighbour: neighbours.includes(o), colleague: colleagues.includes(o),
+    free: !o.shift && !workDayNow(o) && !guests.some((g) => g.life === o),
     house: !!o.house && HOUSES.some((h) => h.id === o.house && h.kind === 'lived')
   }));
 // Round 16, phase 3: why an offer isn't there now (a key for the menu's note), or null: in a power cut at home, the telly
@@ -1797,11 +1798,7 @@ function openEvent(e, who = null, l = sel) {
       const bits = eventOutcome(l, e, who, mate, out);
       $('card').querySelector('.choices').outerHTML = `<div class="result ${result === 'bad' ? 'no' : 'yes'}"><b>${t(`event.${e.id}.${ch.id}.${result}`, vars)}</b>${bits.length ? `<div class="bits">${bits.join(' · ')}</div>` : ''}</div>
         <div class="actions"><button id="card-close" class="go">${t('event.ok')}</button></div>`;
-      $('card-close').onclick = () => {
-        closeCard();
-        if (out.go === 'park' && l.place !== park) l.command(offerById('Door_1', 'goPark'));
-        if (out.go === 'whoHouse' && who?.house && l.place !== places[who.house]) goVisit(who.house);
-      };
+      $('card-close').onclick = closeCard;
       window.__life.lastEvent = { id: e.id, choice: ch.id, result, who: who?.name ?? null };
     };
 }
@@ -1848,6 +1845,9 @@ function eventOutcome(l, e, who, mate, out) {
   if (out.party && who?.house) deck.party = { id: who.house, day: Math.floor(minutes / 1440) };
   if (out.date && who) l.planDate(who);
   if (out.powerCut) deck.powerOff = minutes + out.powerCut;
+  // Off somewhere (on the to-do list: they go when the card is closed). A house is built first, the first time.
+  if (out.go === 'park' && l.place !== park) l.command(offerById('Door_1', 'goPark'));
+  if (out.go === 'whoHouse' && who?.house && l.place !== places[who.house]) loadNeighbours().then(() => housePlace(who.house)).then(() => l.command(goTo(who.house)));
   return bits;
 }
 

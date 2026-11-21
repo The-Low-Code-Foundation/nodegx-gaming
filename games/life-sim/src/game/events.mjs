@@ -20,8 +20,10 @@ export const DECK = { perDay: 2.5, every: 30, gap: 150, from: 8 * 60, to: 22 * 6
 //   weather   the weathers it can happen in (phase 3.4)
 //   when      (c) → false: not now (no flatmate to ask, no coins to spare)
 //   who       someone it is about, from the town's people: { from: 'neighbours' | 'colleagues' | 'anyone',
-//             friendship: at least, house: true (one whose house is on the street), traits: { trait: ×n } }; the
-//             likelier the better friends they are. No one who fits: the event does not come up.
+//             friendship: at least, romance: at least, house: true (one whose house is on the street), free: true
+//             (not at work now), traits: { trait: ×n } }; the likelier the better friends they are. No one who fits:
+//             the event does not come up. keen: true (3.3, calls and knocks): how keen the keenest of them is (their
+//             traits and the bond) makes the event itself likelier or rarer, so a chatty town rings more.
 //   choices   two or three; each:
 //     id, icon, cost (coins, paid when chosen: greyed when short), when (c) → false: not offered,
 //     later     a phase number: shown greyed, "when that comes" (adopting the cat waits for pets)
@@ -271,6 +273,78 @@ export const EVENTS = [
       { id: 'card', icon: '✉️', done: { friendship: 3 } },
       { id: 'slice', icon: '🍰', done: { needs: { hunger: 20 }, moodlet: 'cake' } }
     ]
+  },
+
+  // ---- 3.3: the town's people phone and knock. Who it is goes by their traits and how well they know you (`keen`) ----
+  // A friend rings for a chat.
+  {
+    id: 'callChat', icon: '📞', kind: 'call', where: ['home', 'park', 'street', 'house'], hours: [9, 21], weight: 1.2, traits: { chatty: 1.5 },
+    who: { from: 'anyone', friendship: 10, keen: true, traits: { chatty: 3, cheerful: 1.3, shy: 0.3, grumpy: 0.5 } },
+    choices: [
+      { id: 'chat', icon: '💬', done: { friendship: 5, needs: { social: 40, fun: 10 }, moodlet: 'goodChat', count: 'phone' } },
+      { id: 'invite', icon: '🏠', when: (c) => c.place === 'home', done: { friendship: 4, invite: true } },
+      { id: 'later', icon: '⏰', done: {} }
+    ]
+  },
+  // Someone needs a hand (a wardrobe to move, a fence to paint).
+  {
+    id: 'callHelp', icon: '🛠️', kind: 'call', where: ['home', 'park', 'street'], hours: [10, 18], weight: 0.8, traits: { cheerful: 1.3, lazy: 0.6 },
+    who: { from: 'anyone', friendship: 25, house: true, free: true, keen: true, traits: { clumsy: 2, lazy: 1.5, sporty: 0.7 } },
+    choices: [
+      { id: 'go', icon: '💪', done: { friendship: 8, needs: { energy: -10 }, moodlet: 'helpedOut', points: 40, go: 'whoHouse' } },
+      { id: 'tip', icon: '💡', chance: 0.5, traits: { bookworm: 0.25 }, good: { friendship: 4, moodlet: 'helpedOut' }, bad: { friendship: 1 } },
+      { id: 'no', icon: '🙁', done: {} }
+    ]
+  },
+  // The news on the street (never anyone's secrets: a trumpet, a giant marrow, a parrot).
+  {
+    id: 'callGossip', icon: '🗞️', kind: 'call', where: ['home', 'park', 'street', 'house'], hours: [10, 21], weight: 0.9, traits: { chatty: 2, shy: 0.6 },
+    who: { from: 'anyone', friendship: 10, keen: true, traits: { chatty: 3, joker: 1.5, shy: 0.2 } },
+    choices: [
+      { id: 'listen', icon: '👂', done: { friendship: 4, needs: { social: 30, fun: 15 }, moodlet: 'juicyNews', count: 'phone' } },
+      { id: 'kind', icon: '😇', done: { friendship: 3, moodlet: 'goodDeed' } },
+      { id: 'busy', icon: '⏰', done: {} }
+    ]
+  },
+  // Come round to mine.
+  {
+    id: 'callCome', icon: '🏡', kind: 'call', where: ['home', 'park', 'street'], hours: [10, 20], weight: 0.9, goals: { popular: 1.5 },
+    who: { from: 'anyone', friendship: 25, house: true, free: true, keen: true, traits: { chatty: 2, cheerful: 1.5, shy: 0.4 } },
+    choices: [
+      { id: 'go', icon: '🚶', done: { friendship: 5, go: 'whoHouse' } },
+      { id: 'here', icon: '🏠', when: (c) => c.place === 'home', done: { friendship: 5, invite: true } },
+      { id: 'no', icon: '🙂', done: {} }
+    ]
+  },
+  // Someone sweet on them asks them out (a date in the park, as when asked in person).
+  {
+    id: 'callDate', icon: '🌹', kind: 'call', where: ['home', 'park', 'street', 'house'], hours: [10, 20], weight: 1.2, goals: { family: 2 },
+    when: (c) => c.romance >= 15,
+    who: { from: 'anyone', romance: 15, free: true, keen: true, traits: { romantic: 3, shy: 0.4 } },
+    choices: [
+      { id: 'yes', icon: '💕', done: { romance: 5, moodlet: 'smitten', date: true } },
+      { id: 'no', icon: '🙂', done: { friendship: 1 } }
+    ]
+  },
+  // A cup of sugar.
+  {
+    id: 'borrow', icon: '🥣', kind: 'knock', where: ['home'], hours: [9, 20],
+    who: { from: 'neighbours', keen: true, traits: { foodie: 2, messy: 1.5 } },
+    choices: [
+      { id: 'give', icon: '🥄', done: { friendship: 5, moodlet: 'goodDeed' } },
+      { id: 'bake', icon: '🧁', done: { friendship: 8, needs: { fun: 20, social: 20, hunger: 15 }, moodlet: 'cake', count: 'cook' } },
+      { id: 'out', icon: '🤷', done: { friendship: 1 } }
+    ]
+  },
+  // Someone they hardly know drops by to say hello.
+  {
+    id: 'hello', icon: '👋', kind: 'knock', where: ['home'], hours: [10, 19], weight: 1.1, traits: { shy: 0.6 },
+    who: { from: 'anyone', free: true, keen: true, traits: { chatty: 2.5, cheerful: 1.5, shy: 0.2 } },
+    when: (c) => c.friends < 6,
+    choices: [
+      { id: 'in', icon: '☕', done: { friendship: 8, needs: { social: 25 }, invite: true } },
+      { id: 'door', icon: '💬', done: { friendship: 4, needs: { social: 15 } } }
+    ]
   }
 ];
 // A power cut (the `powerCut` outcome): what can't be done at home until it is back.
@@ -297,6 +371,8 @@ export function whoWeight(spec, p) {
   if (spec.from === 'colleagues' && !p.colleague) return 0;
   if (spec.house && !p.house) return 0;
   if (spec.friendship != null && p.friendship < spec.friendship) return 0;
+  if (spec.romance != null && (p.romance ?? 0) < spec.romance) return 0;
+  if (spec.free && !p.free) return 0;
   let k = 1 + Math.max(0, p.friendship) / 40;
   for (const t of p.traits ?? []) k *= spec.traits?.[t] ?? 1;
   return k;
@@ -311,7 +387,9 @@ export const pickWho = (e, people, random = Math.random) =>
   e.who ? pick(people.map((p) => [p, whoWeight(e.who, p)]).filter(([, k]) => k > 0), random)?.life ?? null : null;
 // An event to happen now (and who it is about), or null. `people` as for pickWho.
 export function pickEvent(c, people, random = Math.random) {
-  const pool = EVENTS.map((e) => [e, weightOf(e, c)]).filter(([e, k]) => k > 0 && (!e.who || people.some((p) => whoWeight(e.who, p) > 0)));
+  const keenest = (e) => Math.max(0, ...people.map((p) => whoWeight(e.who, p)));
+  const pool = EVENTS.map((e) => [e, weightOf(e, c) * (e.who?.keen ? Math.min(3, Math.max(0.4, keenest(e) / 2)) : 1)])
+    .filter(([e, k]) => k > 0 && (!e.who || keenest(e) > 0));
   const e = pool.length ? pick(pool, random) : null;
   return e ? { event: e, who: pickWho(e, people, random) } : null;
 }

@@ -105,7 +105,9 @@ export const MOODLETS = {
   standingOvation: { emotion: 'happy', weight: 3, icon: '👏', minutes: 1440 },
   gaveItAGo: { emotion: 'happy', weight: 1, icon: '🎤', minutes: 360 },
   picnic: { emotion: 'happy', weight: 2, icon: '🧺', minutes: 300 },
-  birdsong: { emotion: 'happy', weight: 1, icon: '🐦', minutes: 120 }
+  birdsong: { emotion: 'happy', weight: 1, icon: '🐦', minutes: 120 },
+  helpedOut: { emotion: 'happy', weight: 2, icon: '🤝', minutes: 360 },
+  juicyNews: { emotion: 'happy', weight: 1, icon: '🗞️', minutes: 120 }
 };
 
 export const EMOTIONS = {
