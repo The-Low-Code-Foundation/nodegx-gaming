@@ -58,7 +58,13 @@ export const SHOP = [
   { id: 'bushyPlant', kind: 'lovely', icon: '🌿', price: 25, model: 'Houseplant_5', fit: 0.8, use: { decor: true, trim: 0.5 }, beauty: 1 },
   { id: 'flowerPot', kind: 'lovely', icon: '🌺', price: 25, model: 'Houseplant_7', fit: 0.7, use: { decor: true, trim: 0.5 }, beauty: 1 },
   { id: 'lamp2', kind: 'lovely', icon: '💡', price: 35, model: 'Light_Floor3', fit: 1.5, use: { decor: true, trim: 0.6 }, beauty: 1 },
-  { id: 'lamp3', kind: 'lovely', icon: '🏮', price: 35, model: 'Light_Stand1', fit: 1.5, use: { decor: true, trim: 0.6 }, beauty: 1 }
+  { id: 'lamp3', kind: 'lovely', icon: '🏮', price: 35, model: 'Light_Stand1', fit: 1.5, use: { decor: true, trim: 0.6 }, beauty: 1 },
+  // Round 16, phase 5 (skills.mjs): things for the new skills, made in code (world.mjs MADE). `skills`: only in the
+  // shop when the skills are on (a real game, or `?skills=1`).
+  { id: 'easel', kind: 'learn', icon: '🎨', price: 70, made: 'EASEL', fit: 1.72, use: { act: 'interact', label: 'Paint', offers: 'easel' }, beauty: 1, skills: true },
+  { id: 'keyboard', kind: 'learn', icon: '🎹', price: 110, made: 'KEYBOARD', fit: 0.87, use: { act: 'interact', label: 'Play music', offers: 'keyboard' }, skills: true },
+  { id: 'planter', kind: 'learn', icon: '🌱', price: 45, made: 'PLANTER', fit: 0.68, use: { act: 'interact', label: 'Garden', offers: 'planter' }, beauty: 1, skills: true },
+  { id: 'workbench', kind: 'learn', icon: '🔧', price: 90, made: 'WORKBENCH', fit: 1.65, use: { act: 'interact', label: 'Tinker', offers: 'workbench' }, skills: true }
 ];
 
 export const shopItem = (id) => SHOP.find((s) => s.id === id);

@@ -49,6 +49,14 @@ export const WANTS = [
   { id: 'cuddleBaby', icon: '👶', did: 'cuddleBaby', points: 30, goals: { family: 3 }, when: (c) => c.babies > 0 },
   // Round 16, phase 3.4: the weather's (weather.mjs).
   { id: 'snowman', icon: '⛄', did: 'buildSnowman', points: 40, base: 4, when: (c) => c.weather === 'snow' },
+  // Round 16, phase 5: the skills (skills.mjs; `c.skills`: on, and the levels), and the things they are learnt on.
+  { id: 'workout', icon: '🏋️', did: 'workout', points: 20, traits: { sporty: 3, lazy: 0.3 }, when: (c) => !!c.skills && (c.has.rug || c.has.rug2 || c.has.rug3) },
+  { id: 'paint', icon: '🎨', did: 'paint', points: 30, traits: { romantic: 2, messy: 1.5, shy: 1.3 }, goals: { artist: 4 }, when: (c) => !!c.skills && c.has.easel },
+  { id: 'playMusic', icon: '🎹', did: 'playMusic', points: 30, traits: { cheerful: 1.5, joker: 1.3, nightOwl: 1.3 }, goals: { artist: 2 }, when: (c) => !!c.skills && c.has.keyboard },
+  { id: 'tendGarden', icon: '🌱', did: 'tendGarden', points: 25, traits: { neat: 1.5, foodie: 1.5, lazy: 0.5 }, when: (c) => !!c.skills && c.has.planter },
+  { id: 'tinker', icon: '🔧', did: 'tinker', points: 25, traits: { neat: 1.5, clumsy: 0.5 }, when: (c) => !!c.skills && c.has.workbench },
+  { id: 'practiseCharm', icon: '🪞', did: 'practiseCharm', points: 20, traits: { chatty: 2, shy: 1.2 }, goals: { popular: 2 }, when: (c) => !!c.skills && (c.has.drawers || c.has.wideDrawers) },
+  { id: 'levelUp', icon: '⬆️', did: 'levelUp', points: 50, base: 0.8, traits: { bookworm: 2 }, goals: { chef: 2, artist: 2, career: 1.5 }, when: (c) => !!c.skills },
   // Round 16, phase 4: given by the news (someone new in the street, townlife.mjs), never rolled (`base` 0). Done by
   // going round to the newcomer's house (the page counts 'welcome').
   { id: 'welcome', icon: '👋', did: 'welcome', points: 40, base: 0 },

@@ -8,8 +8,9 @@
 //   ownHouse       they have bought a house                beauty       how lovely the home is (shop.mjs `beauty`)
 //   things         things bought for the home              has          { shop id: true } what stands in the home
 //   science        their science level                     tally        { what: times } what they have done (Life `count`)
+//   skills         round 16, phase 5: { skill: level } (skills.mjs; cooking, painting…)
 // Words: strings.mjs `goal.<id>`, `goal.<id>.does`, `goal.<id>.<step>`.
-// Phase 5 adds skills (cooking, painting, music…): the artist waits for it (`later`), and the chef's steps count meals.
+// Phase 5 adds skills (skills.mjs): the master chef climbs the cooking skill (meals cooked are what teach it).
 export const GOALS = [
   {
     id: 'family', icon: '👨‍👩‍👧',
@@ -59,11 +60,11 @@ export const GOALS = [
     id: 'chef', icon: '👩‍🍳',
     steps: [
       { id: 'firstMeal', icon: '🍳', test: (f) => (f.tally.cook ?? 0) >= 1 },
-      { id: 'fiveMeals', icon: '🍲', test: (f) => (f.tally.cook ?? 0) >= 5 },
+      { id: 'cookingThree', icon: '🍲', test: (f) => (f.skills?.cooking ?? 0) >= 3 },
       { id: 'bigOven', icon: '🔥', test: (f) => !!f.has.bigOven },
-      { id: 'fifteenMeals', icon: '🥘', test: (f) => (f.tally.cook ?? 0) >= 15 },
-      { id: 'dinnerParty', icon: '🍽️', test: (f) => (f.tally.hostParty ?? 0) >= 1 && (f.tally.cook ?? 0) >= 20 },
-      { id: 'thirtyMeals', icon: '⭐', test: (f) => (f.tally.cook ?? 0) >= 30 }
+      { id: 'cookingFive', icon: '🥘', test: (f) => (f.skills?.cooking ?? 0) >= 5 },
+      { id: 'dinnerParty', icon: '🍽️', test: (f) => (f.tally.hostParty ?? 0) >= 1 && (f.skills?.cooking ?? 0) >= 6 },
+      { id: 'masterChef', icon: '⭐', test: (f) => (f.skills?.cooking ?? 0) >= 8 }
     ]
   },
   // Waits for phase 5 (skills from objects: an easel, painting): not offered until then.

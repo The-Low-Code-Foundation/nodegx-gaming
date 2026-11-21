@@ -26,7 +26,7 @@ import { buildPlace, STATIONS, MADE, measure, ghost, placementOf, houseFurniture
 import { Sim } from '../sim.mjs';
 import { Life, SPEEDS, SKILL_LEVELS, skillLevel } from './life.mjs';
 import { NEEDS, MOODLETS, EMOTIONS } from './needs.mjs';
-import { offersFor, offerById } from './actions.mjs';
+import { OFFERS, offersFor, offerById } from './actions.mjs';
 import { INTERACTIONS, interactionById, bondOf, peekBond, lockOf, friendshipLevel, romanceLevel, allBonds, setBonds, spouseOf } from './social.mjs';
 import { CAREERS, START_MONEY, TASK, weekday, levelOfJob, nextLevel, careerOf } from './work.mjs';
 import { YEARS, DEFAULT_YEAR, ask, record, topicsFor } from './school/school.mjs';
@@ -49,6 +49,7 @@ import { GOALS, goalById, openGoals, rollGoal, stepsDone, STEP_POINTS, GOAL_POIN
 import { WANTS, WANT_SLOTS, WANT_LASTS, rollWant, wantById } from './wants.mjs';
 import { DECK, EVENTS, POWER_CUT, eventById, pickEvent, pickWho, outcomeOf } from './events.mjs';
 import { WEATHER, rollWeather } from './weather.mjs';
+import { SKILLS, SKILL_IDS, addSkills, levelsOf, FIXING } from './skills.mjs';
 import { TOWNLIFE, dayOfTown, startTown, priceFor, REACH, pickReach, sociable, DRAWN } from './townlife.mjs';
 
 const params = new URLSearchParams(location.search);
@@ -163,6 +164,10 @@ const quick = ['seed', 'person', 'flatmate'].some((k) => params.has(k)) && !para
 const saving = !quick || params.has('save');
 // Round 16, phase 2: dreams, wishes and happy points (goals.mjs, wants.mjs). Off on a test's URL unless asked for.
 const aimsOn = !quick || params.has('goal') || params.has('goals');
+// Round 16, phase 5: skills from objects (skills.mjs), not on a test URL unless `?skills=1`: the skill gains of the
+// things already in the game, the new things to do and to buy. Off, seeded free will chooses as it did.
+const skillsOn = !quick || params.has('skills');
+if (skillsOn) addSkills(OFFERS, INTERACTIONS);
 // Round 16, phase 3: things happen (events.mjs), not on a test URL unless `?events=1` (or `?event=<id>`: that one, at
 // once). The deck's state: when it is next looked at, what came up when, today's count, a party you were asked to.
 const eventsOn = !quick || params.has('events') || params.has('event');
@@ -1516,7 +1521,7 @@ function openMenu(item, x, y, point = null) {
     Object.entries(o.advertises ?? o.gives ?? {})
       .filter(([, v]) => v > 0)
       .map(([id]) => NEEDS.find((n) => n.id === id).icon)
-      .join('') + (o.skill ? '🔬' : '');
+      .join('') + (o.skill ? [...new Set(Object.keys(o.skill).map((id) => SKILL_ICONS[id] ?? '🔬'))].join('') : '');
   // A work station says what its job is and the subject it asks.
   const st = item?.use?.station;
   const baby = item?.baby;
@@ -1672,7 +1677,7 @@ function renderPeople() {
 // ---- the panels ----
 const barColour = (v) => (v > 60 ? '#4caf50' : v > 30 ? '#e6b729' : '#e05a47');
 $('needs').innerHTML = NEEDS.map((n) => `<div class="need"><span class="icon">${n.icon}</span><span>${t(`need.${n.id}`)}</span><div class="bar"><i id="need-${n.id}"></i></div></div>`).join('');
-const SKILL_ICONS = { science: '🔬', maths: '🔢', geography: '🌍', french: '📝', english: '☎️', history: '🏺' };
+const SKILL_ICONS = { science: '🔬', maths: '🔢', geography: '🌍', french: '📝', english: '☎️', history: '🏺', ...Object.fromEntries(SKILL_IDS.map((id) => [id, SKILLS[id].icon])) };
 // ---- dreams (round 16, phase 2: goals.mjs) ----
 // What a dream's steps are tested on (goals.mjs, its top): a Sim's friends and romances, the household, the home.
 function factsOf(l) {
@@ -1694,6 +1699,8 @@ function factsOf(l) {
     things: extras().length,
     has,
     science: skillLevel(l.skills.science ?? 0),
+    // Round 16, phase 5: every skill's level (skills.mjs).
+    skills: levelsOf(l.skills, skillLevel),
     tally: l.tally
   };
 }
@@ -1752,7 +1759,7 @@ function openGoalPicker(l, done = null) {
 // after a day. Math.random rolls them, never the seeded dice (a test's free will must choose as it did).
 function wantCtx(l) {
   const f = factsOf(l);
-  return { traits: l.traits, likes: l.likes, goal: l.goal?.id ?? null, needs: l.needs, hour: (minutes % 1440) / 60, money: household.money, job: f.job, friends: f.friends, romance: f.romance, babies: f.babies, has: f.has, weather: weatherNow(), off: offNow() };
+  return { traits: l.traits, likes: l.likes, goal: l.goal?.id ?? null, needs: l.needs, hour: (minutes % 1440) / 60, money: household.money, job: f.job, friends: f.friends, romance: f.romance, babies: f.babies, has: f.has, weather: weatherNow(), off: offNow(), skills: skillsOn ? f.skills : null };
 }
 function wantsTick() {
   if (!aimsOn) return;
@@ -2007,8 +2014,10 @@ function openEvent(e, who = null, l = sel) {
     b.onclick = () => {
       const ch = shown[b.dataset.i];
       if (ch.cost) household.money -= ch.cost;
-      const { result, out } = outcomeOf(ch, l.kit);
+      const { result, out } = outcomeOf(ch, l.kit, Math.random, skillsOn ? levelsOf(l.skills, skillLevel) : {});
       const bits = eventOutcome(l, e, who, mate, out);
+      // Round 16, phase 5: a try at fixing something teaches handiness (more when it works).
+      if (skillsOn && ch.skill) for (const id of Object.keys(ch.skill)) l.learn(id, FIXING.learn[result === 'good' ? 'good' : 'bad']);
       $('card').querySelector('.choices').outerHTML = `<div class="result ${result === 'bad' ? 'no' : 'yes'}"><b>${t(`event.${e.id}.${ch.id}.${result}`, vars)}</b>${bits.length ? `<div class="bits">${bits.join(' · ')}</div>` : ''}</div>
         <div class="actions"><button id="card-close" class="go">${t('event.ok')}</button></div>`;
       $('card-close').onclick = closeCard;
@@ -2372,7 +2381,7 @@ function openShop() {
         return `<div class="offer"><div class="big">${s.icon}</div><div><b>${t(`shop.${id}`)}${n > 1 ? ` ×${n}` : ''}</b><div>${t(`shop.${id}.does`)}</div></div>
           <button class="go" data-unbox="${id}">${t('ui.shop.unbox')}</button></div>`;
       }).join('')
-    : SHOP.filter((s) => s.kind === shopTab)
+    : SHOP.filter((s) => s.kind === shopTab && (!s.skills || skillsOn))
     .map((s) => {
       const short = household.money < s.price;
       return `<div class="offer"><div class="big">${s.icon}</div><div><b>${t(`shop.${s.id}`)}</b><div>${t(`shop.${s.id}.does`)}${s.beauty ? ` · 🌸 ${t('ui.shop.lovely')}` : ''}</div></div>
@@ -2822,6 +2831,8 @@ window.__life = {
   factsOf, checkGoals, openGoalPicker, aimsOn, wantsTick, wantCtx, wished, openRewards, buyReward, diary, openDiary, milestone,
   // Round 16, phase 3.
   eventsOn, deck, eventsTick, openEvent, eventCtx, eventPeople, EVENTS, eventById, lastEvent: null, openMenu, offerWhy,
+  // Round 16, phase 5.
+  skillsOn, SKILLS, placeExtra, spotFor, shopItem,
   // Round 16, phase 4.
   townLifeOn, townLife, townLifeTick, playTownDay, TOWNLIFE, babiesAt, newsText, npcs, openNews, reachTick, REACH, DRAWN, lastReach: null,
   weatherNow, weatherTick, get weather() { return weather && { ...weather }; }, set weatherId(id) { weather = { day: Math.floor(minutes / 1440), id, told: true }; }, snowmen, weatherFx, ducks,

@@ -134,7 +134,7 @@ export const offerById = (itemName, id) => (OFFERS[itemName] ?? []).find((o) => 
 // The icon an action shows in the to-do list: the need it is mostly for.
 export function offerIcon(offer, needIcon) {
   if (offer.icon) return offer.icon;
-  if (offer.skill) return '🔬';
+  if (offer.skill?.science) return '🔬';
   if (offer.act === 'walk') return '👣';
   const [best] = Object.entries(offer.advertises ?? offer.gives ?? {}).sort((a, b) => b[1] - a[1]);
   return best ? needIcon(best[0]) : '•';

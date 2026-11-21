@@ -543,7 +543,9 @@ export class Life {
     p.before = { ...d.other.needs };
     // Round 16: and their traits (a joker's jokes land; a grumpy Sim is hard to please), within the usual bounds.
     const base = chanceOf(d.offer, bondOf(this, d.other), d.other.mood.emotion);
-    d.ok = this.random() < (base >= 1 ? 1 : Math.max(0.05, Math.min(0.97, base + chanceBonus(this.kit, d.other.kit ?? [], d.offer.id))));
+    // Round 16, phase 5: charm (skills.mjs) makes a friendly thing a little likelier to go well, a point a level.
+    const charm = d.offer.skill?.charm ? skillLevel(this.skills.charm ?? 0) * 0.01 : 0;
+    d.ok = this.random() < (base >= 1 ? 1 : Math.max(0.05, Math.min(0.97, base + charm + chanceBonus(this.kit, d.other.kit ?? [], d.offer.id))));
     // Wedding clothes on (round 12), for as long as it goes on.
     if (d.offer.dressUp) this.onDressUp?.([this, d.other], true);
     d.beat = 0;
@@ -620,6 +622,8 @@ export class Life {
       if (ok && ix.after === 'moveIn') lead.moveIn(partner);
       if (ok && ix.after === 'baby') lead.haveBaby(partner);
       if (ok && ix.after === 'marry') lead.marry(partner);
+      // Round 16, phase 5 (skills.mjs SOCIAL_CHARM): charm, for the one who started it.
+      if (ok && ix.skill) for (const [id, pts] of Object.entries(ix.skill)) lead.learn(id, pts * done);
     }
     for (const kind of ['friendship', 'romance'])
       if (now[kind] !== was[kind]) lead.events.push({ key: `ui.bond.${kind}`, vars: { a: lead.name, b: partner.name, level: `${kind}.${now[kind]}` } });
@@ -689,7 +693,8 @@ export class Life {
           score += urge(v) - urge(Math.min(100, v + (rate * offer.minutes) / 60));
         }
         // Studying gives nothing a body needs; a Sim in a good mood with nothing pressing likes to.
-        if (offer.skill && this.mood.emotion.endsWith('appy')) score += 0.04;
+        // (Round 16, phase 5: the subjects only, so the new skills leave seeded free will as it was.)
+        if (offer.skill?.science && this.mood.emotion.endsWith('appy')) score += 0.04;
         // Round 16: what they like doing (traits.mjs `likes`), and their favourite (likes.mjs).
         score *= likingOf(this.traits, offer.id) * keenOn(this.likes, offer.id);
         const far = item ? item.spot.distanceTo(this.sim.position) : 0;
@@ -729,7 +734,7 @@ export class Life {
     const relief = ([id, rate]) => urge(this.needs[id]) - urge(Math.min(100, this.needs[id] + (rate * pick.offer.minutes) / 60));
     // Work at the desk helps no need (round 9): no reason but the job, and its own icon.
     const why = only ?? Object.entries(pick.offer.advertises ?? pick.offer.gives).sort((a, b) => relief(b) - relief(a))[0]?.[0] ?? null;
-    this.think(pick.offer.skill ? '🔬' : why ? needIcon(why) : pick.offer.icon ?? '💭', `action.${pick.offer.id}`);
+    this.think(pick.offer.skill?.science ? '🔬' : pick.offer.skill && pick.offer.icon ? pick.offer.icon : why ? needIcon(why) : pick.offer.icon ?? '💭', `action.${pick.offer.id}`);
     this.start({ offer: pick.offer, item: pick.item, other: pick.other, by: 'self', why });
   }
 
@@ -770,7 +775,7 @@ export class Life {
   }
 
   learn(skill, points) {
-    points *= learnOf(this.kit);
+    points *= learnOf(this.kit, skill);
     const was = skillLevel(this.skills[skill] ?? 0);
     this.skills[skill] = (this.skills[skill] ?? 0) + points;
     const now = skillLevel(this.skills[skill]);
@@ -778,6 +783,8 @@ export class Life {
       this.addMoodlet('learned');
       this.events.push({ key: 'ui.levelUp', vars: { name: this.name, level: now, skill: `skill.${skill}` } });
       this.cheerLeft = 3;
+      // Round 16, phase 5: a level up is something done (wishes, dreams).
+      this.count('levelUp');
     }
   }
 

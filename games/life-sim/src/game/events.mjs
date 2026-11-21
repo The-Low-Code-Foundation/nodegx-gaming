@@ -28,6 +28,7 @@ export const DECK = { perDay: 2.5, every: 30, gap: 150, from: 8 * 60, to: 22 * 6
 //     id, icon, cost (coins, paid when chosen: greyed when short), when (c) → false: not offered,
 //     later     a phase number: shown greyed, "when that comes" (adopting the cat waits for pets)
 //     chance    how likely it goes well (dice); traits { trait: +p }; then `good` and `bad` outcomes
+//     skill     round 16, phase 5 (skills.mjs): { skill: +p a level } (handiness for fixing things); trying teaches it
 //     done      the outcome when there are no dice
 //   an outcome: money (coins), needs { need: +n }, moodlet (theirs), whoMoodlet, mateMoodlet, friendship (with who),
 //             romance (with who), mateFriendship, points (happy points), count (an id for the tally: wishes and
@@ -66,13 +67,13 @@ export const EVENTS = [
   },
 
   // ---- 3.2: gentle trouble (a hassle, soon over) ----
-  // The loo won't flush (a hassle: not again for six days). Fixing it is the dice (phase 5's handiness skill will be the dice then; for now, who they are).
+  // The loo won't flush (a hassle: not again for six days). Fixing it is the dice: who they are, and (phase 5) how handy.
   {
     id: 'loo', icon: '🚽', where: ['home'], hours: [7, 22], weight: 0.8, again: 6,
     who: { from: 'neighbours' },
     choices: [
       { id: 'plumber', icon: '📞', cost: 30, done: { moodlet: 'sorted' } },
-      { id: 'fix', icon: '🔧', chance: 0.5, traits: { clumsy: -0.2, neat: 0.1, bookworm: 0.1 }, good: { moodlet: 'handy', points: 30 }, bad: { moodlet: 'soggy', money: -30 } },
+      { id: 'fix', icon: '🔧', chance: 0.5, traits: { clumsy: -0.2, neat: 0.1, bookworm: 0.1 }, skill: { handiness: 0.07 }, good: { moodlet: 'handy', points: 30 }, bad: { moodlet: 'soggy', money: -30 } },
       { id: 'askWho', icon: '🏡', done: { friendship: 4, needs: { bladder: 100 }, moodlet: 'relief' } }
     ]
   },
@@ -89,7 +90,7 @@ export const EVENTS = [
   {
     id: 'tap', icon: '🚰', where: ['home'], hours: [8, 22], weight: 0.7, again: 5, traits: { neat: 1.5 },
     choices: [
-      { id: 'fix', icon: '🔧', chance: 0.6, traits: { clumsy: -0.25, neat: 0.1 }, good: { moodlet: 'handy', points: 20 }, bad: { moodlet: 'soggy' } },
+      { id: 'fix', icon: '🔧', chance: 0.6, traits: { clumsy: -0.25, neat: 0.1 }, skill: { handiness: 0.07 }, good: { moodlet: 'handy', points: 20 }, bad: { moodlet: 'soggy' } },
       { id: 'plumber', icon: '📞', cost: 15, done: { moodlet: 'sorted' } },
       { id: 'bucket', icon: '🪣', done: { needs: { fun: -5 } } }
     ]
@@ -128,7 +129,7 @@ export const EVENTS = [
     id: 'printer', icon: '🖨️', where: ['office'], hours: [9, 17],
     who: { from: 'colleagues' },
     choices: [
-      { id: 'fix', icon: '🔧', chance: 0.5, traits: { bookworm: 0.2, clumsy: -0.2 }, good: { moodlet: 'handy', points: 30 }, bad: { moodlet: 'oops' } },
+      { id: 'fix', icon: '🔧', chance: 0.5, traits: { bookworm: 0.2, clumsy: -0.2 }, skill: { handiness: 0.07 }, good: { moodlet: 'handy', points: 30 }, bad: { moodlet: 'oops' } },
       { id: 'askWho', icon: '🙋', done: { friendship: 4 } },
       { id: 'later', icon: '🤷', done: {} }
     ]
@@ -433,14 +434,15 @@ export function pickEvent(c, people, random = Math.random) {
   return e ? { event: e, who: pickWho(e, people, random) } : null;
 }
 // How likely a choice is to go well for a Sim with these traits.
-export function chanceOf(choice, traits = []) {
+export function chanceOf(choice, traits = [], levels = {}) {
   let p = choice.chance ?? 1;
   for (const t of traits) p += choice.traits?.[t] ?? 0;
+  for (const [id, per] of Object.entries(choice.skill ?? {})) p += per * (levels[id] ?? 0);
   return Math.max(0.05, Math.min(0.95, p));
 }
 // How a choice turned out: { result: 'good' | 'bad' | 'done', out (the outcome) }.
-export function outcomeOf(choice, traits = [], random = Math.random) {
+export function outcomeOf(choice, traits = [], random = Math.random, levels = {}) {
   if (choice.chance == null) return { result: 'done', out: choice.done ?? {} };
-  const good = random() < chanceOf(choice, traits);
+  const good = random() < chanceOf(choice, traits, levels);
   return { result: good ? 'good' : 'bad', out: (good ? choice.good : choice.bad) ?? {} };
 }

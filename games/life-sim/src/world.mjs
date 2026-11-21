@@ -4,6 +4,7 @@
 // and the room, the Sims' "walls down"), the things a Sim can use and where it stands to use them, and a walk grid.
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { dressHome, dressHouse, dressOffice, dressPark, dressStreet, pondLife, lampGlow, streetLabel } from './dressing.mjs';
 import { kindOf } from './game/shop.mjs';
 
@@ -297,7 +298,41 @@ const COT = madeModel([
   cyl(0.012, 0.62, -0.62, 1.24, -0.3, cotWhite), box(0.02, 0.02, 0.62, -0.62, 1.54, -0.02, cotWhite),
   ...[[0.05, 0xf2c43a], [0.2, 0x7fb8e8], [0.35, 0xf29ab8]].map(([z, c]) => cyl(0.035, 0.012, -0.62, 1.38, z - 0.05, new THREE.MeshStandardMaterial({ color: c, roughness: 0.6 })))
 ], 1.55);
-export const MADE = { CAMP_BED, FRIDGE, TV, TELESCOPE, COT };
+// Round 16, phase 5 (skills.mjs): four things to buy for the new skills, made here (there is no model for them in
+// the furniture pack). Each faces +Z, where the Sim stands.
+const mat5 = (color, roughness = 0.6) => new THREE.MeshStandardMaterial({ color, roughness });
+// Their boxes merged into one mesh per material (a keyboard's keys are one draw call, not ten).
+function merged(parts) {
+  const by = new Map();
+  for (const p of parts) by.set(p.material, [...(by.get(p.material) ?? []), p.geometry.clone().applyMatrix4(p.matrix)]);
+  return [...by].map(([material, list]) => ({ geometry: mergeGeometries(list), material, matrix: new THREE.Matrix4() }));
+}
+const [canvasWhite, soil, leaf, keysWhite, keysBlack, steel] = [mat5(0xfaf7ee, 0.9), mat5(0x5a3e2b, 1), mat5(0x5aa84a, 0.8), mat5(0xf6f6f2, 0.4), mat5(0x1c1c20, 0.4), mat5(0x8a9098, 0.4)];
+// An easel: three legs, a ledge, and a canvas with a painting begun (a sky, a hill, a sun).
+const EASEL = madeModel(merged([
+  box(0.04, 1.7, 0.04, -0.32, 0.85, 0.05, wood), box(0.04, 1.7, 0.04, 0.32, 0.85, 0.05, wood), box(0.04, 1.6, 0.04, 0, 0.8, -0.35, wood),
+  box(0.8, 0.04, 0.1, 0, 0.82, 0.1, wood), box(0.7, 0.6, 0.03, 0, 1.15, 0.1, canvasWhite),
+  box(0.66, 0.26, 0.005, 0, 1.3, 0.117, mat5(0x8cc4e8)), box(0.66, 0.2, 0.005, 0, 1.0, 0.117, mat5(0x6aa84a)), box(0.1, 0.1, 0.006, 0.18, 1.33, 0.12, mat5(0xf2c94c))
+]), 1.72);
+// A keyboard on a stand, with a stool's worth of room in front.
+const KEYBOARD = madeModel(merged([
+  box(0.04, 0.75, 0.04, -0.45, 0.375, 0, metal), box(0.04, 0.75, 0.04, 0.45, 0.375, 0, metal), box(0.95, 0.03, 0.06, 0, 0.3, 0, metal),
+  box(1.1, 0.08, 0.32, 0, 0.79, 0, keysBlack), box(1.0, 0.025, 0.14, 0, 0.84, 0.07, keysWhite),
+  ...[-0.42, -0.34, -0.22, -0.14, -0.06, 0.06, 0.14, 0.26, 0.34, 0.42].map((x) => box(0.035, 0.025, 0.08, x, 0.86, 0.04, keysBlack))
+]), 0.87);
+// A raised planter of vegetables: a wooden box of soil, rows of leaves, a few carrots' tops and tomatoes.
+const PLANTER = madeModel(merged([
+  box(1.2, 0.45, 0.6, 0, 0.225, 0, wood), box(1.12, 0.04, 0.52, 0, 0.45, 0, soil),
+  ...[-0.42, -0.21, 0, 0.21, 0.42].flatMap((x, k) => [box(0.12, 0.14 + (k % 2) * 0.06, 0.1, x, 0.53, -0.13, leaf), box(0.1, 0.1, 0.1, x + 0.05, 0.51, 0.13, leaf)]),
+  ...[[-0.3, 0.13], [0.12, 0.15], [0.36, -0.1]].map(([x, z]) => box(0.06, 0.06, 0.06, x, 0.6, z, mat5(0xd8402a, 0.4)))
+]), 0.68);
+// A workbench: a sturdy top, a shelf, a vice, a hammer and a saw on the wall board behind.
+const WORKBENCH = madeModel(merged([
+  box(1.4, 0.06, 0.6, 0, 0.88, 0, wood), ...[[-0.65, -0.25], [0.65, -0.25], [-0.65, 0.25], [0.65, 0.25]].map(([x, z]) => box(0.06, 0.86, 0.06, x, 0.43, z, wood)),
+  box(1.3, 0.04, 0.5, 0, 0.25, 0, wood), box(1.4, 0.7, 0.03, 0, 1.3, -0.29, mat5(0xc8a878)),
+  box(0.14, 0.1, 0.1, 0.5, 0.96, 0.2, steel), box(0.05, 0.3, 0.02, -0.3, 1.35, -0.27, wood), box(0.12, 0.05, 0.03, -0.3, 1.5, -0.26, steel), box(0.36, 0.12, 0.01, 0.2, 1.3, -0.27, steel)
+]), 1.65);
+export const MADE = { CAMP_BED, FRIDGE, TV, TELESCOPE, COT, EASEL, KEYBOARD, PLANTER, WORKBENCH };
 
 // A sign over a work station: the subject's icon and name, always facing the camera.
 function sign(text, icon, colour) {
