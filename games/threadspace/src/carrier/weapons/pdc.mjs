@@ -2,6 +2,9 @@
 // shells for fighters), their rounds and bursts, and the raider's own point defence against ours. Part of `Weapons` (weapons.mjs).
 
 import { THREE, at, clamp, DEG, _a, _b, _c, _d, _e, _f, _g, _q, _m, Z, turn, leadAccel, ROUND_MAX } from './shared.mjs';
+import { LOOK, streakMatrix } from './tracers.mjs';
+
+const _col = new THREE.Color();
 
 /** Mixed into `Weapons` (weapons.mjs). */
 export const pdcParts = {
@@ -147,6 +150,13 @@ export const pdcParts = {
       if (rd) rd.fdmg = P.fighterDamage ?? 0; // what it does to a bandit it passes close to
       this.plant?.addHeat(P.heat);
     }
+    // The muzzle's flicker while it hoses (a flash every few rounds, not every one: they are hundreds a second).
+    if ((g.flashT = (g.flashT ?? 0) - dt) <= 0) {
+      g.flashT = 0.06 + 0.03 * Math.random();
+      const m = _d.copy(pivot).addScaledVector(want, 3.8);
+      this.flash(m, 1.4 + Math.random(), '#ffe0a0', 0.045);
+      if (Math.random() < 0.4) this.sparkBurst(m, 2, { dir: want, spread: 0.2, speed: 90, v0: this.body?.vel, life: 0.25, color: '#ffd080', w: 0.1 });
+    }
     if ((g.soundT = (g.soundT ?? 0) - dt) <= 0) {
       g.soundT = 0.18;
       this.sfx?.play('hit', this.ear ? Math.min(900, this.ear.distanceTo(pivot) * 0.7) : 600);
@@ -173,7 +183,10 @@ export const pdcParts = {
       const rd = this.round(muzzle, _e.copy(d).multiplyScalar(P.speed).add(this.body.vel), 'ours', fuse);
       if (rd) rd.flak = true;
       this.plant?.addHeat(P.heat);
-      this.flash(muzzle, 2.2, '#ffd090', 0.07);
+      this.flash(muzzle, 3.2, '#ffd090', 0.08);
+      this.flash(_g.copy(muzzle).addScaledVector(d, 2.5), 1.6, '#ffffff', 0.04);
+      this.ring(muzzle, d, 6, '#ffc890', 0.2);
+      this.sparkBurst(muzzle, 5, { dir: d, spread: 0.25, speed: 110, v0: this.body?.vel, life: 0.35, color: '#ffb060', w: 0.14 });
       if (P.shellMass) this.recoil(muzzle, _e.copy(d).multiplyScalar(-P.speed * P.shellMass), 'flak');
       if ((g.soundT = (g.soundT ?? 0) - 1 / P.rate) <= 0) {
         g.soundT = 0.3;
@@ -202,9 +215,11 @@ export const pdcParts = {
       const k = Math.hypot(_f.x / (s[0] + F.burst), _f.y / (s[1] + F.burst), _f.z / (s[2] + F.burst));
       if (k < 1) this.raiderHit(p, F.raiderDamage, false, true);
     }
-    // The burst: a hot flash and a puff of dark smoke that hangs and spreads.
-    this.flash(p, 6, '#ffb060', 0.18);
-    this.flash(p, 2.5, '#ffffff', 0.05);
+    // The burst: a hot flash, its splinters flying out every way (the streaks), and a puff of gas that hangs and
+    // spreads.
+    this.flash(p, 7, '#ffb060', 0.2);
+    this.flash(p, 3, '#ffffff', 0.06);
+    this.sparkBurst(p, 26, { speed: 170, v0: this.body?.vel, life: 0.45, color: '#ffc070', w: 0.16, k: 1.6 });
     const G = this.gas, v0 = this.body?.vel;
     if (G) {
       for (let i = 0; i < 8; i++) {
@@ -301,16 +316,19 @@ export const pdcParts = {
         }
       }
       }
-      if (r.life <= 0) continue;
-      // A streak along its way past the carrier.
-      _a.subVectors(r.vel, this.body.vel);
-      const len = Math.min(_a.length() * 0.025, r.flak ? 14 : 26), w = r.flak ? 0.7 : 0.35;
-      _q.setFromUnitVectors(Z, _a.normalize());
-      _m.compose(r.pos, _q, _c.set(w, w, len));
-      M.setMatrixAt(n++, _m);
+      if (r.life <= 0 || !this.ear) continue;
+      // A tracer streak along its way as you see it (weapons/tracers.mjs), growing out of the muzzle.
+      r.age = (r.age ?? 0) + dt;
+      const K = r.flak ? LOOK.pdflak : r.side === 'ours' ? LOOK.pdc : LOOK.pdTheirs;
+      _a.subVectors(r.vel, this.fighter?.flying ? this.fighter.body.vel : this.body.vel);
+      const sp = _a.length();
+      if (sp > 1e-3) _a.multiplyScalar(1 / sp);
+      M.setMatrixAt(n, streakMatrix(_m, r.pos, _a, Math.min(sp * K.smear, K.max, sp * r.age + 0.5), K.w, this.ear));
+      M.setColorAt(n++, _col.set(K.color).multiplyScalar(K.k));
     }
     this.pdRounds = this.pdRounds.filter((r) => r.life > 0);
     M.count = n;
     M.instanceMatrix.needsUpdate = true;
+    if (M.instanceColor) M.instanceColor.needsUpdate = true;
   }
 };

@@ -10,7 +10,10 @@
 // - `dressKits(C, I, deck)`, at build time: the red extinguisher cabinets and yellow repair lockers along the passages,
 //   and the racks of kit just inside the rooms that keep it. Baked with the deck.
 // - `DamageControl`, at run time: raising a job, its fire or sparks or spray, the switchboard, the job card, the alarm
-//   and the call over the speakers, the clock and the result.
+//   and the call over the speakers, the clock and the result. What you see is hitfx.mjs's particles (blaze.mjs): a fire
+//   that burns where the shell came in if a hit started it, round and drifting where nothing weighs anything and licking
+//   upwards in the drums; the extinguisher's powder; the welder's arc and sparks (the `patch` kit is a welder and hull
+//   plates); a coolant leak's jet of droplets; a fault's bursts of sparks.
 //
 // A job's place is given as a compartment number, deck-frame-side, as on a real warship: 2-291-1 is deck 2, frame 291
 // (291 m aft of the bow), starboard (1; port is 2, the centreline 0).
@@ -19,6 +22,7 @@ import * as THREE from 'three';
 import { box, cyl, at, mat, mulberry } from '../util.mjs';
 import { drawSign } from '../decor.mjs';
 import { frameOf, sideOf, clear, xz } from './wayfinding.mjs';
+import { fireTick, sprayTick, weldTick, jetTick, zapTick } from './hitfx.mjs';
 
 // --- build time: where the kit is kept -------------------------------------------------------------------------------
 
@@ -131,17 +135,13 @@ function rack(C, I, c, k, kit, i) {
 
 // --- run time --------------------------------------------------------------------------------------------------------
 
-const FLAME = new THREE.MeshBasicMaterial({ color: '#ff7a20', transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false });
-const CORE = new THREE.MeshBasicMaterial({ color: '#ffd060', transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false });
-const SMOKE = new THREE.MeshBasicMaterial({ color: '#1a1a1c', transparent: true, opacity: 0.2, depthWrite: false });
-const SPARK = new THREE.MeshBasicMaterial({ color: '#cfe8ff', toneMapped: false });
-const SPRAY = new THREE.MeshBasicMaterial({ color: '#e8f0f8', transparent: true, opacity: 0.35, depthWrite: false });
-const POOL = new THREE.MeshLambertMaterial({ color: '#3a4a58', transparent: true, opacity: 0.55, depthWrite: false });
+const CHAR = new THREE.MeshBasicMaterial({ color: '#16130f', transparent: true, opacity: 0.85, depthWrite: false }); // what is burning, burnt
+const _h = new THREE.Vector3(), _f = new THREE.Vector3(), _d = new THREE.Vector3();
 const MARK = new THREE.MeshBasicMaterial({ color: '#ff3a3a', transparent: true, opacity: 0.8, toneMapped: false, depthTest: false });
 MARK.userData.uncut = true;
 
-const VERB = { fire: 'Put the fire out', electrical: 'Repair the fault', leak: 'Patch the leak' };
-const OUT = { fire: 'Fire out', electrical: 'Fault repaired', leak: 'Leak patched' };
+const VERB = { fire: 'Put the fire out', electrical: 'Repair the fault', leak: 'Weld the leak' };
+const OUT = { fire: 'Fire out', electrical: 'Fault repaired', leak: 'Leak welded shut' };
 
 export class DamageControl {
   /** `auto`: raise jobs by themselves while you walk. Each job is called out on the bus (`call`), and the announcer
@@ -196,15 +196,17 @@ export class DamageControl {
 
   // --- raising a job ---
 
-  /** A job a hit has started (integrity.mjs): raised now if nothing else is on, else as soon as the job in hand ends. */
-  queue(kind, where) {
+  /** A job a hit has started (integrity.mjs): raised now if nothing else is on, else as soon as the job in hand ends.
+   *  `opts.hole`: the hole it came in by (a fire burns there). */
+  queue(kind, where, opts) {
     if (!this.D?.kinds[kind]) return;
-    if (!this.job) return this.raise(kind, where);
-    if (!this.pending.some((p) => p.where === where)) this.pending.push({ kind, where });
+    if (!this.job) return this.raise(kind, where, opts);
+    if (!this.pending.some((p) => p.where === where)) this.pending.push({ kind, where, opts });
   }
 
-  /** Raises a job now: `kind` (a key of `damage.kinds`) and `where` (a room id) or chosen at random. */
-  raise(kind, where) {
+  /** Raises a job now: `kind` (a key of `damage.kinds`) and `where` (a room id) or chosen at random; `opts.hole`, a
+   *  hole drawn in that room: a fire burns at it. */
+  raise(kind, where, opts) {
     if (!this.D) return null;
     if (this.job) this.end(false, 'Stood down.', true);
     const kinds = Object.keys(this.D.kinds);
@@ -214,7 +216,16 @@ export class DamageControl {
     const room = where ? this.C.rooms.get(where) : rooms[Math.floor(this.rand() * rooms.length)];
     if (!room) return null;
     const I = this.C.interiorOf(room); // a drum room's: its segment's, in that segment's frame (drum.mjs)
-    const spot = kind === 'leak' ? this.leakSpot(room) : kind === 'electrical' ? this.wallSpot(room, I) : this.floorSpot(room, I);
+    let spot = kind === 'leak' ? this.leakSpot(room) : kind === 'electrical' ? this.wallSpot(room, I) : this.floorSpot(room, I);
+    // A fire a hit started burns at the hole it came in by (the floor spot is still drawn above, so the seeded randoms
+    // stay where they were). You fight it from a step back, on the deck below it.
+    const H = opts?.hole?.look;
+    if (kind === 'fire' && H && H.I === I && !opts.hole.sealed) {
+      const p = H.g.position, n = H.into, side = Math.abs(n.y) < 0.5 ? 1.6 : 0;
+      const ux = Math.min(room.x[1] - 0.6, Math.max(room.x[0] + 0.6, p.x + n.x * side));
+      const uz = Math.min(room.z[1] - 0.6, Math.max(room.z[0] + 0.6, p.z + n.z * side));
+      spot = { x: p.x, z: p.z, y: p.y - I.floorY, n: n.clone(), ux, uz, hole: opts.hole };
+    }
     const job = { kind, K, room, I, spot, t: 0, size: 1, progress: 0, isolated: false, idle: 0 };
     const drum = room.drum;
     job.code = drum ? `${room.half}${room.ring}-${String(room.seg).padStart(2, '0')}-${frameOf(this.L, spot.z)}` : `${room.deck}-${frameOf(this.L, spot.z)}-${Math.abs(spot.x) < 0.8 && room.x[0] < 0 && room.x[1] > 0 ? 0 : spot.x > 0 ? 1 : 2}`;
@@ -294,96 +305,73 @@ export class DamageControl {
     const g = new THREE.Group();
     g.userData.live = true;
     I.group.add(g);
-    const fx = { g, lights: [] };
-    const room = job.room;
+    const room = job.room, weight = !!room.drum; // only the drums have weight (design/ROADMAP.md, decision 2)
+    const fx = { g, B: this.C.blazes?.in(I.group) ?? null, weight, acc: {} };
     // This room's lamps, to flicker or darken (an electrical fault) and to put back afterwards.
     fx.lamps = I.lights.filter((l) => l.room === room.id);
     for (const l of fx.lamps) (l.dcBase ??= l.intensity), (l.dcColor ??= l.color.clone());
-    if (kind === 'fire') {
-      const f = new THREE.Group();
-      f.position.set(spot.x, I.floorY, spot.z);
-      for (let i = 0; i < 7; i++) {
-        const a = (i / 7) * Math.PI * 2, r = i ? 0.35 : 0;
-        const cone = new THREE.Mesh(new THREE.ConeGeometry(i ? 0.22 : 0.32, i ? 0.9 : 1.3, 7), i % 2 ? CORE : FLAME);
-        cone.position.set(Math.cos(a) * r, 0.45, Math.sin(a) * r);
-        cone.userData.k = 1 + i * 0.37;
-        f.add(cone);
-      }
-      f.add(at(box(1.1, 0.12, 1.1, '#1a1612'), 0, 0.06, 0)); // what is burning: a charred heap
-      g.add(f);
-      fx.flames = f;
-      const h = room.h ?? 3;
-      fx.smoke = at(box(room.x[1] - room.x[0] - 0.3, 0.6, room.z[1] - room.z[0] - 0.3, SMOKE.clone()), (room.x[0] + room.x[1]) / 2, I.floorY + h - 0.35, (room.z[0] + room.z[1]) / 2);
-      g.add(fx.smoke);
+    const lamp = (p, color) => {
       const anchor = new THREE.Object3D();
-      anchor.position.set(spot.x, I.floorY + 1.2, spot.z);
+      anchor.position.copy(p);
       g.add(anchor);
-      fx.light = { anchor, color: new THREE.Color('#ff7a30'), intensity: 30, distance: 12, decay: 1.6, room: room.id };
-      I.lights.push(fx.light);
+      const light = { anchor, color: new THREE.Color(color), intensity: 0, distance: 10, decay: 1.6, room: room.id };
+      I.lights.push(light);
+      return light;
+    };
+    if (kind === 'fire') {
+      // At a hole the scorch is already there; on the deck, a charred patch of whatever caught.
+      const n = spot.n ?? new THREE.Vector3(0, 1, 0);
+      const p = new THREE.Vector3(spot.x, I.floorY + (spot.y ?? 0.05), spot.z);
+      if (!spot.n) {
+        const ch = new THREE.Mesh(new THREE.CircleGeometry(0.9, 14), CHAR);
+        ch.rotation.x = -Math.PI / 2;
+        ch.position.set(spot.x, I.floorY + 0.03, spot.z);
+        g.add(ch);
+      }
+      fx.fire = { p, n, r: 0.5, size: 1, left: 1, weight, up: Math.max(0.5, (room.h ?? 3) - (spot.y ?? 0)), wind: null, acc: {} };
+      fx.light = lamp(p.clone().addScaledVector(n, 0.8), '#ff7a30');
     } else if (kind === 'electrical') {
       const yaw = Math.atan2(spot.nx, spot.nz);
       g.add(at(box(0.7, 0.9, 0.08, '#2a2e34'), spot.x, I.floorY + spot.y, spot.z, 0, yaw, 0)); // the panel, its cover off
-      fx.sparks = [];
-      for (let i = 0; i < 10; i++) {
-        const s = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.03, 0.12), SPARK);
-        g.add(s);
-        fx.sparks.push(s);
-      }
-      const anchor = new THREE.Object3D();
-      anchor.position.set(spot.x + spot.nx * 0.5, I.floorY + spot.y, spot.z + spot.nz * 0.5);
-      g.add(anchor);
-      fx.light = { anchor, color: new THREE.Color('#bcd8ff'), intensity: 0, distance: 8, decay: 1.6, room: room.id };
-      I.lights.push(fx.light);
+      fx.zap = { p: new THREE.Vector3(spot.x + spot.nx * 0.1, I.floorY + spot.y, spot.z + spot.nz * 0.1), n: new THREE.Vector3(spot.nx, 0, spot.nz) };
+      fx.light = lamp(fx.zap.p.clone().addScaledVector(fx.zap.n, 0.4), '#bcd8ff');
     } else {
-      const spray = new THREE.Mesh(new THREE.ConeGeometry(0.5, spot.y - 0.2, 10, 1, true), SPRAY);
-      spray.position.set(spot.x, I.floorY + (spot.y + 0.2) / 2, spot.z);
-      g.add(spray);
-      fx.spray = spray;
-      const pool = new THREE.Mesh(new THREE.CircleGeometry(1, 20), POOL);
-      pool.rotation.x = -Math.PI / 2;
-      pool.position.set(spot.x, I.floorY + 0.02, spot.z);
-      pool.scale.setScalar(0.3);
-      g.add(pool);
-      fx.pool = pool;
+      // The pipe's split: a jet of coolant across the passage and down a little, and a ragged seam on the pipe.
+      const p = new THREE.Vector3(spot.x, I.floorY + spot.y, spot.z);
+      const d = new THREE.Vector3(spot.ux - spot.x, 0, spot.uz - spot.z).normalize().applyAxisAngle(_h.set(0, 1, 0), (Math.random() - 0.5) * 1.2);
+      d.y = -0.3;
+      fx.jet = { p, d: d.normalize() };
+      g.add(at(box(0.22, 0.12, 0.22, '#1e2226'), p.x, p.y, p.z));
+      fx.light = lamp(p.clone().addScaledVector(fx.jet.d, 0.6), '#bcd4ff'); // the welder's arc, when you weld it
       fx.hiss = 0;
     }
     return fx;
   }
 
   animate(job, dt, near) {
-    const fx = job.fx, t = this.time;
+    const fx = job.fx, t = this.time, B = fx.B;
     const left = 1 - job.progress / this.need(job);
-    if (fx.flames) {
-      const s = (0.55 + 0.4 * job.size) * Math.max(0.25, left);
-      fx.flames.scale.setScalar(s);
-      fx.flames.children.forEach((c) => {
-        if (!c.userData.k) return;
-        c.scale.y = 0.75 + 0.35 * Math.sin(t * 9 * c.userData.k) + 0.15 * Math.sin(t * 23 + c.userData.k);
-        c.rotation.y = t * c.userData.k;
-      });
-      fx.smoke.material.opacity = Math.min(0.7, 0.12 + 0.13 * job.size) * Math.max(0.3, left);
+    if (fx.fire) {
+      const F = fx.fire;
+      F.size = 0.7 + 0.45 * job.size;
+      F.r = 0.35 + 0.25 * job.size;
+      F.left = Math.max(0.15, left);
+      F.wind = this.draftOf?.(job.room.id, F.p, (F.draft ??= new THREE.Vector3())) ?? null; // venting: it leans towards where the air goes
+      if (B) fireTick(B, F, dt);
       fx.light.intensity = (16 + 12 * job.size) * Math.max(0.2, left) * (0.8 + 0.25 * Math.sin(t * 17) + 0.1 * Math.sin(t * 41));
     }
-    if (fx.sparks) {
+    if (fx.zap) {
       const live = !job.isolated;
-      for (const s of fx.sparks) {
-        s.visible = live && this.rand() < 0.45;
-        if (!s.visible) continue;
-        const sp = job.spot;
-        s.position.set(sp.x + sp.nx * (0.1 + this.rand() * 0.5) + (this.rand() - 0.5) * 0.6, job.I.floorY + sp.y + (this.rand() - 0.6) * 0.8, sp.z + sp.nz * (0.1 + this.rand() * 0.5) + (this.rand() - 0.5) * 0.6);
-        s.rotation.set(this.rand() * 3, this.rand() * 3, 0);
-      }
-      fx.light.intensity = live && this.rand() < 0.3 ? 14 : 0;
+      const burst = live && B ? zapTick(B, fx.zap.p, fx.zap.n, dt, fx.weight) : false;
+      fx.light.intensity = burst ? 18 : fx.light.intensity * 0.7;
       // A live fault makes the room's lamps stutter; once it is isolated, they are out but for the emergency lighting.
       for (const l of fx.lamps) {
         if (job.isolated) (l.intensity = l.dcBase * 0.12), l.color.set('#ff5040');
-        else if (this.rand() < 0.08) l.intensity = l.dcBase * (this.rand() < 0.5 ? 0.15 : 1);
+        else if (Math.random() < 0.08) l.intensity = l.dcBase * (Math.random() < 0.5 ? 0.15 : 1);
       }
     }
-    if (fx.spray) {
-      fx.spray.scale.set(1 + 0.15 * Math.sin(t * 30), 1, 1 + 0.15 * Math.cos(t * 27));
-      fx.spray.scale.multiplyScalar(Math.max(0.15, left));
-      fx.pool.scale.setScalar(Math.min(2.2, 0.3 + job.t * 0.02));
+    if (fx.jet) {
+      if (B) jetTick(B, fx.jet.p, fx.jet.d, dt, fx.weight, Math.max(0.15, left), fx.acc);
       fx.hiss -= dt;
       if (near < 14 && fx.hiss <= 0) {
         fx.hiss = 1.1;
@@ -393,6 +381,24 @@ export class DamageControl {
     // The cutaway's marker breathes (and, in a drum, turns with it).
     if (this.job?.room.drum) this.placeMarker();
     this.marker.scale.setScalar(this.markScale * (1 + 0.25 * Math.sin(t * 5)));
+  }
+
+  /** You at work, one frame (looks only): the extinguisher's powder at the fire from your hands, the welder's arc on the
+   *  pipe. `walker.pos` is in the job's interior's frame. */
+  working(job, walker, dt) {
+    const fx = job.fx, B = fx.B;
+    if (!B) return;
+    if (fx.fire) {
+      const to = _f.copy(fx.fire.p).addScaledVector(fx.fire.n, 0.3);
+      const hand = _h.set(walker.pos.x, walker.pos.y + 1.2, walker.pos.z);
+      hand.addScaledVector(_d.subVectors(to, hand).normalize(), 0.45);
+      sprayTick(B, hand, to, dt, fx.acc);
+    } else if (fx.jet) {
+      const toYou = _d.set(walker.pos.x - fx.jet.p.x, 0, walker.pos.z - fx.jet.p.z).normalize();
+      weldTick(B, fx.jet.p, toYou, dt, fx.weight, fx.acc);
+      fx.light.intensity = 20 * (0.5 + Math.random());
+      fx.welded = this.time;
+    }
   }
 
   makeMarker() {
@@ -459,7 +465,7 @@ export class DamageControl {
     const job = this.job;
     if (!job) {
       // A job a hit started while another was on comes up a few seconds after that one ends.
-      if (this.pending.length) (this.gap = (this.gap ?? 4) - dt), this.gap <= 0 && ((this.gap = 4), this.raise(...Object.values(this.pending.shift())));
+      if (this.pending.length) (this.gap = (this.gap ?? 4) - dt), this.gap <= 0 && ((this.gap = 4), this.raise(this.pending[0].kind, this.pending[0].where, this.pending.shift().opts));
       else if (this.auto && mode === 'walk') (this.wait -= dt), this.wait <= 0 && this.raise();
       return this.card(mode);
     }
@@ -478,6 +484,7 @@ export class DamageControl {
           this.say(null, `The ${this.D.kits[job.K.kit].label.toLowerCase()} is empty. ${this.whereKit(job.K.kit)}`);
         }
       }
+      this.working(job, walker, dt);
       if (this.workSound <= 0 || this.workSound === undefined) (this.workSound = 0.5), this.sfx?.cue('hiss', { dur: 0.6, vol: 0.5 });
       this.workSound -= dt;
     } else if (job.kind === 'fire') {
@@ -500,6 +507,7 @@ export class DamageControl {
     if (job.progress >= this.need(job)) return this.end(true);
     job.use.label = working ? `${VERB[job.kind]}: ${Math.round((100 * job.progress) / this.need(job))}%` : `Hold E: ${VERB[job.kind].toLowerCase()}`;
     job.use.key = working ? '' : 'E';
+    if (job.fx.jet && !working) job.fx.light.intensity = 0; // the arc is out when you stop
     this.animate(job, dt, near);
     this.card(mode);
   }

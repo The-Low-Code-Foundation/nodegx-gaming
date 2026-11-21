@@ -1,18 +1,19 @@
 // Shells in flight, theirs and ours: fired, flown, meeting the carrier's radiators or hull or the raider, and the
 // flashes; and the recoil every big gun puts into the ship's `Rigid`. Part of `Weapons` (weapons.mjs).
 
-import { THREE, at, clamp, _a, _b, _c, _d, _m, Z, _k1, _k2, _kq, SHELL_GEO, SHELL_OURS, SHELL_THEIRS, FLASH_GEO, turn } from './shared.mjs';
+import { THREE, at, clamp, _a, _b, _c, _d, _m, Z, _k1, _k2, _kq, FLASH_GEO, turn } from './shared.mjs';
+import { lookOf } from './tracers.mjs';
+
+const _w = new THREE.Vector3(), _n = new THREE.Vector3(), _bd = new THREE.Vector3(), _bv = new THREE.Vector3();
 
 /** Mixed into `Weapons` (weapons.mjs). */
 export const projectileParts = {
   // --- shells --------------------------------------------------------------------------------------------------------
 
+  /** A round in flight from `p` at `vel` (world): drawn as a tracer streak by its kind (weapons/tracers.mjs `lookOf`,
+   *  from the flags its gun sets: `rail`, `cannon` and `tracer`, `bandit`, `flak`). */
   fire(p, vel, ours, life, dmg = 0) {
-    const mesh = new THREE.Mesh(SHELL_GEO, ours ? SHELL_OURS : SHELL_THEIRS);
-    mesh.frustumCulled = false;
-    mesh.position.copy(p);
-    this.scene.add(mesh);
-    const s = { mesh, pos: p.clone(), vel: vel.clone(), life, ours, dmg, inside: false };
+    const s = { pos: p.clone(), vel: vel.clone(), life, ours, dmg, inside: false, age: 0 };
     this.shells.push(s);
     return s;
   },
@@ -21,17 +22,23 @@ export const projectileParts = {
     const prev = new THREE.Vector3();
     const foes = this.foes();
     const centre = this.C.obj.position;
+    this.streaks.begin(); // the sparks join them in fxFrame, which draws the lot
+    const eye = this.ear, ref = this.fighter?.flying ? this.fighter.body.vel : this.body.vel;
     for (const s of this.shells) {
       prev.copy(s.pos);
       s.pos.addScaledVector(s.vel, dt);
       s.life -= dt;
-      // Drawn as a streak along its way past the carrier (you are almost always moving with her).
-      _a.subVectors(s.vel, this.body.vel);
-      const sp = _a.length();
-      s.mesh.position.copy(s.pos);
-      s.mesh.quaternion.setFromUnitVectors(Z, _a.normalize());
-      const len = Math.min(sp * (s.rail ? 0.012 : 0.03), s.rail ? 110 : 40), w = s.w ?? (s.ours ? 0.7 : 1.1);
-      s.mesh.scale.set(w, w, len);
+      s.age += dt;
+      // Drawn as a tracer streak along its way as you see it (moving with the carrier, or with your fighter): it
+      // grows out of the muzzle over its first metres rather than starting full length behind it.
+      const K = lookOf(s);
+      _w.subVectors(s.vel, ref);
+      const sp = _w.length();
+      if (sp > 1e-3) _w.multiplyScalar(1 / sp);
+      const len = Math.min(sp * K.smear, K.max, sp * s.age + 0.5);
+      if (eye) this.streaks.add(s.pos, _w, len, K.w, K.color, K.k * (s.life < 0.3 ? s.life / 0.3 : 1), eye);
+      // A turret's shell: the tracer's spent compound glowing a moment where it passed.
+      if (K.k > 1.5 && !s.cannon && this.gas && Math.random() < dt * 25) this.gas.emit(s.pos, _n.copy(s.vel).multiplyScalar(0.98), 0.5 + Math.random() * 0.6, 0.6, 1.6, 0.05, 0.85, 0);
       if (s.ours) {
         // The raider (or a target sled) and its bandits.
         const R = this.raider;
@@ -44,7 +51,7 @@ export const projectileParts = {
           s.life = 0;
         } else if (s.cannon && s.pos.distanceTo(centre) < 240 && this.ship.inHull(_b.copy(s.pos).applyMatrix4(this.inv))) {
           // A fighter's round that finds the carrier: stopped by her plating, with a spark to show for it.
-          this.flash(s.pos, 1.5, '#ffd090', 0.12);
+          this.impact(s.pos, _n.copy(s.vel).sub(this.body.vel).normalize(), 0.25, '#ffd090');
           s.life = 0;
         } else {
           // A shell or a cannon round that passes close to one of the raider's torpedoes kills it.
@@ -70,7 +77,6 @@ export const projectileParts = {
         if (this.hitsCarrier(s, prev, s.pos)) s.life = 0;
       }
     }
-    for (const s of this.shells) if (s.life <= 0) s.mesh.removeFromParent();
     this.shells = this.shells.filter((s) => s.life > 0);
   },
 
@@ -114,7 +120,10 @@ export const projectileParts = {
       const met = this.ship.meets ? this.ship.meets(q) : this.ship.inHull(q) && { part: 'hull' };
       if (met) {
         if (s.torpedo) this.ship.arrive(q, _a.subVectors(B, A), { ...this.torpHarm(), part: met });
-        else this.ship.arrive(q, _a.subVectors(B, A), { shell: true, part: met });
+        else {
+          this.impact(this.C.frame.localToWorld(_n.copy(q)), _w.subVectors(B, A).normalize().transformDirection(this.C.frame.matrixWorld), 1, '#ffb070');
+          this.ship.arrive(q, _a.subVectors(B, A), { shell: true, part: met });
+        }
         return true;
       }
     }
@@ -128,15 +137,31 @@ export const projectileParts = {
     return { pen: pick(T.pen), damage: pick(T.damage), hole: pick(T.hole), torpedo: true };
   },
 
-  /** A big gun's muzzle blast at `p` (world) along `d` (world, unit): the flash, a hot core, and a cone of propellant
-   *  gas thrown out ahead and round the muzzle that cools and spreads (gas.mjs; `this.gas`, set by main.mjs). `size`
-   *  1 is a turret's round. Unseeded randoms: what you see, never what happens. */
-  blast(p, d, size, color = '#ffd090') {
-    this.flash(p, 3.5 * size, color, 0.14 + 0.06 * size);
-    this.flash(_c.copy(p).addScaledVector(d, 2.5 * size), 2 * size, '#ffffff', 0.06);
-    const G = this.gas, v0 = this.body?.vel;
+  /** A big gun's muzzle blast at `p` (world) along `d` (world, unit). Everything a heavy gun throws out of its muzzle
+   *  in vacuum, where nothing slows it: the flash, a white-hot core, a long tongue of burning propellant ahead, the
+   *  muzzle brake's ring of gas thrown out flat round the barrel (`ring`), burning grains flung ahead in a cone
+   *  (`sparkBurst`), and the cloud of propellant gas that cools and spreads (gas.mjs; `this.gas`, set by main.mjs).
+   *  `size` 1 is a turret's round; `v0` what it is carried along with (the carrier). Unseeded randoms: what you see,
+   *  never what happens. */
+  blast(p, d, size, color = '#ffd090', v0 = this.body?.vel) {
+    d = _bd.copy(d); // callers hand in shared scratch vectors, which the gas below borrows
+    v0 = v0 && _bv.copy(v0);
+    this.flash(p, 6 * size, color, 0.16 + 0.08 * size);
+    this.flash(_c.copy(p).addScaledVector(d, 3 * size), 3.2 * size, '#ffffff', 0.07);
+    for (let i = 1; i <= 3; i++) this.flash(_c.copy(p).addScaledVector(d, (4 + 5 * i) * size), (3.4 - 0.7 * i) * size, color, 0.1 + 0.04 * i); // the tongue
+    this.ring(_c.copy(p).addScaledVector(d, -0.4 * size), d, 14 * size, color, 0.32 + 0.1 * size);
+    this.ring(_c.copy(p).addScaledVector(d, 1.5 * size), d, 7 * size, '#ffffff', 0.16);
+    this.sparkBurst(p, Math.round(14 + 16 * size), { dir: d, spread: 0.28, speed: 160 * size, v0, life: 0.6, color: '#ffb050', w: 0.22 * size });
+    const G = this.gas;
     if (!G) return;
-    const n = Math.round(10 + 14 * size);
+    const n = Math.round(14 + 20 * size);
+    // The muzzle brake throws half of it out sideways, flat round the barrel.
+    for (let i = 0; i < n / 2; i++) {
+      const v = _d.set(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5);
+      v.addScaledVector(d, -v.dot(d)).normalize().multiplyScalar((40 + 40 * Math.random()) * size).addScaledVector(d, 10 * size);
+      if (v0) v.add(v0);
+      G.emit(p, v, 0.6 + Math.random(), 0.8 * size, (5 + 6 * Math.random()) * size, 0.3, 0.8, 0);
+    }
     for (let i = 0; i < n; i++) {
       const fwd = Math.random(), sp = (1 - fwd) * 0.9 + 0.15;
       const v = _d.copy(d).multiplyScalar((20 + 60 * fwd) * size);
@@ -163,6 +188,11 @@ export const projectileParts = {
       if (e.kind === 'flash') {
         e.mesh.scale.setScalar(e.size * (0.4 + 0.8 * Math.sqrt(k)));
         e.mesh.material.opacity = Math.max(0, 1 - k);
+      } else if (e.kind === 'ring') {
+        // Out fast and fading, carried along with the gun.
+        e.mesh.scale.setScalar(e.size * (0.15 + 0.85 * Math.sqrt(Math.min(1, k))));
+        e.mesh.material.opacity = Math.max(0, 1 - k) ** 1.5 * 0.9;
+        if (e.vel) e.mesh.position.addScaledVector(e.vel, dt);
       } else if (e.kind === 'debris') {
         e.mesh.position.addScaledVector(e.vel, dt);
         e.mesh.rotation.x += e.spin.x * dt;
@@ -171,10 +201,13 @@ export const projectileParts = {
       }
       if (k >= 1) {
         e.mesh.removeFromParent();
-        if (e.kind === 'flash') e.mesh.material.dispose();
+        if (e.kind === 'flash' || e.kind === 'ring') e.mesh.material.dispose();
       }
     }
     this.fx = this.fx.filter((e) => e.t < e.life);
+    // The sparks, into the streak pool after the shells (shellsFrame began it), and the pool drawn.
+    this.sparksFrame(dt);
+    this.streaks.end();
   },
 
   // --- recoil --------------------------------------------------------------------------------------------------------

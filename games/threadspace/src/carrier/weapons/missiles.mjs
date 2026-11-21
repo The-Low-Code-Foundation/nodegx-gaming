@@ -25,25 +25,40 @@
 // carrier's at any missile homing on her.
 
 import { THREE, at, cyl, clamp, _a, _b, _c, _d, _e, _f, _g, _m, Y, flareTex, TORP_BODY, TORP_NOSE } from './shared.mjs';
+import { motorFlame, flameFrame } from './tracers.mjs';
 
 const _h = new THREE.Vector3(), _i = new THREE.Vector3(), _j = new THREE.Vector3(), _k = new THREE.Vector3();
+const _n = new THREE.Vector3(), _o = new THREE.Vector3(); // the looks' own: nothing below hands them on
 const FWD = new THREE.Vector3(0, 0, -1);
 
-/** A missile: a slim body, a seeker's dome, and its motor's glow. -z is its nose. */
+/** A missile: a slim body, a seeker's dome, four tail fins, its motor's glow and its flame. -z is its nose. */
 function missileMesh(ours) {
   const g = new THREE.Group();
   g.add(at(cyl(0.09, 0.09, 2.6, TORP_BODY, 6), 0, 0, 0, Math.PI / 2));
   g.add(at(cyl(0.02, 0.09, 0.3, TORP_NOSE, 6), 0, 0, -1.45, -Math.PI / 2));
+  for (let i = 0; i < 4; i++) {
+    const fin = new THREE.Mesh(FIN_GEO, TORP_BODY);
+    fin.position.z = 1.05;
+    fin.rotation.z = (i * Math.PI) / 2 + Math.PI / 4;
+    g.add(fin);
+  }
   const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: flareTex(), color: ours ? '#ffe6c0' : '#ffc0a0', transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }));
   glow.position.z = 1.5;
   glow.scale.setScalar(3);
   g.add(glow);
   g.userData.glow = glow;
+  const flame = motorFlame(0.16, 7, ours ? '#ffb868' : '#ff9060');
+  flame.position.z = 1.35;
+  g.add(flame);
+  g.userData.flame = flame;
   g.traverse((o) => (o.frustumCulled = false));
   return g;
 }
 
-const FLARE_MAT = () => new THREE.SpriteMaterial({ map: flareTex(), color: '#fff2d8', transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false });
+const FIN_GEO = new THREE.BoxGeometry(0.02, 0.36, 0.42).translate(0, 0.22, 0);
+// A flare: a small, fierce white-pink core (magnesium burning) in a big warm halo that flickers.
+const FLARE_MAT = () => new THREE.SpriteMaterial({ map: flareTex(), color: '#fff4ec', transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false });
+const HALO_MAT = () => new THREE.SpriteMaterial({ map: flareTex(), color: '#ff9a50', transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false });
 
 /** Mixed into `Weapons` (weapons.mjs). */
 export const missileParts = {
@@ -175,6 +190,10 @@ export const missileParts = {
     const dir = _a.copy(FWD).transformDirection(w.matrixWorld);
     const drop = _b.set(0, -1, 0).transformDirection(w.matrixWorld).multiplyScalar(M.push);
     this.launchMissile(p, _c.copy(fi.body.vel).add(drop), dir, 'ours', this.lockRef, fi);
+    // Off the rail: the ejector's kick through her airframe and a jolt in the seat; the motor lights a beat later
+    // (missilesFrame), close under her nose.
+    this.jolt = Math.max(this.jolt ?? 0, 0.45);
+    this.feel?.railOff?.();
     this.dc?.say(null, this.lockRef ? 'Fox two: missile away.' : 'Fox two: missile away, no lock.', 0, 3);
     return true;
   },
@@ -188,7 +207,10 @@ export const missileParts = {
     this.scene.add(obj);
     const m = { obj, pos: p.clone(), prev: p.clone(), vel: v.clone(), acc: new THREE.Vector3(), dir: dir.clone(), side, track, from, t: 0, dv: 0, dead: false };
     this.missiles.push(m);
-    this.sfx?.play('turbolaser', this.ear ? this.ear.distanceTo(p) * 0.8 : 900);
+    // The ejector's puff of cold gas off the rail (looks only).
+    const G = this.gas;
+    for (let i = 0; G && i < 6; i++) G.emit(p, _n.copy(v).add(_o.set(Math.random() - 0.5, -Math.random(), Math.random() - 0.5).multiplyScalar(6)), 0.6 + Math.random() * 0.5, 0.3, 1.5 + Math.random(), 0.2, 0, 1);
+    if (from !== this.fighter) this.sfx?.play('hit', this.ear ? this.ear.distanceTo(p) * 0.8 : 900);
     return m;
   },
 
@@ -231,7 +253,14 @@ export const missileParts = {
       m.obj.quaternion.setFromRotationMatrix(_m.lookAt(m.pos, _g.copy(m.pos).add(m.dir), Y));
       const gl = m.obj.userData.glow;
       gl.visible = lit;
-      gl.scale.setScalar(this.ear ? clamp(this.ear.distanceTo(m.pos) * 0.008, 2.5, 22) : 3);
+      gl.scale.setScalar(this.ear ? clamp(this.ear.distanceTo(m.pos) * 0.012, 3.5, 30) : 3);
+      // Its motor: lit with a bang (a flash, a ring of the first gas, the sound), a flame and a long trail of exhaust
+      // while it burns (weapons/tracers.mjs). Looks only.
+      if (lit && !m.lit) this.ignite(m.pos, m.dir, 1, m.vel);
+      if (!lit && m.lit) this.flash(m.pos, 1.5, '#ffb070', 0.2); // burnout
+      m.lit = lit;
+      flameFrame(m.obj.userData.flame, lit, 1, m.t);
+      if (lit) this.trail(_n.copy(m.pos).addScaledVector(m.dir, -1.6), m.dir, m.vel, 60, dt, 0.7);
       // What it meets, once it is armed: the first heat source (any side but its own launcher, and not a flare it has
       // seen through) its path passes within `fuse` of.
       for (const h of m.t > M.arm ? list : []) {
@@ -303,6 +332,8 @@ export const missileParts = {
     if (!burst) return;
     this.flash(m.pos, 8, '#ffd090', 0.5);
     this.flash(m.pos, 3, '#ffffff', 0.12);
+    this.ring(m.pos, null, 22, '#ffc080', 0.5);
+    this.sparkBurst(m.pos, 45, { speed: 150, v0: m.vel, life: 0.9, color: '#ffc070', w: 0.3 }); // the rod warhead's fragments
     this.sfx?.play('boom', this.ear ? Math.min(900, this.ear.distanceTo(m.pos) * 0.5) : 700, 14);
   },
 
@@ -315,11 +346,15 @@ export const missileParts = {
     for (let i = 0; i < n; i++) {
       const d = _a.copy(out).add(_b.set(this.rand() - 0.5, this.rand() - 0.5, this.rand() - 0.5).multiplyScalar(1.2)).normalize();
       const v = vel.clone().addScaledVector(d, F.eject * (0.8 + 0.4 * this.rand()));
-      const sp = new THREE.Sprite(FLARE_MAT());
+      const sp = new THREE.Sprite(FLARE_MAT()), halo = new THREE.Sprite(HALO_MAT());
       sp.position.copy(p);
-      this.scene.add(sp);
-      this.flares.push({ sp, pos: p.clone(), vel: v, t: 0, life: F.life * (0.85 + 0.3 * this.rand()), peak: K.heat, I: K.heat, dead: false });
+      halo.position.copy(p);
+      this.scene.add(sp, halo);
+      this.flares.push({ sp, halo, pos: p.clone(), vel: v, t: 0, life: F.life * (0.85 + 0.3 * this.rand()), peak: K.heat, I: K.heat, dead: false, ph: Math.random() * 10, big: kind !== 'fighter' && kind !== 'bandit' });
     }
+    // The dispenser's pop: a flash and a puff of its charge (looks only).
+    this.flash(p, kind === 'fighter' || kind === 'bandit' ? 1.6 : 5, '#fff0d8', 0.12);
+    for (let i = 0; this.gas && i < 4; i++) this.gas.emit(p, _n.copy(vel).addScaledVector(out, 8 + 6 * Math.random()).add(_o.set(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).multiplyScalar(6)), 0.6 + Math.random() * 0.4, 0.3, 2, 0.2, 0.3, 0);
   },
 
   flaresFrame(dt) {
@@ -330,10 +365,18 @@ export const missileParts = {
       const k = 1 - f.t / f.life;
       f.I = f.peak * Math.sqrt(Math.max(0, k));
       f.sp.position.copy(f.pos);
-      const s = this.ear ? clamp(this.ear.distanceTo(f.pos) * 0.012, 1.5, 30) : 3;
-      f.sp.scale.setScalar(s * (0.7 + 0.3 * Math.sqrt(Math.max(0, k))) * (0.85 + 0.15 * Math.sin(f.t * 53)));
+      f.halo.position.copy(f.pos);
+      // A fierce small core and a big halo, flickering hard (burning magnesium sputters, the more as it burns out),
+      // shedding glittering sparks that drift off it (looks only: unseeded).
+      const s = this.ear ? clamp(this.ear.distanceTo(f.pos) * 0.012, 2.2, 30) : 3;
+      const kk = Math.sqrt(Math.max(0, k)), sputter = 0.12 + 0.3 * (1 - k);
+      const flick = 1 - sputter + sputter * (0.5 + 0.5 * Math.sin(f.t * 47 + f.ph) * Math.sin(f.t * 19 + 2 * f.ph)) + 0.08 * Math.random();
+      f.sp.scale.setScalar(s * 0.7 * (0.7 + 0.3 * kk) * flick * (f.big ? 1.6 : 1));
+      f.halo.scale.setScalar(s * 2.2 * (0.6 + 0.4 * kk) * (0.9 + 0.2 * flick) * (f.big ? 1.8 : 1));
       f.sp.material.opacity = Math.max(0, Math.min(1, k * 1.5));
-      if (k <= 0) (f.dead = true), f.sp.removeFromParent(), f.sp.material.dispose();
+      f.halo.material.opacity = 0.55 * Math.max(0, Math.min(1, k * 1.5)) * flick;
+      if (k > 0.05 && Math.random() < dt * 16) this.sparkBurst(f.pos, 1, { speed: 5, v0: f.vel, life: 0.7, color: '#fff0d0', w: 0.12, k: 1.2 });
+      if (k <= 0) (f.dead = true), f.sp.removeFromParent(), f.halo.removeFromParent(), f.sp.material.dispose(), f.halo.material.dispose();
     }
     this.flares = this.flares.filter((f) => !f.dead);
   },

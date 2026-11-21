@@ -16,8 +16,8 @@
     "color": "#c8302a"
    },
    "patch": {
-    "name": "a patch kit",
-    "label": "Patch kit",
+    "name": "a welder and hull plates",
+    "label": "Welder",
     "lockers": "DC LOCKER",
     "kept": "the yellow DC LOCKERs in the passages",
     "color": "#d8b030",

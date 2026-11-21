@@ -1,0 +1,12 @@
+{
+  "id": "rescue-recall",
+  "about": "You called the rescue craft back before it reached you (rescue.mjs).",
+  "who": "flight",
+  "say": [
+    "Flight control. Copy, rescue craft returning to the bay."
+  ],
+  "to": {
+    "you": "radio"
+  },
+  "priority": 3
+}

@@ -1,0 +1,12 @@
+{
+  "id": "rescue-launch",
+  "about": "A rescue craft is launched from your pad to a fighter in space (rescue.mjs).",
+  "who": "flight",
+  "say": [
+    "Flight control. Rescue craft launching to you now. Hold your course and conserve your gas."
+  ],
+  "to": {
+    "you": "radio"
+  },
+  "priority": 3
+}

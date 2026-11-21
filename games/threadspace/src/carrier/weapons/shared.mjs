@@ -16,6 +16,7 @@ export { glow };
 export { clamp };
 export { mulberry };
 import { hazardMat } from '../../decor.mjs';
+import { motorFlame } from './tracers.mjs';
 export { hazardMat };
 
 export const DEG = Math.PI / 180;
@@ -25,9 +26,6 @@ export const Z = new THREE.Vector3(0, 0, 1), Y = new THREE.Vector3(0, 1, 0);
 // The railguns' and the recoil's own scratch vectors (nothing they call borrows them).
 export const _r1 = new THREE.Vector3(), _r2 = new THREE.Vector3(), _r3 = new THREE.Vector3(), _k1 = new THREE.Vector3(), _k2 = new THREE.Vector3(), _kq = new THREE.Quaternion();
 
-export const SHELL_GEO = new THREE.BoxGeometry(1, 1, 1);
-export const SHELL_OURS = new THREE.MeshBasicMaterial({ color: '#ffe2a0', transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false });
-export const SHELL_THEIRS = new THREE.MeshBasicMaterial({ color: '#ff7048', transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false });
 export const FLASH_GEO = new THREE.SphereGeometry(1, 12, 8);
 export const SLED = new THREE.MeshBasicMaterial({ color: '#ff7a1a', side: THREE.DoubleSide, toneMapped: false });
 export const CABLE = new THREE.MeshBasicMaterial({ color: '#8a9098', toneMapped: false });
@@ -68,9 +66,8 @@ export function leadAccel(r, v, a, speed, out) {
   return t;
 }
 
-// The point defence's tracers: hundreds of them in the air at once, so one instanced mesh, not a mesh each.
+// The point defence's tracers: hundreds of them in the air at once, so one instanced pool (tracers.mjs streaks).
 export const ROUND_MAX = 900;
-export const ROUND_OURS = new THREE.MeshBasicMaterial({ color: '#fff0b0', transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false });
 export const TORP_BODY = new THREE.MeshLambertMaterial({ color: '#5a6068' });
 export const TORP_NOSE = new THREE.MeshLambertMaterial({ color: '#c8c0a8' });
 let FLARE = null;
@@ -103,6 +100,11 @@ export function torpedoMesh(ours) {
   flare.scale.setScalar(9);
   g.add(flare);
   g.userData.flare = flare;
+  // Its motor's flame, lit while it burns (weapons/tracers.mjs `motorFlame`; broadside.mjs `torpsFrame`).
+  const flame = motorFlame(0.55, 22, ours ? '#9fc4ff' : '#ff9a60');
+  flame.position.z = 2.9;
+  g.add(flame);
+  g.userData.flame = flame;
   return g;
 }
 

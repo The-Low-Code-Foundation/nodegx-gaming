@@ -83,10 +83,11 @@ export const railgunParts = {
     const s = this.fire(p, _r2.copy(d).multiplyScalar(G.speed).add(this.body.vel), true, G.range / G.speed, G.damage[0] + r() * (G.damage[1] - G.damage[0]));
     s.rail = true;
     s.you = you;
-    s.w = 1.4;
     this.flash(p, 18, '#cfe4ff', 0.45);
     this.flash(p, 7, '#ffffff', 0.12);
     this.blast(p, _r2.copy(d), 1.6, '#cfe4ff'); // the sabot and the rails' plasma thrown out ahead of her
+    // The rails' arc: molten metal off the rails and the armature, blue-white, flung out ahead in a wide cone.
+    this.sparkBurst(p, 50, { dir: _r2.copy(d), spread: 0.6, speed: 260, v0: this.body.vel, life: 0.8, color: '#bfe0ff', w: 0.2, k: 1.8 });
     this.plant?.addHeat(G.heat);
     this.sfx?.play('boom', this.ship.aboard ? 160 : this.ear ? this.ear.distanceTo(p) : 60, 50);
     if (G.slug) this.recoil(p, J, 'rail');

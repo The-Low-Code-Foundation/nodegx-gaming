@@ -21,6 +21,7 @@
 //   fighter-contact collide.mjs your fighter touched the ship (a scrape or a crash) { what, kind, speed, damage, hole }
 //   launch     fighter.mjs    a fighter starts her launch run           { pad }
 //   landed     fighter.mjs    back on her pad, turned round             { pad, manual }
+//   rescue     rescue.mjs     a tanker or tug: launch, fuel, tow, home, stowed { kind, state, why? }
 //   talk       career.mjs     you spoke to one of the officers          { who }
 //   call       everyone       the ship makes a call                     { id, room?, z?, …its slots }
 //                             (content/announcements/<id>.json; src/core/announcer.mjs decides who hears it)

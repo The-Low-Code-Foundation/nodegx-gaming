@@ -375,6 +375,30 @@ No physics engine. The ship already has its own Newtonian code (`newton.mjs`, `f
   Not done: missiles on the carrier or the raider; bandits on a turret gunner's sight (it shows the raider and
   torpedoes only); not yet played by hand.
 
+  **Built (21 November 2026, from play-testing):** a rescue craft for a fighter out of gas, and the guns' looks.
+  The rescue (`src/carrier/rescue.mjs`, numbers in the layout's `fighter.rescue`): from the cockpit, 1 calls a tanker
+  and 2 a tug, launched off your empty pad. Each flies Newtonian (flip and burn on its main drive, trim on jets, a
+  braking profile planned at the jets' rate for the last stretch) round the hull, slice by slice, and out to you. The
+  tanker holds station above you and runs a hose to your port: it fills both tanks in about ten seconds and goes home.
+  The tug couples a tow bar to your nose and tows you to the landing gate, where flight control takes you in. A tow
+  bar, not a rope: a rope cannot brake her, so she would overrun the tug into the hull. Call the same one again to
+  recall it. Four new flight calls (`rescue-launch`, `-on`, `-done`, `-recall`) wait for `voices.mjs`.
+  The guns' looks (`weapons/tracers.mjs`): every round is a streak on one instanced pool (a white-hot head and a
+  coloured tail, never thinner than a point of light, so a tracer reads at 3 km). Your fighter's belt is one tracer in
+  three. The turrets and the raider's guns fire with a muzzle blast (flash, a ring of gas off the brake, a forward
+  cone of burning grains), hits spatter off armour, flak bursts throw splinters, the railgun throws arcs, and kills
+  get rings and sparks. Missiles and torpedoes now have tail fins and a flame, light with a flash, a ring, sparks and
+  a bang (`ignite`; `Feel.ignite` and `Feel.railOff` in gunfeel.mjs, and the seat jolts when a missile leaves the
+  rail), and burn with a trail. Flares have a fierce core in a warm halo that sputters as it burns out, and shed
+  glittering sparks. Everything new is looks only (unseeded randoms): the fingerprints do not move for it.
+  Then, from the first play: shot dead in space, the tug now comes out by itself (a tug already out carries on and
+  brings you in; a tanker out goes home and a tug follows), and a tumbling fighter is grappled and despun on a line
+  before the bar goes on (the tug could not catch a spinning one). The tug and the tanker are now working spacecraft
+  (`rescue-craft.mjs`): a cab with windows, lights and quads on an open truss, the tug's tow frame and outrigger
+  engines, the tanker's foam tank and hose boom. `fighter-down` was reworded and needs recording again.
+  Not done: the rescue craft are not solid to your fighter (collide.mjs) and are invulnerable (on purpose, for now);
+  the tanker's run not yet played by hand.
+
 ## Phase 8. Talking to people (three or more sessions) [13]
 
 - **The story first, by Gemini, with you as editor.** A story bible before any dialogue: the ship's name and history,
@@ -392,6 +416,53 @@ No physics engine. The ship already has its own Newtonian code (`newton.mjs`, `f
   the main story all use, so a conversation can start one.
 - **Voices for everyone.** Named characters get their own voice; the rest of the crew share a pool of about twenty
   designed voices. Every line is recorded by `tools/voices.mjs` before it ships.
+
+## Phase 9. Damage you can see, feel and mend (three or four sessions)
+
+From play-testing (21 November 2026): hits should do real damage with real consequences, on the fighter and on the
+carrier, without a teardown engine that breaks the models. The rule: **the models stay whole, and damage is drawn on
+them and in them** (holes, scorch, fire, venting gas, plates welded over), while what the damage does is modelled:
+thrust lost, gas leaking, systems out, rooms losing air. The rescue craft are invulnerable for now.
+
+- **Session 1: hits, fire and mending you can see.**
+  - **Hits.** A torpedo on the hull is a fireball out of the plating, a shock of light, glowing debris and a dust
+    cloud that hangs, and air venting white out of the hole while the room behind it has any. A shell is the same,
+    smaller. Inside, the blast comes in through the hole: a jet of flame, shrapnel and smoke along the way it came,
+    and a flash of light in the room.
+  - **Fire where it hit.** A fire a hit starts burns at the breach, not at a random spot in the room. Fire is drawn
+    as particles: in the fixed hull, which floats, round flames that drift with the air (towards a hole while she
+    vents) and smoke that spreads every way; in the drums, which have weight, flames that lick upwards and smoke
+    that rolls along the deckhead. A fire in a room that loses its air goes out by itself, as now.
+  - **The tools.** The extinguisher throws a cloud of powder at the fire. The patch kit becomes a welder and hull
+    plates: a plate goes over the hole and you weld it round, the arc lighting the room blue and sparks showing the
+    weld creeping round the seam. A coolant leak is a jet of droplets and vapour off the pipe (no puddles where nothing
+    weighs anything), welded shut the same way. An electrical fault throws sparks.
+  - The old prototype looks go: the cone flames, the smoke box, the spray cone and the pool.
+  **Built (session 1, 21 November 2026):** `blaze.mjs` (fire, smoke, sparks, powder, vapour and droplets, as point
+  particles in any frame, with drag towards a draft and rise only where there is weight) and `hitfx.mjs` (the recipes).
+  A hull hit is a fireball, debris and a hanging dust cloud outside (the flat ring is gone: no air, no shock), the blast
+  comes in through each hole drawn in a room with its light, a hole to space breathes white while its room has air, and
+  a fire a hit started burns at the hole. The extinguisher sprays powder from your hands; the patch kit is now a
+  welder and hull plates: a plate goes over the hole when you start and the weld bead creeps round it, hot and cooling,
+  with the arc's sparks and blue light; a coolant leak is a jet of droplets welded shut; a fault throws sparks. The
+  cone flames, the smoke box, the spray cone and the pool are gone. Looks only (Math.random): the seeded randoms are
+  untouched.
+  Not done: no sound of its own for the welder (it uses the hiss); the mist streaming to a hole is the old one (its
+  specks now round); not yet played by hand.
+- **Session 2: the fighter takes damage.** Hits land on a part of her (`fighter.json` gets a damage map: drive, each
+  jet quad, tanks, wings, cockpit, guns), each with its own health and its own consequence: the drive's thrust down
+  or out, a jet quad dead (she yaws or rolls against your stick), a holed tank leaking (gas venting is a small thrust
+  of its own, so she starts to turn), the guns jammed, the canopy cracked (the HUD flickers). Drawn on her: scorch and
+  holes on the model as decals, sparks, a gas leak. When she is dead in space the tug brings her in (built). The
+  cockpit's displays show what is hit.
+- **Session 3: mending fighters in the hangar.** A damaged fighter landed on her pad gets a repair crew: drones from
+  the hangar's racks for the outside (plates and welding, as the player's tools), deck crew for the inside, the time
+  depending on the damage. The pad's board shows what is being done. You can help: the same tools. A fighter under
+  repair cannot launch.
+- **Session 4: the carrier's physical consequences.** Hits do what they hit: a radiator holed loses heat rejection
+  (the plant already models this), a thruster quad hit loses thrust, a tank holed leaks propellant (and the leak
+  pushes her), a turret hit is out until mended, a hangar door jammed, a drum bearing hit makes the drum shudder. The
+  drones and damage control parties mend them over time, by priority, and you can do any job yourself.
 
 ## The opening ([`OPENING.md`](OPENING.md))
 

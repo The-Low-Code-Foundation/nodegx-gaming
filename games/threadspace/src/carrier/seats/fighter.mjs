@@ -14,6 +14,9 @@ const _p = new THREE.Vector3();
 const _f = new THREE.Vector3();
 const FOE = {}; // what the fighter's sight shows of the contact she has selected (weapons/fighter-guns.mjs `foe`)
 const MARKS = []; // the other contacts (`foeMarks`)
+const RESCUE = {}; // the rescue craft on her way (rescue.mjs `mark`)
+/** Low enough on the drive's propellant or the jets' gas to want a rescue craft: under a fifth of either. */
+const low = (fl) => fl.prop.main < fl.S.tank.main * 0.2 || fl.prop.rcs < fl.S.tank.rcs * 0.2;
 const range = (d) => (d < 1000 ? `${Math.round(d)} m` : `${(d / 1000).toFixed(2)} km`);
 
 /** How a landing you flew yourself went: speed and how far off the line when flight control caught you. */
@@ -55,9 +58,11 @@ export class FighterSeat {
     else if (code === 'KeyX' && fighter.flying) this.G.guns.nextFoe(); // the next contact on her sight
     else if (code === 'KeyQ' && fighter.flying) this.G.guns.fireMissile(); // a heat-seeker off the rail
     else if (code === 'KeyG' && fighter.flying) this.G.guns.dropFlares(); // a pair of flares
+    else if (code === 'Digit1' && fighter.flying) this.G.rescue?.call('tanker'); // run dry: the tanker comes to you
+    else if (code === 'Digit2' && fighter.flying) this.G.rescue?.call('tug'); // or the tug tows you home
     else if (code === 'KeyE') {
       if (fighter.phase === 'seated') this.G.fadeThen(() => this.leave());
-      else if (fighter.canLand(body.vel)) {
+      else if (fighter.canLand(body.vel) && !fighter.towed) {
         doors.setBay(1);
         fighter.land();
       }
@@ -79,7 +84,7 @@ export class FighterSeat {
     const fl = fighter.flight;
     hud.where(fighter.flying ? `Fighter · ${fl.assistOn ? 'attitude hold: the mouse moves the aim' : 'hold off: your hand on the valves'} · mouse ${fighter.mouseMode}` : ph === 'landing' ? 'Fighter · on approach' : ph === 'wrecked' ? 'Fighter · breaking up' : 'Fighter · in the hangar');
     if (ph === 'seated') hud.use(fighter.refuelT > 0 ? { key: '', label: 'The deck crew are topping up your tanks' } : !fl.online ? { key: '', label: 'The drive is spinning up' } : doors.open ? { key: 'W', label: 'Launch (hold)' } : { key: '', label: 'Flight control is opening the bay doors' });
-    else if (ph === 'flying') hud.use(fighter.canLand(body.vel) && !approach.state.inLane ? { label: 'Hand over: flight control brings you in' } : null);
+    else if (ph === 'flying') hud.use(this.G.rescue?.prompt() ?? (fighter.canLand(body.vel) && !approach.state.inLane ? { label: 'Hand over: flight control brings you in' } : low(fl) ? { key: '1 / 2', label: `${fl.dryMain ? 'Fuel dry' : 'Fuel low'}: 1 calls the tanker, 2 a tug to tow you home` } : null));
     else if (ph === 'turn' && fighter.lastLanding?.manual) hud.use({ key: '', label: grade(fighter.lastLanding) });
     else hud.use(PROMPTS[ph] ?? null);
     const lane = approach.state;
@@ -99,7 +104,8 @@ export class FighterSeat {
       cockpit: fighter.view === 'cockpit', bayOpen: doors.open, pad: fighter.index + 1,
       foe: fighter.flying ? guns.foe(FOE) : null, marks: fighter.flying ? guns.foeMarks(MARKS) : null, rounds: guns.rounds, roundsMax: L.weapons.fighter?.rounds,
       missiles: guns.rails, flares: guns.myFlares, lock: fighter.flying ? guns.lock : null, lockName: guns.lockName(), seeing: guns.seeing, warn: fighter.flying ? guns.warn : null,
-      hull: guns.fhull != null ? guns.fhull / L.weapons.fighter.hull : 1
+      hull: guns.fhull != null ? guns.fhull / L.weapons.fighter.hull : 1,
+      rescue: fighter.flying ? this.G.rescue?.mark(RESCUE) : null
     });
   }
 }

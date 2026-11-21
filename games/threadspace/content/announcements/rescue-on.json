@@ -1,0 +1,12 @@
+{
+  "id": "rescue-on",
+  "about": "The rescue craft is coupled: the tanker's hose is on, or the tug has you on its tow bar (rescue.mjs).",
+  "who": "flight",
+  "say": [
+    "Rescue craft. We are coupled. Hands off and hold still."
+  ],
+  "to": {
+    "you": "radio"
+  },
+  "priority": 3
+}

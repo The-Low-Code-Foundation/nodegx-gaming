@@ -28,8 +28,7 @@ export const torpedoParts = {
     const side = _a.set(i % 2 ? 1 : -1, 0.3, 0).transformDirection(R.obj.matrixWorld);
     const p = R.obj.localToWorld(new THREE.Vector3(i % 2 ? 3 : -3, 0, 0));
     const v = _b.copy(R.v).add(this.body.vel).addScaledVector(side, T.push);
-    this.torpedo(p, v, 'theirs', aim);
-    this.sfx?.play('turbolaser', this.ear ? this.ear.distanceTo(p) * 0.5 : 900);
+    this.torpedo(p, v, 'theirs', aim); // its motor lights at once: torpsFrame's ignition is the flash and the bang
   },
 
   /** Brace for impact: the nearest of the raider's torpedoes that will arrive within `brace.eta` seconds (on the line

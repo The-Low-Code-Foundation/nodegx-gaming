@@ -2,6 +2,9 @@
 // CIC, and the helm's plot of whether the raider bears. Part of `Weapons` (weapons.mjs).
 
 import { THREE, at, clamp, _a, _b, _c, _d, _e, _f, _g, _m, Y, turn } from './shared.mjs';
+import { flameFrame } from './tracers.mjs';
+
+const _tn = new THREE.Vector3(), _tp = new THREE.Vector3(); // the looks' own: nothing here hands them on
 
 /** Mixed into `Weapons` (weapons.mjs). */
 export const broadsideParts = {
@@ -65,14 +68,15 @@ export const broadsideParts = {
       t.t = -(B.cold ?? 2) - i * 0.15;
       _m.lookAt(p, _c.copy(p).add(dir), Y);
       t.obj.quaternion.setFromRotationMatrix(_m);
-      this.flash(p, 3, '#d8e8ff', 0.2);
+      this.flash(p, 5, '#d8e8ff', 0.25);
+      this.ring(p, dir, 9, '#d8e8ff', 0.45);
       // The tube's charge of cold gas blowing out round it: frost, not fire.
       for (let j = 0; this.gas && j < 14; j++) {
         const v = _c.copy(dir).multiplyScalar(8 + 14 * Math.random()).add(this.body.vel);
         v.x += (Math.random() - 0.5) * 10;
         v.y += (Math.random() - 0.5) * 10;
         v.z += (Math.random() - 0.5) * 10;
-        this.gas.emit(p, v, 1 + Math.random(), 1, 5 + 4 * Math.random(), 0.2, 0, 1);
+        this.gas.emit(p, v, 1.4 + Math.random(), 1.2, 7 + 5 * Math.random(), 0.25, 0, 1);
       }
     }
     const first = _c.set(...S.at[b.next % S.at.length]); // ship frame
@@ -150,6 +154,14 @@ export const broadsideParts = {
       fl.visible = !!burning;
       fl.scale.setScalar(this.ear ? clamp(this.ear.distanceTo(t.pos) * 0.012, 6, 40) : 9);
       fl.material.opacity = 0.75 + 0.25 * Math.sin(t.t * 40);
+      // Its motor lighting is an event: a flash, a ring of the first gas, sparks and the bang (tracers.mjs `ignite`);
+      // then a long flame and a trail of exhaust while it burns, and a pop at burnout. Looks only (unseeded).
+      const nose = _tn.set(0, 0, -1).applyQuaternion(t.obj.quaternion);
+      if (burning && !t.lit) this.ignite(_tp.copy(t.pos).addScaledVector(nose, -3), nose, 2.4, t.vel, t.side === 'ours' ? '#cfe0ff' : '#ffd0a0');
+      else if (!burning && t.lit && t.t >= T.burn) this.flash(t.pos, 5, '#ffc890', 0.3);
+      t.lit = !!burning;
+      flameFrame(t.obj.userData.flame, !!burning, 1, t.t);
+      if (burning) this.trail(_tp.copy(t.pos).addScaledVector(nose, -3.4), nose, t.vel, 30, dt, 2);
       // What it meets.
       if (t.side === 'theirs') {
         if (t.pos.distanceTo(this.C.obj.position) < 300) {
@@ -172,6 +184,8 @@ export const broadsideParts = {
     t.obj.removeFromParent();
     this.flash(at, 26, '#ffd8a0', 0.9);
     this.flash(at, 12, '#ffffff', 0.25);
+    this.ring(at, null, 80, '#ffc080', 1.1);
+    this.sparkBurst(at, 90, { speed: 220, v0: t.vel, life: 1.4, color: '#ffb060', w: 0.5 });
     this.sfx?.play('boom', this.ear ? Math.min(900, this.ear.distanceTo(at) * 0.4) : 500, 60);
     if (onCarrier) return; // integrity.mjs has already taken the hit (and shaken you)
     const D = this.W.torpedo.raiderDamage;
@@ -188,6 +202,8 @@ export const broadsideParts = {
     if (!by) return;
     this.flash(t.pos, 9, '#ffc080', 0.5);
     this.flash(t.pos, 4, '#ffffff', 0.12);
+    this.ring(t.pos, null, 26, '#ffb070', 0.6);
+    this.sparkBurst(t.pos, 40, { speed: 120, v0: t.vel, life: 1, color: '#ffc070', w: 0.35 });
     this.sfx?.play('boom', this.ear ? Math.min(900, this.ear.distanceTo(t.pos) * 0.5) : 600, 14);
     this.log.push({ t: this.time, kill: t.side, by });
     if (t.side === 'theirs' && by === 'you') this.dc?.say(null, 'You shot down a torpedo.', 0, 3);

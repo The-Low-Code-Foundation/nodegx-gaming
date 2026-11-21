@@ -3,7 +3,7 @@
   "about": "Your fighter is shot dead in space (weapons/raid.mjs).",
   "who": "flight",
   "say": [
-    "Flight control. You are hit and dead in space. Hands off: we are bringing you in."
+    "Flight control. You are hit and dead in space. Hands off: a tug is on its way to bring you in."
   ],
   "to": {
     "you": "radio"

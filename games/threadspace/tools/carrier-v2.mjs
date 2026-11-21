@@ -634,6 +634,9 @@ const routes = { ...v1.routes, lines: [
 const damage = structuredClone(v1.damage);
 damage.switchboards = ['switchboard'];
 damage.kits.patch.rooms = ['repair-fwd', 'repair-mid', 'dc-store', 'machine-shop'];
+// The patch kit is a welder and hull plates (design/ROADMAP.md, phase 9): a plate over a hole, welded round; a clamp
+// welded over a split coolant pipe.
+Object.assign(damage.kits.patch, { name: 'a welder and hull plates', label: 'Welder' });
 damage.kits.toolkit.rooms = ['elec-shop', 'dc-store'];
 damage.kits.suit.rooms = ['damage-control', 'flight-gear', 'pilots-ready'];
 // Outside the drums everyone wears the duty suit (crew.mjs `OUTFITS.duty`; ROADMAP phase 5), so the hull's suit lockers
@@ -694,6 +697,27 @@ fighter.collide = {
   scrape: { speed: 4, mu: 0.4 },
   damage: { k: 0.2 },
   hole: { speed: 30, pen: 3.5, damage: 20, area: 0.1 },
+};
+// The rescue craft (src/carrier/rescue.mjs): a tanker or a tug, called from the cockpit (1, 2) to a fighter run dry.
+// They launch from her empty pad at `launch` m/s², fly at up to `accel` (4 g: light hulls, full tanks) and `cruise`
+// m/s closing, brake with `margin` of their drive (time to flip), trim on `jets` m/s², turn at `turn` rad/s, and steer
+// for the velocity they want over `tau` s. They keep `clear` metres off her hull (her lofts, slice by slice: less than the landing gate is out past the hangar). `near` metres out they slow to
+// make fast, and they are fast within `dock.dist` m and `dock.speed` m/s. The tanker's `station` (in the fighter's
+// frame) is over her spine; its hose runs from `hoseAt` (its frame) to her `port`, fills `flow` kg/s [drive, jets], and
+// comes away past `hose` m. The tug's station is a bar's length (`cable`) ahead of her nose; it tows at `tow.accel` up
+// to `tow.cruise`, to a point `tow.beyond` m past the landing gate, and swings her nose to the bar at `swing` rad/s, her swing across it damped at `damp` a second.
+// Home, each goes in `bay` m along the hangar from her pad (toward `bayMid`), from `home` m out past the gate, and is
+// stowed `stow` m in from the centre line after `inT` s.
+fighter.rescue = {
+  launch: 14, accel: 40, cruise: 450, margin: 0.55, jets: 6, turn: 1.8, tau: 0.5, clear: 22, near: 60,
+  dock: { dist: 2.5, speed: 1.5 },
+  grab: { spin: 0.04, hold: 34, range: 4, despin: 0.35, steady: 0.012 }, // a tumbling fighter: hold off her centre, a line on her, her spin taken off (rad/s, m, rad/s²)
+  tow: { accel: 16, cruise: 320, beyond: 40 },
+  bay: 12, bayMid: 33, home: 12, stow: 14, inT: 6,
+  kinds: {
+    tanker: { station: [0, 8, 0.5], hoseAt: [0, -3.6, 2.2], port: [0, 1.4, 1], flow: [300, 120], hose: 9 },
+    tug: { station: [0, 0.6, -42], hoseAt: [0, 0.1, 5.2], port: [0, 0.2, -5.6], cable: 30, swing: 0.8, damp: 1.5 }
+  }
 };
 
 const L = {

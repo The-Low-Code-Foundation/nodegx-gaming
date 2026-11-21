@@ -419,6 +419,40 @@ export class Cockpit {
       g.shadowColor = 'rgba(80, 255, 150, 0.6)';
       g.strokeStyle = g.fillStyle = GREEN;
     }
+    // A rescue craft on her way (rescue.mjs): a cyan ring with her name, range and what she is doing; an arrow at the
+    // edge while she is out of view.
+    if (s.rescue) {
+      const p = project(s.rescue.point.clone().sub(cam.position).normalize());
+      const rr = s.rescue.range, rng = rr < 1000 ? `${Math.round(rr)} m` : `${(rr / 1000).toFixed(2)} km`;
+      const what = { out: 'INBOUND', dock: 'CLOSING', fuel: 'HOSE ON', tow: 'TOWING', home: 'RTB' }[s.rescue.state] ?? '';
+      g.strokeStyle = g.fillStyle = '#7fe8ff';
+      g.shadowColor = 'rgba(120, 230, 255, 0.6)';
+      g.font = font(11);
+      const m = 30;
+      if (p.behind || p.x < m || p.x > W - m || p.y < m || p.y > H - m) {
+        let dx = p.x - W / 2, dy = p.y - H / 2;
+        if (p.behind) (dx = -dx), (dy = -dy);
+        if (Math.abs(dx) < 1 && Math.abs(dy) < 1) dy = 1;
+        const k = Math.min((W / 2 - m) / Math.max(Math.abs(dx), 1e-6), (H / 2 - m) / Math.max(Math.abs(dy), 1e-6));
+        const ex = W / 2 + dx * k, ey = H / 2 + dy * k;
+        g.beginPath();
+        g.arc(ex, ey, 7, 0, Math.PI * 2);
+        g.stroke();
+        g.textAlign = ex > W / 2 ? 'right' : 'left';
+        g.fillText(`${s.rescue.label} ${rng}`, ex + (ex > W / 2 ? -14 : 14), ey + 4);
+      } else {
+        g.beginPath();
+        g.arc(p.x, p.y, 11, 0, Math.PI * 2);
+        g.moveTo(p.x, p.y - 15), g.lineTo(p.x, p.y - 8), g.moveTo(p.x, p.y + 8), g.lineTo(p.x, p.y + 15);
+        g.stroke();
+        g.textAlign = 'left';
+        g.fillText(`${s.rescue.label} ${rng}`, p.x + 17, p.y - 2);
+        g.fillText(what, p.x + 17, p.y + 12);
+      }
+      g.textAlign = 'left';
+      g.shadowColor = 'rgba(80, 255, 150, 0.6)';
+      g.strokeStyle = g.fillStyle = GREEN;
+    }
     // Her missiles' seeker: a circle round what it has locked (amber, with its name, when that is one of ours, a flare
     // or anything but the enemy: it has no friend or foe), or, searching, how much heat it sees.
     if (f.flying && s.missiles > 0) {

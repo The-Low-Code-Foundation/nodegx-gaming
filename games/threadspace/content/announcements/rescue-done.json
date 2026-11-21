@@ -1,0 +1,12 @@
+{
+  "id": "rescue-done",
+  "about": "The tanker has filled you, or the tug has cast you off for flight control (rescue.mjs).",
+  "who": "flight",
+  "say": [
+    "Rescue craft. You are good to go. We are heading home."
+  ],
+  "to": {
+    "you": "radio"
+  },
+  "priority": 3
+}

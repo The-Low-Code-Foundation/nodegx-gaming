@@ -182,7 +182,8 @@ export const raidParts = {
     dir.normalize();
     const vel = dir.multiplyScalar(s).add(R.v).add(this.body.vel);
     this.fire(muzzle, vel, false, K.gun.range / s + 1);
-    this.flash(muzzle, 2.5, '#ff9a60', 0.15);
+    // Its muzzle blast, a size below a turret's, carried along with the raider (unseeded: looks only).
+    this.blast(muzzle, _d.copy(vel).sub(R.v).sub(this.body.vel).normalize(), 0.8, '#ff9a60', _a.copy(R.v).add(this.body.vel));
     this.sfx?.play('turbolaser', this.ear ? this.ear.distanceTo(muzzle) * 0.6 : 800);
   },
 
@@ -203,13 +204,13 @@ export const raidParts = {
     dir.z += (r() - 0.5) * 2 * K.spread;
     const s = this.fire(muzzle, dir.normalize().multiplyScalar(K.shell).add(own), false, K.range / K.shell + 1, K.damage[0] + r() * (K.damage[1] - K.damage[0]));
     s.flak = true;
-    s.w = 0.5;
-    this.flash(muzzle, 1.6, '#ff9a60', 0.1);
+    this.flash(muzzle, 2.4, '#ff9a60', 0.1);
+    this.ring(muzzle, dir, 4, '#ff9a60', 0.15);
     this.sfx?.play('turbolaser', this.ear ? this.ear.distanceTo(muzzle) * 0.8 : 900);
   },
 
   /** The fighter is hit: her hull takes it (the layout's `weapons.fighter.hull`), she is thrown about, and at nothing
-   *  she is dead in space: flight control takes her and brings her in (`fighter-down`; main.mjs). She is mended on her
+   *  she is dead in space: hands off, and the tug goes out to tow her in (`fighter-down`; main.mjs, rescue.mjs). She is mended on her
    *  pad. `crash` (collide.mjs): the speed she hit something at; if that finishes her she breaks up instead, a fireball
    *  and her pieces, and says `fighter-wrecked` (main.mjs: you come round in the sick bay, the spare on her pad). */
   fighterHit(p, dmg, crash = 0) {
@@ -237,7 +238,7 @@ export const raidParts = {
       return;
     }
     this.C.bus?.emit('call', { id: 'fighter-down' });
-    this.dc?.say(null, 'You are hit and dead in space: flight control is bringing you in.', 0, 8);
+    this.dc?.say(null, 'You are hit and dead in space: hands off, a tug is coming out to bring you in.', 0, 8);
     this.C.bus?.emit('fighter-down');
   },
 
@@ -269,6 +270,7 @@ export const raidParts = {
     else {
       this.flash(p, 9, '#ffc070', 0.45);
       this.flash(p, 5, '#ffffff', 0.12);
+      this.impact(p, null, 1.2, '#ffc070');
     }
     if (R.hull > 0) return;
     // Destroyed: a fireball, and the wreck in pieces.
@@ -277,6 +279,8 @@ export const raidParts = {
     const c = R.obj.position.clone();
     this.flash(c, 70, '#ffb050', 1.6);
     this.flash(c, 35, '#ffffff', 0.4);
+    this.ring(c, new THREE.Vector3(0, 1, 0).applyQuaternion(R.obj.quaternion), 160, '#ffb060', 1.1);
+    this.sparkBurst(c, 120, { speed: 160, v0: _b.copy(R.v).add(this.body.vel).clone(), life: 2.2, color: '#ffa040', w: 0.5, k: 1.7 });
     for (let i = 0; i < 6; i++) this.flash(_a.copy(c).add(new THREE.Vector3((this.rand() - 0.5) * 30, (this.rand() - 0.5) * 16, (this.rand() - 0.5) * 70)), 20 + this.rand() * 20, '#ff7a30', 0.9 + this.rand());
     const wreck = metal('#5a3634', { rough: 0.7 });
     const vel = R.v.clone().add(this.body.vel);

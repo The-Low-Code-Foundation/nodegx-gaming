@@ -340,8 +340,7 @@ export const banditParts = {
     const d = _b.set((r() - 0.5) * 2 * G.spread, (r() - 0.5) * 2 * G.spread, -1).normalize().transformDirection(w.matrixWorld);
     const s = this.fire(p, d.multiplyScalar(G.shell).add(B.body.vel), false, G.range / G.shell, G.damage[0] + r() * (G.damage[1] - G.damage[0]));
     s.bandit = true;
-    s.w = 0.3;
-    this.flash(p, 0.6, '#ff9a60', 0.05);
+    this.flash(p, 1, '#ff9a60', 0.05);
     if ((B.soundT = (B.soundT ?? 0) - G.every) <= 0) (B.soundT = 0.25), this.sfx?.play('hit', this.ear ? Math.min(900, this.ear.distanceTo(p) * 0.7) : 900);
   },
 
@@ -377,7 +376,7 @@ export const banditParts = {
         return true;
       }
       if (this.ship.inHull(q)) {
-        this.flash(this.C.frame.localToWorld(q.clone()), 1.2, '#ffd090', 0.1);
+        this.impact(this.C.frame.localToWorld(q.clone()), _t.copy(ab).transformDirection(this.C.frame.matrixWorld), 0.3, '#ffd090'); // sparks off her armour
         return true;
       }
     }
@@ -389,12 +388,15 @@ export const banditParts = {
     B.hull -= dmg;
     if (you) (B.hitByYou++), (B.byYou++);
     this.flash(p, small ? 1.2 : 2.5, '#ffd090', 0.1);
+    this.sparkBurst(p, small ? 4 : 10, { speed: 60, v0: B.body.vel, life: 0.4, color: '#ffd090', w: 0.12 });
     if (B.hull > 0) return;
     B.dead = true;
     B.killedByYou = you;
     const c = B.obj.position.clone();
     this.flash(c, 22, '#ffb050', 1.1);
     this.flash(c, 10, '#ffffff', 0.25);
+    this.ring(c, B.body.vel.lengthSq() > 1 ? B.body.vel.clone().normalize() : new THREE.Vector3(0, 1, 0), 40, '#ffb060', 0.6);
+    this.sparkBurst(c, 50, { speed: 120, v0: B.body.vel, life: 1.4, color: '#ffa040', w: 0.3, k: 1.6 });
     const wreck = metal('#5a2b28', { rough: 0.7 });
     for (let i = 0; i < 4; i++) {
       const piece = box(0.8 + this.rand() * 2.5, 0.4 + this.rand(), 1 + this.rand() * 3, wreck);

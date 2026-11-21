@@ -15,7 +15,7 @@
 //   do the same, without the doors you see.
 // - Life support puts air back into any compartment that is no longer losing it.
 // - The repair drones in the drone bay fly out to every hole to space and seal it, one drone a hole. Inside, you can
-//   put a patch on a hole yourself, with a patch kit (hold E), which is quicker.
+//   put a plate over a hole yourself, with the welder and hull plates (the `patch` kit; hold E), which is quicker.
 //
 // What the damage does to the ship, from each system's health (volume-weighted over its compartments):
 //
@@ -52,6 +52,7 @@ import { hazardMat } from '../decor.mjs';
 import { facing, roomAt } from './layout.mjs';
 import { frameOf, sideOf, portals } from './wayfinding.mjs';
 import { sectionOf, sectionName } from '../core/announcer.mjs';
+import { hullBlast, breachIn, ventOut, weldTick } from './hitfx.mjs';
 
 const DOOR_H = 2.5;
 const SIDES = {
@@ -63,13 +64,26 @@ const SIDES = {
 
 // Shared looks.
 const HOLE = new THREE.MeshBasicMaterial({ color: '#000000', side: THREE.DoubleSide });
-const PATCH = new THREE.MeshLambertMaterial({ color: '#c8a030', side: THREE.DoubleSide });
+const PLATE = new THREE.MeshLambertMaterial({ color: '#7d848b', side: THREE.DoubleSide }); // a hull plate welded over a hole
+const BEAD_HOT = new THREE.Color('#ffc060'), BEAD_COLD = new THREE.Color('#4c4842');
 const SCORCH = new THREE.MeshBasicMaterial({ color: '#1c1a18', transparent: true, opacity: 0.85, depthWrite: false, side: THREE.DoubleSide });
-const MIST = new THREE.PointsMaterial({ color: '#dfe8f0', size: 0.06, transparent: true, opacity: 0.75, depthWrite: false });
+// The specks streaming to a hole: soft round dots, not squares (a radial sprite; none in a page without a canvas).
+const dot = (() => {
+  if (typeof document === 'undefined') return null;
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = 32;
+  const g = cv.getContext('2d'), gr = g.createRadialGradient(16, 16, 0, 16, 16, 16);
+  gr.addColorStop(0, 'rgba(255,255,255,1)');
+  gr.addColorStop(0.5, 'rgba(255,255,255,0.5)');
+  gr.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = gr;
+  g.fillRect(0, 0, 32, 32);
+  return new THREE.CanvasTexture(cv);
+})();
+const MIST = new THREE.PointsMaterial({ color: '#dfe8f0', size: 0.09, map: dot, transparent: true, opacity: 0.6, depthWrite: false });
 const MARK_HOLE = new THREE.MeshBasicMaterial({ color: '#ff2a2a', toneMapped: false, depthTest: false, transparent: true });
 const MARK_SEALED = new THREE.MeshBasicMaterial({ color: '#e8c040', toneMapped: false, depthTest: false, transparent: true });
 const MARK_DRONE = new THREE.MeshBasicMaterial({ color: '#5ff0ff', toneMapped: false, depthTest: false, transparent: true });
-const FLASH = new THREE.MeshBasicMaterial({ color: '#ffb060', transparent: true, opacity: 1, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false });
 const TRACER = new THREE.MeshBasicMaterial({ color: '#ffd890', transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false });
 for (const m of [MARK_HOLE, MARK_SEALED, MARK_DRONE]) m.userData.uncut = true;
 
@@ -96,6 +110,7 @@ function section(list, z) {
 
 /** The distance from point `p` to the segment a–b (arrays [x, y, z]). */
 const _Z = new THREE.Vector3(0, 0, 1);
+const _o = new THREE.Vector3(), _w = new THREE.Vector3();
 
 function segDist(p, a, b) {
   const dx = b[0] - a[0], dy = b[1] - a[1], dz = b[2] - a[2];
@@ -454,7 +469,7 @@ export class Integrity {
 
   /** The shell arrives: through the ship along its line, holing and hurting what it passes, bursting where it stops. */
   strike({ from, dir, entry, pen, damage, hole, kick = 'shell' }) {
-    const path = [];
+    const path = [], breaches = [];
     let prev = null, last = null;
     const q = new THREE.Vector3();
     let stop = entry.clone();
@@ -466,7 +481,8 @@ export class Integrity {
       if (n && n !== prev) {
         // A new compartment: holed at the face the shell came through, to space or to the compartment before.
         const face = n.b ? this.face(n.b, q, dir) : { at: q.clone(), n: dir.clone() };
-        this.makeHole(n, last, face.at, face.n, last ? hole * 0.7 : hole);
+        const h = this.makeHole(n, last, face.at, face.n, last ? hole * 0.7 : hole);
+        if (h.look) breaches.push(h);
         this.hurt(n, damage * (1 - (0.5 * s) / pen));
         path.push(n);
         last = n;
@@ -482,7 +498,9 @@ export class Integrity {
     }
     const res = { from, entry, stop, path: path.map((n) => n.c.id), burst: burst?.c.id ?? null };
     this.log.push(res);
-    this.impact(entry, dir, kick);
+    const first = path[0];
+    this.impact(entry, dir, kick, first && !first.c.vacuum && !first.to ? clamp(first.air / this.N.air.nominal, 0, 1) : 0);
+    for (const h of breaches) this.breach(h, kick);
     this.consequences(path, burst);
     this.C.bus?.emit('hit', { room: res.burst ?? res.path[0] ?? null, from, holed: res.path });
     return res;
@@ -595,7 +613,7 @@ export class Integrity {
     for (const k of ['x', 'y', 'z']) if (into[k]) on[k] = into[k] > 0 ? b[k][0] : b[k][1];
     g.position.copy(on).addScaledVector(into, 0.13);
     g.lookAt(g.position.clone().add(into));
-    this.setClip(HOLE, PATCH, SCORCH, rimMat, MIST);
+    this.setClip(HOLE, PLATE, SCORCH, rimMat, MIST);
     I.group.add(g);
     h.look = { g, rimMat, I, r, into, b };
     // The mist: air and loose dust streaming to the hole.
@@ -622,7 +640,7 @@ export class Integrity {
 
   pressPatch(h) {
     if (h.sealed) return;
-    if (!this.dc?.carry.has('patch')) this.dc?.say(null, `You need a patch kit to plug it. ${this.dc.whereKit('patch')}`);
+    if (!this.dc?.carry.has('patch')) this.dc?.say(null, `You need ${this.dc.D.kits.patch.name} to close it. ${this.dc.whereKit('patch')}`);
   }
 
   seal(h, by) {
@@ -632,28 +650,95 @@ export class Integrity {
     h.mark.material = MARK_SEALED;
     this.patchLook(h);
     const where = h.n.c.access === 'walk' ? h.n : h.to?.c.access === 'walk' ? h.to : h.n;
-    this.dc?.say(null, by === 'you' ? `Hole patched in the ${where.c.name.toLowerCase()}.` : `Drones have sealed the hole in the ${where.c.name.toLowerCase()}.`, 0, 4);
+    this.dc?.say(null, by === 'you' ? `Hole plated over in the ${where.c.name.toLowerCase()}.` : `Drones have sealed the hole in the ${where.c.name.toLowerCase()}.`, 0, 4);
     this.sfx?.cue('clunk', { vol: 0.4 });
+    if (h.arc) h.arc.I.lights.splice(h.arc.I.lights.indexOf(h.arc.light) >>> 0, 1), h.arc.light.anchor.removeFromParent(), (h.arc = null);
   }
 
-  /** A sealed hole's patch over its look (if it has one yet: a drum hole's is drawn when its segment is built). */
+  /** A sealed hole's plate over its look, welded all round (if it has one yet: a drum hole's is drawn when its
+   *  segment is built). */
   patchLook(h) {
     if (!h.look || h.look.patched) return;
-    const { g, r } = h.look;
-    g.add(at(new THREE.Mesh(new THREE.CircleGeometry(r * 1.7, 16), PATCH), 0, 0, 0.01));
+    const pl = this.plate(h);
+    for (const b of pl.bead) if (!b.visible) (b.visible = true), (b.userData.t = this.time);
     h.look.mist.visible = false;
     h.look.rimMat.opacity = 0;
     h.look.patched = true;
   }
 
+  /** The plate over a hole, put up when the welding starts: a square of hull plate bigger than the hole, and its weld
+   *  bead round it in short runs, laid as the work goes (`weld`), glowing and cooling. */
+  plate(h) {
+    const L = h.look;
+    if (L.plate) return L.plate;
+    const g = new THREE.Group(), r = L.r, rb = r * 1.35;
+    g.position.z = 0.025;
+    g.add(at(new THREE.Mesh(new THREE.BoxGeometry(r * 3.1, r * 3.1, 0.03), PLATE), 0, 0, 0, 0, 0, Math.random() * 0.6));
+    const N = 28, len = ((2 * Math.PI * rb) / N) * 1.1, bead = [];
+    for (let i = 0; i < N; i++) {
+      const a = ((i + 0.5) / N) * Math.PI * 2;
+      const m = new THREE.Mesh(new THREE.BoxGeometry(len, 0.05, 0.03), new THREE.MeshBasicMaterial({ color: BEAD_HOT, toneMapped: false }));
+      m.position.set(Math.cos(a) * rb, Math.sin(a) * rb, 0.025);
+      m.rotation.z = a + Math.PI / 2;
+      m.visible = false;
+      g.add(m);
+      bead.push(m);
+    }
+    this.setClip(PLATE, ...bead.map((b) => b.material));
+    L.g.add(g);
+    L.g.updateMatrix();
+    L.plate = { g, rb, bead };
+    return L.plate;
+  }
+
+  /** You welding a plate over hole `h`, one frame: the plate up, the bead creeping round it, the arc's sparks and its
+   *  flickering blue light (hitfx.mjs `weldTick`). */
+  weld(h, dt) {
+    const L = h.look, pl = this.plate(h);
+    const k = clamp(h.patch / this.N.patch.work, 0, 1);
+    for (let i = 0, n = Math.ceil(k * pl.bead.length); i < n; i++) if (!pl.bead[i].visible) (pl.bead[i].visible = true), (pl.bead[i].userData.t = this.time);
+    const a = k * Math.PI * 2;
+    const p = _w.set(Math.cos(a) * pl.rb, Math.sin(a) * pl.rb, 0.08).applyMatrix4(L.g.matrix);
+    const B = this.C.blazes?.in(L.I.group);
+    if (B) weldTick(B, p, L.into, dt, !!h.room.drum, (h.weldAcc ??= {}));
+    if (!h.arc) {
+      const anchor = new THREE.Object3D();
+      L.I.group.add(anchor);
+      const light = { anchor, color: new THREE.Color('#bcd4ff'), intensity: 0, distance: 9, decay: 1.6, room: h.room.c.id };
+      L.I.lights.push(light);
+      h.arc = { light, I: L.I };
+    }
+    h.arc.light.anchor.position.copy(p).addScaledVector(L.into, 0.5);
+    h.arc.light.intensity = 22 * (0.5 + Math.random());
+    h.weldT = this.time;
+  }
+
+  /** The hit seen from inside a room it holed (hitfx.mjs `breachIn`): the blast through the hole, a jet of flame,
+   *  shrapnel and smoke, and the room lit by it for a moment. */
+  breach(h, kick) {
+    const L = h.look, n = h.room, B = this.C.blazes?.in(L.I.group);
+    if (!B) return;
+    const size = kick === 'kick' ? 2.5 : 1;
+    breachIn(B, L.g.position, L.into, size, clamp(n.air / this.N.air.nominal, 0, 1), !!n.drum);
+    const anchor = new THREE.Object3D();
+    anchor.position.copy(L.g.position).addScaledVector(L.into, 1.2);
+    L.I.group.add(anchor);
+    const light = { anchor, color: new THREE.Color('#ffa850'), intensity: 0, distance: 16, decay: 1.6, room: n.c.id };
+    L.I.lights.push(light);
+    this.fx.push({ kind: 'lamp', light, I: L.I, t: 0, life: 0.9, base: 90 * size });
+  }
+
   /** The flash where it struck, the bang and the shake you feel aboard, and the kick through her structure that throws
    *  whoever is floating loose (`jolt` on the bus: `kind` is 'kick' for a torpedo, 'shell' or 'glance', the sizes in
    *  the layout's `weapons.brace`; weightless.mjs answers it). */
-  impact(p, dir, kind = 'shell') {
-    const f = at(new THREE.Mesh(new THREE.SphereGeometry(1, 12, 8), FLASH.clone()), p.x, p.y, p.z);
-    f.userData.uncut = true;
-    this.C.frame.add(f);
-    this.fx.push({ mesh: f, t: 0, life: 0.6, kind: 'flash' });
+  impact(p, dir, kind = 'shell', air = 0) {
+    // Seen from outside (hitfx.mjs `hullBlast`): the flash, a fireball out of the plating, glowing debris, a dust cloud
+    // that hangs, and the air behind the plating (`air` 0..1) venting white; the streaking sparks and the blast's ring
+    // in the world (`sparks`, main.mjs). Looks only.
+    const out = _o.copy(dir).normalize().negate();
+    const B = this.C.blazes?.in(this.C.frame, { clipPlanes: null, near: [1.5, 9] });
+    if (B) hullBlast(B, p, out, kind === 'kick' ? 3 : kind === 'glance' ? 0.5 : 1, air);
+    this.sparks?.(p, out, kind);
     const you = this.you ?? new THREE.Vector3();
     const d = you.distanceTo(p);
     // A torpedo's warhead is felt the length of her: a hard shake anywhere aboard, and the structure lurching along
@@ -692,7 +777,11 @@ export class Integrity {
       const elec = ['power', 'bridge', 'sensors', 'aux', 'engineering', 'repair', 'flight'].includes(c.system);
       if (c.system === 'corridor') r < J.leak && this.dc.placesFor(this.dc.D.kinds.leak).includes(c) && this.dc.queue('leak', c.id);
       else if (elec && r < J.electrical) this.dc.queue('electrical', c.id);
-      else if (r < J.fire) this.dc.queue('fire', c.id);
+      else if (r < J.fire) {
+        // The fire burns where the shell came in, if its hole is drawn in this room; else somewhere in the room.
+        const hole = hurt.holes.findLast((h) => h.look && h.room === hurt && !h.sealed);
+        this.dc.queue('fire', c.id, hole ? { hole } : undefined);
+      }
     }
     // The call: the first breach of a walkable space by name, or what was hit.
     const breached = path.find((n) => n.c.access === 'walk') ?? path[0];
@@ -1108,39 +1197,73 @@ export class Integrity {
     for (const e of this.fx) {
       e.t += dt;
       const k = e.t / e.life;
-      if (e.kind === 'flash') {
-        e.mesh.scale.setScalar(3 + 22 * Math.sqrt(k)); // big enough to read from the helm's outside view, 600 m off
-        e.mesh.material.opacity = Math.max(0, 1 - k);
-      } else e.mesh.position.lerpVectors(e.from, e.to, Math.min(1, k));
+      if (e.kind === 'lamp') {
+        // A blast's light in a room: bright at once, flickering down to nothing.
+        e.light.intensity = e.base * Math.pow(Math.max(0, 1 - k), 2) * (0.75 + 0.5 * Math.random());
+        if (k >= 1) e.I.lights.splice(e.I.lights.indexOf(e.light) >>> 0, 1), e.light.anchor.removeFromParent();
+        continue;
+      }
+      e.mesh.position.lerpVectors(e.from, e.to, Math.min(1, k));
       if (k >= 1) e.mesh.removeFromParent(), e.mesh.geometry.dispose();
     }
     this.fx = this.fx.filter((e) => e.t < e.life);
+  }
+
+  /** The draft in room `id` at `p` (its frame, x and z), towards the hole or door it is losing air through: m/s, in
+   *  `out`, or null if it is not losing any (damage.mjs: a fire's flames and smoke drift on it). The drums' rooms have
+   *  their own frames, so none there. */
+  draftAt(id, p, out) {
+    const n = this.nodes.get(id), d = n?.drain;
+    if (!d || n.drum) return null;
+    out.set(d.x - p.x, 0, d.z - p.z);
+    const len = out.length();
+    if (len < 0.3) return null;
+    return out.multiplyScalar(clamp(d.rate * 40, 0, 2.5) / len);
   }
 
   /** The holes you can see: the hot rim cooling, the mist streaming in, and patching one yourself. */
   holeFrame(dt, f, walker, mode) {
     const P = this.N.patch;
     const near = mode === 'walk' ? walker.nearestUse() : null;
+    const outside = this.C.blazes?.in(this.C.frame, { clipPlanes: null, near: [1.5, 9] });
     for (const h of this.holes) {
       h.t += dt;
+      // A hole to space breathes its room's air out, white, while there is any (looks only).
+      if (outside && !h.sealed && !h.to && h.n.air > 3) {
+        const p = this.holeNow(h, _w), out = h.spin ? _o.set(p.x, p.y, 0).normalize() : _o.copy(h.normal).negate();
+        ventOut(outside, p, out, clamp(h.n.air / this.N.air.nominal, 0, 1), dt, (h.ventAcc ??= {}), clamp(Math.sqrt(h.area), 0.5, 2));
+      }
+      if (h.arc && this.time - h.weldT > 0.05) h.arc.light.intensity = 0; // the arc is out when you stop
       if (!h.look && h.drum && h.n.c.access === 'walk' && this.C.drums.built.has(h.drum.key)) {
         this.holeLook(h, h.n);
         if (h.sealed) this.patchLook(h);
       }
       if (!h.look) continue;
       const L = h.look;
+      // The weld bead cooling from orange to grey, a run at a time.
+      if (L.plate && !L.cold) {
+        let hot = false;
+        for (const b of L.plate.bead) {
+          if (!b.visible) continue;
+          const u = clamp((this.time - b.userData.t) / 25, 0, 1);
+          b.material.color.lerpColors(BEAD_HOT, BEAD_COLD, u);
+          hot ||= u < 1;
+        }
+        if (!hot && h.sealed) L.cold = true;
+      }
       // Hot metal cooling: yellow-orange to a dull red, then gone.
       L.rimMat.opacity = h.sealed ? 0 : Math.max(0, 1 - h.t / 40);
       L.rimMat.color.setHSL(0.09 - Math.min(0.09, h.t / 300), 1, 0.6 - Math.min(0.35, h.t / 60));
       if (h.use && near === h.use && !h.sealed) {
         if (f.keys.has('KeyE') && this.dc?.carry.has('patch')) {
           h.patch += dt;
+          this.weld(h, dt);
           if (h.patch >= P.work) {
             this.dc.carry.delete('patch');
             this.seal(h, 'you');
           }
         }
-        h.use.label = h.patch > 0 ? `Patching: ${Math.round((100 * h.patch) / P.work)}%` : 'Hold E: patch the hole';
+        h.use.label = h.patch > 0 ? `Welding the plate: ${Math.round((100 * h.patch) / P.work)}%` : 'Hold E: weld a plate over the hole';
         h.use.key = f.keys.has('KeyE') && h.patch > 0 ? '' : 'E';
       }
       // The mist: specks drawn from the room toward the hole, quicker as they near it.

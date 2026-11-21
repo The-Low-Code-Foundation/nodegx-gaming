@@ -86,6 +86,8 @@ export class Fighter {
     this.view = 'cockpit';
     this.chasePos = new THREE.Vector3();
     this.inside = null;
+    this.towed = false; // on a rescue tug's tow bar (rescue.mjs): hands off
+    this.disabled = false; // shot dead in space (main.mjs, `fighter-down`): hands off until she is in
   }
 
   get aboard() {
@@ -105,6 +107,8 @@ export class Fighter {
   // --- getting in and out ------------------------------------------------------------------------------------------
 
   board(i) {
+    this.disabled = false;
+    this.towed = false;
     const w = this.C.fighters[i];
     this.index = i;
     this.obj = w;
@@ -226,6 +230,7 @@ export class Fighter {
   /** Hands her to flight control: back into the carrier's frame and along a path that goes round the hull. */
   land() {
     if (this.phase !== 'flying') return;
+    this.disabled = false; // flight control has her: she is mended on her pad
     const w = this.obj;
     this.C.obj.updateMatrixWorld(true);
     this.berth.attach(w); // keeps where she is; her position is now in the carrier's frame (and drawn with the hangar)
@@ -355,8 +360,9 @@ export class Fighter {
       if (out > (L.wings ?? Math.abs(L.clear) - 10)) this.wingsWant = 0; // spread them once she is through the door
       if (out > Math.abs(L.clear)) this.handOver(env.carrier);
     } else if (this.phase === 'flying') {
-      // Blacked out, your hands are off the controls: the drive cuts, and she flies on as she was.
-      fl.frame(hands && !this.gl.out ? this.controls(f, dt) : this.controls(IDLE, dt), dt);
+      // Blacked out, or on a rescue tug's tow bar (rescue.mjs), your hands are off the controls: the drive cuts, and
+      // she flies on as she was (or as the tug takes her).
+      fl.frame(hands && !this.gl.out && !this.towed && !this.disabled ? this.controls(f, dt) : this.controls(IDLE, dt), dt);
     } else if (this.phase === 'landing') {
       this.t += dt;
       const k = Math.min(1, this.t / this.pathT);

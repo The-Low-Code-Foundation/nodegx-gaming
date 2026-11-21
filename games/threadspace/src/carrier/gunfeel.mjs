@@ -9,7 +9,8 @@
 // `gun(kind, impulse, d)`: a shot from one of hers, `d` metres from you (ship frame). Kinds: `cannon` (a turret's
 // round), `rail` (a railgun slug: the whole hull rings), `tube` (a cold torpedo launch), `pdc` (a burst of point
 // defence), `flak` (a flak gun's shell: a short, sharp version of the cannon). `blast(d)`: a torpedo's warhead going off in her. `fighterShot()`: a round from your fighter's cannon,
-// heard and felt through her airframe. `frame(dt, camera, how)` moves the camera: `how` is 'aboard' (walking, at a
+// heard and felt through her airframe. `railOff()`: a missile kicked off her rail. `ignite(v, near)`: a rocket motor
+// lighting (a missile's or a torpedo's), by loudness `v`; `near` within a few tens of metres. `frame(dt, camera, how)` moves the camera: `how` is 'aboard' (walking, at a
 // gun, on the bridge), 'cockpit' or null (outside: you see it instead, and hear it by distance through sfx.mjs).
 // Numbers are `FEEL`.
 
@@ -100,6 +101,29 @@ export class Feel {
     this.tone(o, t, 'sine', 130, 48, 0.07, v);
     this.tone(o, t, 'triangle', 260, 90, 0.04, v * 0.25);
     this.noise(o, t, 'lowpass', 2200, 500, 0.05, v * 0.4);
+  }
+
+  /** A missile kicked off her rail: the ejector's clunk through the airframe and a hard shove in the seat. */
+  railOff() {
+    this.buzz = Math.min(1, this.buzz + 0.9);
+    const o = this.out;
+    if (!o) return;
+    const t = this.sfx.ctx.currentTime;
+    this.tone(o, t, 'sine', 95, 38, 0.22, 0.7);
+    this.noise(o, t, 'bandpass', 700, 260, 0.14, 0.45);
+    this.ring(o, t + 0.01, [151, 233, 347], 0.5, 0.05);
+  }
+
+  /** A rocket motor lighting, heard (a missile's or torpedo's: there is no air, so only close by or through what it
+   *  is fixed to, which `v` already accounts for): a hard bang and the motor's roar rising and tearing away. */
+  ignite(v, near) {
+    const o = this.out;
+    if (!o || v < 0.03) return;
+    const t = this.sfx.ctx.currentTime;
+    this.tone(o, t, 'sine', 70, 30, 0.35, v * 0.8);
+    this.noise(o, t, 'lowpass', near ? 4200 : 1600, 300, 0.2, v * 0.5);
+    this.noise(o, t + 0.02, 'bandpass', 380, 1400, 1.3, v * 0.35); // the roar, climbing away from you
+    if (near) this.buzz = Math.min(1, this.buzz + 0.5);
   }
 
   /** The camera, this frame. */

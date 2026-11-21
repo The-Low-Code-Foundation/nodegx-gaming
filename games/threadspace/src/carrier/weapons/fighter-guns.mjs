@@ -1,7 +1,10 @@
 // The fighter's cannon, what her sight shows of the raider (`foe`), and the raider's flak at her. Part of `Weapons`
 // (weapons.mjs).
 
-import { THREE, _a, _b, _c, intercept } from './shared.mjs';
+import { THREE, _a, _b, _c, intercept, metal } from './shared.mjs';
+
+const _v = new THREE.Vector3(), _s = new THREE.Vector3();
+let BRASS = null, CASE_GEO = null;
 
 /** Mixed into `Weapons` (weapons.mjs). */
 export const fighterGunParts = {
@@ -37,17 +40,34 @@ export const fighterGunParts = {
     this.cannonBlast(p, d);
     const s = this.fire(p, d.multiplyScalar(F.shell).add(fi.body.vel), true, F.range / F.shell, F.damage[0] + r() * (F.damage[1] - F.damage[0]));
     s.you = s.cannon = true;
-    s.w = 0.22;
+    // One round in three is a tracer (`tracerEvery`): the rest are drawn faint (weapons/tracers.mjs `LOOK.ball`).
+    this.cannonCount = (this.cannonCount ?? 0) + 1;
+    s.tracer = this.cannonCount % (F.tracerEvery ?? 3) === 1 % (F.tracerEvery ?? 3);
     // Felt through the airframe more than heard: a chug and a shiver in the seat (gunfeel.mjs), or the old knock.
     if (this.feel) this.feel.fighterShot();
     else this.sfx?.play('hit', 30);
   },
 
-  /** The cannon's muzzle at `p` along `d` (world, unit): a flash, a star, and a puff of hot gas (unseeded: looks only). */
+  /** The cannon's muzzle at `p` along `d` (world, unit): a flash, a white star a little ahead, a ring of gas off the
+   *  muzzle brake, burning grains thrown ahead, a puff of hot gas, and a spent case kicked out of her belly, tumbling
+   *  away (unseeded: looks only). */
   cannonBlast(p, d) {
-    this.flash(p, 1.2, '#ffd9a0', 0.06);
-    this.flash(_c.copy(p).addScaledVector(d, 0.8), 0.6, '#ffffff', 0.03);
-    const G = this.gas, v0 = this.fighter.body.vel;
+    const fi = this.fighter, v0 = fi.body.vel;
+    this.flash(p, 1.6, '#ffd9a0', 0.06);
+    this.flash(_v.copy(p).addScaledVector(d, 1.2), 0.8, '#ffffff', 0.035);
+    if (Math.random() < 0.5) this.ring(_v.copy(p).addScaledVector(d, 0.3), d, 2.2, '#ffd0a0', 0.1);
+    this.sparkBurst(p, 2, { dir: d, spread: 0.15, speed: 140, v0, life: 0.2, color: '#ffd080', w: 0.06 });
+    if (this.cannonCount % 2 === 0) {
+      BRASS ??= metal('#c9a04a', { plated: false, rough: 0.35, metalness: 0.7 });
+      CASE_GEO ??= new THREE.CylinderGeometry(0.035, 0.035, 0.2, 6).rotateX(Math.PI / 2);
+      const c = new THREE.Mesh(CASE_GEO, BRASS);
+      c.position.copy(fi.obj.localToWorld(_s.set(Math.sign(fi.obj.worldToLocal(_v.copy(p)).x || 1) * 0.5, -1.1, -3.2)));
+      c.frustumCulled = false;
+      this.scene.add(c);
+      const out = _v.set((Math.random() - 0.5) * 3, -4 - 3 * Math.random(), 1 + Math.random() * 2).transformDirection(fi.obj.matrixWorld).multiplyScalar(4 + 3 * Math.random());
+      this.fx.push({ kind: 'debris', mesh: c, t: 0, life: 1.6, vel: out.add(v0).clone(), spin: new THREE.Vector3(Math.random() * 30, Math.random() * 30, Math.random() * 10) });
+    }
+    const G = this.gas;
     for (let i = 0; G && i < 3; i++) {
       const v = _c.copy(d).multiplyScalar(15 + 25 * Math.random()).add(v0);
       v.x += (Math.random() - 0.5) * 12;

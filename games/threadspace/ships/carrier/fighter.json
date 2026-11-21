@@ -575,6 +575,82 @@
     "damage": 20,
     "area": 0.1
    }
+  },
+  "rescue": {
+   "launch": 14,
+   "accel": 40,
+   "cruise": 450,
+   "margin": 0.55,
+   "jets": 6,
+   "turn": 1.8,
+   "tau": 0.5,
+   "clear": 22,
+   "near": 60,
+   "dock": {
+    "dist": 2.5,
+    "speed": 1.5
+   },
+   "grab": {
+    "spin": 0.04,
+    "hold": 34,
+    "range": 4,
+    "despin": 0.35,
+    "steady": 0.012
+   },
+   "tow": {
+    "accel": 16,
+    "cruise": 320,
+    "beyond": 40
+   },
+   "bay": 12,
+   "bayMid": 33,
+   "home": 12,
+   "stow": 14,
+   "inT": 6,
+   "kinds": {
+    "tanker": {
+     "station": [
+      0,
+      8,
+      0.5
+     ],
+     "hoseAt": [
+      0,
+      -3.6,
+      2.2
+     ],
+     "port": [
+      0,
+      1.4,
+      1
+     ],
+     "flow": [
+      300,
+      120
+     ],
+     "hose": 9
+    },
+    "tug": {
+     "station": [
+      0,
+      0.6,
+      -42
+     ],
+     "hoseAt": [
+      0,
+      0.1,
+      5.2
+     ],
+     "port": [
+      0,
+      0.2,
+      -5.6
+     ],
+     "cable": 30,
+     "swing": 0.8,
+     "damp": 1.5
+    }
+   }
   }
  }
 }

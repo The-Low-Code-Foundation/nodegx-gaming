@@ -51,7 +51,7 @@
 // The layout's `weapons` entry has every number. In the console: `__carrier.guns.raid('port')`, `.raider`, `.torps`,
 // `.pdcs`, `.turrets`.
 
-import { THREE, metal, at, box, glow, clamp, mulberry, hazardMat, ROUND_MAX, ROUND_OURS, pdcMesh, flakMesh } from './weapons/shared.mjs';
+import { THREE, metal, at, box, glow, clamp, mulberry, hazardMat, ROUND_MAX, pdcMesh, flakMesh } from './weapons/shared.mjs';
 import { raidParts } from './weapons/raid.mjs';
 import { projectileParts } from './weapons/projectiles.mjs';
 import { torpedoParts } from './weapons/torpedoes.mjs';
@@ -62,6 +62,7 @@ import { turretParts } from './weapons/turrets.mjs';
 import { fighterGunParts } from './weapons/fighter-guns.mjs';
 import { banditParts } from './weapons/bandits.mjs';
 import { missileParts } from './weapons/missiles.mjs';
+import { tracerParts, Streaks, STREAK_GEO, streakMaterial } from './weapons/tracers.mjs';
 
 export class Weapons {
   /** `ship` the integrity (holes, health, `inHull`), `body` the carrier's rigid body (her world velocity), `hooks.man(t)`
@@ -96,11 +97,17 @@ export class Weapons {
     this.pdcs = this.L.mounts.filter((m) => m.kind === 'pdc').map((m) => this.makePdc(m));
     // Their tracers, and the raider's: one pool, drawn as one instanced mesh.
     this.pdRounds = []; // point defence rounds in flight (`this.rounds` is the fighter's ammunition)
-    this.roundMesh = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), ROUND_OURS, ROUND_MAX);
+    // Each a tracer streak turned to the camera (weapons/tracers.mjs), tinted by kind.
+    this.roundMesh = new THREE.InstancedMesh(STREAK_GEO, streakMaterial(), ROUND_MAX);
+    this.roundMesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(ROUND_MAX * 3), 3);
+    this.roundMesh.instanceColor.setUsage(THREE.DynamicDrawUsage);
     this.roundMesh.frustumCulled = false;
     this.roundMesh.count = 0;
     this.roundMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     scene.add(this.roundMesh);
+    // Every other streak: the shells and the sparks (weapons/tracers.mjs).
+    this.streaks = new Streaks(scene);
+    this.sparks = [];
     // Torpedoes in flight, either side's; the carrier's own tubes.
     this.torps = [];
     this.brace = null; // { eta }: a torpedo is seconds out (braceFrame, weapons/torpedoes.mjs)
@@ -238,4 +245,4 @@ export class Weapons {
 
 // The rest of `Weapons` lives in weapons/, a file per kind of gun (design/ROADMAP.md, phase 2). Each is a set of
 // methods mixed in here, so `this` is the one `Weapons` everywhere and the methods call each other as before.
-Object.assign(Weapons.prototype, raidParts, projectileParts, torpedoParts, broadsideParts, pdcParts, railgunParts, turretParts, fighterGunParts, banditParts, missileParts);
+Object.assign(Weapons.prototype, raidParts, projectileParts, torpedoParts, broadsideParts, pdcParts, railgunParts, turretParts, fighterGunParts, banditParts, missileParts, tracerParts);

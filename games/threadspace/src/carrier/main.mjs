@@ -42,6 +42,7 @@ import { HelmSight } from './helmsight.mjs';
 import { Sfx } from '../sfx.mjs';
 import { Feel } from './gunfeel.mjs';
 import { Gas } from './gas.mjs';
+import { Blazes } from './blaze.mjs';
 import { FlightAudio } from './flight-audio.mjs';
 import { Career } from './career.mjs';
 import { Routine, fmt } from './watch.mjs';
@@ -51,6 +52,7 @@ import { View } from './render.mjs';
 import { Drive } from './drive.mjs';
 import { Doors } from './doors.mjs';
 import { Collisions } from './collide.mjs';
+import { Rescue } from './rescue.mjs';
 import { loadLayout, fetchJson } from '../core/ship.mjs';
 import { loadPeople, peopleNamed, joinPeople } from '../core/people.mjs';
 import { Announcer, loadCalls, DEPTS } from '../core/announcer.mjs';
@@ -150,6 +152,8 @@ const doors = new Doors(C); // the bay doors, the hatch lids
 // Gas in vacuum (gas.mjs): what the fighter's drive and jets throw out, and the carrier's own, each in its own pool.
 const gas = new Gas(world, 2600);
 const carrierGas = new Gas(world, 4000);
+// Fire, smoke, sparks and spray (blaze.mjs): damage's particles, one pool per frame they are drawn in (hitfx.mjs).
+const blazes = (C.blazes = new Blazes(C));
 // The fighter's sound: live DSP worklets fed from her flight (flight-audio.mjs), on the page's AudioContext.
 const sfx = new Sfx();
 const flightAudio = new FlightAudio(sfx);
@@ -179,6 +183,7 @@ const ship = new Integrity(C, {
   }
 });
 dc.airOf = (id) => ship.airOf(id);
+dc.draftOf = (id, p, out) => ship.draftAt(id, p, out); // a fire leans on the draft to a hole
 // The guns, the point defence, the torpedoes, the railgun and the raider (weapons.mjs). The hatches to the turrets sit
 // you in one.
 const guns = new Weapons(C, world, {
@@ -193,13 +198,22 @@ const feel = new Feel(sfx);
 guns.feel = ship.feel = feel;
 guns.gas = carrierGas;
 ship.knock = (p, dir, kind) => guns.struck(p, dir, kind);
-// A fighter shot dead in space: flight control takes her, from wherever she is, and brings her in.
+// A torpedo hit's streaking debris, in the world (weapons/tracers.mjs), on top of integrity.mjs's fireball and dust in
+// her own frame. No ring: there is no air out there to carry a shock. A shell's own spatter is already drawn where it
+// met the plating (projectiles.mjs).
+ship.sparks = (p, out, kind) => {
+  if (kind !== 'kick') return;
+  const P = C.frame.localToWorld(p.clone()), O = out.clone().transformDirection(C.frame.matrixWorld);
+  guns.impact(P, O.negate(), 3, '#ffb060');
+};
 // The weightless crew brace at the call and take a hit's kick (floating.mjs).
 C.bus.on('brace', (e) => crewBrace(e.on));
 C.bus.on('jolt', crewJolt);
+// Shot dead in space: hands off, and the tug goes out to bring her in (rescue.mjs `disabled`), not flight control's
+// carry from wherever she is. Flight control takes her only at the gate, off the tug's bar.
 C.bus.on('fighter-down', () => {
-  doors.setBay(1);
-  fighter.land();
+  fighter.disabled = true;
+  rescue.disabled();
 });
 // A crash that finishes her: she breaks up (weapons/raid.mjs `fighterHit`), you see the fireball for a moment (fighter.mjs
 // `WRECK_T`), then come round in the sick bay, hurt; the spare airframe is on her pad under her number (fighter.mjs `salvage`).
@@ -305,6 +319,7 @@ Object.assign(G, {
   hands, doors, drive, deckOf, blenderFighters
 });
 const walk = (G.walk = new WalkSeat(G));
+const rescue = (G.rescue = new Rescue(G)); // the tanker and the tug, called from the cockpit (rescue.mjs)
 walker.floater = new Floater(G); // weightless: the handholds, pushing off, drifting, the puffer (weightless.mjs)
 const helmSeat = new HelmSeat(G);
 const fighterSeat = new FighterSeat(G);
@@ -383,6 +398,7 @@ function tick(dt) {
   helm.frame(mode === 'helm' ? f : IDLE, dt, mode === 'helm');
   drive.standBy(dt, helm, mode === 'helm');
   fighter.frame(mode === 'fighter' ? f : IDLE, dt, mode === 'fighter', { carrier: body, bayOpen: doors.open });
+  rescue.frame(dt); // a tanker or a tug out to her: after she has moved, so the tow bar holds her where it is
   // The approach lane: lit while you are out in her, and flight control catches you at its end.
   const lane = approach.frame(dt, fighter, body, mode !== 'walk' && (fighter.flying || fighter.phase === 'landing'));
   if (mode === 'fighter' && fighter.flying && lane.call === 'catch' && doors.open) fighter.capture(lane);
@@ -390,6 +406,7 @@ function tick(dt) {
   carrierGas.stepTick();
   gas.frame(dt, time);
   carrierGas.frame(dt, time);
+  blazes.frame(dt);
   flightAudio.setActive(mode === 'fighter' && fighter.aboard);
   flightAudio.frame(fighter.flight);
   machineryFrame(C, time, { power: ship.power, reactor: ship.sys('reactor') });
@@ -506,6 +523,7 @@ function tick(dt) {
   routine.light(lightPool, hemi, { mode, room: roomNow }); // night: red lighting in the passages
   gas.setView(camera, renderer.domElement.height);
   carrierGas.setView(camera, renderer.domElement.height);
+  blazes.setView(camera, renderer.domElement.height);
   view.draw({ mode, inside });
 }
 
@@ -570,7 +588,7 @@ window.addEventListener('keydown', wake, { once: true });
 
 window.__carrier = {
   C, L, K, W, crew, routine, hands, body, helm, thrusters, walker, renderer, camera, cut, fighter, dc, ship, guns, plant, helmSight, sfx, approach, cockpit, career, voices, announcer,
-  gas, carrierGas, feel, flightAudio, composer, bloom, ABOARD, ambience, input, G, seats, drive, doors,
+  gas, carrierGas, blazes, feel, flightAudio, composer, bloom, ABOARD, ambience, input, G, seats, drive, doors, rescue,
   mode: () => mode,
   tick: (n = 1, dt = 1 / 60) => {
     for (let i = 0; i < n; i++) tick(dt);
