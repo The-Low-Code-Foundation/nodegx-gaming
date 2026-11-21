@@ -78,6 +78,29 @@ export const CAREERS = {
       { id: 'labHead', pay: 205, days: 5 },
       { id: 'professor', pay: 275 }
     ]
+  },
+  // Round 16, phase 5.4: the vet, at the vet's (world.mjs lifeVet), Tuesday to Saturday (pets' owners bring them on a
+  // Saturday), 9:00 to 15:00. Check-ups and care: no animal there is ill or hurt. Talking to the owners all day, a vet
+  // gets more charming at every right answer.
+  vet: {
+    icon: '🐾',
+    skills: true,
+    place: 'vet',
+    days: [1, 2, 3, 4, 5],
+    leave: 8 * 60 + 30,
+    starts: 9 * 60,
+    ends: 15 * 60,
+    work: { id: 'work', slows: { hunger: 0.7, energy: 1, bladder: 0, hygiene: 0.8, fun: 0.9, social: 0.8 } },
+    stations: ['maths', 'science', 'geography', 'english'],
+    learns: { charm: 0.2 },
+    levels: [
+      { id: 'kennelHelper', pay: 55, days: 3 },
+      { id: 'vetNurse', pay: 80, days: 4 },
+      { id: 'juniorVet', pay: 115, days: 4 },
+      { id: 'vet', pay: 155, days: 5 },
+      { id: 'seniorVet', pay: 210, days: 5 },
+      { id: 'headVet', pay: 285 }
+    ]
   }
 };
 

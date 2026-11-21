@@ -85,6 +85,8 @@ Object.assign(OFFERS, {
   officeCouch: [{ id: 'rest', act: 'sit', minutes: 30, gives: { energy: 10, fun: 12 }, when: (n) => n.energy < 45 || n.fun < 40 }],
   // Round 16, phase 5.3: the café's tables (world.mjs lifeCafe), served between the stations' questions, as a desk.
   cafeTable: [{ id: 'serveTables', act: 'interact', clip: 'mc_talk', talk: true, minutes: 45, gives: { social: 15 }, bonus: () => 0.15, icon: '🍽️' }],
+  // Round 16, phase 5.4: the vet's kennels (world.mjs lifeVet), between questions, as the café's tables are.
+  vetKennel: [{ id: 'tendPatients', act: 'interact', clip: 'Interact', minutes: 45, gives: { social: 10, fun: 10 }, bonus: () => 0.15, icon: '🐾' }],
   bench: [{ id: 'sitBench', act: 'sit', minutes: 30, gives: { energy: 4, fun: 20 } }],
   ducks: [{ id: 'feedDucks', act: 'interact', minutes: 20, gives: { fun: 90 }, moodlet: 'ducks', hand: 'bread' }],
   flowers: [{ id: 'smellFlowers', act: 'interact', minutes: 5, gives: { fun: 60 } }],

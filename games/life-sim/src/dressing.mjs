@@ -1067,6 +1067,27 @@ export async function dressCafe(group, walls, furnish, S, { w, d }) {
   return [];
 }
 
+// ---- the vet's (round 16, phase 5.4: the vet's work, world.mjs lifeVet) ----
+// A pale tiled floor, a strip of washable tiles behind the exam table, windows on the street, a clock and pictures.
+export async function dressVet(group, walls, furnish, S, { w, d }) {
+  if (!DOM) return [];
+  const [back, left, , front] = [side(walls, 0, -1), side(walls, -1, 0), side(walls, 1, 0), side(walls, 0, 1)];
+  group.add(ground('bathroom', w, d, 0, 0, 0));
+  skirting(group, walls);
+  hang(group, back, 0.6, 1.3, wallTiles(2.2, 0.6, [195, 25, 88]));
+  hang(group, back, -3.0, 1.9, clock(0.22));
+  hang(group, left, 1.0, 1.6, picture(0.5, 0.38, 'sea', M.frame));
+  for (const x of [-2.4, 2.6]) {
+    hang(group, front, x, 1.6, windowPiece(2.0, 1.3, { view: 'city', curtains: null }));
+    hangOutside(group, front, x, 1.6, windowPiece(2.0, 1.3, { view: 'city', outside: true }));
+  }
+  hang(group, front, 0.1, 1.6, picture(0.45, 0.6, 'sunflower', M.frame));
+  bake(group, walls);
+  group.add(ground('grass', 120, 120, 0, 0, -0.03));
+  group.add(ground('paving', w + 6, d + 6, 0, 0, -0.02));
+  return [];
+}
+
 // ---- the park: grass, gravel paths, paving, a pond that moves, stones round it, ducks ----
 export function dressPark(group) {
   if (!DOM) return;

@@ -124,7 +124,7 @@ home.house = 'flat';
 const places = { home, office, park };
 // Round 16, phase 5.3: a career's own place (work.mjs `place`: the café), built the first time someone has that job
 // (taking it, a save with it, or the morning they go), as a town house is.
-const CAREER_PLACES = { cafe: 'lifeCafe' };
+const CAREER_PLACES = { cafe: 'lifeCafe', vet: 'lifeVet' };
 const careerLabels = (career) => Object.fromEntries(STATIONS.map((s) => [s.id, stationName(career, s.id)]));
 const workBuilding = new Map();
 function careerPlace(id) {
@@ -1620,7 +1620,7 @@ function light() {
 }
 
 // ---- where: the places, and who is in each. You see the one the Sim you look after is in ----
-const PLACE_ICONS = { home: '🏠', office: '🏢', park: '🌳', street: '🏘️', cafe: '☕' };
+const PLACE_ICONS = { home: '🏠', office: '🏢', park: '🌳', street: '🏘️', cafe: '☕', vet: '🐾' };
 let followed = null; // the place sel was in last frame: when it changes, the view goes with them
 // Round 14: a house in the town shows here while someone from the household is in it (or you are looking at it), and
 // 🗺️ Town opens the street: who lives where, the parties, the houses for sale, an extension.

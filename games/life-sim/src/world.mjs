@@ -5,7 +5,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { dressHome, dressHouse, dressOffice, dressCafe, dressPark, dressStreet, pondLife, lampGlow, streetLabel } from './dressing.mjs';
+import { dressHome, dressHouse, dressOffice, dressCafe, dressVet, dressPark, dressStreet, pondLife, lampGlow, streetLabel } from './dressing.mjs';
 import { kindOf } from './game/shop.mjs';
 
 const loader = new GLTFLoader();
@@ -807,6 +807,70 @@ async function lifeCafe(group, { labels = {} } = {}) {
   return { w, d, walls, items, cell: 0.25, view: { target: [0, 0.6, 0.3], camera: [6, 8.5, 10], max: 20, fog: [30, 80] }, starts: [], shadow: 7, fade };
 }
 
+// ---- the vet's (round 16, phase 5.4; work.mjs CAREERS.vet, 10 × 8 m) ----
+// Where the vet works: built the first time someone has the job (page.mjs), as the café is. Four stations (the
+// reception desk, the exam table, the animal atlas, the pinboard of care cards: a school subject each, with the vet's
+// own names: `labels`), the kennels to see to between questions (what free will does there), a fridge and a sink for a
+// snack and a hot chocolate, chairs to wait on. The patients are the pets' models (pets.mjs), only looked at: a dog
+// on the table having a check-up, cats resting in the kennels. Nobody is ill or hurt: it's check-ups and care.
+const A = (n) => `assets/animals/${n}.glb`;
+// The pets' models face +X: turned this much, one faces +Z like the furniture.
+const FACE_Z = -Math.PI / 2;
+const bars = mat5(0xc8ccd2, 0.35), mint = mat5(0x7cc8b4, 0.6), blanket = mat5(0x6a8fd8, 1);
+// The exam table: a steel top on a pedestal, a blue mat on it.
+const EXAM_TABLE = madeModel(merged([
+  box(1.2, 0.05, 0.62, 0, 0.88, 0, steel), box(1.0, 0.015, 0.5, 0, 0.912, 0, mint),
+  box(0.22, 0.84, 0.22, 0, 0.42, 0, metal), box(0.6, 0.04, 0.45, 0, 0.02, 0, metal)
+]), 0.92);
+// Kennels: two cages side by side, each with a blanket, behind bars, on a low stand.
+const KENNEL = madeModel(merged([
+  box(1.5, 0.1, 0.7, 0, 0.05, 0, metal), box(1.5, 0.04, 0.7, 0, 0.12, 0, bars), box(1.5, 0.04, 0.7, 0, 0.82, 0, bars),
+  box(1.5, 0.7, 0.03, 0, 0.47, -0.335, bars), box(0.03, 0.7, 0.7, 0, 0.47, 0, bars),
+  box(0.03, 0.7, 0.7, -0.735, 0.47, 0, bars), box(0.03, 0.7, 0.7, 0.735, 0.47, 0, bars),
+  ...[-0.6, -0.45, -0.3, -0.15, 0.15, 0.3, 0.45, 0.6].map((x) => box(0.015, 0.66, 0.015, x, 0.47, 0.335, bars)),
+  box(0.6, 0.03, 0.5, -0.37, 0.155, -0.02, blanket), box(0.6, 0.03, 0.5, 0.37, 0.155, -0.02, blanket)
+]), 0.84);
+async function lifeVet(group, { labels = {} } = {}) {
+  const w = 10, d = 8;
+  const walls = makeWalls(group, w, d);
+  const st = (id) => ({ act: 'interact', label: labels[id] ?? id, offers: 'station', station: id });
+  const tend = { act: 'interact', label: 'See to the patients', offers: 'vetKennel' };
+  const P = [
+    [F('Door_1'), -4.9, 2.4, Q, 2.05, { act: 'door', label: 'Way out', offers: 'officeDoor' }],
+    // Along the back: the fridge and sink, the animal atlas (geography), the exam table (science), the medicine shelf.
+    [FRIDGE, -4.3, -3.5, 0, 1.9, { act: 'interact', label: 'Get a snack', offers: 'officeFridge', moving: 'fridge' }],
+    [F('Kitchen_Sink'), -3.45, -3.55, 0, 0.92, { act: 'interact', label: 'Hot chocolate', offers: 'officeSink' }],
+    [F('Bookshelf'), -1.9, -3.75, 0, 1.9, st('geography')],
+    [EXAM_TABLE, 0.6, -3.1, 0, 0.92, st('science')],
+    [A('Dog'), 0.6, -3.1, 0, 0.5, null, 0.93], // along the table, looking to the right
+    [F('Shelf_Large'), 2.9, -3.6, 0, 1.8],
+    // The reception desk (maths) and the pinboard of care cards (English).
+    [DESK, -2.2, 0.4, 0, 0.75, st('maths')],
+    [MONITOR, -2.5, 0.25, 0.2, 0.47, null, 0.75],
+    [NOTICE_BOARD, -4.75, -1.2, Q, 2.06, st('english')],
+    // The kennels on the right, facing in, a cat resting in two of the cages (side on, to be seen).
+    [KENNEL, 4.6, -1.3, -Q, 0.84, tend],
+    [KENNEL, 4.6, 0.6, -Q, 0.84, tend],
+    [A('Cat'), 4.62, -0.93, FACE_Z, 0.3, null, 0.17],
+    [A('Cat'), 4.62, 0.23, -FACE_Z, 0.3, null, 0.17],
+    // Chairs to wait on by the front windows (only looked at), plants, a lamp, a bin.
+    ...[0.2, 1.0, 1.8].map((x) => [F('Chair_1'), x, 3.45, Math.PI, 0.95]),
+    [F('Houseplant_4'), 4.5, 3.4, 0, 1.2], [F('Houseplant_6'), -1.0, 3.5, 0, 1.0], [F('Light_Floor1'), -4.4, 3.4, 0, 1.7], [F('Trashcan_Small1'), -1.0, -3.6, 0, 0.35]
+  ];
+  const items = await furnish(group, P);
+  const fade = await dressVet(group, walls, furnish, S, { w, d });
+  for (const it of items) {
+    const s = STATIONS.find((x) => x.id === it.use?.station);
+    if (!s || typeof document === 'undefined') continue;
+    const sp = sign(labels[s.id] ?? s.id, s.icon, s.colour);
+    sp.position.set(it.obj.position.x, 2.55, it.obj.position.z);
+    sp.userData.station = s.id;
+    group.add(sp);
+    it.sign = sp;
+  }
+  return { w, d, walls, items, cell: 0.25, view: { target: [0, 0.6, 0.3], camera: [6, 8.5, 10], max: 20, fog: [30, 80] }, starts: [], shadow: 7, fade };
+}
+
 // ---- the life game's park: round 2's park, with a bus stop to come and go by, and things to do on a date ----
 async function lifePark(group) {
   const p = await park(group, true);
@@ -896,7 +960,7 @@ export function houseFurniture(w, d, n = 1, seed = 1) {
   return out.map(([id, x, z, turn]) => ({ id, x, z, turn }));
 }
 
-export const PLACES = { home, park, office, lifeHome, lifeOffice, lifeCafe, lifePark, lifeHouse, lifeStreet };
+export const PLACES = { home, park, office, lifeHome, lifeOffice, lifeCafe, lifeVet, lifePark, lifeHouse, lifeStreet };
 
 // Builds a place into its own group (call once; switching places adds/removes the group).
 export async function buildPlace(name, options) {
