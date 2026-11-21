@@ -342,6 +342,32 @@ const PET_BED = madeModel(merged([
 ]), 0.3);
 export const MADE = { CAMP_BED, FRIDGE, TV, TELESCOPE, COT, EASEL, KEYBOARD, PLANTER, WORKBENCH, PET_BED };
 
+// Round 16, phase 6.3: a stall for the town's events (calendar.mjs TOWN_EVENTS `stalls`): a counter under a striped
+// awning on two posts, its goods on top by kind. Faces +Z, where the Sim stands. One model a kind (its boxes merged
+// into one mesh per material), made the first time it is needed. The page puts them up and takes them down.
+const STALL_AWNING = { plants: 0x4f9a4a, cakes: 0xe07aa0, treats: 0xe8b43a, cocoa: 0xc8483e, games: 0x3f7fd0, show: 0x8a5ac8 };
+const STALL_GOODS = {
+  plants: () => [-0.5, -0.17, 0.17, 0.5].flatMap((x, k) => [cyl(0.09, 0.14, x, 0.99, 0.05, mat5(0xc0643a, 0.9)), box(0.16, 0.18 + (k % 2) * 0.08, 0.16, x, 1.15, 0.05, leaf)]),
+  cakes: () => [[-0.45, 0xe8c48a], [0, 0xf7c6d9], [0.45, 0x6b3f22]].flatMap(([x, c]) => [cyl(0.15, 0.015, x, 0.93, 0.05, mat5(0xfbfbf8, 0.4)), cyl(0.12, 0.12, x, 1.0, 0.05, mat5(c, 0.7))]),
+  treats: () => [[-0.5, 0xf08ac0], [-0.25, 0x7fb8e8], [0, 0xf2c94c], [0.25, 0x7ed36a], [0.5, 0xe8484a]].map(([x, c]) => box(0.16, 0.1, 0.16, x, 0.97, 0.05, mat5(c, 0.5))),
+  cocoa: () => [cyl(0.14, 0.4, -0.45, 1.12, -0.05, steel), ...[-0.1, 0.08, 0.26, 0.44].map((x) => cyl(0.045, 0.1, x, 0.97, 0.1, mat5(0xd8574a, 0.5)))],
+  games: () => [...[-0.45, -0.15, 0.15, 0.45].map((x) => cyl(0.025, 0.3, x, 1.07, 0.05, wood)), ...[-0.3, 0, 0.3].map((x) => box(0.1, 0.1, 0.1, x, 0.97, 0.18, mat5(0xe8484a, 0.5)))],
+  show: () => [box(1.3, 0.02, 0.62, 0, 0.93, 0, mat5(0xfbfbf8, 0.9)), box(0.9, 0.6, 0.03, 0, 1.55, -0.28, mat5(0x2b6cc4, 0.7)), cyl(0.12, 0.02, 0, 1.6, -0.25, mat5(0xf2c94c, 0.3))]
+};
+const STALLS = {};
+export function stallModel(kind) {
+  if (STALLS[kind]) return STALLS[kind];
+  const awning = mat5(STALL_AWNING[kind] ?? 0x8a5ac8, 0.8), white = mat5(0xfaf7ee, 0.8);
+  STALLS[kind] = madeModel(merged([
+    box(1.5, 0.9, 0.6, 0, 0.45, 0, wood), box(1.56, 0.04, 0.66, 0, 0.92, 0, wood),
+    box(0.06, 2.3, 0.06, -0.72, 1.15, -0.28, wood), box(0.06, 2.3, 0.06, 0.72, 1.15, -0.28, wood),
+    box(1.7, 0.05, 0.95, 0, 2.3, 0.05, awning),
+    ...[-0.68, -0.34, 0, 0.34, 0.68].map((x, k) => box(0.34, 0.18, 0.02, x, 2.2, 0.53, k % 2 ? white : awning)),
+    ...(STALL_GOODS[kind]?.() ?? [])
+  ]), 2.33);
+  return STALLS[kind];
+}
+
 // A sign over a work station: the subject's icon and name, always facing the camera.
 function sign(text, icon, colour) {
   const c = document.createElement('canvas');

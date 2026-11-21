@@ -81,6 +81,36 @@ export const OFFERS = {
   ]
 };
 
+// Round 16, phase 6.3: the stalls at the town's events (calendar.mjs TOWN_EVENTS, world.mjs stallModel), by kind.
+// What costs is the household's to choose (free will spends no coins); the show is the contest (a skill's: the page
+// says how they did) and the stage, which anyone stops to watch.
+Object.assign(OFFERS, {
+  stall_plants: [
+    { id: 'buyPlant', act: 'interact', minutes: 10, gives: { fun: 25 }, cost: 8, free: false, moodlet: 'townEvent', icon: '🪴' },
+    { id: 'browseStall', act: 'interact', minutes: 15, gives: { fun: 20, social: 10 }, icon: '👀' }
+  ],
+  stall_cakes: [
+    { id: 'buySlice', act: 'interact', clip: 'mc_drink', hand: 'fork', minutes: 12, gives: { hunger: 70, fun: 20 }, cost: 4, free: false, icon: '🍰' },
+    { id: 'browseStall', act: 'interact', minutes: 15, gives: { fun: 20, social: 10 }, icon: '👀' }
+  ],
+  stall_treats: [
+    { id: 'buyTreat', act: 'interact', clip: 'mc_drink', minutes: 10, gives: { hunger: 35, fun: 35 }, cost: 3, free: false, icon: '🍭' },
+    { id: 'browseStall', act: 'interact', minutes: 15, gives: { fun: 20, social: 10 }, icon: '👀' }
+  ],
+  stall_cocoa: [
+    { id: 'buyCocoa', act: 'interact', clip: 'mc_drink', hand: 'mug', minutes: 12, gives: { hunger: 20, fun: 25, energy: 8 }, cost: 3, free: false, icon: '☕' },
+    { id: 'browseStall', act: 'interact', minutes: 15, gives: { fun: 20, social: 10 }, icon: '👀' }
+  ],
+  stall_games: [
+    { id: 'playHoopla', act: 'interact', minutes: 15, gives: { fun: 60 }, cost: 3, free: false, icon: '🎯' },
+    { id: 'watchShow', act: 'interact', clip: 'mc_talk', minutes: 20, gives: { fun: 30, social: 25 }, icon: '👏' }
+  ],
+  stall_show: [
+    { id: 'enterContest', act: 'interact', minutes: 30, gives: { fun: 30 }, free: false, icon: '🏅' },
+    { id: 'watchShow', act: 'interact', clip: 'mc_talk', minutes: 20, gives: { fun: 30, social: 25 }, icon: '👏' }
+  ]
+});
+
 // Round 9: the office (lifeOffice) and the park (lifePark).
 Object.assign(OFFERS, {
   // A work station: the Sim stands at it while the child answers its questions (page.mjs). Never free will's: the

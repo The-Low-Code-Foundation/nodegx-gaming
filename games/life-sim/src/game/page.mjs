@@ -24,7 +24,7 @@ import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { makeSky, tick as tickDressing, daylight, partyDecor, weatherLook, greySky, snowman, seasonLook, eventDecor } from '../dressing.mjs';
 import { CANDIDATES, loadTemplate } from '../characters.mjs';
-import { buildPlace, STATIONS, MADE, measure, ghost, placementOf, houseFurniture } from '../world.mjs';
+import { buildPlace, STATIONS, MADE, measure, ghost, placementOf, houseFurniture, stallModel } from '../world.mjs';
 import { Sim } from '../sim.mjs';
 import { Life, SPEEDS, SKILL_LEVELS, skillLevel } from './life.mjs';
 import { NEEDS, MOODLETS, EMOTIONS } from './needs.mjs';
@@ -1380,7 +1380,7 @@ async function welcome({ who, house, traits, likes, dream }, day) {
 // The notice board's news (4.2). Someone the household is Friends with: told, and glad for them (a moodlet). Someone
 // new: everyone hears, and a wish to go round and say hello (not for the shy).
 const GLAD = ['news.birthday', 'news.sweethearts', 'news.inLove', 'news.married', 'news.baby', 'news.bestFriends', 'news.newHome', 'news.bigger'];
-const newsText = (n) => t(n.key, { ...n.vars, dream: n.vars.dream ? t(`goal.${n.vars.dream}`) : '' });
+const newsText = (n) => t(n.key, { ...n.vars, dream: n.vars.dream ? t(`goal.${n.vars.dream}`) : '', event: n.vars.event ? t(n.vars.event) : '', where: n.vars.where ? t(n.vars.where) : '' });
 function tellNews(n, day) {
   townLife.news.unshift({ day, icon: n.icon, key: n.key, vars: { ...n.vars }, who: [...n.who] });
   townLife.news.length = Math.min(townLife.news.length, TOWNLIFE.news);
@@ -1388,7 +1388,7 @@ function tellNews(n, day) {
   const known = npcs().filter((o) => n.who.includes(o.name));
   const knows = lives.filter((h) => known.some((o) => (peekBond(h, o)?.friendship ?? 0) >= INVITED));
   if (GLAD.includes(n.key)) for (const h of knows) h.addMoodlet('gladForThem');
-  if (knows.length || n.key === 'news.welcome') toast(`📰 ${newsText(townLife.news[0])}`);
+  if (knows.length || n.key === 'news.welcome' || n.key === 'news.townEvent') toast(`📰 ${newsText(townLife.news[0])}`);
   if (n.key === 'news.welcome' && aimsOn) for (const h of lives) if (!h.traits?.includes('shy')) giveWant(h, 'welcome');
 }
 // A wish given (not rolled): in the place of the oldest, for two days.
@@ -2022,6 +2022,8 @@ function wished(l, id) {
   if (id === 'buildSnowman') buildSnowman(l);
   // Round 16, phase 6.2: a birthday cake baked or bought, and a birthday party (the household's own: round 15).
   if (id === 'bakeCake' || id === 'orderCake') birthdayCake(l, id === 'bakeCake' ? 'baked' : 'bought');
+  // Round 16, phase 6.3: the town event's contest.
+  if (id === 'enterContest' && lives.includes(l)) enterContest(l);
   if (id === 'birthdayParty' && lives.includes(l)) {
     if (homeParty) toast(t('town.partyOn'));
     else if (household.money < HOME_PARTY.cost) toast(t('ui.money.short', { name: l.name, cost: HOME_PARTY.cost }));
@@ -2216,6 +2218,7 @@ function calendarTick() {
   if (!calendarOn) return;
   const d = dateNow();
   birthdaysTick(d);
+  townEventsTick(d);
   if (d.season !== seasonShown) {
     seasonLook(d.season);
     household.crop = seasonById(d.season).crop;
@@ -2235,7 +2238,7 @@ function birthdaysTick(d) {
   if (calendar.day === day || (minutes % 1440) < BIRTHDAY.at * 60) return;
   calendar.day = day;
   for (const l of lives) if (birthdayOf(l) === d.yearDay) birthday(l);
-  if (townLifeOn) for (const o of npcs()) if (!lives.includes(o) && birthdayOf(o) === d.yearDay) tellNews({ icon: '🎂', key: 'news.birthday', vars: { a: o.name }, who: [o.name] }, day);
+  if (townLifeOn) for (const o of npcs()) if (!lives.includes(o) && birthdayOf(o) === d.yearDay) tellNews({ icon: '🎂', key: 'news.birthday', vars: { a: o.name }, who: [o.name] }, day + 1);
 }
 function birthday(l) {
   l.addMoodlet('birthday');
@@ -2265,6 +2268,120 @@ function birthdayCake(by, how) {
     milestone('🎂', `diary.cake.${how}`, { name: l.name, by: by.name });
     toast(t('birthday.candles', { name: l.name }));
   }
+}
+// ---- the town's events (round 16, phase 6.3; calendar.mjs TOWN_EVENTS) ----
+// One a season. On the notice board TOWN_EVENT.ahead days before; on the morning, told, with a wish to go; its stalls
+// up at its place (round the park's plaza, or along the street's far pavement) from a little before it opens until it
+// closes, under bunting or fairy lights. While someone from the household is there, up to TOWN_EVENT.people of the
+// town's people come (each to a stall first, then as they like); the rest of the town stays data. Going counts
+// 'townEvent'; the show's contest gives a rosette, coins and happy points by how good they are at its skill (PRIZES).
+// `calendar.events[id]`: the game day it was advertised for, the day it was told, who went and who entered (by day).
+let fair = null, fairBusy = false; // the event up now: { e, place, items, decor, people }
+const eventPlace = (e) => (e.place === 'street' ? street : park);
+const evName = (e) => t(`townEvent.${e.id}`);
+function stallSpots(e) {
+  if (e.place === 'street') {
+    const fr = street.street.fronts, mid = (fr[0].x + fr[fr.length - 1].x) / 2, z = -STREET_SIZE.d / 2 + 11.3;
+    return [[mid - 5, z, Math.PI], [mid - 7.5, z, Math.PI], [mid + 6.5, z, Math.PI]];
+  }
+  return [113, 162, -45].map((a) => {
+    const x = 3.8 * Math.cos((a * Math.PI) / 180), z = 3.8 * Math.sin((a * Math.PI) / 180);
+    return [x, z, Math.atan2(-x, -z)];
+  });
+}
+function decorLine(e) {
+  if (e.place === 'street') {
+    const fr = street.street.fronts, mid = (fr[0].x + fr[fr.length - 1].x) / 2, z = -STREET_SIZE.d / 2 + 12.7;
+    return [-12, -6, 0, 6, 12].map((dx) => [mid + dx, z]);
+  }
+  return [67.5, 112.5, 157.5, 247.5, 292.5, 337.5, 67.5].map((a) => [5 * Math.cos((a * Math.PI) / 180), 5 * Math.sin((a * Math.PI) / 180)]);
+}
+function townEventsTick(d) {
+  const hour = (minutes % 1440) / 60, day = Math.floor(minutes / 1440);
+  if (hour >= BIRTHDAY.at)
+    for (const e of TOWN_EVENTS) {
+      const until = (yearDayOf(e.season, e.day) - d.yearDay + YEAR_DAYS) % YEAR_DAYS, st = (calendar.events[e.id] ??= {});
+      if (until < 1 || until > TOWN_EVENT.ahead || st.advertised === day + until) continue;
+      st.advertised = day + until;
+      const news = { icon: e.icon, key: 'news.townEvent', vars: { event: `townEvent.${e.id}`, where: `townEvent.where.${e.place}`, when: t(until === 1 ? 'townEvent.tomorrow' : 'townEvent.inDays', { n: until, day: t(`day.${weekday(minutes + until * 1440)}`) }), from: hhmm(e.hours[0] * 60) }, who: [] };
+      if (townLifeOn) tellNews(news, day + 1);
+      else toast(`📰 ${newsText(news)}`);
+    }
+  const e = townEventOn(d), st = e && (calendar.events[e.id] ??= {});
+  if (e && st.told !== day && hour >= BIRTHDAY.at) {
+    st.told = day;
+    toast(t('townEvent.today', { icon: e.icon, event: evName(e), where: t(`townEvent.where.${e.place}`), from: hhmm(e.hours[0] * 60), to: hhmm(e.hours[1] * 60) }));
+    if (aimsOn) for (const l of lives) giveWant(l, 'townEvent');
+  }
+  const up = !!e && hour >= e.hours[0] - TOWN_EVENT.before && hour < e.hours[1];
+  if (up && !fair && !fairBusy) setUpFair(e);
+  else if (!up && fair) takeDownFair();
+  else if (fair && eventOpen(fair.e, hour)) fairPeople(day);
+}
+async function setUpFair(e) {
+  fairBusy = true;
+  const place = eventPlace(e), spots = stallSpots(e);
+  const items = await place.add(e.stalls.map((kind, k) => [stallModel(kind), spots[k][0], spots[k][1], spots[k][2], 2.33, { act: 'interact', label: t(`townEvent.stall.${kind}`), offers: `stall_${kind}`, stall: kind }]));
+  const decor = eventDecor(e.decor, decorLine(e));
+  place.group.add(decor);
+  fair = { e, place, items, decor, people: [] };
+  fairBusy = false;
+}
+function takeDownFair() {
+  const { e, place, items, decor } = fair;
+  for (const l of everyone) {
+    if (items.includes(l.doing?.item)) l.stop('away');
+    l.queue = l.queue.filter((q) => !items.includes(q.item));
+  }
+  for (const o of fair.people) if (o.present && o.place === place && !lives.includes(o)) vanish(o);
+  for (const it of items) place.remove(it);
+  decor.removeFromParent();
+  if (lives.some((l) => l.present && l.place === place)) toast(t('townEvent.over', { icon: e.icon, event: evName(e) }));
+  fair = null;
+}
+// While it's open: the town's people there while someone from the household is (and gone when they go), and going counts.
+function fairPeople(day) {
+  const { e, place, items } = fair, st = calendar.events[e.id];
+  const here = lives.filter((l) => l.present && l.place === place);
+  for (const l of here) {
+    st.went ??= {};
+    if (st.went[l.name] === day) continue;
+    st.went[l.name] = day;
+    l.count('townEvent');
+    l.addMoodlet('townEvent');
+    milestone(e.icon, 'diary.townEvent', { name: l.name, event: evName(e) });
+  }
+  const free = (o) => !lives.includes(o) && !o.carer && !o.shift && !workDayNow(o) && !guests.some((g) => g.life === o) && (!o.present || o.place === place);
+  const want = here.length ? npcs().filter(free).sort((a, b) => ((a.who * 7 + day) % 13) - ((b.who * 7 + day) % 13)).slice(0, TOWN_EVENT.people) : [];
+  for (const o of fair.people) if (!want.includes(o) && o.present && o.place === place) vanish(o);
+  for (const [k, o] of want.entries()) {
+    if (o.present && o.place === place) continue;
+    appear(o, place, false);
+    const item = items[k % items.length], [x, z] = [item.obj?.position.x ?? 0, item.obj?.position.z ?? 0];
+    const v = new THREE.Vector3(x * 0.6 + (Math.random() - 0.5) * 2, 0, z * (e.place === 'street' ? 1 : 0.6) - (e.place === 'street' ? 1.5 : 0) + (Math.random() - 0.5) * 2);
+    if (place.grid.free(v)) o.sim.position.copy(v);
+    const offer = offersFor(item).find((x) => x.free !== false && !x.cost);
+    if (offer) o.queue.push({ offer, item, by: 'self' });
+  }
+  if (want.length && !fair.people.length) toast(t('townEvent.crowd', { icon: e.icon, event: evName(e) }));
+  fair.people = want;
+}
+// The show's contest (a skill's): once a Sim a day; a rosette, coins and happy points by how good they are.
+function enterContest(l) {
+  if (!fair) return;
+  const e = fair.e, st = calendar.events[e.id], day = Math.floor(minutes / 1440), contest = t(`townEvent.contest.${e.id}`);
+  st.entered ??= {};
+  if (st.entered[l.name] === day) return toast(t('townEvent.contest.again', { name: l.name, contest }));
+  st.entered[l.name] = day;
+  const place = contestPlace(skillLevel(l.skills[e.contest] ?? 0), Math.random);
+  window.__life.lastContest = { name: l.name, event: e.id, skill: e.contest, place };
+  if (!place) return toast(t('townEvent.contest.none', { name: l.name, contest, skill: t(`skill.${e.contest}`) }));
+  const coins = PRIZES.coins[place - 1];
+  household.money += coins;
+  if (aimsOn) l.points += PRIZES.points[place - 1];
+  l.addMoodlet('rosette');
+  milestone('🏅', 'diary.rosette', { name: l.name, place: t(`townEvent.place.${place}`), contest, event: evName(e) });
+  toast(t('townEvent.contest.won', { name: l.name, place: t(`townEvent.place.${place}`), contest, coins }));
 }
 // How much keener free will is on an offer now: the season's (calendar.mjs SEASONS `lean`).
 function leanOf(l, id, hour) {
@@ -3217,7 +3334,7 @@ window.__life = {
   // Round 16, phase 4.
   townLifeOn, townLife, townLifeTick, playTownDay, TOWNLIFE, babiesAt, newsText, npcs, openNews, reachTick, REACH, DRAWN, lastReach: null,
   // Round 16, phase 6.
-  calendarOn, calendar, dateNow, seasonNow, weekendNow, calendarTick, SEASONS, TOWN_EVENTS, birthdayOf, birthdayToday, birthdayHere, npcBirthday,
+  calendarOn, calendar, dateNow, seasonNow, weekendNow, calendarTick, SEASONS, TOWN_EVENTS, birthdayOf, birthdayToday, birthdayHere, npcBirthday, get fair() { return fair; }, townEventsTick,
   weatherNow, weatherTick, get weather() { return weather && { ...weather }; }, set weatherId(id) { weather = { day: Math.floor(minutes / 1440), id, told: true }; }, snowmen, weatherFx, ducks,
   folk, get extras() { return extras(); }, furniture, storage, save, snapshot, openShop, startPlacing, stopPlacing, turnPlacing, placeHere, hover, sell, beauty, openLook, get home() { return home; }, saving,
   get placing() { return placing; }, get start() { return start?.kind ?? null; },
