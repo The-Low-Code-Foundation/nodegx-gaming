@@ -62,13 +62,15 @@ Time: one game minute a second at speed 1 (`SPEEDS` in `life.mjs`). Every need n
 - `rewards.mjs`: `REWARDS`, what happy points buy: perks (`traits.mjs` `PERKS`), things for the home, a new trait.
 - `events.mjs`: `EVENTS`, the things that happen (cards with choices and dice), and `DECK`, how often (round 16, phase 3).
 - `weather.mjs`: `WEATHER`, the day's sun, rain or snow and what each takes off the menu (its look is dressing.mjs's).
+- `townlife.mjs`: the town lives without you (round 16, phase 4): `TOWNLIFE` (how often things happen), `dayOfTown`
+  (one town day as data), `REACH` (the town's people starting things with you), `DRAWN` (how many Sims in one place).
 - `baby.mjs`, `childcare.mjs`: the baby's needs and names; the nanny and the nursery.
 - `create.mjs`, `looks.mjs`: make-your-Sim screen; a Sim's look as data and how it is dressed.
 - `props.mjs`: what is in a Sim's hands or on the table, the eating motion, wedding clothes.
-- `save.mjs`: the save in `localStorage` (`lifesim.save.v1` key, format v5 since round 16 phase 3; a v1 to v4 save
+- `save.mjs`: the save in `localStorage` (`lifesim.save.v1` key, format v6 since round 16 phase 4; a v1 to v5 save
   from an earlier round still loads and is upgraded: the classic town, traits and likes rolled for everyone, no dream
   yet (a "Pick a dream" button), new wishes, 0 happy points, a life story that starts with "before this story", a fresh
-  event deck and the day's weather rolled).
+  event deck and the day's weather rolled; the town as made, and town life starting that day).
 - `strings.mjs`: every word, by key (`t('need.hunger')`). English only; a language is a new table with the same keys.
 
 Other files: `index.html` (the HUD's empty panels), `style.css` + `life.css`, `assets/` (models and clips, see
@@ -82,7 +84,8 @@ town, 0), `?story=savings|friend|sweetheart|broke|inherit` (how the life begins)
 chooses as it did before round 16). Phase 2: `?goal=id` and `?goal2=id` (the household's dreams), `?goals=1` (dreams,
 wishes and happy points on a test URL; a test URL has none otherwise). Phase 3: `?events=1` (things happen on a test URL),
 `?event=id` (that event at once, then the deck as usual), `?weather=sun|rain|snow` (that weather, all game; a test URL
-has sunshine otherwise, and no weather icon).
+has sunshine otherwise, and no weather icon). Phase 4: `?townlife=1` (the town lives, and its people come to you, on a
+test URL; the notice board is always on the street, and says town life is off otherwise).
 
 ## How to add a thing to buy
 
@@ -193,6 +196,28 @@ moved in the vertex shader, and one unshadowed sheet of snow; outdoors only.
 To add an event: an entry in `EVENTS` (fields at the top of the file), and its strings: `event.<id>`, `.text`, and for
 each choice `.<choice>` and `.<choice>.good|bad|done` (`.diary` if an outcome has `diary`). New moodlets go in needs.mjs.
 Checks: [tests/r16-phase3.md](tests/r16-phase3.md).
+
+## A town that lives without you (round 16, phase 4)
+
+Once a game day at 03:00 (`TOWNLIFE.at`), `townLifeTick` (in `townTick`) plays the town's day out as data with
+`dayOfTown` (townlife.mjs): pairs of the town's people (`npcs()`, never the household) spend time together by chance
+(more if they live or work together), and their bond grows by how well they get on (`getOn`: traits and likes); two
+Friends who are both free can fall in love (`falls`: romantic, shy…); in love and good friends, they marry and live
+together; a married couple has babies (data: `townLife.babies`, shown on the town card and the door, not drawn); a
+family moves to a bigger house, someone sharing gets a place of their own; an empty house goes on the market; and
+someone new (one of the twelve not yet in town) moves into a house for sale, with rolled traits, likes and a dream.
+The dice are `townDice(seed, 7000 + day)`. Rules that keep it fair: nobody falls for someone with a romance with the
+household, the household's home and any house one of them is in are never touched, `keepForSale` houses always stay
+on the market, and someone in view (`present`) never moves. The page then makes it true: `dropHouse` (a house's inside
+is built again next visit, with beds for whoever lives there; later if someone is in it), `welcome` (the newcomer's
+Life and hidden body), `tellNews` (the notice board, a toast, `gladForThem` for a friend's news, the `welcome` wish).
+The street's name boards and For sale boards read the houses every UI tick. A window's evening glow is baked into the
+street when it is built, so a house that changes keeps its old glow until the game is loaded again.
+
+The notice board (world.mjs `NOTICE_BOARD`, by the bus stop, with a name board saying how much is new) opens
+`openNews`. `reachTick` (in `townTick`) lets the town's people start things with the household (`REACH`, `pickReach`).
+`DRAWN.most` caps the Sims in one place: a party's extra guests and friends invited round stay data. Save v6 keeps
+`town.houses`, `town.homes`, `town.dreams` and `town.life`. Checks and measurements: [tests/r16-phase4.md](tests/r16-phase4.md).
 
 ## How to add a house to the street (the nearest thing to a level)
 

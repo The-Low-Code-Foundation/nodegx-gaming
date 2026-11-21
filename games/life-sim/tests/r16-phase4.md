@@ -5,6 +5,40 @@ The browser pane that ran them was hidden, so its animation frames were held bac
 (which runs `townTick`, and so town life and the town coming to you) and played town days with `playTownDay(day)`.
 Town life is off on a test URL unless `?townlife=1`.
 
+## Town life (4.1)
+
+| How | Expect |
+|---|---|
+| `?seed=5&flatmate=7&townlife=1&town=1`, a week (`advance(1440)` × 7) | day 4: Gus (sharing no. 4) gets a place of his own at no. 3; day 6: Eva and Jules sweethearts, Dora moves to no. 5 (traits lazy/grumpy/joker, dream "A big family"); no. 8 still for sale |
+| the same with `&town=2` | a different week: Bea moves in on day 8, nothing else (that town's dice); no. 5 and no. 8 still for sale |
+| the street after the week | each house's name board says who lives there now ("3 · Gus's house"); the For sale board only on the houses still for sale |
+| a house the town changed, visited | built again as lived in, a bed for the newcomer (`housePlace('s1')`: "Bea's house", Bea's bed) |
+| 40–60 town days in a row (node and the page) | weddings ("together at no. N"), babies (named, on the town card and the door), houses going back on the market when someone moves in with a partner; always one house left for sale |
+| the same URL without `?townlife` | nothing changes over 3 days (`townLife.day` stays null, no news) |
+| a newcomer, in a game with dreams (`/`, Carry on) | the news toast; each household Sim who isn't shy gets the wish "Say hello to the new neighbour"; going round to their house makes it come true (+40) |
+
+## The notice board (4.2)
+
+| How | Expect |
+|---|---|
+| the street after a week | the board by the bus stop, its name board "📰 Notice board · 3 new" in red |
+| a click on the board | "The Primrose Street notice board": the week's news, newest first, the new ones in bold; the name board then says "Notice board" |
+
+## The town comes to you (4.3)
+
+| How | Expect |
+|---|---|
+| a Saturday visit to Ivan (cheerful, shy, neat), six game hours | Ivan comes over with a joke once (shy: rarely) |
+| Friday's party, the household there | Bea comes over for a chat with Hugo |
+| `pickReach`, 3,000 rolls each (node) | a romantic with a romance married to someone else, or with no romance: never a flirt; a grumpy stranger teases about one time in six |
+
+## Save v6
+
+| How | Expect |
+|---|---|
+| a week with `&save=1`, then `/` and "Carry on" | the same people in the same houses, the same three news items (3 new), Dora's house, dream and traits, Eva and Jules's romance (65); the next day is played as day 9 |
+| a v5 save (no town houses, homes or town life), "Carry on" | the town as made (Gus and Flo at no. 9 again), town life starts that day (no days played behind you), written back as v6 |
+
 ## Performance (4.4)
 
 Measured on the Mac (Apple Silicon, Chrome in the app's browser pane, canvas 1024 × 768, pixel ratio 1) with
@@ -54,3 +88,15 @@ const out = [run()]; const order = L.everyone.filter((l) => l.present && l.place
 while (order.length) { order.pop().present = false; out.push(run()); }
 console.table(out); console.log('canvas', L.renderer.domElement.width, L.renderer.domElement.height, 'pixel ratio', L.renderer.getPixelRatio());
 ```
+
+## Not checked this round
+
+- The Surface tablet (to be run there with the script above).
+- A long game played for real over weeks, without calling the hooks by hand.
+- A house the town changes while someone from the household is in it (deferred until they leave: `stale`; at 03:00 it
+  should not happen).
+- A window's evening glow on the street after a house changes (it stays as built until the game is loaded again).
+- An NPC who moved in with the household (Ask to move in) leaving their house: it goes on the market the next night
+  (by the rule; not played).
+- A flirt from the town, played (the rule was checked with `pickReach`, not in a game with a romance).
+- The town coming to you at the park or at work (checked at a visit and a party).

@@ -89,3 +89,8 @@ Each one has a default, so none of them blocks phase 1.
   wrong only as a mild hassle (the roadmap's default). Adopting the stray cat waits for pets (phase 5); fixing the loo
   is dice on traits until there is a handiness skill (phase 5); snow is just rare until the seasons (phase 6). The
   checks are listed in [tests/r16-phase3.md](tests/r16-phase3.md).
+- Phase 4: built on branch `life-sim-town-life`, cut from `life-sim-events` (one commit per task, then the checks),
+  checked in the browser on the Mac. The town's day is played out at 03:00 as data; newcomers get a body (hidden until
+  met, like the neighbours) when they move in, and nobody else is added. Save v6 (4.1). 4.4 was measured on the Mac
+  only: ten Sims at a party take a frame from 1.6 to 2.1 ms, and `DRAWN.most` is 10 until the Surface is measured
+  with the script in [tests/r16-phase4.md](tests/r16-phase4.md), where the checks are listed too.
