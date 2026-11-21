@@ -5,7 +5,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { dressHome, dressHouse, dressOffice, dressPark, dressStreet, pondLife, lampGlow, streetLabel } from './dressing.mjs';
+import { dressHome, dressHouse, dressOffice, dressCafe, dressPark, dressStreet, pondLife, lampGlow, streetLabel } from './dressing.mjs';
 import { kindOf } from './game/shop.mjs';
 
 const loader = new GLTFLoader();
@@ -745,6 +745,62 @@ async function lifeOffice(group, { labels = {} } = {}) {
   return { w, d, walls, items, cell: 0.25, view: { target: [0, 0.6, 0.5], camera: [9, 10, 13], max: 26, fog: [30, 80] }, starts: [], shadow: 10, fade };
 }
 
+// ---- the café (round 16, phase 5.3; work.mjs CAREERS.cafe, 10 × 8 m) ----
+// Where the café chef works: built the first time someone has the job (page.mjs). Four stations (the till, the oven,
+// the menu board, the spice shelf: a school subject each, as at the office, with the café's own names: `labels`), the
+// tables to serve between questions (what free will does there, as at a desk), a fridge and a sink for a snack and a
+// hot chocolate. The kitchen along the back.
+const chalk = mat5(0x2e3a34, 0.95);
+// The till on its counter: a box, a little screen, a drawer.
+const TILL = madeModel(merged([
+  box(1.5, 0.95, 0.6, 0, 0.475, 0, wood), box(1.56, 0.05, 0.66, 0, 0.975, 0, deskTop),
+  box(0.36, 0.16, 0.3, 0.3, 1.08, -0.05, metal), box(0.26, 0.16, 0.02, 0.3, 1.22, -0.12, screen), box(0.3, 0.05, 0.24, 0.3, 1.025, 0.12, steel),
+  box(0.2, 0.2, 0.2, -0.45, 1.1, 0, glassMat(0xf2d8a0))
+]), 1.3);
+// A chalk menu board on legs (the day's specials, written for the tourists).
+const MENU_BOARD = madeModel(merged([
+  box(0.05, 1.5, 0.05, -0.45, 0.75, -0.08, wood), box(0.05, 1.5, 0.05, 0.45, 0.75, -0.08, wood),
+  box(0.95, 0.75, 0.04, 0, 1.05, 0, wood), box(0.85, 0.65, 0.01, 0, 1.05, 0.025, chalk),
+  ...[1.25, 1.12, 0.99, 0.86].map((y, k) => box(0.5 - (k % 2) * 0.15, 0.02, 0.005, -0.1, y, 0.032, canvasWhite))
+]), 1.5);
+async function lifeCafe(group, { labels = {} } = {}) {
+  const w = 10, d = 8;
+  const walls = makeWalls(group, w, d);
+  const st = (id) => ({ act: 'interact', label: labels[id] ?? id, offers: 'station', station: id });
+  const serve = { act: 'interact', label: 'Serve', offers: 'cafeTable' };
+  const P = [
+    [F('Door_1'), -4.9, 2.4, Q, 2.05, { act: 'door', label: 'Way out', offers: 'officeDoor' }],
+    // The kitchen along the back: fridge, oven (science), sink, drawers; the spice shelf (geography) at the end.
+    [FRIDGE, -4.3, -3.5, 0, 1.9, { act: 'interact', label: 'Get a snack', offers: 'officeFridge', moving: 'fridge' }],
+    [F('Kitchen_2Drawers'), -3.45, -3.55, 0, 0.92],
+    [F('Kitchen_Oven_Large'), -2.4, -3.55, 0, 0.92, st('science')],
+    [F('Kitchen_3Drawers'), -1.35, -3.55, 0, 0.92],
+    [F('Kitchen_Sink'), -0.45, -3.55, 0, 0.92, { act: 'interact', label: 'Hot chocolate', offers: 'officeSink' }],
+    [F('Shelf_Large'), 1.2, -3.6, 0, 1.8, st('geography')],
+    // The till (maths) and the menu board (English) by the door.
+    [TILL, -2.6, 0.2, 0, 1.3, st('maths')],
+    [MENU_BOARD, -4.2, -0.6, Q, 1.5, st('english')],
+    // The tables: three, two chairs each (only looked at), and served.
+    ...[[1.2, 0.2], [3.4, -1.4], [3.2, 2.0]].flatMap(([x, z]) => [
+      [F('Table_RoundSmall'), x, z, 0, 0.75, serve],
+      [F('Chair_1'), x - 0.75, z, Q, 0.95], [F('Chair_1'), x + 0.75, z, -Q, 0.95]
+    ]),
+    [F('Houseplant_4'), 4.5, -3.5, 0, 1.2], [F('Houseplant_6'), 4.5, 3.4, 0, 1.2], [F('Light_Floor1'), -4.4, 3.4, 0, 1.7], [F('Trashcan_Small1'), -0.2, 3.6, 0, 0.35]
+  ];
+  const items = await furnish(group, P);
+  const fade = await dressCafe(group, walls, furnish, S, { w, d });
+  for (const it of items) {
+    const s = STATIONS.find((x) => x.id === it.use?.station);
+    if (!s || typeof document === 'undefined') continue;
+    const sp = sign(labels[s.id] ?? s.id, s.icon, s.colour);
+    sp.position.set(it.obj.position.x, 2.55, it.obj.position.z);
+    sp.userData.station = s.id;
+    group.add(sp);
+    it.sign = sp;
+  }
+  return { w, d, walls, items, cell: 0.25, view: { target: [0, 0.6, 0.3], camera: [6, 8.5, 10], max: 20, fog: [30, 80] }, starts: [], shadow: 7, fade };
+}
+
 // ---- the life game's park: round 2's park, with a bus stop to come and go by, and things to do on a date ----
 async function lifePark(group) {
   const p = await park(group, true);
@@ -834,7 +890,7 @@ export function houseFurniture(w, d, n = 1, seed = 1) {
   return out.map(([id, x, z, turn]) => ({ id, x, z, turn }));
 }
 
-export const PLACES = { home, park, office, lifeHome, lifeOffice, lifePark, lifeHouse, lifeStreet };
+export const PLACES = { home, park, office, lifeHome, lifeOffice, lifeCafe, lifePark, lifeHouse, lifeStreet };
 
 // Builds a place into its own group (call once; switching places adds/removes the group).
 export async function buildPlace(name, options) {

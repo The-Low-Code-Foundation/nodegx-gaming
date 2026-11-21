@@ -1042,6 +1042,31 @@ export async function dressOffice(group, walls, furnish, S) {
   return scenery(group, furnish, P);
 }
 
+// ---- the café (round 16, phase 5.3: the café chef's work, world.mjs lifeCafe) ----
+// A wooden floor, kitchen tiles along the back, windows on the street, a clock and a picture; outside, paving and grass.
+export async function dressCafe(group, walls, furnish, S, { w, d }) {
+  if (!DOM) return [];
+  const [back, left, , front] = [side(walls, 0, -1), side(walls, -1, 0), side(walls, 1, 0), side(walls, 0, 1)];
+  group.add(ground('wood', w, d, 0, 0, 0));
+  group.add(ground('kitchen', w - 0.2, 1.4, 0, -d / 2 + 0.7, 0.002));
+  skirting(group, walls);
+  hang(group, back, -2.2, 1.22, wallTiles(3.4, 0.6));
+  hang(group, back, 2.6, 1.7, clock(0.22));
+  for (const z of [-1.2]) {
+    hang(group, left, z, 1.6, windowPiece(1.8, 1.3, { view: 'city', curtains: null }));
+    hangOutside(group, left, z, 1.6, windowPiece(1.8, 1.3, { view: 'city', outside: true }));
+  }
+  for (const x of [-2.6, 2.2]) {
+    hang(group, front, x, 1.6, windowPiece(2.2, 1.4, { view: 'city', curtains: null }));
+    hangOutside(group, front, x, 1.6, windowPiece(2.2, 1.4, { view: 'city', outside: true }));
+  }
+  hang(group, front, -0.2, 1.6, picture(0.7, 0.5, 'hills', M.frame));
+  bake(group, walls);
+  group.add(ground('grass', 120, 120, 0, 0, -0.03));
+  group.add(ground('paving', w + 6, d + 6, 0, 0, -0.02));
+  return [];
+}
+
 // ---- the park: grass, gravel paths, paving, a pond that moves, stones round it, ducks ----
 export function dressPark(group) {
   if (!DOM) return;

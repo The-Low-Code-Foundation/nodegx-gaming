@@ -19,7 +19,7 @@ import * as THREE from 'three';
 import { NEEDS, NEED_IDS, MOODLETS, EMOTIONS, moodOf, urge, needIcon } from './needs.mjs';
 import { OFFERS, offersFor, offerById, offerIcon } from './actions.mjs';
 import { INTERACTIONS, bondOf, lockOf, chanceOf, applyOutcome } from './social.mjs';
-import { CAREERS, MOOD_AT_WORK, TASK, careerOf, levelOfJob, nextLevel, timeForWork } from './work.mjs';
+import { CAREERS, MOOD_AT_WORK, TASK, careerOf, levelOfJob, nextLevel, timeForWork, workPlaceOf } from './work.mjs';
 import { decayOf, likingOf, chanceBonus, alwaysOf, ignoredBy, afterOf, learnOf } from './traits.mjs';
 import { keenOn, shared, GIFT, SHARED } from './likes.mjs';
 import { EARNING } from './skills.mjs';
@@ -121,8 +121,9 @@ export class Life {
   goToWork() {
     const now = this.clock?.() ?? 0, day = Math.floor(now / 1440);
     if (!this.job || this.job.lastDay === day || !timeForWork(this.job, now) || this.shift) return;
-    const office = this.places.office;
-    if (!office) return;
+    // Round 16, phase 5.3: the career's own place (the café); the page builds it the first time (`needPlace`).
+    const to = workPlaceOf(this.job), office = this.places[to];
+    if (!office) return this.needPlace?.(to);
     const c = careerOf(this.job);
     if (!this.homePlace && (now % 1440) < c.leave + (this.lateBy ?? 0)) return;
     this.job.lastDay = day;
@@ -134,7 +135,7 @@ export class Life {
       return this.startShift(day * 1440 + c.ends);
     }
     if (this.doing) this.stop('work');
-    this.queue.unshift({ offer: { id: 'goToWork', act: 'travel', travel: 'office', minutes: 1, gives: {}, icon: '💼', free: false }, by: 'job', endsAt: day * 1440 + c.ends });
+    this.queue.unshift({ offer: { id: 'goToWork', act: 'travel', travel: to, minutes: 1, gives: {}, icon: c.icon === '🏢' ? '💼' : c.icon, free: false }, by: 'job', endsAt: day * 1440 + c.ends });
     this.say('ui.work.off');
   }
 
@@ -231,7 +232,7 @@ export class Life {
     }
     const from = this.place;
     this.arrive(place, from);
-    if (d?.offer.travel === 'office') this.startShift(d.endsAt);
+    if (d?.offer.id === 'goToWork') this.startShift(d.endsAt);
     // A date begins at the park: both have the moodlet, and three hours of it.
     if (to === 'park' && this.date) this.date.until ??= (this.clock?.() ?? 0) + 180;
     if (to === 'park' && this.date) this.addMoodlet('date');
@@ -253,6 +254,8 @@ export class Life {
     this.today.right++;
     if (job && nextLevel(job)) job.performance = Math.min(100, job.performance + TASK.bar);
     this.learn(station, TASK.skill);
+    // Round 16, phase 5.3: what the job teaches too (a café chef: cooking).
+    for (const [id, pts] of Object.entries(careerOf(job ?? { career: 'office' })?.learns ?? {})) this.learn(id, pts);
     return coins;
   }
   // A round of questions finished (`asked` of them, `right` right). `more`: they stay at the station for another round.

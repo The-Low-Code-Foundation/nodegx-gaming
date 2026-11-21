@@ -13,6 +13,12 @@
 //   work       how the needs fall at work (`slows`: they use the loo there, and the office has no loo to show), as the
 //              actions.mjs offers say it
 //   levels     lowest first: `pay` a day, `days` (days at work that fill the promotion bar on their own)
+// Round 16, phase 5.3 (more careers):
+//   place      where the work is (the page's place, built the first time someone has the job): 'office' if not said
+//   stations   the work stations there, by school subject (world.mjs STATIONS): all six if not said. Their names are
+//              the career's (strings.mjs `station.<career>.<subject>`), the questions the school year's
+//   learns     skill points each right answer gives too (skills.mjs: a café chef learns cooking)
+//   skills     true: only in a game with skills on (a test URL needs ?skills=1)
 export const CAREERS = {
   office: {
     icon: '🏢',
@@ -29,6 +35,28 @@ export const CAREERS = {
       { id: 'manager', pay: 210, days: 5 },
       { id: 'boss', pay: 280 }
     ]
+  },
+  // The café chef: Wednesday to Sunday (the weekend is the café's busy time), late morning to late afternoon, at the
+  // café (world.mjs lifeCafe). Pay a little under the office's, and cooking learnt at every right answer.
+  cafe: {
+    icon: '☕',
+    skills: true,
+    place: 'cafe',
+    days: [2, 3, 4, 5, 6],
+    leave: 10 * 60 + 30,
+    starts: 11 * 60,
+    ends: 17 * 60,
+    work: { id: 'work', slows: { hunger: 0.7, energy: 1, bladder: 0, hygiene: 0.8, fun: 0.9, social: 0.8 } },
+    stations: ['maths', 'science', 'geography', 'english'],
+    learns: { cooking: 0.3 },
+    levels: [
+      { id: 'kitchenHelper', pay: 50, days: 3 },
+      { id: 'commis', pay: 75, days: 4 },
+      { id: 'cook', pay: 105, days: 4 },
+      { id: 'sousChef', pay: 145, days: 5 },
+      { id: 'headChef', pay: 200, days: 5 },
+      { id: 'starChef', pay: 260 }
+    ]
   }
 };
 
@@ -44,6 +72,9 @@ export const START_MONEY = 100;
 
 export const weekday = (minutes) => Math.floor(minutes / 1440) % 7;
 export const careerOf = (job) => CAREERS[job.career];
+// Where a career's work is (a place's name), and its stations.
+export const workPlaceOf = (job) => careerOf(job).place ?? 'office';
+export const stationsOf = (job, all) => careerOf(job).stations ?? all;
 export const levelOfJob = (job) => careerOf(job).levels[job.level];
 export const nextLevel = (job) => careerOf(job).levels[job.level + 1] ?? null;
 // Is `minutes` (game minutes since day 1 began) inside a work day's going-to-work window?

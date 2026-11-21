@@ -83,6 +83,8 @@ Object.assign(OFFERS, {
   officeSink: [{ id: 'hotChocolate', act: 'interact', clip: 'mc_drink', hand: 'mug', minutes: 8, gives: { hunger: 25, fun: 40 }, moodlet: 'cosy' }],
   // A rest when tired or bored, not instead of work.
   officeCouch: [{ id: 'rest', act: 'sit', minutes: 30, gives: { energy: 10, fun: 12 }, when: (n) => n.energy < 45 || n.fun < 40 }],
+  // Round 16, phase 5.3: the café's tables (world.mjs lifeCafe), served between the stations' questions, as a desk.
+  cafeTable: [{ id: 'serveTables', act: 'interact', clip: 'mc_talk', talk: true, minutes: 45, gives: { social: 15 }, bonus: () => 0.15, icon: '🍽️' }],
   bench: [{ id: 'sitBench', act: 'sit', minutes: 30, gives: { energy: 4, fun: 20 } }],
   ducks: [{ id: 'feedDucks', act: 'interact', minutes: 20, gives: { fun: 90 }, moodlet: 'ducks', hand: 'bread' }],
   flowers: [{ id: 'smellFlowers', act: 'interact', minutes: 5, gives: { fun: 60 } }],

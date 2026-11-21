@@ -28,7 +28,7 @@ import { Life, SPEEDS, SKILL_LEVELS, skillLevel } from './life.mjs';
 import { NEEDS, MOODLETS, EMOTIONS } from './needs.mjs';
 import { OFFERS, offersFor, offerById } from './actions.mjs';
 import { INTERACTIONS, interactionById, bondOf, peekBond, lockOf, friendshipLevel, romanceLevel, allBonds, setBonds, spouseOf } from './social.mjs';
-import { CAREERS, START_MONEY, TASK, weekday, levelOfJob, nextLevel, careerOf } from './work.mjs';
+import { CAREERS, START_MONEY, TASK, weekday, levelOfJob, nextLevel, careerOf, workPlaceOf, stationsOf } from './work.mjs';
 import { YEARS, DEFAULT_YEAR, ask, record, topicsFor } from './school/school.mjs';
 import { t } from './strings.mjs';
 import { Props } from './props.mjs';
@@ -119,6 +119,36 @@ let street = null;
 let home = flat;
 home.house = 'flat';
 const places = { home, office, park };
+// Round 16, phase 5.3: a career's own place (work.mjs `place`: the café), built the first time someone has that job
+// (taking it, a save with it, or the morning they go), as a town house is.
+const CAREER_PLACES = { cafe: 'lifeCafe' };
+const careerLabels = (career) => Object.fromEntries(STATIONS.map((s) => [s.id, stationName(career, s.id)]));
+const workBuilding = new Map();
+function careerPlace(id) {
+  if (places[id]) return Promise.resolve(places[id]);
+  if (!CAREER_PLACES[id]) return Promise.resolve(null);
+  if (!workBuilding.has(id))
+    workBuilding.set(id, (async () => {
+      const p = await buildPlace(CAREER_PLACES[id], { labels: careerLabels(id) });
+      shine(p);
+      scene.add(p.group);
+      p.group.visible = view === p;
+      p.work = id;
+      places[id] = p;
+      workBuilding.delete(id);
+      return p;
+    })());
+  return workBuilding.get(id);
+}
+// A station's name: the career's own (the café's till), or the office's.
+function stationName(career, id) {
+  const key = `station.${career}.${id}`;
+  return career && career !== 'office' && t(key) !== key ? t(key) : t(`station.${id}`);
+}
+const stationJob = (career, id) => (career && career !== 'office' && t(`station.${career}.${id}.job`) !== `station.${career}.${id}.job` ? t(`station.${career}.${id}.job`) : t(`station.${id}.job`));
+const workOf = (l) => (l.job ? places[workPlaceOf(l.job)] ?? office : office);
+// The days a career works, in words ("Monday to Friday").
+const daysWords = (career) => (t(`job.${career}.days`) !== `job.${career}.days` ? t(`job.${career}.days`) : t('ui.job.weekdays'));
 // The shiny things take the room light; matte ones (walls, floors, cloth, wood) don't need it.
 function shine(p) {
   p.group.traverse((o) => {
@@ -359,6 +389,7 @@ async function makeSim(who, at, i, { name = null, look = null, body = null, ...o
   life.onArrive = arrived;
   life.onDid = wished;
   life.offerOk = (offer) => inWeather(offer) && !offerWhy(life, offer);
+  life.needPlace = (id) => careerPlace(id);
   life.titleOf = (p) => titleOf(p);
   everyone.push(life);
   return life;
@@ -1002,7 +1033,8 @@ function openDoorMenu(item, x, y) {
   showMenu(x, y, rows.length + 1);
 }
 // At home to visit now: awake, not at work, not round somewhere else.
-const workDayNow = (l) => l.job && weekday(minutes) < 5 && (minutes % 1440) >= 8 * 60 && (minutes % 1440) < careerOf(l.job).ends;
+// Round 16, phase 5.3: by the career's own days (the café works Wednesday to Sunday); the office's as it was.
+const workDayNow = (l) => l.job && careerOf(l.job).days.includes(weekday(minutes)) && (minutes % 1440) >= Math.min(8 * 60, careerOf(l.job).leave) && (minutes % 1440) < careerOf(l.job).ends;
 function homeNow(l) {
   if (!l.house || l.shift || !awake(minutes) || workDayNow(l)) return false;
   return !(l.present && l.place !== places[l.house]);
@@ -1058,7 +1090,7 @@ function sendHome(l, key) {
 // Arriving somewhere (Life `onArrive`): a welcome at a friend's, a party's welcome (or a gatecrasher's), a house to buy.
 function arrived(l, p) {
   // Round 16: where they have been (wants, dreams).
-  if (lives.includes(l)) l.count(`go.${p === park ? 'park' : p === office ? 'office' : p === street ? 'street' : p === home ? 'home' : 'house'}`);
+  if (lives.includes(l)) l.count(`go.${p === park ? 'park' : p === office ? 'office' : p === street ? 'street' : p === home ? 'home' : p.work ?? 'house'}`);
   if (!lives.includes(l) || !p.house || p === home) return;
   l.visitOver = false;
   const id = p.house, h = houseById(id);
@@ -1443,12 +1475,12 @@ function light() {
 }
 
 // ---- where: the places, and who is in each. You see the one the Sim you look after is in ----
-const PLACE_ICONS = { home: '🏠', office: '🏢', park: '🌳', street: '🏘️' };
+const PLACE_ICONS = { home: '🏠', office: '🏢', park: '🌳', street: '🏘️', cafe: '☕' };
 let followed = null; // the place sel was in last frame: when it changes, the view goes with them
 // Round 14: a house in the town shows here while someone from the household is in it (or you are looking at it), and
 // 🗺️ Town opens the street: who lives where, the parties, the houses for sale, an extension.
 function renderPlaces() {
-  const shown = [home, office, park, street, ...allPlaces().filter((p) => p.house && p !== home && (view === p || lives.some((l) => l.present && l.place === p)))];
+  const shown = [home, office, park, street, ...allPlaces().filter((p) => (p.house || p.work) && p !== home && (view === p || lives.some((l) => l.present && l.place === p)))];
   $('places').innerHTML = shown
     .map((p) => {
       const k = nameOf(p);
@@ -1531,7 +1563,7 @@ function openMenu(item, x, y, point = null) {
   const st = item?.use?.station;
   const baby = item?.baby;
   const head = st
-    ? `<div class="with">${STATIONS.find((s) => s.id === st).icon} ${t(`station.${st}`)}<small>${t(`subject.${st}`)} · ${t(`station.${st}.job`)}</small></div>`
+    ? `<div class="with">${STATIONS.find((s) => s.id === st).icon} ${stationName(sel.job?.career, st)}<small>${t(`subject.${st}`)} · ${stationJob(sel.job?.career, st)}</small></div>`
     : baby ? `<div class="with">👶 ${baby.name}<small>${t(`ui.baby.state.${baby.state}`)}${baby.crying ? ` · ${t(`baby.need.${baby.crying}`)}` : ''}</small></div>` : '';
   // Anything in the home (round 10: what was bought; round 14: all of it): moved, put away in the boxes, or sold back
   // for half. Not while someone uses it or sleeps in it, and never the last loo, fridge or shower. A cot (round 12)
@@ -1950,7 +1982,7 @@ function openDiary() {
 // Now and then a small event for the Sim you look after: a card with two or three choices, the dice, and what came of it
 // put into what the game already has (moodlets, needs, bonds, coins, happy points, the tally, the life story, a guest, a
 // party, a trip). Never while a card is open, at a work station, asleep, or on the way somewhere.
-const placeKey = (p) => (p === home ? 'home' : p === park ? 'park' : p === office ? 'office' : p === street ? 'street' : p?.house ? 'house' : null);
+const placeKey = (p) => (p === home ? 'home' : p === park ? 'park' : p === office ? 'office' : p === street ? 'street' : p?.house ? 'house' : p?.work ?? null);
 function weatherNow() {
   if (weatherForced) return weatherForced;
   if (!weatherOn) return 'sun';
@@ -2168,18 +2200,18 @@ function renderJob() {
   const when = sel.shift ? t('ui.job.atWork', { time: hhmm(sel.shift.endsAt) }) : t('ui.job.next', { weekday: t(`day.${nextWorkDay(job)}`), time: hhmm(c.leave) });
   const promo = next ? `<div class="promo"><span>${t('ui.job.promotion')}</span><div class="bar"><i style="width:${job.performance}%"></i></div></div>` : `<div class="note">${t('ui.job.top')}</div>`;
   const stations = sel.shift
-    ? `<div class="stations"><div class="line">${t('ui.job.today', { right: sel.today.right, coins: sel.today.coins })}</div>${STATIONS.map((s) => {
+    ? `<div class="stations"><div class="line">${t('ui.job.today', { right: sel.today.right, coins: sel.today.coins })}</div>${STATIONS.filter((s) => stationsOf(job, STATIONS.map((x) => x.id)).includes(s.id)).map((s) => {
         const n = sel.today.tasks[s.id] ?? 0;
         return `<button data-station="${s.id}" class="${n ? 'done' : ''}">${s.icon} ${t(`subject.${s.id}`)}${n ? ` <b>✓${n > 1 ? n : ''}</b>` : ''}</button>`;
       }).join('')}</div>`
     : `<p class="hint">${t('ui.job.tasksHint')}</p>`;
   $('job').innerHTML = `<div class="title">${c.icon} <b>${t(`job.${job.career}.${lvl.id}`)}</b></div>
-    <div class="line">${t('ui.job.pay', { pay: lvl.pay })} · ${t('ui.job.hours', { from: hhmm(c.starts), to: hhmm(c.ends), days: t('ui.job.weekdays') })}</div>
+    <div class="line">${t('ui.job.pay', { pay: lvl.pay })} · ${t('ui.job.hours', { from: hhmm(c.starts), to: hhmm(c.ends), days: daysWords(job.career) })}</div>
     <div class="line">${when}</div>${promo}${stations}
     ${sel.shift || sel.doing?.by === 'job' ? '' : `<button class="quit" id="quit-job">${t('ui.job.quitButton')}</button>`}`;
   for (const b of $('job').querySelectorAll('[data-station]'))
     b.onclick = () => {
-      const item = office.items.find((i) => i.use?.station === b.dataset.station);
+      const item = workOf(sel).items.find((i) => i.use?.station === b.dataset.station);
       sel.command(offersFor(item)[0], item);
     };
   if ($('quit-job')) $('quit-job').onclick = () => sel.quitJob();
@@ -2214,10 +2246,11 @@ function closeCard() {
 function openJobs(life) {
   life.card = null;
   const rows = Object.entries(CAREERS)
+    .filter(([, c]) => !c.skills || skillsOn)
     .map(([id, c]) => {
       const lvl = c.levels[0];
       return `<div class="offer"><div class="big">${c.icon}</div><div><b>${t('ui.card.jobs.offer', { job: t(`job.${id}.${lvl.id}`), place: t(`job.${id}.place`) })}</b>
-        <div>${t('ui.job.pay', { pay: lvl.pay })} · ${t('ui.job.hours', { from: hhmm(c.starts), to: hhmm(c.ends), days: t('ui.job.weekdays') })}</div></div>
+        <div>${t('ui.job.pay', { pay: lvl.pay })} · ${t('ui.job.hours', { from: hhmm(c.starts), to: hhmm(c.ends), days: daysWords(id) })}</div></div>
         <button class="go" data-career="${id}">${t('ui.card.take')}</button></div>`;
     })
     .join('');
@@ -2225,7 +2258,8 @@ function openJobs(life) {
   for (const b of $('card').querySelectorAll('[data-career]'))
     b.onclick = () => {
       life.takeJob(b.dataset.career);
-      giveDesk(life);
+      if (workPlaceOf(life.job) === 'office') giveDesk(life);
+      else careerPlace(workPlaceOf(life.job));
       closeCard();
     };
   $('card-close').onclick = closeCard;
@@ -2239,7 +2273,7 @@ const yearOf = (l) => l.year ?? year;
 function openStation(life) {
   const station = life.card.station;
   const s = STATIONS.find((x) => x.id === station);
-  const head = `<h2>${s.icon} ${t(`station.${station}`)}</h2><p class="intro">${t(`subject.${station}`)} · ${t(`station.${station}.job`)}</p>`;
+  const head = `<h2>${s.icon} ${stationName(life.job?.career, station)}</h2><p class="intro">${t(`subject.${station}`)} · ${stationJob(life.job?.career, station)}</p>`;
   let round = { right: 0, asked: 0 };
   const done = (more) => {
     life.taskDone(station, round.right, round.asked, more);
@@ -2875,7 +2909,7 @@ window.__life = {
   // Round 16, phase 3.
   eventsOn, deck, eventsTick, openEvent, eventCtx, eventPeople, EVENTS, eventById, lastEvent: null, openMenu, offerWhy,
   // Round 16, phase 5.
-  skillsOn, SKILLS, placeExtra, spotFor, shopItem, oddJobToday, EARNING, ODD_JOB, earnGain,
+  skillsOn, SKILLS, placeExtra, spotFor, shopItem, oddJobToday, EARNING, ODD_JOB, earnGain, careerPlace, workOf, openJobs, openStation,
   // Round 16, phase 4.
   townLifeOn, townLife, townLifeTick, playTownDay, TOWNLIFE, babiesAt, newsText, npcs, openNews, reachTick, REACH, DRAWN, lastReach: null,
   weatherNow, weatherTick, get weather() { return weather && { ...weather }; }, set weatherId(id) { weather = { day: Math.floor(minutes / 1440), id, told: true }; }, snowmen, weatherFx, ducks,
