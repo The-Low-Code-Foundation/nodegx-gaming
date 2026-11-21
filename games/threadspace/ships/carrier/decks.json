@@ -532,6 +532,7 @@
     -24,
     70
    ],
+   "float": true,
    "h": 23,
    "vacuum": true,
    "bayDoors": [

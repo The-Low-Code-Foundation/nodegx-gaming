@@ -84,7 +84,6 @@ export function buildCarrier(L, hooks = {}) {
 
   buildHull(C);
   for (const d of L.decks) buildDeck(C, d, hooks);
-  boardingTubes(C, hooks);
   for (const c of L.compartments) if (c.access === 'sealed') buildSealed(C, c);
   bake(C.machinery);
   lightViewed(C);
@@ -187,7 +186,8 @@ function buildDeck(C, deck, hooks) {
     roomLights(I, c);
     furnish(C, I, c, hooks, open.get(c.id));
     dressRoom(C, I, c, open.get(c.id));
-    if (c.float) dressHolds(C, I, c, open.get(c.id)); // weightless: handholds on every surface (weightless.mjs)
+    // Weightless: handholds on every surface (weightless.mjs). The airless hangar's are its gangway (sets/hangar.mjs).
+    if (c.float && !c.vacuum) dressHolds(C, I, c, open.get(c.id));
     floorOverlay(C, c, deck.floor);
   }
   I.s = roomSurfaces({ system: 'corridor' });
@@ -598,7 +598,8 @@ function hangar(C, I, c, hooks) {
     C.fighters.push(w);
     I.collider(Math.min(f.at[0] + out * 3, f.at[0] - out * 6), I.floorY, f.at[1] - 3.8, Math.max(f.at[0] + out * 3, f.at[0] - out * 6), I.floorY + 3, f.at[1] + 3.8);
     // Her ladder, on her port side: E climbs in (main.mjs, fighter.mjs). In an airless, weightless hangar it is a frame
-    // of grab bars you pull yourself up, not a ladder you climb.
+    // of grab bars you pull yourself up, not a ladder you climb, at the end of her spur of the gangway (sets/hangar.mjs,
+    // which makes its bars holds).
     if (c.vacuum) I.group.add(grabFrame(f.at[0] + 1, I.floorY, f.at[1] - 4.0));
     I.use(`fighter-${i}`, c.vacuum ? 'Pull yourself up into the cockpit' : 'Climb into the fighter', f.at[0] + 1, f.at[1] - 4.6, () => hooks.fighter?.(i), { r: 2.8 });
   });
@@ -703,40 +704,6 @@ function ladder(C, I, l, end, hooks) {
   I.group.add(g);
   const name = C.L.decks.find((d) => d.id === other.deck).name;
   I.use(`${l.id}-${end}`, `${up ? 'Climb up' : 'Climb down'} to the ${name.toLowerCase()}`, x, z, () => hooks.ladder?.(l, end), { r: 2 });
-}
-
-/** The boarding tubes, where a fighter has `boarding` (the spin-drum carrier, whose hangar is airless): a hatch in the
- *  deck of the room it names, over her, and a tube from the hangar's roof down to her canopy, so a pilot goes from the
- *  crew tunnel into her seat without a suit. E at the hatch boards her (`hooks.fighter`). */
-function boardingTubes(C, hooks) {
-  const hc = [...C.rooms.values()].find((c) => c.system === 'hangar' && c.access === 'walk');
-  const HI = hc && C.decks.get(hc.deck);
-  const steel = mat('#b9bec6'), ring = mat('#6a7380');
-  C.L.fighters.forEach((f, i) => {
-    const b = f.boarding, from = b && C.rooms.get(b.from), I = from && C.decks.get(from.deck);
-    if (!I) return;
-    const side = Math.sign(f.at[0]) || 1;
-    const x = Math.min(from.x[1] - 0.5, Math.max(from.x[0] + 0.5, b.at[0] + side * 0.85)), z = b.at[1];
-    const g = new THREE.Group();
-    g.add(at(cyl(0.62, 0.62, 0.04, hazardMat(), 20), 0, 0.02, 0), at(cyl(0.48, 0.48, 0.06, '#1a1d22', 20), 0, 0.03, 0));
-    for (const s of [-1, 1]) g.add(at(box(0.05, 1.1, 0.05, '#c9a43a'), s * 0.55, 0.55, 0), at(box(0.05, 0.05, 1.0, '#c9a43a'), s * 0.55, 1.1, 0));
-    g.position.set(x, I.floorY, z);
-    I.group.add(g);
-    I.use(`tube-${i}`, `Down the boarding tube to fighter ${i + 1}`, x, z, () => hooks.fighter?.(i), { r: 2 });
-    if (!HI) return;
-    const out = f.yaw >= 0 ? -1 : 1; // her nose points out of her side's door
-    const top = HI.floorY + (hc.h ?? 3), bottom = HI.floorY + 3.3, tx = f.at[0] + out * 1.5;
-    // The tube telescopes up to the roof when she is crewed and her drive is up, so she lifts and runs out clear of it
-    // (`C.boardTubes`, run by main.mjs): a group pivoted at the roof, squashed toward it.
-    const t = new THREE.Group();
-    t.add(at(cyl(0.75, 0.75, top - bottom, steel, 14), 0, (top + bottom) / 2 - top, 0));
-    for (let y = bottom + 0.3; y < top; y += 2.5) t.add(at(cyl(0.82, 0.82, 0.18, ring, 14), 0, y - top, 0));
-    t.add(at(cyl(1.0, 0.85, 0.4, ring, 14), 0, bottom + 0.2 - top, 0));
-    t.position.set(tx, top, f.at[1]);
-    t.userData.live = true;
-    HI.group.add(t);
-    (C.boardTubes ??= [])[i] = { t, k: 0 };
-  });
 }
 
 // --- sealed compartments: machinery you see but do not walk into -----------------------------------------------------

@@ -260,14 +260,21 @@ export class Career {
 
   /** Where your action station is, for the card and the markers. */
   stationTarget() {
-    const line = this.as.line, f = this.L.weapons.turrets?.[0]?.from, b = this.L.fighters?.[0]?.boarding;
+    const line = this.as.line, f = this.L.weapons.turrets?.[0]?.from;
     const at = (id) => {
       const r = this.C.rooms.get(id);
       return r && { deck: r.deck, seg: r.seg, x: (r.x[0] + r.x[1]) / 2, z: (r.z[0] + r.z[1]) / 2, room: r };
     };
     if (line.seat === 'gun' && f) return { deck: f.deck, x: f.at[0], z: f.at[1], room: null };
-    if (line.seat === 'fighter') return b ? { deck: this.C.rooms.get(b.from).deck, x: b.at[0], z: b.at[1], room: this.C.rooms.get(b.from) } : at('hangar');
+    if (line.seat === 'fighter') return this.boardTarget();
     return at(line.room);
+  }
+
+  /** Where you board a fighter: the first one's grab frame, where E climbs in (in the airless hangar, at the end of her
+   *  spur of the gangway from the airlock). */
+  boardTarget() {
+    const h = this.C.rooms.get('hangar'), f = this.L.fighters?.[0];
+    return h && f ? { deck: h.deck, x: f.at[0] + 1, z: f.at[1] - 4.6, room: h } : null;
   }
 
   /** A damage control job ended (damage.mjs says `job-end`). */
@@ -444,11 +451,8 @@ export class Career {
         const f = this.L.weapons.turrets[0].from;
         return { deck: f.deck, x: f.at[0], z: f.at[1], room: null };
       }
-      case 'board': {
-        // Down a boarding tube where the fighters have them (the spin-drum carrier's hangar is airless), else the hangar.
-        const b = this.L.fighters?.[0]?.boarding, from = b && this.C.rooms.get(b.from);
-        return from ? { deck: from.deck, x: b.at[0], z: b.at[1], room: from } : room('hangar');
-      }
+      case 'board':
+        return this.boardTarget();
       case 'launch':
       case 'land':
         return room('hangar');

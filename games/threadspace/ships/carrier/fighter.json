@@ -6,14 +6,7 @@
     17.166666666666668
    ],
    "yaw": 1.5708,
-   "side": "port",
-   "boarding": {
-    "from": "tunnel",
-    "at": [
-     0,
-     17.166666666666668
-    ]
-   }
+   "side": "port"
   },
   {
    "at": [
@@ -21,14 +14,7 @@
     23.5
    ],
    "yaw": 1.5708,
-   "side": "port",
-   "boarding": {
-    "from": "tunnel",
-    "at": [
-     0,
-     23.5
-    ]
-   }
+   "side": "port"
   },
   {
    "at": [
@@ -36,14 +22,7 @@
     29.833333333333336
    ],
    "yaw": 1.5708,
-   "side": "port",
-   "boarding": {
-    "from": "tunnel",
-    "at": [
-     0,
-     29.833333333333336
-    ]
-   }
+   "side": "port"
   },
   {
    "at": [
@@ -51,14 +30,7 @@
     36.16666666666667
    ],
    "yaw": 1.5708,
-   "side": "port",
-   "boarding": {
-    "from": "tunnel",
-    "at": [
-     0,
-     36.16666666666667
-    ]
-   }
+   "side": "port"
   },
   {
    "at": [
@@ -66,14 +38,7 @@
     42.5
    ],
    "yaw": 1.5708,
-   "side": "port",
-   "boarding": {
-    "from": "tunnel",
-    "at": [
-     0,
-     42.5
-    ]
-   }
+   "side": "port"
   },
   {
    "at": [
@@ -81,14 +46,7 @@
     48.83333333333333
    ],
    "yaw": 1.5708,
-   "side": "port",
-   "boarding": {
-    "from": "tunnel",
-    "at": [
-     0,
-     48.83333333333333
-    ]
-   }
+   "side": "port"
   },
   {
    "at": [
@@ -96,14 +54,7 @@
     17.166666666666668
    ],
    "yaw": -1.5708,
-   "side": "starboard",
-   "boarding": {
-    "from": "tunnel",
-    "at": [
-     0,
-     17.166666666666668
-    ]
-   }
+   "side": "starboard"
   },
   {
    "at": [
@@ -111,14 +62,7 @@
     23.5
    ],
    "yaw": -1.5708,
-   "side": "starboard",
-   "boarding": {
-    "from": "tunnel",
-    "at": [
-     0,
-     23.5
-    ]
-   }
+   "side": "starboard"
   },
   {
    "at": [
@@ -126,14 +70,7 @@
     29.833333333333336
    ],
    "yaw": -1.5708,
-   "side": "starboard",
-   "boarding": {
-    "from": "tunnel",
-    "at": [
-     0,
-     29.833333333333336
-    ]
-   }
+   "side": "starboard"
   },
   {
    "at": [
@@ -141,14 +78,7 @@
     36.16666666666667
    ],
    "yaw": -1.5708,
-   "side": "starboard",
-   "boarding": {
-    "from": "tunnel",
-    "at": [
-     0,
-     36.16666666666667
-    ]
-   }
+   "side": "starboard"
   },
   {
    "at": [
@@ -156,14 +86,7 @@
     42.5
    ],
    "yaw": -1.5708,
-   "side": "starboard",
-   "boarding": {
-    "from": "tunnel",
-    "at": [
-     0,
-     42.5
-    ]
-   }
+   "side": "starboard"
   },
   {
    "at": [
@@ -171,14 +94,7 @@
     48.83333333333333
    ],
    "yaw": -1.5708,
-   "side": "starboard",
-   "boarding": {
-    "from": "tunnel",
-    "at": [
-     0,
-     48.83333333333333
-    ]
-   }
+   "side": "starboard"
   }
  ],
  "fighter": {

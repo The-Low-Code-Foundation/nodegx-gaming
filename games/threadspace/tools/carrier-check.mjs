@@ -386,8 +386,10 @@ const scenarios = {
           }
           case 'board': {
             key('KeyE'); await wait(900); // out of the turret
-            c.place(...(() => { const b = c.L.fighters[0].boarding; const r = c.C.rooms.get(b.from); return [r.deck, b.at[0], b.at[1], 0]; })());
-            findUse(c.walker.interior, 'tube-')?.use();
+            // At her grab frame, on the end of her spur of the gangway (the airless hangar), and up into her.
+            const f = c.L.fighters[0];
+            c.place(c.C.rooms.get('hangar').deck, f.at[0] + 1, f.at[1] - 4.6, Math.PI);
+            findUse(c.walker.interior, 'fighter-0')?.use();
             await wait(900);
             break;
           }

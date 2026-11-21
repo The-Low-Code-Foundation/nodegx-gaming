@@ -15,6 +15,9 @@
 // Out of gas in air you can still swim, very slowly. You move in three dimensions: up to the deckhead, down to the
 // deck, through a door only below its lintel.
 //
+// The airless hangar has no handholds of these: you cross it by its gangway (sets/hangar.mjs), whose rails are its holds,
+// clipped by a lanyard to the safety wire over it (`I.tethers`, `tether()`), so you can never drift off into the bay.
+//
 // Brace for impact: a brace strap on the walls of every weightless room (a padded back and a harness, every five metres
 // or so). At action stations, or when the ship calls brace (a torpedo seconds out: weapons/torpedoes.mjs `braceFrame`),
 // E straps you in; E again lets you go. A hit kicks her structure (`jolt` on the bus, from integrity.mjs `impact`):
@@ -43,6 +46,7 @@ export const HOLD = {
   door: 2.1, // m above the deck: your eye's highest through a door (its lintel is at 2.5)
   legs: 1.5, // m below your eye your feet reach: a foot rail or a deck handle under you
   stand: 1.55, // m: your eye over a foot rail you stand in
+  tether: 3.2, // m: the furthest your eye gets from the safety wire you are clipped to (the airless hangar's gangway)
 };
 
 const RAIL = mat('#d8a530'); // the airless hangar's rails (sets/hangar.mjs) are this yellow too
@@ -103,9 +107,11 @@ function footRails(I, c) {
 // --- the holds, built -----------------------------------------------------------------------------------------------
 
 /** A hold from `a` to `b` (in the deck's frame) standing `off` m out from its surface along `n`: a bar and a foot at
- *  each end (or one in the middle of a short handle). Axis-aligned. */
-function hold(I, c, a, b, n, kind) {
+ *  each end (or one in the middle of a short handle). Axis-aligned. With `draw` false, only the hold: something else
+ *  (a gangway's rail, a grab frame's bar) already draws it. */
+export function hold(I, c, a, b, n, kind, draw = true) {
   const d = new THREE.Vector3().subVectors(b, a), len = d.length();
+  if (!draw) return void (I.holds ??= []).push({ a, b, n, kind, room: c.id, len, I });
   const ax = Math.abs(d.x) > 1e-3 ? 'x' : Math.abs(d.y) > 1e-3 ? 'y' : 'z';
   const nx = Math.abs(n.x) > 0.5 ? 'x' : Math.abs(n.y) > 0.5 ? 'y' : 'z';
   const dims = { x: 0.04, y: 0.04, z: 0.04 };
@@ -277,6 +283,13 @@ export class Floater {
     this.marker = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 6), new THREE.MeshBasicMaterial({ color: '#ffd77a', toneMapped: false, transparent: true, opacity: 0.85 }));
     this.marker.visible = false;
     this.marker.userData.live = true;
+    // Clipped on (a room with safety wires, `I.tethers`: the airless hangar's gangway): the wire's point nearest you, and
+    // your lanyard to it, drawn from your chest.
+    this.clip = null;
+    this.lanyard = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]), new THREE.LineBasicMaterial({ color: '#ff7a30' }));
+    this.lanyard.visible = false;
+    this.lanyard.frustumCulled = false;
+    this.lanyard.userData.live = true;
     // Brace for impact: the strap you are in, how hurt you are (0 to 1: 1 blacks you out), the red flash of a knock.
     this.strapped = null;
     this.hurt = 0;
@@ -300,6 +313,8 @@ export class Floater {
     this.charge = -1;
     this.near = null;
     this.marker.visible = false;
+    this.clip = null;
+    this.lanyard.visible = false;
   }
 
   // --- brace for impact ---------------------------------------------------------------------------------------------
@@ -400,6 +415,8 @@ export class Floater {
     if (this.held || this.charge >= 0) this.reset();
     this.marker.visible = false;
     this.puffing = false;
+    this.clip = null;
+    this.lanyard.visible = false;
   }
 
   /** The nearest hold in reach, or null: { h, t, d, p, foot }. Your hands reach `reach` from your eye; with `body`
@@ -459,6 +476,7 @@ export class Floater {
     this.puffing = false;
     if (this.held) this.holding(walker, dt, { down, pressed, released, shift });
     else this.drifting(walker, dt, { down, shift });
+    this.tether(walker);
     this.was = new Set(keys);
     this.last.copy(walker.pos);
     // The glow where your hand is, or would go.
@@ -565,6 +583,48 @@ export class Floater {
     if (n && !this.puffed && (speed < HOLD.slow || (hit.any && speed < 1.5))) this.grab(walker, n, speed);
   }
 
+  /** Clipped to a safety wire (`I.tethers`, each `{ a, b, room }` in the deck's frame: the airless hangar's gangway,
+   *  sets/hangar.mjs): in a room that has them, your lanyard runs to the nearest point of the nearest one and slides
+   *  along it, and you get no further than `HOLD.tether` from it. Going out against it, the line goes taut and takes
+   *  the speed you had away from it (gently: a lanyard has give, so it never hurts). */
+  tether(walker) {
+    const I = walker.interior, r = roomAt(this.G.C, this.G.walk?.deckNow, walker.pos.x, walker.pos.z);
+    const wires = r && I.tethers?.filter((t) => t.room === r.id);
+    if (!wires?.length) {
+      this.clip = null;
+      this.lanyard.visible = false;
+      return;
+    }
+    const eye = walker.eye(_e);
+    let best = null, bd = Infinity;
+    for (const t of wires) {
+      _d.subVectors(t.b, t.a);
+      const L2 = _d.lengthSq() || 1, u = Math.min(1, Math.max(0, _d.dot(_p.subVectors(eye, t.a)) / L2));
+      _p.copy(t.a).addScaledVector(_d, u);
+      const d = _p.distanceTo(eye);
+      if (d < bd) (bd = d), (best = (best ?? new THREE.Vector3()).copy(_p));
+    }
+    this.clip = best;
+    if (bd > HOLD.tether) {
+      _d.subVectors(eye, best).divideScalar(bd);
+      eye.copy(best).addScaledVector(_d, HOLD.tether);
+      walker.pos.copy(eye).y -= EYE;
+      const out = walker.vel.dot(_d);
+      if (out > 0) {
+        walker.vel.addScaledVector(_d, -out * 1.25); // a little spring back off the line's stretch
+        if (out > 0.6) this.G.sfx?.cue('clunk', { vol: Math.min(0.5, 0.1 + out * 0.1) });
+      }
+    }
+    // The lanyard: from your chest, just under your eye and a little ahead, to the wire.
+    const pos = this.lanyard.geometry.attributes.position;
+    walker.forward(_f2);
+    pos.setXYZ(0, eye.x + _f2.x * 0.25, eye.y - 0.45, eye.z + _f2.z * 0.25);
+    pos.setXYZ(1, best.x, best.y, best.z);
+    pos.needsUpdate = true;
+    if (this.lanyard.parent !== I.group) I.group.add(this.lanyard);
+    this.lanyard.visible = true;
+  }
+
   /** Moves your eye by (dx, dy, dz) in the deck's frame: the walls stop you on x and z (at your eye's height), the deck
    *  and the deckhead on y, and a door's lintel stops you going through it with your head up. Each axis you are
    *  stopped on loses its speed. Returns { any, into }: whether anything stopped you, and how fast you met it. */
@@ -625,7 +685,7 @@ export class Floater {
   /** The line for the top of the screen. */
   status(walker) {
     const hurt = this.hurt > 0.7 ? ' · badly hurt' : this.hurt > 0.4 ? ' · hurt' : this.hurt > 0.12 ? ' · bruised' : '';
-    const gas = `puffer ${Math.round((100 * this.gas) / HOLD.gas)}%${hurt}`;
+    const gas = `puffer ${Math.round((100 * this.gas) / HOLD.gas)}%${this.clip ? ' · clipped on' : ''}${hurt}`;
     if (this.strapped) return `weightless · strapped in · ${gas}`;
     if (this.held) return `weightless · ${this.held.foot ? 'feet in a foot rail' : `holding a ${this.held.h.kind === 'rail' ? 'rail' : 'handhold'}`} · ${gas}`;
     const s = walker.vel.length();

@@ -144,7 +144,7 @@ const deckOf = (id) => C.rooms.get(id)?.deck;
 const BRIDGE_DECK = deckOf('bridge'), HANGAR_DECK = deckOf('hangar');
 const thrusters = new Thrusters(thrusterList, body);
 const helm = new Helm(C.obj, body, thrusters);
-const doors = new Doors(C); // the bay doors, the hatch lids, the boarding tubes
+const doors = new Doors(C); // the bay doors, the hatch lids
 // Gas in vacuum (gas.mjs): what the fighter's drive and jets throw out, and the carrier's own, each in its own pool.
 const gas = new Gas(world, 2600);
 const carrierGas = new Gas(world, 4000);
@@ -370,7 +370,7 @@ function tick(dt) {
   ship.frame(dt, f, walker, mode);
   plant.frame(dt, { stations: ship.stations }); // after integrity has set the thrusters' health: heat and tanks cap the drive
   helmSeat.fire(f);
-  doors.frame(dt, fighter);
+  doors.frame(dt);
   C.obj.updateMatrixWorld(true);
   guns.fly(fighter, mode === 'fighter' && !fading && f.trigger); // her cannon: the mouse button, out in space
   guns.frame(dt, mode === 'gun' ? f : IDLE, mode, camera);

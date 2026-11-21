@@ -220,11 +220,11 @@
       "unlock": [
         "fighters"
       ],
-      "say": "Every gunner gets a go in a fighter. The hangar has no air: go down a boarding tube from the crew tunnel into any of them. Launch, fly about, then fly yourself home down the lane of rings. Don't call flight control to bring you in: fly it."
+      "say": "Every gunner gets a go in a fighter. The hangar has no air: go down the forward trunk to the hangar airlock, keep your visor down, and pull yourself along the gangway to any of them. Launch, fly about, then fly yourself home down the lane of rings. Don't call flight control to bring you in: fly it."
     },
     {
       "do": "board",
-      "order": "Down a boarding tube from the crew tunnel into a fighter"
+      "order": "Through the hangar airlock and along the gangway into a fighter"
     },
     {
       "do": "launch",

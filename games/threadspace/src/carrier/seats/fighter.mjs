@@ -35,15 +35,14 @@ export class FighterSeat {
     doors.setBay(1);
   }
 
-  /** Out of her on the pad: up her boarding tube where she has one, else down beside her. */
+  /** Out of her on the pad, beside her: in the airless hangar, at her grab frame on the end of her spur of the gangway,
+   *  facing her (the Floater takes the frame's bar for you). */
   leave() {
-    const { L, fighter, cockpit, setMode, walk, walker, deckOf } = this.G;
+    const { fighter, cockpit, setMode, walk, deckOf } = this.G;
     cockpit.detach();
-    const b = L.fighters[fighter.index]?.boarding;
     const s = fighter.leave();
     setMode('walk');
-    if (b) walk.goDeck(deckOf(b.from), b.at[0], b.at[1], walker.yaw);
-    else walk.goDeck(3, s.x, s.z, s.yaw);
+    walk.goDeck(deckOf('hangar') ?? 3, s.x, s.z, s.yaw);
   }
 
   key(code) {

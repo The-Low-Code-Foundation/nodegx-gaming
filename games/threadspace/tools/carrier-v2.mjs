@@ -109,8 +109,8 @@ const floorOf = Object.fromEntries(decks.map((d) => [d.id, d.floor]));
 const comps = [];
 /** A walkable room. */
 // A walkable room of the fixed hull. Outside the drums there is no weight (ROADMAP decision 2): every one is `float`
-// (weightless.mjs), but the airless hangar, which is walked until its gangways come (phase 5).
-const W = (id, name, deck, system, x, z, more = {}) => comps.push({ id, name, deck, access: 'walk', system, x, z, ...(more.vacuum ? {} : { float: true }), ...more });
+// (weightless.mjs), the airless hangar too, which you cross by its gangway (sets/hangar.mjs, phase 5).
+const W = (id, name, deck, system, x, z, more = {}) => comps.push({ id, name, deck, access: 'walk', system, x, z, float: true, ...more });
 /** A sealed compartment (machinery, tanks, magazines). */
 const X = (id, name, system, x, y, z, more = {}) => comps.push({ id, name, access: 'sealed', system, x, y, z, ...more });
 
@@ -157,7 +157,8 @@ const doorZ = [hz0 + 42, hz0 + 80]; // the launch doors, both sides
 const hTurrets = [hz0 + 20, hz0 + 58, hz0 + 96];
 {
   W('fwd-trunk', 'Forward trunk', 4, 'corridor', [-1.5, 1.5], [hz0 + 0.4, hz0 + 3.6], { float: true });
-  // The way into the airless hangar from inside the ship: an airlock under the forward trunk.
+  // The way into the airless hangar from inside the ship: an airlock under the forward trunk. From its outer door the
+  // gangway runs aft down the hangar's middle, a spur off it to each fighter (sets/hangar.mjs).
   W('hangar-lock', 'Hangar airlock', 6, 'corridor', [-3, 3], [hz0 + 0.4, hz0 + 3.6], { h: 3.2, airlock: true });
   W('hangar', 'Hangar', 6, 'hangar', [-17.5, 17.5], [hz0 + 4, hz0 + 98], {
     h: 23, vacuum: true,
@@ -170,7 +171,8 @@ const hTurrets = [hz0 + 20, hz0 + 58, hz0 + 96];
   X('aircraft-spares', 'Aircraft spares', 'stores', [-17.5, -0.4], [-12, -2], [hz0 + 98.4, hz1 - 2.4]);
   X('fighter-ordnance', 'Fighter ordnance', 'magazine', [0, 17.5], [-12, -2], [hz0 + 98.4, hz1 - 2.4]);
   X('fighter-fuel', 'Fighter propellant', 'tanks', [-17.5, 17.5], [-1.6, 10], [hz0 + 98.4, hz1 - 2.4]);
-  // The crew tunnel and the rooms beside it (deck 2). Pilots get to the fighters down boarding tubes, never in suits.
+  // The crew tunnel and the rooms beside it (deck 2). Pilots go from here down the forward trunk to the hangar airlock,
+  // and along the gangway to their fighters, in their duty suits.
   W('tunnel', 'Crew tunnel', 2, 'corridor', [-1.5, 1.5], [hz0 + 0.4, hz1 - 0.2], { float: true });
   W('pilots-ready', 'Pilots’ ready room', 2, 'flight', [1.9, 12], [hz0 + 4, hz0 + 15.6], { fit: 'briefing' });
   W('flight-gear', 'Flight gear', 2, 'flight', [1.9, 12], [hz0 + 16, hz0 + 27.6], { fit: 'lockers' });
@@ -488,7 +490,7 @@ const fighters = [];
   const per = Math.ceil(hgr.s.fighters / 2), dz = (doorZ[1] - doorZ[0]) / per, z0 = doorZ[0] + dz / 2;
   for (let i = 0; i < hgr.s.fighters; i++) {
     const port = i < per, k = port ? i : i - per;
-    fighters.push({ at: [port ? -9 : 9, z0 + k * dz], yaw: port ? 1.5708 : -1.5708, side: port ? 'port' : 'starboard', boarding: { from: 'tunnel', at: [0, z0 + k * dz] } });
+    fighters.push({ at: [port ? -9 : 9, z0 + k * dz], yaw: port ? 1.5708 : -1.5708, side: port ? 'port' : 'starboard' });
   }
 }
 
@@ -499,9 +501,10 @@ const stations = [
   st('bridge', [4, sz0 + 18], 0, 'sitChair', 'command', 'Sensor watch', 'on'),
   st('bridge', [-1, sz0 + 24.5], 0, 'idle', 'command', 'Quartermaster of the watch', 'on'),
   st('cic', [-8, sz0 + 12], 1.5708, 'workTable', 'command', 'Plotter, CIC', 'on'),
-  // The airless hangar's deck crews, suited (crew.mjs puts anyone in a vacuum room in a vac suit): the sentry down the
-  // centre walkway, two at work in the gaps between fighters, one by the port bay door, clear of its lanes.
-  st('hangar', [-1.2, hz0 + 50], 0, 'walk', 'flight', 'Hangar sentry', 'on', { route: [[-1.2, hz0 + 8], [-1.2, hz0 + 94]] }),
+  // The airless hangar's deck crews, suited (crew.mjs puts anyone in a vacuum room in a vac suit) and weightless: the
+  // sentry pulling himself up and down the gangway, two at work in the gaps between fighters, one by the port bay door,
+  // clear of its lanes.
+  st('hangar', [0, hz0 + 40], 0, 'walk', 'flight', 'Hangar sentry', 'on', { route: [[0, hz0 + 8], [0, hz0 + 68]] }),
   st('hangar', [-5.6, doorZ[0] + 6.33], 3.14159, 'workTable', 'flight', 'Deck crew', 'on'),
   st('hangar', [5.6, doorZ[0] + 19], 0, 'workTable', 'flight', 'Deck crew', 'on'),
   st('hangar', [-15, doorZ[0] - 3], 0, 'lookAround', 'flight', 'Deck crew, launch lanes', 'on'),
@@ -516,7 +519,7 @@ const stations = [
 // ---- everything else: carried over, with ids moved where rooms moved ----
 const routes = { ...v1.routes, lines: [
   { name: 'Bridge', to: 'bridge', color: '#58b0ff' }, { name: 'Hangar tunnel', to: 'tunnel', color: '#3fe0d0' },
-  { name: 'Engineering', to: 'eng-control', color: '#ff9a30' },
+  { name: 'Engineering', to: 'eng-control', color: '#ff9a30' }, { name: 'Hangar airlock', to: 'hangar-lock', color: '#e8d84a' },
   // The mess, the sick bay, the quarters and the offices are in the drums: one line to the spine, whose lifts go down to them.
   { name: 'Drums', to: 'spine', color: '#c08cff' },
 ] };

@@ -281,6 +281,19 @@ Left for the phases that design their formats: `content/announcements/` (phase 3
   airlock along the pads: a lattice with handrails and a tether line, visor down. You pull yourself along it to your
   fighter and into her seat, and the deck crew are there in heavy suits. This closes the open hangar item from the rebuild.
 
+  **Built (phase 5's second session):** the hangar floats (`W()` sets `float` on every walkable room now) and the
+  boarding tubes are gone: pilots go down the forward trunk to the hangar airlock and through it. From its door a
+  lattice gangway runs aft down the hangar's middle on legs, a spur off it to each fighter ending at her grab frame
+  (`sets/hangar.mjs` `gangway()`). Its rails and the frame's bars are the hangar's only holds (no `dressHolds` there);
+  an orange safety wire runs on hoops over the gangway and out along each spur, and in the hangar you are clipped to it
+  (`weightless.mjs` `tether()`: no further than 3.2 m from it, the lanyard drawn from your chest). Climbing out of a
+  fighter puts you at her frame. The hangar sentry pulls himself up and down the gangway; the deck crews float in their
+  heavy suits. A floor line leads to the hangar airlock. The career's board order and Lieutenant Moss's line say the
+  airlock and the gangway (her changed line shows as a subtitle until `tools/voices.mjs --only flight` is run).
+  Not done: the deck crew don't come to meet you or clip you on, there is no unclipping to go off the gangway, the
+  grating is not solid (you can float through it to the deck), and the walk to the airlock is long (the gangway is
+  about 70 m; a hard push crosses it in under 20 s).
+
 ## Phase 6. Collisions (one or two sessions) [14]
 
 No physics engine. The ship already has its own Newtonian code (`newton.mjs`, `flight.mjs`); collisions fit beside it.

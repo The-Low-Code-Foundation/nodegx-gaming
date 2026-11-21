@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { box, cyl, at, mat } from '../../util.mjs';
 import { P, G, place } from './parts.mjs';
 import { poster } from './paper.mjs';
+import { hold } from '../weightless.mjs';
 
 /** The hangar's dressing, after layout.mjs has put the fighters, the lanes, the bay door and the crates in. */
 export function dressHangar(C, I, c) {
@@ -47,7 +48,8 @@ export function dressHangar(C, I, c) {
     I.group.add(at(box(cw, 0.08, L, P.steel), x2 - cw / 2, y + cy, m));
     for (const e of [0.5, 1.05]) I.group.add(at(box(0.04, 0.04, L, yellow), x2 - cw, y + cy + e, m));
     for (let z = a; z <= b; z += 2) I.group.add(at(box(0.04, 1.05, 0.04, P.steel), x2 - cw, y + cy + 0.53, z), at(box(cw, 0.06, 0.06, P.steel), x2 - cw / 2, y + cy - 0.15, z));
-    (C.catwalks ??= []).push({ deck: c.deck, wall: x2, x: [x2 - cw, x2], z: [a, b], y: y + cy, rungs: [a + 0.6, b - 0.6] });
+    // Walked only where there is weight: in the airless, weightless hangar it is structure, out of the gangway's reach.
+    if (!c.vacuum) (C.catwalks ??= []).push({ deck: c.deck, wall: x2, x: [x2 - cw, x2], z: [a, b], y: y + cy, rungs: [a + 0.6, b - 0.6] });
     for (const z of [a + 0.6, b - 0.6]) {
       // Rungs: grab bars up the wall from the deck to the catwalk, on stand-offs.
       for (let yy = 0.4; yy < cy + 1.2; yy += 0.4) I.group.add(at(box(0.08, 0.05, 0.6, yellow), x2 - 0.2, y + yy, z));
@@ -85,8 +87,7 @@ export function dressHangar(C, I, c) {
 
 /** The airless hangar dressed for no weight and no air (the spin-drum carrier's): everything loose is held down.
  *  Crates under cargo nets strapped to the tie-downs, at both ends; a tool chest clamped to the deck beside each pad, its
- *  tools tethered; handrail lines on posts down both sides of the centre walkway, open at each pad, with tether coils
- *  hung on them; and handholds along the bulkheads. */
+ *  tools tethered; the gangway from the airlock to every fighter (`gangway`); and handholds along the bulkheads. */
 function zeroG(C, I, c, { yellow }) {
   const [x1, x2] = c.x, [z1, z2] = c.z, y = I.floorY;
   const net = mat('#2a2d22'), strap = mat('#c8a030'), clamp = mat('#e0b030'), tether = mat('#ff7a30');
@@ -117,20 +118,129 @@ function zeroG(C, I, c, { yellow }) {
     const s = Math.sign(f.at[0]) || 1;
     place(I, chest(), s * 4.2, f.at[1] + 5.4, s > 0 ? -Math.PI / 2 : Math.PI / 2);
   }
-  // Handrail lines down both sides of the centre walkway, open at each pad so the crews can cross.
-  const rx = 2.8, rail = (a, b, x) => {
-    if (b - a < 1) return;
-    I.group.add(at(box(0.05, 0.05, b - a, yellow), x, y + 1.0, (a + b) / 2));
-    for (let z = a; z <= b + 0.01; z += Math.max(1, (b - a) / Math.ceil((b - a) / 3))) I.group.add(at(box(0.06, 1.0, 0.06, P.steel), x, y + 0.5, z));
-  };
-  const gaps = padZ.map((z) => [z - 4.2, z + 4.2]);
-  for (const x of [-rx, rx]) {
-    let from = z1 + 2;
-    for (const [a, b] of gaps) (rail(from, a, x), (from = b));
-    rail(from, z2 - 2, x);
-    // A coiled tether hung on the rail every other pad.
-    padZ.forEach((z, k) => k % 2 || I.group.add(at(new THREE.Mesh(new THREE.TorusGeometry(0.18, 0.025, 4, 14), tether), x, y + 0.82, z + 6, 0, Math.PI / 2, 0)));
-  }
+  gangway(C, I, c, { yellow, tether });
   // Handholds along the forward and after bulkheads, at hand height (clear of the airlock's door in the middle).
   for (const z of [z1 + 0.15, z2 - 0.15]) for (let x = x1 + 1; x < x2 - 1; x += 1.5) if (Math.abs(x) > 3.4) I.group.add(at(box(0.5, 0.05, 0.08, yellow), x, y + 1.3, z));
+}
+
+/** A see-through deck grating `w` by `d` (in its own x and z, lying flat): flat bars about 15 cm apart, one shared
+ *  alpha-tested material, so the whole gangway bakes into one mesh. */
+let GRATE = null;
+function grating(w, d) {
+  if (!GRATE) {
+    const cv = document.createElement('canvas');
+    cv.width = cv.height = 64;
+    const g = cv.getContext('2d');
+    g.fillStyle = '#d0d4d8';
+    for (let k = 0; k < 64; k += 32) g.fillRect(k, 0, 7, 64), g.fillRect(0, k, 64, 5);
+    const t = new THREE.CanvasTexture(cv);
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    t.colorSpace = THREE.SRGBColorSpace;
+    GRATE = new THREE.MeshLambertMaterial({ map: t, alphaTest: 0.5, side: THREE.DoubleSide, color: '#8a9098' });
+  }
+  const geo = new THREE.PlaneGeometry(w, d);
+  geo.rotateX(-Math.PI / 2);
+  const uv = geo.attributes.uv;
+  for (let i = 0; i < uv.count; i++) uv.setXY(i, (uv.getX(i) * w) / 0.3, (uv.getY(i) * d) / 0.3);
+  return new THREE.Mesh(geo, GRATE);
+}
+
+/** Runs along [a0, b0] with the `gaps` taken out, each at least `min` long. */
+function runs(a0, b0, gaps, min = 0.3) {
+  const out = [];
+  let cur = a0;
+  for (const [a, b] of gaps.slice().sort((p, q) => p[0] - q[0])) {
+    if (a - cur >= min) out.push([cur, a]);
+    cur = Math.max(cur, b);
+  }
+  if (b0 - cur >= min) out.push([cur, b0]);
+  return out;
+}
+
+/** The gangway (ROADMAP phase 5, [8]): how you cross the airless, weightless hangar in your duty suit, visor down. A
+ *  lattice from the airlock's door aft down the centre of the hangar, a spur off it to each fighter's grab frame, on legs
+ *  a little off the deck. A rail along each side of it at hand height (holds: you pull yourself along them, or push off
+ *  and drift down the middle), and over it, on hoops, an orange safety wire you are clipped to (`I.tethers`:
+ *  weightless.mjs `tether` keeps you within reach of it and draws your lanyard). The grab frame's bars are holds too:
+ *  E at the frame boards her (layout.mjs `hangar`). */
+function gangway(C, I, c, { yellow, tether }) {
+  const z1 = c.z[0], y = I.floorY;
+  const gy = y + 0.35, ry = gy + 1.0, wy = gy + 2.0, top = wy + 0.25; // the grating, its rails, the wire, the hoops
+  const HW = 0.8, SW = 0.5; // half the width of the gangway and of a spur
+  const steel = P.steel, wire = tether;
+  const V = (x, yy, z) => new THREE.Vector3(x, yy, z);
+  const lock = C.L.doors.find((d) => d.between.includes(c.id) && d.between.some((id) => C.rooms.get(id)?.airlock));
+  const gx = lock?.at ?? 0; // the airlock's door is in the forward bulkhead: its `at` is the x
+  // Each fighter's spur: from the gangway's side out to her grab frame (layout.mjs: at her x + 1, 4 m forward of her),
+  // along her flank 4.6 m forward of her centre, where E boards her.
+  const spurs = C.L.fighters.map((f) => {
+    const s = Math.sign(f.at[0] - gx) || 1, fx = f.at[0] + 1;
+    return { s, z: f.at[1] - 4.6, x0: gx + s * HW, x1: fx + s * 0.7, fx, fz: f.at[1] - 4.0 };
+  });
+  const za = z1 + 0.15, zb = Math.max(...spurs.map((p) => p.z)) + 2.5;
+  const add = (...m) => I.group.add(...m);
+  // The lattice: the grating on stringers, on legs to the deck every three metres.
+  const deck = (cx, cz, w, d, alongX) => {
+    add(at(grating(w, d), cx, gy, cz));
+    for (const e of [-1, 1]) add(alongX ? at(box(w, 0.12, 0.06, steel), cx, gy - 0.07, cz + e * (d / 2)) : at(box(0.06, 0.12, d, steel), cx + e * (w / 2), gy - 0.07, cz));
+    const L = alongX ? w : d, n = Math.max(1, Math.round(L / 3));
+    for (let k = 0; k <= n; k++) {
+      const u = -L / 2 + (k * L) / n;
+      for (const e of [-1, 1]) {
+        const [lx, lz] = alongX ? [cx + u, cz + e * (d / 2 - 0.05)] : [cx + e * (w / 2 - 0.05), cz + u];
+        add(at(box(0.07, gy - y, 0.07, steel), lx, y + (gy - y) / 2, lz), at(box(0.2, 0.02, 0.2, P.dark), lx, y + 0.01, lz));
+      }
+    }
+  };
+  deck(gx, (za + zb) / 2, 2 * HW, zb - za, false);
+  for (const p of spurs) deck((p.x0 + p.x1) / 2, p.z, Math.abs(p.x1 - p.x0), 2 * SW, true);
+  // The rails: a bar at hand height on posts from the grating, each length one hold.
+  const rail = (a, b, n, kind = 'rail') => {
+    const d = new THREE.Vector3().subVectors(b, a), len = d.length(), mid = a.clone().add(b).multiplyScalar(0.5);
+    const alongX = Math.abs(d.x) > Math.abs(d.z);
+    add(at(alongX ? box(len, 0.045, 0.045, yellow) : box(0.045, 0.045, len, yellow), mid.x, mid.y, mid.z));
+    const k = Math.max(1, Math.round(len / 2));
+    for (let i = 0; i <= k; i++) {
+      const q = a.clone().addScaledVector(d, i / k);
+      add(at(box(0.05, ry - gy, 0.05, steel), q.x, gy + (ry - gy) / 2, q.z));
+    }
+    hold(I, c, a, b, n, kind, false);
+  };
+  for (const s of [-1, 1]) {
+    const x = gx + s * HW, gaps = spurs.filter((p) => p.s === s).map((p) => [p.z - SW, p.z + SW]);
+    for (const [a, b] of runs(za + 0.4, zb, gaps)) rail(V(x, ry, a), V(x, ry, b), V(-s, 0, 0));
+  }
+  for (const p of spurs) {
+    const lo = Math.min(p.x0, p.x1), hi = Math.max(p.x0, p.x1);
+    // The side toward her runs up to her grab frame; the far side and the end rail go on past it.
+    const nearEnd = p.fx - p.s * 0.55, [na, nb] = p.s > 0 ? [lo, nearEnd] : [nearEnd, hi];
+    rail(V(lo, ry, p.z - SW), V(hi, ry, p.z - SW), V(0, 0, 1));
+    rail(V(na, ry, p.z + SW), V(nb, ry, p.z + SW), V(0, 0, -1));
+    rail(V(p.x1, ry, p.z - SW), V(p.x1, ry, p.z + SW), V(-p.s, 0, 0));
+    // Her grab frame's bars (drawn by layout.mjs), from the spur's side.
+    for (let h = 0.45; h < 2.5; h += 0.4) hold(I, c, V(p.fx - 0.4, y + h, p.fz), V(p.fx + 0.4, y + h, p.fz), V(0, 0, -1), 'frame', false);
+  }
+  // The hoops over it, and the safety wire under them down the middle: one down the gangway from a bracket over the
+  // airlock's door, one out along each spur from it.
+  const wires = (I.tethers ??= []);
+  const hoop = (x, z, alongX) => {
+    const w = alongX ? 2 * SW : 2 * HW;
+    for (const e of [-1, 1]) add(alongX ? at(box(0.06, top - gy, 0.06, steel), x, (gy + top) / 2, z + e * (w / 2)) : at(box(0.06, top - gy, 0.06, steel), x + e * (w / 2), (gy + top) / 2, z));
+    add(alongX ? at(box(0.06, 0.06, w, steel), x, top, z) : at(box(w, 0.06, 0.06, steel), x, top, z), at(box(0.03, top - wy, 0.03, steel), x, (wy + top) / 2, z));
+  };
+  const wireTo = (a, b) => {
+    const d = new THREE.Vector3().subVectors(b, a), mid = a.clone().add(b).multiplyScalar(0.5), len = d.length();
+    add(at(Math.abs(d.x) > Math.abs(d.z) ? box(len, 0.025, 0.025, wire) : box(0.025, 0.025, len, wire), mid.x, mid.y, mid.z));
+    wires.push({ a, b, room: c.id });
+  };
+  wireTo(V(gx, wy, za), V(gx, wy, zb - 0.3));
+  add(at(box(0.3, 0.08, 0.3, steel), gx, wy + 0.05, za + 0.1));
+  for (let z = za + 3; z < zb - 0.5; z += 4) if (!spurs.some((p) => Math.abs(p.z - z) < 0.9)) hoop(gx, z, false);
+  for (const p of spurs) {
+    wireTo(V(gx, wy, p.z), V(p.x1 - p.s * 0.3, wy, p.z));
+    const n = Math.max(1, Math.round(Math.abs(p.x1 - p.x0) / 3));
+    for (let k = 1; k <= n; k++) hoop(p.x0 + ((p.x1 - p.x0) * (k - 0.5)) / n, p.z, true);
+  }
+  // A coil of spare lanyard hung on the rail at every other spur, as before on the walkway's rails.
+  spurs.forEach((p, k) => k % 2 || add(at(new THREE.Mesh(new THREE.TorusGeometry(0.18, 0.025, 4, 14), wire), gx + p.s * HW, ry - 0.18, p.z + 2, 0, Math.PI / 2, 0)));
 }
