@@ -1082,6 +1082,7 @@ async function throwParty() {
   home.group.add(homeParty.decor);
   for (const l of lives) if (l.present && l.place === home) l.addMoodlet('party');
   sel.count('hostParty');
+  milestone('🥳', 'diary.party', { name: sel.name });
   const came = friends.filter((f) => inviteOver(f, true, HOME_PARTY.minutes));
   toast(t(came.length ? 'ui.party.home' : 'ui.party.homeNobody', { n: came.length }));
   save();
@@ -1195,6 +1196,7 @@ async function extendHome() {
   household.money -= cost;
   const boxed = await rehome({ ...homeState, size: next, paid: homeState.paid + cost });
   toast(t('ui.extend.done', { w: SIZES[next].w, d: SIZES[next].d }));
+  milestone('📐', 'diary.extended', { w: SIZES[next].w, d: SIZES[next].d });
   if (boxed?.length) toast(t('ui.move.boxed', { n: boxed.length }));
 }
 // Buying a house: the one you live in now is sold for what it cost you (the flat is rented: nothing back).
@@ -1205,6 +1207,7 @@ async function buyHouse(id) {
   household.money -= buyCost(id);
   const boxed = await rehome({ id, size: h.size, paid: h.price });
   toast(t('ui.move.done', { house: houseName(houseById(id)) }));
+  milestone('🔑', 'diary.moved', { house: houseName(houseById(id)) });
   if (boxed?.length) toast(t('ui.move.boxed', { n: boxed.length }));
 }
 
@@ -1612,12 +1615,13 @@ function renderAims() {
     : `<div class="goal"><button id="aims-pick">🌠 ${t('goal.pick')}</button></div>`;
   const wants = sel.wants.map((w) => wantById(w.id)).filter(Boolean)
     .map((w) => `<div class="want"><span class="icon">${w.icon}</span><span>${t(`want.${w.id}`)}</span><small>+${w.points}</small><button data-drop="${w.id}" title="${t('want.drop')}">✖</button></div>`).join('');
-  const html = `${goalHtml}<h3>${t('want.title')}</h3><div class="wants">${wants}</div><div class="points">🌟 ${t('ui.points', { n: sel.points })} <button id="aims-spend">🎁 ${t('reward.spend')}</button></div>`;
+  const html = `${goalHtml}<h3>${t('want.title')}</h3><div class="wants">${wants}</div><div class="points">🌟 ${t('ui.points', { n: sel.points })} <button id="aims-spend">🎁 ${t('reward.spend')}</button></div><button id="aims-diary">📖 ${t('diary.button')}</button>`;
   if (html === aimsShown) return;
   $('aims').innerHTML = aimsShown = html;
   $('aims-pick')?.addEventListener('click', () => openGoalPicker(sel));
   for (const b of $('aims').querySelectorAll('[data-drop]')) b.onclick = () => dropWant(sel, b.dataset.drop);
   $('aims-spend').onclick = () => openRewards(sel);
+  $('aims-diary').onclick = openDiary;
 }
 // ---- what happy points buy (round 16, phase 2: rewards.mjs) ----
 function openRewards(l) {
@@ -1676,8 +1680,34 @@ function swapTrait(l, r) {
         };
     };
 }
-// The life story (2.4) gathers these; until then, nothing.
-function milestone() {}
+// ---- the life story (round 16, phase 2) ----
+// The household's big moments, in order: how it began, dreams and their steps, a job, promotions, best friends, falling
+// in love, a wedding, a baby, moving house, a party, a perk or a new trait. Saved (`diary`); the 📖 card reads it.
+// `vars` as in a toast: a value with a dot in it is a key of its own ('goal.chef').
+const diary = Array.isArray(saved?.diary) ? saved.diary.slice(-300) : [];
+function milestone(icon, key, vars = {}) {
+  diary.push({ at: Math.floor(minutes), icon, key, vars });
+  if (diary.length > 300) diary.shift();
+}
+// The household's news that is a milestone (Life events, by key): its icon, and (optional) when it counts.
+const MILESTONES = {
+  'ui.job.taken': { icon: '💼' },
+  'ui.job.promoted': { icon: '🎖️' },
+  'ui.married': { icon: '💍' },
+  'ui.baby.born': { icon: '👶' },
+  'ui.movedIn': { icon: '🏠' },
+  'ui.bond.friendship': { icon: '🤝', when: (v) => /goodFriends|bestFriends/.test(v.level) },
+  'ui.bond.romance': { icon: '💕', when: (v) => /sweethearts|inLove/.test(v.level) },
+  'ui.levelUp': { icon: '🔬', when: (v) => v.level % 3 === 0 }
+};
+const keyVars = (vars) => Object.fromEntries(Object.entries(vars ?? {}).map(([k, v]) => [k, typeof v === 'string' && v.includes('.') ? t(v) : v]));
+function openDiary() {
+  if (card || placing) return;
+  const rows = [...diary].reverse().map((d) => `<div class="diary-row"><span class="when">${t('ui.day.short', { day: Math.floor(d.at / 1440) + 1 })} · ${hhmm(d.at)}</span><span class="icon">${d.icon}</span><span>${t(d.key, keyVars(d.vars))}</span></div>`).join('');
+  openCard(sel, 'diary', `<h2>📖 ${t('diary.title', { names: lives.map((l) => l.name).join(', ') })}</h2>${rows || `<p class="intro">${t('diary.empty')}</p>`}
+    <div class="actions"><button id="card-close">${t('ui.close')}</button></div>`);
+  $('card-close').onclick = closeCard;
+}
 function renderPanels() {
   $('clock').textContent = clockText();
   renderAims();
@@ -1924,6 +1954,8 @@ function snapshot() {
     home: { ...homeState },
     town: { seed: TOWN.seed, neighbours: neighbours.map((n) => n.who) },
     story: story?.id ?? saved?.story ?? null,
+    // Round 16, phase 2: the life story.
+    diary: diary.slice(),
     // Round 16: everyone else's traits, by person (the household's are in `lives`).
     traits: { ...(saved?.traits ?? {}), ...Object.fromEntries(npcs().map((l) => [l.who, [...(l.traits ?? [])]])) },
     likes: { ...(saved?.likes ?? {}), ...Object.fromEntries(npcs().filter((l) => l.likes).map((l) => [l.who, { ...l.likes }])) },
@@ -2321,6 +2353,9 @@ function renderToasts() {
   for (const l of everyone)
     for (const ev of l.events.splice(0)) {
       if (!lives.includes(l) && !/date|movedIn/.test(ev.key)) continue;
+      // Round 16: a milestone goes in the life story too.
+      const m = MILESTONES[ev.key];
+      if (m && (!m.when || m.when(ev.vars ?? {}))) milestone(m.icon, ev.key, ev.vars);
       const el = document.createElement('div');
       // A value with a dot in it is itself a key (a level's name: 'friendship.friends').
       const vars = Object.fromEntries(Object.entries(ev.vars ?? {}).map(([k, v]) => [k, typeof v === 'string' && v.includes('.') ? t(v) : v]));
@@ -2411,7 +2446,7 @@ window.__life = {
   get card() { return card; }, get year() { return year; }, get speed() { return speed; }, get view() { return nameOf(view); },
   get sel() { return sel; }, colleaguesLoaded, town: TOWN, HOUSES, streetName, story,
   // Round 16, phase 2.
-  factsOf, checkGoals, openGoalPicker, aimsOn, wantsTick, wantCtx, wished, openRewards, buyReward,
+  factsOf, checkGoals, openGoalPicker, aimsOn, wantsTick, wantCtx, wished, openRewards, buyReward, diary, openDiary, milestone,
   folk, get extras() { return extras(); }, furniture, storage, save, snapshot, openShop, startPlacing, stopPlacing, turnPlacing, placeHere, hover, sell, beauty, openLook, get home() { return home; }, saving,
   get placing() { return placing; }, get start() { return start?.kind ?? null; },
   setSpeed, advance, get minutes() { return minutes; }, set minutes(v) { minutes = v; },
@@ -2426,5 +2461,10 @@ window.__life = {
   ready: true
 };
 colleaguesLoaded.then(() => (window.__life.colleaguesReady = true));
+// Round 16, phase 2: the life story begins (a new game): who, how, and their dreams.
+if (!saved) {
+  milestone(story?.icon ?? '🏠', story ? 'diary.start' : 'diary.startPlain', { name: life.name, mate: lives[1]?.name ?? '', story: story ? `start.${story.id}` : '' });
+  for (const l of lives) if (l.goal) milestone(goalById(l.goal.id).icon, 'diary.newGoal', { name: l.name, goal: `goal.${l.goal.id}` });
+}
 // Round 16: how this life began, said once (a new game, or a test's ?story=).
 if (story) toast(t(`start.${story.id}.toast`, { name: life.name, mate: lives[1]?.name ?? '', house: houseName(houseById(homeState.id)), coins: household.money }));
