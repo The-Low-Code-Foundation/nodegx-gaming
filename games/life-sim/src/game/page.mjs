@@ -22,7 +22,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { makeSky, tick as tickDressing, daylight, partyDecor, weatherLook, greySky, snowman } from '../dressing.mjs';
+import { makeSky, tick as tickDressing, daylight, partyDecor, weatherLook, greySky, snowman, seasonLook, eventDecor } from '../dressing.mjs';
 import { CANDIDATES, loadTemplate } from '../characters.mjs';
 import { buildPlace, STATIONS, MADE, measure, ghost, placementOf, houseFurniture } from '../world.mjs';
 import { Sim } from '../sim.mjs';
@@ -54,6 +54,7 @@ import { WEATHER, rollWeather } from './weather.mjs';
 import { Pet, PETS, PET_KINDS, PET_NEEDS, MAX_PETS, ADOPT_FEE, addPets } from './pets.mjs';
 import { SKILLS, SKILL_IDS, addSkills, levelsOf, FIXING, EARNING, ODD_JOB, freshSide, earnWhy } from './skills.mjs';
 import { TOWNLIFE, dayOfTown, startTown, priceFor, REACH, pickReach, sociable, DRAWN } from './townlife.mjs';
+import { CALENDAR, SEASONS, SEASON_IDS, seasonById, YEAR_DAYS, dateOf, yearDayOf, rollStart, startFor, rollBirthday, BIRTHDAY, PRESENT_KINDS, TOWN_EVENTS, TOWN_EVENT, PRIZES, contestPlace, townEventOn, eventOpen, WEEKEND, isWeekend } from './calendar.mjs';
 
 const params = new URLSearchParams(location.search);
 const $ = (id) => document.getElementById(id);
@@ -222,10 +223,16 @@ const YEAR_STORED = (() => {
 let start = null;
 if (!quick) start = await startScreen(readSave());
 const saved = start?.kind === 'continue' ? start.save : null;
+// Round 16, phase 6: the calendar (calendar.mjs; its date is set once the clock is, below).
+const seasonForced = SEASON_IDS.includes(params.get('season')) ? params.get('season') : null;
+const dateForced = params.has('date') ? Math.max(1, Math.min(YEAR_DAYS, Number(params.get('date')) || 1)) - 1 : null;
+const calendarOn = !quick || params.has('calendar') || !!seasonForced || dateForced != null;
+const calendar = { start: null, told: null, born: {}, cake: {}, presents: {}, events: {}, ...(saved?.calendar ?? {}) };
 // Round 16, phase 3.4: the day's weather ({ day, id }: weather.mjs), rolled each morning; a test URL has sunshine unless
 // `?weather=rain|snow|sun` (which keeps it so).
 const weatherForced = WEATHER[params.get('weather')] ? params.get('weather') : null;
-const weatherOn = !quick || !!weatherForced;
+// Round 16, phase 6.1: and with the calendar on, the season's weather.
+const weatherOn = !quick || !!weatherForced || calendarOn;
 let weather = saved?.weather ?? null;
 // The event deck's state (round 16, phase 3; `eventsOn` above).
 const deck = { next: null, last: null, seen: {}, day: null, today: 0, party: null, ...(saved?.deck ?? {}) };
@@ -393,6 +400,8 @@ async function makeSim(who, at, i, { name = null, look = null, body = null, ...o
   life.onArrive = arrived;
   life.onDid = wished;
   life.offerOk = (offer) => inWeather(offer) && !offerWhy(life, offer);
+  // Round 16, phase 6: the season's and the weekend's leanings, and a weekend lie-in (calendar.mjs).
+  if (calendarOn) (life.lean = (id, hour) => leanOf(life, id, hour)), (life.lieIn = () => lieInNow(life));
   life.needPlace = (id) => careerPlace(id);
   life.titleOf = (p) => titleOf(p);
   everyone.push(life);
@@ -1302,6 +1311,7 @@ function townTick() {
   guestsTick();
   townLifeTick();
   reachTick();
+  calendarTick();
 }
 // ---- the town lives without you (round 16, phase 4; townlife.mjs) ----
 // Once a game day, at 03:00 (TOWNLIFE.at), the town's day is played out as data: nobody is drawn and no animation
@@ -1584,6 +1594,24 @@ async function buyHouse(id) {
 const [h0, m0] = (params.get('start') ?? '07:30').split(':').map(Number);
 let minutes = saved?.minutes ?? h0 * 60 + m0;
 let speed = Number(params.get('speed') ?? 1);
+// ---- the calendar (round 16, phase 6; calendar.mjs) ----
+// On in a game; on a test URL only with ?calendar=1, ?season=<spring|summer|autumn|winter> (today its first day) or
+// ?date=<1 to 28> (today that day of the year). `calendar`: `start` (the day of the year the game began on: a new
+// game's by the town's dice; a save from before phase 6 makes the day it loads the first day of spring), `told` (the
+// season last announced), `cake` / `presents` (whose birthday has had them, by year), `events` (each town event's
+// state, by year: advertised, entered).
+const today0 = Math.floor(minutes / 1440);
+if (seasonForced || dateForced != null) calendar.start = startFor(today0, dateForced ?? yearDayOf(seasonForced, 1));
+else if (calendar.start == null) calendar.start = saved ? startFor(today0, 0) : rollStart(TOWN.seed ? townDice(TOWN.seed, 7999) : Math.random);
+const dateNow = () => dateOf(Math.floor(minutes / 1440), calendar.start);
+const seasonNow = () => (calendarOn ? dateNow().season : null);
+const weekendNow = () => calendarOn && isWeekend(weekday(minutes));
+const yearKey = () => `${dateNow().year}`;
+// The day's date for the clock: "🌸 Spring 3".
+const dateText = () => {
+  const d = dateNow();
+  return t('season.date', { icon: seasonById(d.season).icon, season: t(`season.${d.season}`), n: d.dayOfSeason });
+};
 // Day 1 is a Monday (work.mjs: the work days are Monday to Friday).
 const clockText = () => `${t('ui.day', { day: Math.floor(minutes / 1440) + 1, weekday: t(`day.${weekday(minutes)}`) })} · ${hhmm(minutes)}`;
 const SPEED_ICONS = ['⏸', '▶', '⏩', '⏭'];
@@ -1755,7 +1783,7 @@ function openMenu(item, x, y, point = null) {
 function earnGain(o) {
   const side = household.side, lv = (id) => skillLevel(sel.skills[id] ?? 0);
   if (o.earn === 'paintings') return `+${t('ui.cost', { cost: side.paintings.reduce((a, b) => a + b, 0) })}`;
-  if (o.earn === 'veg') return `+${t('ui.cost', { cost: EARNING.veg.worth(lv('gardening')) })}`;
+  if (o.earn === 'veg') return `+${t('ui.cost', { cost: Math.round(EARNING.veg.worth(lv('gardening')) * (household.crop?.worth ?? 1)) })}`;
   if (o.earn === 'busk') return t('earn.perHour', { coins: EARNING.busk.tips(lv('music')) });
   return '🪙';
 }
@@ -1959,7 +1987,7 @@ function openGoalPicker(l, done = null) {
 // after a day. Math.random rolls them, never the seeded dice (a test's free will must choose as it did).
 function wantCtx(l) {
   const f = factsOf(l);
-  return { traits: l.traits, likes: l.likes, goal: l.goal?.id ?? null, needs: l.needs, hour: (minutes % 1440) / 60, money: household.money, job: f.job, friends: f.friends, romance: f.romance, babies: f.babies, has: f.has, weather: weatherNow(), off: offNow(), skills: skillsOn ? f.skills : null };
+  return { traits: l.traits, likes: l.likes, goal: l.goal?.id ?? null, needs: l.needs, hour: (minutes % 1440) / 60, money: household.money, job: f.job, friends: f.friends, romance: f.romance, babies: f.babies, has: f.has, weather: weatherNow(), season: seasonNow(), off: offNow(), skills: skillsOn ? f.skills : null };
 }
 function wantsTick() {
   if (!aimsOn) return;
@@ -2142,7 +2170,7 @@ function weatherNow() {
   if (weatherForced) return weatherForced;
   if (!weatherOn) return 'sun';
   const day = Math.floor(minutes / 1440);
-  if (weather?.day !== day) weather = { day, id: rollWeather(), told: false };
+  if (weather?.day !== day) weather = { day, id: rollWeather(Math.random, calendarOn ? seasonById(seasonNow()).weather : null), told: false };
   return weather.id;
 }
 // Once a day, what the weather is (a toast), and how it looks: rain or snow outdoors, no ducks on the pond in the rain;
@@ -2158,6 +2186,33 @@ function weatherTick() {
   for (const m of ducks) m.visible = id !== 'rain';
   if (id !== 'snow') for (const s of snowmen.splice(0)) s.removeFromParent();
 }
+// ---- the calendar's day (round 16, phase 6; calendar.mjs) ----
+// Each step (townTick): a new season recolours the garden and the park (dressing.mjs seasonLook, nothing new drawn),
+// sets the planter's crop (life.mjs, `household.crop`), and is announced once.
+let seasonShown = null;
+function calendarTick() {
+  if (!calendarOn) return;
+  const d = dateNow();
+  if (d.season !== seasonShown) {
+    seasonLook(d.season);
+    household.crop = seasonById(d.season).crop;
+    const first = seasonShown == null;
+    seasonShown = d.season;
+    const told = `${d.year}.${d.season}`;
+    if (calendar.told !== told) {
+      calendar.told = told;
+      toast(t(first ? 'season.now' : 'season.new', { icon: seasonById(d.season).icon, season: t(`season.${d.season}`) }));
+    }
+  }
+}
+// How much keener free will is on an offer now: the season's (calendar.mjs SEASONS `lean`).
+function leanOf(l, id, hour) {
+  return seasonById(seasonNow()).lean[id] ?? 1;
+}
+// A lie-in (phase 6.4): not yet.
+function lieInNow(l) {
+  return false;
+}
 // A snowman where they built it (the park's `buildSnowman`), three at most.
 function buildSnowman(l) {
   if (l.place !== park || weatherNow() !== 'snow') return;
@@ -2172,7 +2227,7 @@ const mateOf = (l) => lives.find((o) => o !== l && !o.carer && o.present && o.pl
 function eventCtx(l) {
   const f = factsOf(l);
   return {
-    place: placeKey(l.place), hour: (minutes % 1440) / 60, day: Math.floor(minutes / 1440), weekday: weekday(minutes), weather: weatherNow(),
+    place: placeKey(l.place), hour: (minutes % 1440) / 60, day: Math.floor(minutes / 1440), weekday: weekday(minutes), weather: weatherNow(), season: seasonNow(), weekend: weekendNow(),
     traits: l.traits, likes: l.likes, goal: l.goal?.id ?? null, money: household.money, job: f.job, friends: f.friends, romance: f.romance,
     babies: f.babies, has: f.has, mate: mateOf(l)?.name ?? null, seen: deck.seen
   };
@@ -2308,7 +2363,7 @@ function eventOutcome(l, e, who, mate, out) {
 }
 
 function renderPanels() {
-  $('clock').textContent = weatherOn ? `${clockText()} · ${WEATHER[weatherNow()].icon}` : clockText();
+  $('clock').textContent = (weatherOn ? `${clockText()} · ${WEATHER[weatherNow()].icon}` : clockText()) + (calendarOn ? ` · ${dateText()}` : '');
   renderAims();
   $('money').textContent = t('ui.coins', { n: household.money });
   renderJob();
@@ -2571,6 +2626,8 @@ function snapshot() {
     // Round 16, phase 3: the event deck.
     deck: { ...deck, seen: { ...deck.seen } },
     weather: weather && { ...weather },
+    // Round 16, phase 6 (v8): the calendar.
+    calendar: structuredClone(calendar),
     // Round 16, phase 5 (v7): the side earnings.
     side: household.side && { ...household.side, paintings: [...household.side.paintings], oddJob: household.side.oddJob && { ...household.side.oddJob } },
     // Round 16: everyone else's traits, by person (the household's are in `lives`).
@@ -3096,6 +3153,8 @@ window.__life = {
   skillsOn, SKILLS, placeExtra, spotFor, shopItem, oddJobToday, EARNING, ODD_JOB, earnGain, careerPlace, workOf, openJobs, openStation,
   // Round 16, phase 4.
   townLifeOn, townLife, townLifeTick, playTownDay, TOWNLIFE, babiesAt, newsText, npcs, openNews, reachTick, REACH, DRAWN, lastReach: null,
+  // Round 16, phase 6.
+  calendarOn, calendar, dateNow, seasonNow, weekendNow, calendarTick, SEASONS, TOWN_EVENTS,
   weatherNow, weatherTick, get weather() { return weather && { ...weather }; }, set weatherId(id) { weather = { day: Math.floor(minutes / 1440), id, told: true }; }, snowmen, weatherFx, ducks,
   folk, get extras() { return extras(); }, furniture, storage, save, snapshot, openShop, startPlacing, stopPlacing, turnPlacing, placeHere, hover, sell, beauty, openLook, get home() { return home; }, saving,
   get placing() { return placing; }, get start() { return start?.kind ?? null; },

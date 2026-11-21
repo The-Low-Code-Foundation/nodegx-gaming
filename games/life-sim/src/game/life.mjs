@@ -364,7 +364,11 @@ export class Life {
     // The other side of an interaction ends when the one who started it does (complete / stop).
     const babyFull = d?.offer.babyUntil && d.item?.baby && d.item.baby.needs[d.offer.babyUntil] >= 99.5;
     const petFull = d?.offer.petUntil && d.item?.pet && d.item.pet.needs[d.offer.petUntil] >= 99.5;
-    if (active && d.role !== 'partner' && (d.minutes >= (d.length ?? d.offer.minutes) || (d.offer.until && this.needs[d.offer.until] >= 99.5) || babyFull || petFull)) this.complete();
+    // Round 16, phase 6.4: a lie-in at the weekend (the page's `lieIn`): rested, and the night's sleep over, but still
+    // asleep until the morning's lie-in ends.
+    const lie = d?.offer.id === 'sleep' && !!this.lieIn?.();
+    const full = d?.offer.until && this.needs[d.offer.until] >= 99.5;
+    if (active && d.role !== 'partner' && ((!lie && (d.minutes >= (d.length ?? d.offer.minutes) || full)) || babyFull || petFull)) this.complete();
 
     for (const [id, left] of [...this.timed]) left - min <= 0 ? this.timed.delete(id) : this.timed.set(id, left - min);
     const had = new Set(this.moodlets);
@@ -473,10 +477,13 @@ export class Life {
       if (side.paintings.length < EARNING.paintings.most) side.paintings.push(worth);
       this.events.push({ key: 'ui.earn.painted', vars: { name: this.name, n: side.paintings.length } });
     }
+    // Round 16, phase 6.1: the season's crop (calendar.mjs SEASONS `crop`, the page's `household.crop`): faster in
+    // summer, slow in winter, worth more in autumn. No calendar: as phase 5.
+    const crop = this.household.crop ?? null;
     if (o.grows && side.veg < 100 && side.vegDay !== today) {
-      side.veg = Math.min(100, side.veg + EARNING.veg.grow(lv('gardening')));
+      side.veg = Math.min(100, side.veg + Math.round(EARNING.veg.grow(lv('gardening')) * (crop?.grow ?? 1)));
       side.vegDay = today;
-      if (side.veg >= 100) this.events.push({ key: 'ui.earn.ripe', vars: { name: this.name } });
+      if (side.veg >= 100) this.events.push(crop ? { key: 'ui.earn.cropRipe', vars: { name: this.name, crop: `crop.${crop.id}` } } : { key: 'ui.earn.ripe', vars: { name: this.name } });
     }
     if (o.earn === 'paintings' && side.paintings.length) {
       const n = side.paintings.length;
@@ -486,9 +493,9 @@ export class Life {
       this.events.push({ key: 'ui.earn.sold', vars: { name: this.name, n, coins } });
     }
     if (o.earn === 'veg' && side.veg >= 100) {
-      coins = EARNING.veg.worth(lv('gardening'));
+      coins = Math.round(EARNING.veg.worth(lv('gardening')) * (crop?.worth ?? 1));
       side.veg = 0;
-      this.events.push({ key: 'ui.earn.veg', vars: { name: this.name, coins } });
+      this.events.push(crop ? { key: 'ui.earn.crop', vars: { name: this.name, coins, crop: `crop.${crop.id}` } } : { key: 'ui.earn.veg', vars: { name: this.name, coins } });
     }
     if (o.earn === 'busk') {
       coins = Math.round(EARNING.busk.tips(lv('music')) * (o.minutes / 60) * Math.min(1, share));
@@ -756,6 +763,8 @@ export class Life {
         if (offer.skill?.science && this.mood.emotion.endsWith('appy')) score += 0.04;
         // Round 16: what they like doing (traits.mjs `likes`), and their favourite (likes.mjs).
         score *= likingOf(this.traits, offer.id) * keenOn(this.likes, offer.id);
+        // Round 16, phase 6: the season's and the weekend's leanings (the page's, calendar.mjs).
+        if (this.lean) score *= this.lean(offer.id, hour);
         const far = item ? item.spot.distanceTo(this.sim.position) : 0;
         options.push({ offer, item, score: score / (1 + far / 8) });
       }

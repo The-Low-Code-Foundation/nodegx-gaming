@@ -11,26 +11,27 @@
 //   base     how likely it comes up (1: as likely as any)
 //   traits   { trait: ×n }   goals { goal: ×n }   need: a need that makes it likelier the lower it is
 //   when     (c) → false: not now (no telescope to want to look through, no sweetheart to kiss)
+//   seasons  { season: ×n } (phase 6.1, calendar.mjs): the fire in winter, the flowers in spring
 // Liking it (likes.mjs `activity`) makes it three times as likely; disliking it, almost never.
-// `c`: { traits, likes, goal, needs, hour, money, job, friends, romance, babies, has: { shop id: true }, weather, off: [ids] }
+// `c`: { traits, likes, goal, needs, hour, money, job, friends, romance, babies, has: { shop id: true }, weather, season, off: [ids] }
 export const WANTS = [
-  { id: 'cook', icon: '🍳', did: 'cook', points: 25, traits: { foodie: 3, lazy: 0.6 }, goals: { chef: 4 }, need: 'hunger' },
+  { id: 'cook', icon: '🍳', did: 'cook', points: 25, traits: { foodie: 3, lazy: 0.6 }, goals: { chef: 4 }, need: 'hunger', seasons: { autumn: 1.3 } },
   { id: 'eat', icon: '🍽️', did: 'eat', points: 15, need: 'hunger', when: (c) => c.needs.hunger < 70 },
   { id: 'pizza', icon: '🍕', did: 'eatPizza', points: 30, traits: { foodie: 2, lazy: 1.5 }, when: (c) => c.money >= 20 },
   { id: 'dance', icon: '💃', did: 'dance', points: 20, traits: { sporty: 3, lazy: 0.3, clumsy: 1.3 }, need: 'fun' },
   { id: 'stretch', icon: '🧘', did: 'stretch', points: 15, traits: { sporty: 3, lazy: 0.3 } },
-  { id: 'read', icon: '📖', did: 'read', points: 20, traits: { bookworm: 3, shy: 1.5, sporty: 0.6 }, need: 'fun' },
+  { id: 'read', icon: '📖', did: 'read', points: 20, traits: { bookworm: 3, shy: 1.5, sporty: 0.6 }, need: 'fun', seasons: { autumn: 1.3, winter: 1.3 } },
   { id: 'study', icon: '🔬', did: 'study', points: 25, traits: { bookworm: 2.5 }, goals: { career: 2 } },
   { id: 'tv', icon: '📺', did: 'tv', points: 15, traits: { lazy: 2.5, nightOwl: 1.5, sporty: 0.5 }, need: 'fun' },
   { id: 'nap', icon: '😴', did: 'nap', points: 15, traits: { lazy: 3 }, need: 'energy' },
-  { id: 'stargaze', icon: '🔭', did: 'stargaze', points: 30, traits: { nightOwl: 2.5, romantic: 2, bookworm: 1.5 }, when: (c) => c.has.telescope },
-  { id: 'bath', icon: '🛁', did: 'bath', points: 25, traits: { neat: 2, lazy: 1.5 }, need: 'hygiene', when: (c) => c.has.bath },
+  { id: 'stargaze', icon: '🔭', did: 'stargaze', points: 30, traits: { nightOwl: 2.5, romantic: 2, bookworm: 1.5 }, when: (c) => c.has.telescope, seasons: { winter: 1.4, summer: 1.2 } },
+  { id: 'bath', icon: '🛁', did: 'bath', points: 25, traits: { neat: 2, lazy: 1.5 }, need: 'hygiene', when: (c) => c.has.bath, seasons: { winter: 1.5 } },
   { id: 'washUp', icon: '🧽', did: 'washUp', points: 15, traits: { neat: 4, messy: 0.1 } },
-  { id: 'fireside', icon: '🔥', did: 'warmUp', points: 20, traits: { romantic: 1.5, lazy: 1.5 }, when: (c) => c.has.fireplace },
+  { id: 'fireside', icon: '🔥', did: 'warmUp', points: 20, traits: { romantic: 1.5, lazy: 1.5 }, when: (c) => c.has.fireplace, seasons: { winter: 2.5, autumn: 1.4, summer: 0.3 } },
   { id: 'newLook', icon: '👗', did: 'changeLook', points: 25, traits: { romantic: 1.5 }, when: (c) => c.has.drawers || c.has.wideDrawers },
-  { id: 'park', icon: '🌳', did: 'go.park', points: 25, traits: { sporty: 1.5, cheerful: 1.5 } },
-  { id: 'ducks', icon: '🦆', did: 'feedDucks', points: 30, traits: { cheerful: 2, shy: 1.3 } },
-  { id: 'flowers', icon: '🌷', did: 'smellFlowers', points: 25, traits: { romantic: 2.5 } },
+  { id: 'park', icon: '🌳', did: 'go.park', points: 25, traits: { sporty: 1.5, cheerful: 1.5 }, seasons: { spring: 1.3, summer: 1.5, winter: 0.6 } },
+  { id: 'ducks', icon: '🦆', did: 'feedDucks', points: 30, traits: { cheerful: 2, shy: 1.3 }, seasons: { spring: 1.4, summer: 1.2 } },
+  { id: 'flowers', icon: '🌷', did: 'smellFlowers', points: 25, traits: { romantic: 2.5 }, seasons: { spring: 2.2, summer: 1.3, winter: 0.4 } },
   { id: 'phone', icon: '📞', did: 'phone', points: 15, traits: { chatty: 3, shy: 0.6 }, need: 'social' },
   { id: 'chat', icon: '💬', did: 'chat', points: 15, traits: { chatty: 3, shy: 0.5, grumpy: 0.6 }, goals: { popular: 2 }, need: 'social' },
   { id: 'joke', icon: '😂', did: 'joke', points: 20, traits: { joker: 4, grumpy: 0.5 }, goals: { popular: 1.5 } },
@@ -53,13 +54,17 @@ export const WANTS = [
   { id: 'workout', icon: '🏋️', did: 'workout', points: 20, traits: { sporty: 3, lazy: 0.3 }, when: (c) => !!c.skills && (c.has.rug || c.has.rug2 || c.has.rug3) },
   { id: 'paint', icon: '🎨', did: 'paint', points: 30, traits: { romantic: 2, messy: 1.5, shy: 1.3 }, goals: { artist: 4 }, when: (c) => !!c.skills && c.has.easel },
   { id: 'playMusic', icon: '🎹', did: 'playMusic', points: 30, traits: { cheerful: 1.5, joker: 1.3, nightOwl: 1.3 }, goals: { artist: 2 }, when: (c) => !!c.skills && c.has.keyboard },
-  { id: 'tendGarden', icon: '🌱', did: 'tendGarden', points: 25, traits: { neat: 1.5, foodie: 1.5, lazy: 0.5 }, when: (c) => !!c.skills && c.has.planter },
+  { id: 'tendGarden', icon: '🌱', did: 'tendGarden', points: 25, traits: { neat: 1.5, foodie: 1.5, lazy: 0.5 }, when: (c) => !!c.skills && c.has.planter, seasons: { spring: 1.6, summer: 1.4, winter: 0.4 } },
   { id: 'tinker', icon: '🔧', did: 'tinker', points: 25, traits: { neat: 1.5, clumsy: 0.5 }, when: (c) => !!c.skills && c.has.workbench },
   { id: 'practiseCharm', icon: '🪞', did: 'practiseCharm', points: 20, traits: { chatty: 2, shy: 1.2 }, goals: { popular: 2 }, when: (c) => !!c.skills && (c.has.drawers || c.has.wideDrawers) },
   { id: 'levelUp', icon: '⬆️', did: 'levelUp', points: 50, base: 0.8, traits: { bookworm: 2 }, goals: { chef: 2, artist: 2, career: 1.5 }, when: (c) => !!c.skills },
   // Round 16, phase 4: given by the news (someone new in the street, townlife.mjs), never rolled (`base` 0). Done by
   // going round to the newcomer's house (the page counts 'welcome').
   { id: 'welcome', icon: '👋', did: 'welcome', points: 40, base: 0 },
+  // Round 16, phase 6 (calendar.mjs): given on the day, never rolled. A birthday cake (baked or bought: the page counts
+  // 'birthdayCake'), and going to the town's event (the page counts 'townEvent' there while it is on).
+  { id: 'birthdayCake', icon: '🎂', did: 'birthdayCake', points: 40, base: 0 },
+  { id: 'townEvent', icon: '🎡', did: 'townEvent', points: 40, base: 0 },
   { id: 'puddles', icon: '💦', did: 'splashPuddles', points: 25, base: 2, traits: { sporty: 1.5, neat: 0.4 }, when: (c) => c.weather === 'rain' }
 ];
 export const WANT_SLOTS = 3;
@@ -77,6 +82,7 @@ export function weightOf(w, c) {
   if (c.likes?.activity === w.did) k *= 3;
   if (c.likes?.dislike === w.did) k *= 0.1;
   if (w.need) k *= 1 + Math.max(0, 70 - (c.needs[w.need] ?? 70)) / 35;
+  if (c.season) k *= w.seasons?.[c.season] ?? 1;
   return k;
 }
 // A new want, not one of `taken` (ids), at random by weight (`random`: the dice; never the game's seeded ones).

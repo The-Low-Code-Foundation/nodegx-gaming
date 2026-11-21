@@ -10,7 +10,9 @@
 // How often. The deck is looked at every `every` game minutes between `from` and `to` (minutes in the day), and an
 // event comes up with the chance that makes about `perDay` a day, never sooner than `gap` after the last one, never more
 // than `most` in a day, and the same one not again for `again` days.
-export const DECK = { perDay: 2.5, every: 30, gap: 150, from: 8 * 60, to: 22 * 60, most: 4, again: 2 };
+export const DECK = { perDay: 2.5, every: 30, gap: 150, from: 8 * 60, to: 22 * 60, most: 4, again: 2, weekend: { calls: 1.8, perDay: 1.25 } };
+// Round 16, phase 6.4 (`weekend`, with the calendar on): on a Saturday or Sunday the phone and the door are `calls`
+// times likelier and the deck comes up `perDay` times as often.
 
 // An event:
 //   icon, weight (how likely, 1: as likely as any), kind: 'card' (default), 'call' (the phone rings), 'knock' (at the door)
@@ -18,11 +20,14 @@ export const DECK = { perDay: 2.5, every: 30, gap: 150, from: 8 * 60, to: 22 * 6
 //   hours     [from, to): the hours of the day          days   weekdays (0 Monday … 6 Sunday)
 //   traits    { trait: ×n }   goals { goal: ×n }   like: an activity (likes.mjs): ×3 when it is their favourite
 //   weather   the weathers it can happen in (phase 3.4)
+//   seasons   the seasons it can happen in (phase 6.1, calendar.mjs; any when the calendar is off)
+//   calendar  true: only with the calendar on (phase 6's own events)
 //   when      (c) → false: not now (no flatmate to ask, no coins to spare)
 //   who       someone it is about, from the town's people: { from: 'neighbours' | 'colleagues' | 'anyone',
 //             friendship: at least, romance: at least, house: true (one whose house is on the street), free: true
 //             (not at work now), traits: { trait: ×n } }; the likelier the better friends they are. No one who fits:
-//             the event does not come up. keen: true (3.3, calls and knocks): how keen the keenest of them is (their
+//             the event does not come up. birthday: true (phase 6.2): only someone whose birthday it is (with the
+//             calendar on). keen: true (3.3, calls and knocks): how keen the keenest of them is (their
 //             traits and the bond) makes the event itself likelier or rarer, so a chatty town rings more.
 //   choices   two or three; each:
 //     id, icon, cost (coins, paid when chosen: greyed when short), when (c) → false: not offered,
@@ -34,7 +39,7 @@ export const DECK = { perDay: 2.5, every: 30, gap: 150, from: 8 * 60, to: 22 * 6
 //             romance (with who), mateFriendship, points (happy points), count (an id for the tally: wishes and
 //             dreams), go ('park' | 'whoHouse'), invite (who comes round), party (a party at who's house tonight),
 //             date (a date with who), powerCut (minutes without power at home), diary (into the life story)
-// `c` (the page's): { place, hour, day, weekday, weather, traits, likes, goal, money, job, friends, romance, babies,
+// `c` (the page's): { place, hour, day, weekday, weekend (6.4), season (6.1, null: no calendar), weather, traits, likes, goal, money, job, friends, romance, babies,
 //   has, mate (the name of someone they live with who is here, or null), seen: { id: day } }
 export const EVENTS = [
   // A neighbour at the door with a cake.
@@ -231,7 +236,7 @@ export const EVENTS = [
   // asked.
   {
     id: 'birthday', icon: '🎂', where: ['home', 'street', 'park', 'house'], hours: [9, 17], weight: 0.9, goals: { popular: 2 }, again: 4,
-    who: { from: 'anyone', friendship: 10, house: true, traits: { chatty: 1.5, cheerful: 1.3 } },
+    who: { from: 'anyone', friendship: 10, house: true, birthday: true, traits: { chatty: 1.5, cheerful: 1.3 } },
     choices: [
       { id: 'yes', icon: '🎉', done: { friendship: 4, party: true, moodlet: 'invited', diary: true } },
       { id: 'present', icon: '🎁', cost: 15, done: { friendship: 8, party: true, moodlet: 'invited', diary: true } },
@@ -269,7 +274,7 @@ export const EVENTS = [
   // A colleague's birthday at work.
   {
     id: 'officeCake', icon: '🎂', where: ['office'], hours: [10, 16], weight: 0.8,
-    who: { from: 'colleagues' },
+    who: { from: 'colleagues', birthday: true },
     choices: [
       { id: 'sing', icon: '🎶', done: { friendship: 5, whoMoodlet: 'party', moodlet: 'cake', needs: { fun: 15, hunger: 15 } } },
       { id: 'card', icon: '✉️', done: { friendship: 3 } },
@@ -370,11 +375,66 @@ export const EVENTS = [
   },
   // The ice-cream van.
   {
-    id: 'iceCream', icon: '🍦', where: ['park', 'street'], hours: [12, 18], weather: ['sun'],
+    id: 'iceCream', icon: '🍦', where: ['park', 'street'], hours: [12, 18], weather: ['sun'], seasons: ['spring', 'summer'],
     choices: [
       { id: 'buy', icon: '🍦', cost: 3, done: { needs: { hunger: 15, fun: 10 }, moodlet: 'iceCream' } },
       { id: 'mate', icon: '🍨', cost: 6, when: (c) => !!c.mate, done: { needs: { hunger: 15 }, moodlet: 'iceCream', mateMoodlet: 'iceCream', mateFriendship: 3 } },
       { id: 'no', icon: '🙂', done: {} }
+    ]
+  },
+  // ---- 6.1: the seasons' own (calendar.mjs) ----
+  // Blossom on the trees in the park.
+  {
+    id: 'blossom', icon: '🌸', calendar: true, where: ['park'], hours: [9, 18], weather: ['sun'], seasons: ['spring'], weight: 1.4, traits: { romantic: 1.5, cheerful: 1.3 },
+    choices: [
+      { id: 'look', icon: '🌸', done: { needs: { fun: 20 }, moodlet: 'blossom' } },
+      { id: 'mate', icon: '📸', when: (c) => !!c.mate, done: { needs: { fun: 20, social: 10 }, moodlet: 'blossom', mateMoodlet: 'blossom', mateFriendship: 3 } }
+    ]
+  },
+  // A big pile of leaves in the park.
+  {
+    id: 'leaves', icon: '🍂', calendar: true, where: ['park', 'street'], hours: [9, 18], weather: ['sun'], seasons: ['autumn'], weight: 1.4, traits: { sporty: 1.5, joker: 1.5, neat: 0.7 },
+    choices: [
+      { id: 'jump', icon: '🤸', chance: 0.7, traits: { sporty: 0.15, clumsy: -0.2 }, good: { needs: { fun: 35 }, moodlet: 'leafPile' }, bad: { needs: { fun: 20, hygiene: -10 }, moodlet: 'laughed' } },
+      { id: 'sweep', icon: '🧹', done: { needs: { fun: 5 }, moodlet: 'goodDeed', points: 25 } }
+    ]
+  },
+  // Carol singers at the door, one winter evening.
+  {
+    id: 'carols', icon: '🎶', calendar: true, kind: 'knock', where: ['home'], hours: [17, 21], seasons: ['winter'], weight: 1.3, again: 3,
+    choices: [
+      { id: 'coins', icon: '🪙', cost: 5, done: { needs: { fun: 20 }, moodlet: 'carols', points: 20 } },
+      { id: 'sing', icon: '🎤', done: { needs: { fun: 30, social: 20 }, moodlet: 'carols' } },
+      { id: 'wave', icon: '👋', done: { needs: { fun: 10 } } }
+    ]
+  },
+  // A paddling pool and a hose on a hot day in the street.
+  {
+    id: 'sprinkler', icon: '💦', calendar: true, where: ['street', 'home'], hours: [12, 18], weather: ['sun'], seasons: ['summer'], weight: 1.1,
+    who: { from: 'neighbours', free: true, traits: { joker: 1.5, cheerful: 1.5 } },
+    choices: [
+      { id: 'splash', icon: '💦', done: { friendship: 4, needs: { fun: 30, hygiene: 10 }, moodlet: 'splashy' } },
+      { id: 'no', icon: '🙂', done: { friendship: 1 } }
+    ]
+  },
+
+  // ---- 6.4: weekends only ----
+  // A market on the street on a Saturday or Sunday morning.
+  {
+    id: 'market', icon: '🧺', calendar: true, where: ['street', 'home'], hours: [9, 13], days: [5, 6], weight: 1.6, again: 1,
+    choices: [
+      { id: 'bread', icon: '🥖', cost: 6, done: { needs: { hunger: 30, fun: 10 }, moodlet: 'market' } },
+      { id: 'flowers', icon: '💐', cost: 8, when: (c) => !!c.mate, done: { needs: { fun: 10 }, moodlet: 'market', mateMoodlet: 'present', mateFriendship: 5 } },
+      { id: 'browse', icon: '👀', done: { needs: { fun: 15 } } }
+    ]
+  },
+  // A kick-about in the park.
+  {
+    id: 'kickAbout', icon: '⚽', calendar: true, where: ['park'], hours: [10, 17], days: [5, 6], weather: ['sun'], weight: 1.8, again: 1, traits: { sporty: 2, lazy: 0.5 },
+    who: { from: 'anyone', free: true, traits: { sporty: 2.5, lazy: 0.3 } },
+    choices: [
+      { id: 'play', icon: '⚽', chance: 0.6, traits: { sporty: 0.25, clumsy: -0.2 }, skill: { fitness: 0.04 }, good: { friendship: 6, needs: { fun: 35, energy: -10 }, moodlet: 'pumped', count: 'workout' }, bad: { friendship: 4, needs: { fun: 20, energy: -10 }, moodlet: 'laughed' } },
+      { id: 'watch', icon: '👏', done: { friendship: 2, needs: { fun: 15 } } }
     ]
   },
   // Someone they hardly know drops by to say hello.
@@ -398,9 +458,13 @@ export function weightOf(e, c) {
   if (e.hours && !(c.hour >= e.hours[0] && c.hour < e.hours[1])) return 0;
   if (e.days && !e.days.includes(c.weekday)) return 0;
   if (e.weather && !e.weather.includes(c.weather)) return 0;
+  if (e.seasons && c.season && !e.seasons.includes(c.season)) return 0;
+  // Phase 6: the calendar's own events (`calendar`) only with it on; without it, a test URL's deck is as it was.
+  if (e.calendar && !c.season) return 0;
   if (e.when && !e.when(c)) return 0;
   if (c.seen?.[e.id] != null && c.day - c.seen[e.id] < (e.again ?? DECK.again)) return 0;
   let k = e.weight ?? 1;
+  if (c.weekend && (e.kind === 'call' || e.kind === 'knock')) k *= DECK.weekend.calls;
   for (const t of c.traits ?? []) k *= e.traits?.[t] ?? 1;
   if (c.goal) k *= e.goals?.[c.goal] ?? 1;
   if (e.like && c.likes?.activity === e.like) k *= 3;
@@ -414,6 +478,8 @@ export function whoWeight(spec, p) {
   if (spec.friendship != null && p.friendship < spec.friendship) return 0;
   if (spec.romance != null && (p.romance ?? 0) < spec.romance) return 0;
   if (spec.free && !p.free) return 0;
+  // Phase 6.2: a birthday is their own (`p.birthday` false: the calendar is on and it isn't today).
+  if (spec.birthday && p.birthday === false) return 0;
   let k = 1 + Math.max(0, p.friendship) / 40;
   for (const t of p.traits ?? []) k *= spec.traits?.[t] ?? 1;
   return k;

@@ -120,7 +120,18 @@ export const MOODLETS = {
   singingInRain: { emotion: 'happy', weight: 2, icon: '☔', minutes: 180 },
   rainbow: { emotion: 'happy', weight: 2, icon: '🌈', minutes: 240 },
   brrr: { emotion: 'uncomfortable', weight: 1, icon: '🥶', minutes: 30 },
-  iceCream: { emotion: 'happy', weight: 1, icon: '🍦', minutes: 120 }
+  iceCream: { emotion: 'happy', weight: 1, icon: '🍦', minutes: 120 },
+  // Round 16, phase 6: the calendar's (calendar.mjs).
+  blossom: { emotion: 'happy', weight: 1, icon: '🌸', minutes: 180 },
+  leafPile: { emotion: 'happy', weight: 1, icon: '🍂', minutes: 180 },
+  carols: { emotion: 'happy', weight: 2, icon: '🎶', minutes: 240 },
+  birthday: { emotion: 'happy', weight: 3, icon: '🎂', minutes: 1440 },
+  birthdayCake: { emotion: 'happy', weight: 2, icon: '🍰', minutes: 360 },
+  present: { emotion: 'happy', weight: 1, icon: '🎁', minutes: 360 },
+  lieIn: { emotion: 'happy', weight: 1, icon: '😌', minutes: 180 },
+  townEvent: { emotion: 'happy', weight: 2, icon: '🎡', minutes: 300 },
+  rosette: { emotion: 'happy', weight: 2, icon: '🏅', minutes: 600 },
+  market: { emotion: 'happy', weight: 1, icon: '🧺', minutes: 180 }
 };
 
 export const EMOTIONS = {

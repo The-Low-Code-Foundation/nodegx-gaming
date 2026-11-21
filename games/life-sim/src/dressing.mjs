@@ -198,7 +198,7 @@ export function floor(kind, w, d) {
     case 'kitchen': return surface('kitchen', 512, tiles([38, 18, 78], '#a8a196', 4), w, d, 1.2, { roughness: 0.35 });
     case 'bathroom': return surface('bathroom', 512, tiles([195, 30, 82], '#9fb0b8', 6), w, d, 0.9, { roughness: 0.3 });
     case 'carpet': return surface('carpet', 512, carpet, w, d, 1.0, { roughness: 1 });
-    case 'grass': return surface('grass', 512, grass, w, d, 3.0, { roughness: 1 });
+    case 'grass': return seasonal(surface('grass', 512, grass, w, d, 3.0, { roughness: 1 }), 'grass');
     case 'gravel': return surface('gravel', 512, gravel, w, d, 2.0, { roughness: 1 });
     case 'paving': return surface('paving', 512, paving([40, 8, 68]), w, d, 2.0, { roughness: 0.9 });
     case 'asphalt': return surface('asphalt', 512, asphalt, w, d, 3.0, { roughness: 0.95 });
@@ -950,6 +950,91 @@ function saleSign(street = 'Sunny Lane') {
   g.add(face);
   return g;
 }
+// ---- the seasons (round 16, phase 6.1; calendar.mjs) ----
+// Each season recolours what is already there, nothing new drawn (the tablet): the grass (a tint over its painted
+// texture; frost in winter is a pale glow added on top) and the leaves of the trees, bushes and plants (the scenery's
+// Green and DarkGreen materials, times `leaves`; the pine stays green). Summer is the models as made.
+export const SEASON_LOOK = {
+  spring: { grass: [0.98, 1.12, 0.88], frost: 0, leaves: [1.3, 1.5, 0.9] },
+  summer: { grass: [1.06, 1.02, 0.8], frost: 0, leaves: [1, 1, 1] },
+  autumn: { grass: [1.12, 0.86, 0.52], frost: 0, leaves: [2.9, 0.7, 0.3] },
+  winter: { grass: [0.8, 0.86, 0.9], frost: 0.22, leaves: [1.5, 1.05, 2.2] }
+};
+const SEASONAL = { grass: new Set(), leaves: new Set(), dark: new Set() };
+let seasonNow = null;
+// A material the seasons recolour (`kind`: 'grass', 'leaves' or 'dark'), as made; given the season's colour now.
+export function seasonal(m, kind) {
+  if (!m || SEASONAL[kind].has(m)) return m;
+  m.userData.base = m.color.clone();
+  SEASONAL[kind].add(m);
+  if (seasonNow) tint(m, kind, SEASON_LOOK[seasonNow]);
+  return m;
+}
+// The scenery's own: its leaves (world.mjs unitModel, for every model from assets/scenery/).
+export function seasonalScenery(url, materials) {
+  if (/Pine|Lilypad|Rock_1|Streetlight|TV_|Story/.test(url)) return;
+  for (const m of materials) if (/^Green/.test(m.name)) seasonal(m, 'leaves');
+  else if (/^DarkGreen/.test(m.name)) seasonal(m, 'dark');
+}
+const frostColour = new THREE.Color(0x9aa6ae);
+function tint(m, kind, look) {
+  const base = m.userData.base;
+  if (kind === 'grass') {
+    m.color.copy(base).multiply(new THREE.Color(...(look?.grass ?? [1, 1, 1])));
+    m.emissive.copy(frostColour).multiplyScalar(look?.frost ?? 0);
+  } else m.color.copy(base).multiply(new THREE.Color(...(look?.leaves ?? [1, 1, 1])));
+}
+// Every recoloured material to season `id` (null: as made). Called when the season changes, not each frame.
+export function seasonLook(id) {
+  seasonNow = id;
+  const look = id ? SEASON_LOOK[id] : null;
+  for (const [kind, set] of Object.entries(SEASONAL)) for (const m of set) tint(m, kind, look);
+}
+
+// ---- the town's events (round 16, phase 6.3; calendar.mjs TOWN_EVENTS) ----
+// What dresses the place while one is on: bunting on poles round the stalls (`bunting`), or fairy lights along the
+// street (`lights`, lit: they glow in the dark, with no light of their own). `line`: the points [x, z] it runs along.
+// One mesh for the flags, one for the bulbs, one for the poles: a few draw calls.
+export function eventDecor(kind, line) {
+  const g = new THREE.Group();
+  if (!DOM) return g;
+  const colours = [0xe8484a, 0xf2c94c, 0x4a90e2, 0x7ed36a, 0xf08ac0, 0x9a6ad8];
+  const c = new THREE.Color(), o = new THREE.Object3D();
+  const top = kind === 'lights' ? 3.1 : 2.7;
+  const poles = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.04, 0.05, top, 6).translate(0, top / 2, 0), mat(0xf2efe8), line.length);
+  line.forEach(([x, z], i) => (o.position.set(x, 0, z), o.updateMatrix(), poles.setMatrixAt(i, o.matrix)));
+  poles.castShadow = true;
+  g.add(poles);
+  const spots = [];
+  for (let k = 0; k + 1 < line.length; k++) {
+    const [x0, z0] = line[k], [x1, z1] = line[k + 1];
+    const len = Math.hypot(x1 - x0, z1 - z0), steps = Math.max(2, Math.floor(len / (kind === 'lights' ? 0.3 : 0.4)));
+    for (let j = 1; j < steps; j++) {
+      const t = j / steps;
+      spots.push({ x: x0 + (x1 - x0) * t, z: z0 + (z1 - z0) * t, y: top - 0.1 - Math.sin(t * Math.PI) * 0.4, ux: (x1 - x0) / len, uz: (z1 - z0) / len, j });
+    }
+  }
+  if (kind === 'lights') {
+    const bulbs = new THREE.InstancedMesh(new THREE.SphereGeometry(0.05, 8, 6), new THREE.MeshBasicMaterial({ toneMapped: false }), spots.length);
+    spots.forEach((p, i) => (o.position.set(p.x, p.y - 0.06, p.z), o.updateMatrix(), bulbs.setMatrixAt(i, o.matrix), bulbs.setColorAt(i, c.set([0xffd27a, 0xff7a6a, 0x8ad0ff, 0xa0ff9a][i % 4]).multiplyScalar(1.6))));
+    const wire = new THREE.BufferGeometry().setFromPoints(spots.map((p) => new THREE.Vector3(p.x, p.y, p.z)));
+    g.add(bulbs, new THREE.Line(wire, new THREE.LineBasicMaterial({ color: 0x333333 })));
+  } else {
+    const flags = [], cols = [];
+    for (const p of spots) {
+      flags.push(p.x - p.ux * 0.13, p.y, p.z - p.uz * 0.13, p.x + p.ux * 0.13, p.y, p.z + p.uz * 0.13, p.x, p.y - 0.25, p.z);
+      c.set(colours[p.j % colours.length]);
+      for (let v = 0; v < 3; v++) cols.push(c.r, c.g, c.b);
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(flags, 3));
+    geo.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
+    geo.computeVertexNormals();
+    g.add(new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, side: THREE.DoubleSide, roughness: 0.8 })));
+  }
+  return g;
+}
+
 // A party (round 14): balloons in bunches in the corners and bunting across the room, above everyone's heads. Looked
 // at, never walked round: the page shows it while a party is on.
 export function partyDecor(w, d) {

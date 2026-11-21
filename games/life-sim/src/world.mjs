@@ -5,7 +5,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { dressHome, dressHouse, dressOffice, dressCafe, dressVet, dressPark, dressStreet, pondLife, lampGlow, streetLabel } from './dressing.mjs';
+import { dressHome, dressHouse, dressOffice, dressCafe, dressVet, dressPark, dressStreet, pondLife, lampGlow, streetLabel, seasonalScenery } from './dressing.mjs';
 import { kindOf } from './game/shop.mjs';
 
 const loader = new GLTFLoader();
@@ -27,6 +27,8 @@ async function unitModel(url) {
         const parts = [];
         root.traverse((o) => o.isMesh && parts.push({ geometry: o.geometry, material: o.material, matrix: fit.clone().multiply(o.matrixWorld) }));
         if (url.includes('/furniture/')) for (const p of parts) for (const m of [p.material].flat()) polish(m);
+        // Round 16, phase 6.1: the leaves the seasons recolour (dressing.mjs seasonLook).
+        if (url.includes('/scenery/')) seasonalScenery(url, parts.flatMap((p) => [p.material].flat()));
         return { parts, size: size.clone().divideScalar(size.y) };
       })
     );
