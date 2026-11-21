@@ -362,9 +362,10 @@ const scenarios = {
     return out;
   },
 
-  /** Weightless in the spine and the crew tunnel (weightless.mjs): nothing is taken for you; puff to a wall and take
-   *  the rail there with Space, push off along it with W, take the next one, pull along it with S, a hard push
-   *  (Shift W) up to the deckhead, a drift aft under the drive, and holding on under it. */
+  /** Weightless in the spine and the crew tunnel (weightless.mjs): nothing is taken for you and the puffer is off;
+   *  swim toward a wall and take the rail there with Space (reaching for it), push off along it with W, take the next
+   *  one, pull along it with S, a hard push (Shift W) up to the deckhead, a drift aft under the drive, and holding on
+   *  under it. */
   async float(c) {
     c.career.free();
     const w = c.walker, F = w.floater, K = c.input.keys, out = {};
@@ -374,7 +375,7 @@ const scenarios = {
     c.place(4, 0, -50, -Math.PI / 2); // the spine, facing starboard
     run_(c, 0.2);
     out.start = at(); // adrift: nothing taken
-    F.reset(); // puff toward the starboard rail
+    F.reset(); // swim toward the starboard rail
     hold('KeyW', 1);
     out.puffed = at();
     run_(c, 3);
@@ -452,7 +453,9 @@ const scenarios = {
     c.input.keys.add('KeyW');
     run_(c, 1);
     c.input.keys.delete('KeyW');
+    c.input.keys.add('Space'); // take the rail as you come to it
     run_(c, 6, () => F.held);
+    c.input.keys.delete('Space');
     out.holding = at();
     kick(60);
     run_(c, 0.5);
