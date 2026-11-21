@@ -256,6 +256,7 @@ async function makeSim(who, at, i, { name = null, look = null, body = null, ...o
   life.onDressUp = dressUp;
   life.mayLeave = mayLeave;
   life.via = via;
+  life.partnerOf = (other) => partners(life, other);
   life.onArrive = arrived;
   life.titleOf = (p) => titleOf(p);
   everyone.push(life);
@@ -308,9 +309,40 @@ const entryOf = (item) => furniture.find((e) => e.item === item) ?? null;
 function removeExtra(item) {
   const k = furniture.findIndex((e) => e.item === item);
   if (k >= 0) furniture.splice(k, 1);
-  for (const l of everyone) if (l.home === item) l.home = null;
+  for (const l of everyone) if (l.home === item || (item.twin && l.home === item.twin)) l.home = null;
   home.remove(item);
 }
+// ---- a double bed (round 15) ----
+// A couple who live together (married, or in love) share a double bed when there is one: a side each, their own beds
+// left free (a camp bed is folded away). Checked a few times a second, so it happens when the bed is bought, moved, or
+// carried to a new home, and when two fall in love or marry. The other side of anyone else's bed is left alone.
+const partners = (a, b) => a !== b && lives.includes(a) && lives.includes(b) && (bondOf(a, b).married || romanceLevel(bondOf(a, b)).id === 'inLove');
+function shareBeds() {
+  const doubles = home.items.filter((i) => i.twin && !i.side && !i.gone);
+  if (!doubles.length) return;
+  for (const [k, a] of lives.entries())
+    for (const b of lives.slice(k + 1)) {
+      if (!partners(a, b)) continue;
+      const theirs = (d) => [d.owner, d.twin.owner].every((o) => !o || o === a || o === b);
+      const bed = doubles.find((d) => [d.owner, d.twin.owner].includes(a) && theirs(d)) ?? doubles.find((d) => [d.owner, d.twin.owner].includes(b) && theirs(d)) ?? doubles.find(theirs);
+      if (!bed || (a.home === bed || a.home === bed.twin) && (b.home === bed || b.home === bed.twin)) continue;
+      // Whoever has a side keeps it.
+      const [first, second] = bed.owner === b || bed.twin.owner === a ? [b, a] : [a, b];
+      for (const l of [a, b]) {
+        const old = l.home;
+        if (!old || old === bed || old === bed.twin) continue;
+        old.owner = null;
+        l.home = null;
+        if (old.bought?.id === 'campBed') removeExtra(old);
+      }
+      bed.owner = first, first.home = bed;
+      bed.twin.owner = second, second.home = bed.twin;
+      toast(t('ui.bed.share', { a: first.name, b: second.name }));
+      save();
+    }
+}
+// A click on a double bed: the side that is theirs, or the one free.
+const sideFor = (l, item) => (!item?.twin || item.side ? item : item.twin.owner === l || (item.owner && item.owner !== l) || (item.user && item.user !== l.sim) ? item.twin : item);
 // A new game: the flat as it comes. A round-13 save (v1): the flat as it came, and what they had added to it.
 await placeFurniture(saved?.furniture ?? [...FLAT_FURNITURE.map((e) => ({ ...e, base: true })), ...(saved?.extras ?? [])]);
 
@@ -585,8 +617,10 @@ function careCard() {
 }
 // A bed each: free will leaves the other's alone (you can still send anyone to either). A saved game: the beds they had.
 const beds = home.items.filter((i) => i.name === 'Bed_Single');
-const sleepers = () => home.items.filter((i) => i.use?.act === 'sleep');
-if (saved) saved.lives.forEach((s, i) => { const b = sleepers()[s.bed]; if (b) (b.owner = lives[i]), (lives[i].home = b); });
+// Round 15: a double bed counts once here (its other side is `side`, saved as `side: 1` on whoever sleeps there), so a
+// save from before keeps its numbers.
+const sleepers = () => home.items.filter((i) => i.use?.act === 'sleep' && !i.side);
+if (saved) saved.lives.forEach((s, i) => { let b = sleepers()[s.bed]; if (b && s.side && b.twin) b = b.twin; if (b) (b.owner = lives[i]), (lives[i].home = b); });
 else if (lives.length > 1) lives.forEach((l, i) => beds[i] && ((beds[i].owner = l), (l.home = beds[i])));
 const [life] = lives;
 const sim = life.sim;
@@ -655,13 +689,13 @@ async function moveIn(other) {
   other.freeWill = $('freewill').checked;
   // Met at their own house (round 14): they come home with you.
   if (other.present && other.place !== home && !other.shift) other.queue.push({ offer: GO_HOME, by: 'self' });
-  let bed = home.items.find((i) => i.use?.act === 'sleep' && !i.owner);
+  let bed = home.items.find((i) => i.use?.act === 'sleep' && !i.owner && !i.side);
   // By the bookshelf (round 9), or, with things bought since, wherever it fits.
   if (!bed) bed = await placeExtra(await spotFor(CAMP_BED, { id: 'campBed', x: 0.2, z: -1.2, turn: Math.PI / 2 }));
   bed.owner = other;
   other.home = bed;
   for (const l of lives) if (!l.home) {
-    const b = home.items.find((i) => i.use?.act === 'sleep' && !i.owner);
+    const b = home.items.find((i) => i.use?.act === 'sleep' && !i.owner && !i.side);
     if (b) (b.owner = l), (l.home = b);
   }
   save();
@@ -746,7 +780,7 @@ function housePlace(id) {
       scene.add(p.group);
       p.group.visible = view === p;
       // A bed each for whoever lives there.
-      const sleep = p.items.filter((i) => i.use?.act === 'sleep');
+      const sleep = p.items.filter((i) => i.use?.act === 'sleep' && !i.side);
       living.forEach((l, i) => sleep[i] && ((sleep[i].owner = l), (l.home = sleep[i])));
       places[id] = p;
       building.delete(id);
@@ -1014,7 +1048,7 @@ async function rehome(st) {
   const there = everyone.filter((l) => l.present && l.place === old);
   for (const l of there) if (l.doing && l.doing.by !== 'job') l.stop('move');
   for (const l of everyone) l.queue = l.queue.filter((e) => !e.item || !old.items.includes(e.item));
-  const van = furniture.splice(0).map((e) => ({ e, owner: e.item.owner ?? null, baby: e.item.baby ?? null }));
+  const van = furniture.splice(0).map((e) => ({ e, owner: e.item.owner ?? null, twinOwner: e.item.twin?.owner ?? null, baby: e.item.baby ?? null }));
   for (const l of everyone) if (l.home && old.items.includes(l.home)) l.home = null;
   scene.remove(old.group);
   // The house bought may be the one they are looking round (bought at its own front door): whoever is in it comes into
@@ -1031,7 +1065,7 @@ async function rehome(st) {
   const boxed = [];
   // The cots first (a baby must have one), then the beds, then the rest.
   const order = [...van].sort((a, b) => (b.baby ? 2 : b.e.id.match(/bed/i) ? 1 : 0) - (a.baby ? 2 : a.e.id.match(/bed/i) ? 1 : 0));
-  for (const { e, owner, baby } of order) {
+  for (const { e, owner, twinOwner, baby } of order) {
     const s = kindOf(e.id), want = { ...e, x: along(e.x, from.w / 2, to.w / 2), z: along(e.z, from.d / 2, to.d / 2) };
     const spot = (await fitSpot(s, want)) ?? (baby || e.id === 'campBed' ? await fitSpot(s, { ...want, x: 0, z: 0 }, 6) : null);
     if (!spot) {
@@ -1040,6 +1074,7 @@ async function rehome(st) {
     }
     const item = await placeExtra({ ...e, ...spot });
     if (owner) (item.owner = owner), (owner.home = item);
+    if (twinOwner && item.twin) (item.twin.owner = twinOwner), (twinOwner.home = item.twin);
     if (baby) addBaby(baby, item), home.group.add(baby.mesh);
   }
   for (const l of [...there, ...visitors]) l.arrive(p);
@@ -1217,7 +1252,7 @@ function openMenu(item, x, y, point = null) {
   $('menu').innerHTML = head + offers.map((o, i) => `<button data-i="${i}">${o.baby ? `${o.icon} ` : ''}${t(`action.${o.id}`)}<span class="gain">${o.task ? '🪙' : gain(o)}</span></button>`).join('') + extra + doorRows;
   for (const b of $('menu').querySelectorAll('button[data-i]'))
     b.onclick = () => {
-      sel.command(offers[b.dataset.i], item, point);
+      sel.command(offers[b.dataset.i], sideFor(sel, item), point);
       $('menu').hidden = true;
     };
   if (bought) {
@@ -1570,7 +1605,7 @@ function snapshot() {
   const beds = sleepers();
   return {
     minutes, money: household.money, childcare: household.childcare, year,
-    lives: lives.map((l) => ({ ...lifeState(l), bed: beds.indexOf(l.home) })),
+    lives: lives.map((l) => ({ ...lifeState(l), bed: beds.indexOf(l.home?.side ? l.home.twin : l.home), ...(l.home?.side ? { side: 1 } : {}) })),
     // Before they have loaded (the first save comes straight away), the ones the save had.
     colleagues: colleaguesIn ? colleagues.map((c) => ({ who: c.who, job: c.job && { ...c.job } })) : saved?.colleagues ?? [],
     bonds: allBonds(),
@@ -1785,7 +1820,7 @@ async function placeHere(cx, cy) {
   if (!p.move && !p.fromBox && household.money < p.s.price) return toast(t('ui.money.short', { name: sel.name, cost: p.s.price }));
   stopPlacing();
   // A thing moved keeps who it belongs to (a bed's sleeper), and stays one of the flat's own (`base`) if it was.
-  const owner = p.move?.owner ?? null;
+  const owner = p.move?.owner ?? null, twinOwner = p.move?.twin?.owner ?? null;
   const was = p.move ? entryOf(p.move) : null;
   if (p.move) removeExtra(p.move);
   let base = !!was?.base;
@@ -1795,6 +1830,7 @@ async function placeHere(cx, cy) {
   } else if (!p.move) household.money -= p.s.price;
   const item = await placeExtra({ id: p.s.id, x, z, turn: p.turn, ...(was?.width ? { width: was.width } : {}), ...(base ? { base: true } : {}) });
   if (owner) (item.owner = owner), (owner.home = item);
+  if (twinOwner && item.twin) (item.twin.owner = twinOwner), (twinOwner.home = item.twin);
   // A cot moved keeps its baby.
   if (p.move?.baby) addBaby(p.move.baby, item);
   // A new bed: for whoever slept on the camp bed (folded away), or anyone without a bed.
@@ -2022,6 +2058,7 @@ function frame(now) {
     if (Math.floor(minutes / 60) !== Math.floor((savedAt ?? -60) / 60)) save();
     renderPanels();
     streetTick();
+    shareBeds();
     renderPeople();
     renderToasts();
     renderCards();
@@ -2069,7 +2106,7 @@ window.__life = {
   // Round 14: the town.
   measure, kindOf, srcOf,
   // Round 15: the street.
-  street, via, frontDoor, openDoorMenu, streetTick,
+  street, via, frontDoor, openDoorMenu, streetTick, shareBeds, sideFor, partners, sleepers,
   neighbours, neighboursLoaded, guests, get homeState() { return { ...homeState }; }, get homeParty() { return !!homeParty; }, housePlace, residentsOf, visitState,
   partyToday, partyAt, invited, openTown, goVisit, openBuy, buyHouse, openExtend, extendHome, inviteOver, throwParty, store, rehome, homeNow, titleOf, get moving() { return moving; },
   ready: true

@@ -117,6 +117,10 @@ Object.assign(OFFERS, {
   ]
 });
 
+// Round 15: a double bed (shop.mjs bigBed): each side sleeps and naps as a single bed does. Whose side is whose is the
+// page's (shareBeds); free will leaves the other side of someone's bed to their partner (life.mjs `score`).
+OFFERS.doubleBed = OFFERS.Bed_Single;
+
 const night = (h) => h >= 22 || h < 6;
 
 export const offersFor = (item) => OFFERS[item ? item.use?.offers ?? item.name : 'self'] ?? [];

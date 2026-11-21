@@ -29,7 +29,8 @@ export const SHOP = [
   { id: 'shelf', kind: 'lovely', icon: '🧺', price: 40, model: 'Shelf_Large', fit: 1.8, use: { decor: true }, beauty: 1 },
   // Round 14 (the brief, 11-11: "be able to move, delete or add furniture … a furniture shop"): the flat's own things
   // are in the shop too (so anything in a home can be moved, sold or put away, and bought again), and more besides.
-  { id: 'bigBed', kind: 'sleep', icon: '🛏️', price: 200, model: 'Bed_King', fit: 0.7, use: { act: 'sleep', label: 'Sleep', offers: 'Bed_Single' }, beauty: 1 },
+  // Round 15: the big bed is a double bed: two sides (world.mjs twinOf), one for each of a couple (page.mjs shareBeds).
+  { id: 'bigBed', kind: 'sleep', icon: '🛏️', price: 200, model: 'Bed_King', fit: 0.7, use: { act: 'sleep', label: 'Sleep', offers: 'doubleBed', double: true }, beauty: 1 },
   { id: 'nightstand2', kind: 'sleep', icon: '🗄️', price: 25, model: 'NightStand_2', fit: 0.55, use: { decor: true }, beauty: 1 },
   { id: 'smallCouch', kind: 'sit', icon: '🛋️', price: 70, model: 'Couch_Small1', fit: 0.85, use: { act: 'sit', label: 'Sit', offers: 'Couch_Medium1' } },
   { id: 'cornerCouch', kind: 'sit', icon: '🛋️', price: 180, model: 'Couch_L', fit: 0.85, use: { act: 'sit', label: 'Sit', offers: 'Couch_Medium1' }, beauty: 1 },

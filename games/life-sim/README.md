@@ -28,7 +28,8 @@ Settings (French school years, CP to 5e: ages 6 to 12).
 
 Playable end to end, built over fourteen rounds of play-testing on a laptop and a tablet, plus a fifteenth: Sunny Lane
 as a street to walk down. Not done: the tablet needs a measured performance pass for big parties (and the street), a
-double bed for two, inside walls for bigger houses, a walk-round furniture shop.
+inside walls for bigger houses, a walk-round furniture shop. A couple who live together share a double bed (from the
+shop) and sleep side by side.
 
 ## Run it locally
 

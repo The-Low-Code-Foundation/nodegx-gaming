@@ -386,7 +386,25 @@ async function furnish(group, placements) {
     }
   }
   spots(items);
+  // A double bed (round 15): its second side, after everything placed (the page counts what it placed by position).
+  for (const it of [...items]) if (it.use?.double && it.bed) items.push(twinOf(it));
   return items;
+}
+// The other side of a double bed: the same bed (no drawing of its own, the same footprint), a place of its own to lie
+// (the far half; the first side lies on the near half), and a spot of its own to get in from, a little towards the
+// foot on the same side as the first's (the far side is often against a wall). Owned and used like a bed of its own,
+// so two Sims can sleep side by side; `twin` points each side at the other, `side` marks this one.
+function twinOf(it) {
+  const { head, feet, top, across, halfWide } = it.bed;
+  const off = halfWide * 0.42;
+  it.bed = { ...it.bed, feet: feet.clone().addScaledVector(across, off) };
+  const twin = {
+    name: it.name, obj: it.obj, use: it.use, footprint: it.footprint, half: it.half, side: true, twin: it,
+    spot: it.spot.clone().addScaledVector(head, -0.6), facing: it.facing,
+    bed: { head, top, across, halfWide, feet: feet.clone().addScaledVector(across, -off) }
+  };
+  it.twin = twin;
+  return twin;
 }
 
 // Where a Sim stands to use a thing: in front of it, facing it (to sit, backed up to it, facing the way it faces).
@@ -400,13 +418,15 @@ function spots(items) {
     // Used from inside (a shower): stand in the middle, facing out.
     if (it.use.inside) (it.spot = it.footprint.getCenter(new THREE.Vector3()).setY(0)), (it.facing = Math.atan2(fwd.x, fwd.z));
     if (it.use.act === 'sleep') {
-      // Lie along the bed's long side, head at the end nearer a wall; get in from the side facing the room.
-      const b = it.footprint, alongX = b.max.x - b.min.x > b.max.z - b.min.z;
+      // Lie along the bed, head at its headboard (the back of the model: every bed's front faces +Z); get in from the
+      // side facing the room. Round 15: the headboard, not the end nearer a wall (a bed out in the room had its sleeper
+      // lying with their feet on the pillow).
+      const b = it.footprint, back = fwd.clone().negate(), alongX = Math.abs(back.x) > Math.abs(back.z);
       const c = b.getCenter(new THREE.Vector3());
-      const head = alongX ? new THREE.Vector3(Math.sign(c.x) || 1, 0, 0) : new THREE.Vector3(0, 0, Math.sign(c.z) || -1);
+      const head = alongX ? new THREE.Vector3(Math.sign(back.x), 0, 0) : new THREE.Vector3(0, 0, Math.sign(back.z));
       const across = alongX ? new THREE.Vector3(0, 0, -Math.sign(c.z) || 1) : new THREE.Vector3(-Math.sign(c.x) || 1, 0, 0);
       const halfLong = (alongX ? b.max.x - b.min.x : b.max.z - b.min.z) / 2, halfWide = (alongX ? b.max.z - b.min.z : b.max.x - b.min.x) / 2;
-      it.bed = { head, feet: c.clone().setY(0).addScaledVector(head, -halfLong + 0.32), top: b.max.y };
+      it.bed = { head, feet: c.clone().setY(0).addScaledVector(head, -halfLong + 0.32), top: b.max.y, across, halfWide };
       it.spot = c.clone().setY(0).addScaledVector(across, halfWide + 0.3);
       it.facing = Math.atan2(-across.x, -across.z);
     }
@@ -811,7 +831,9 @@ export async function buildPlace(name, options) {
         mesh.instanceMatrix.needsUpdate = true;
       }
       item.gone = true;
-      for (const list of [p.items, this.items]) list.splice(list.indexOf(item), 1);
+      // A double bed's other side goes too (round 15).
+      if (item.twin) item.twin.gone = true;
+      for (const it of [item, item.twin]) for (const list of [p.items, this.items]) if (it && list.includes(it)) list.splice(list.indexOf(it), 1);
       // Round 14: its moving part too (a TV sold kept playing in the air; a shower moved left its water behind).
       for (const m of moving.filter((m) => m.item === item)) {
         for (const o of m.parts ?? []) o.removeFromParent();
@@ -824,6 +846,8 @@ export async function buildPlace(name, options) {
     // and every spot a Sim uses (and the way in) still reachable from the door with it there. `except`: things to
     // leave out (the camp bed a new bed replaces).
     fits(item, except = []) {
+      // A double bed's other side goes with it (moving the bed, it is not in its own way).
+      except = [...except, ...except.map((i) => i?.twin).filter(Boolean)];
       const others = p.items.filter((i) => !except.includes(i) && !i.gone);
       const users = others.filter((i) => i.spot && i.use?.act && !i.use.walkable && i.use.act !== 'door');
       if (item.spot && item.use?.act) users.push(item);

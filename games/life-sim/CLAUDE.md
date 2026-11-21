@@ -94,6 +94,15 @@ adds, `chance` it goes well, `lock` (the bond level it needs), `free` (whether f
 `'action.<id>'` (the button), `'react.<id>.ok'` / `'react.<id>.fail'` (what the other says) and `'ui.fail.<id>'`
 (search `compliment` there to see the set).
 
+## A double bed
+
+The shop's `bigBed` has `use.double`: `furnish` (`world.mjs`) gives it a second side (`twinOf`), an item of its own in
+the place's list (`side: true`, `twin` pointing at each other) with its own spot, its own half of the mattress and its own
+owner, drawn and moved as one bed. A couple who live together (married or in love) are given a side each by
+`shareBeds` in `page.mjs`; free will leaves the other side of anyone else's bed alone and sleeps in its own bed when it
+is there (`score` in `life.mjs`). The save counts a double bed once (`sleepers()`) and marks the second side `side: 1`.
+Any other bed with `double: true` in its `use` works the same way.
+
 ## Sunny Lane, the street
 
 The houses' fronts stand in a row on the street (`lifeStreet`), the flat's block first, by number. Going from home to a

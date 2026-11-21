@@ -601,6 +601,12 @@ export class Life {
     for (const item of [...this.place.items.filter((i) => i.spot && offersFor(i).length), null]) {
       if (item?.user && item.user !== this.sim) continue;
       if (item && item.owner && item.owner !== this) continue;
+      // Round 15: the other side of someone's double bed is their partner's (`partnerOf`, the page's), not anyone's.
+      const mate = item?.twin?.owner;
+      if (mate && !item.owner && (mate === this || !this.partnerOf?.(mate))) continue;
+      // A Sim with a bed of their own sleeps in it when it is here (a couple given a double bed left their single beds
+      // free, and the nearer one won).
+      if (item?.use?.act === 'sleep' && this.home && item !== this.home && !this.home.gone && this.place.items.includes(this.home)) continue;
       for (const offer of offersFor(item)) {
         if (offer.offered === false || offer.free === false || offer.cost || offer.travel || offer.task) continue;
         if (this.carer && !offer.baby) continue;
