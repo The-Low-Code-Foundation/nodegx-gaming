@@ -83,7 +83,10 @@ export const MOODLETS = {
   // Round 16: likes (likes.mjs): two who love the same thing, a present, their favourite.
   kindred: { emotion: 'happy', weight: 2, icon: '💞', minutes: 240 },
   niceGift: { emotion: 'happy', weight: 1, icon: '🎁', minutes: 240 },
-  favouriteGift: { emotion: 'happy', weight: 2, icon: '🥰', minutes: 480 }
+  favouriteGift: { emotion: 'happy', weight: 2, icon: '🥰', minutes: 480 },
+  // Round 16, phase 2: a dream come true (goals.mjs), a wish come true (wants.mjs).
+  dreamComeTrue: { emotion: 'happy', weight: 3, icon: '🏆', minutes: 2880 },
+  wishCameTrue: { emotion: 'happy', weight: 1, icon: '✨', minutes: 120 }
 };
 
 export const EMOTIONS = {

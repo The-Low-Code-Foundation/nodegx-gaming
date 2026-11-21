@@ -215,3 +215,11 @@ body.creating #hud, body.creating #right, body.creating #places, body.creating #
 .chips.traits button.off { opacity: 0.4; }
 h3 button.small { margin-left: 8px; padding: 2px 8px; font-size: 12px; border-radius: 8px; vertical-align: middle; }
 .traitline { font-size: 12px; opacity: 0.85; margin-top: 2px; }
+/* Round 16, phase 2: the Aims panel (the dream's steps, the happy points, the wishes). */
+#aims .goal { margin-bottom: 6px; }
+#aims .steps { display: flex; gap: 4px; margin: 3px 0; font-size: 15px; }
+#aims .steps span { opacity: 0.3; }
+#aims .steps span.done { opacity: 1; }
+#aims .steps span.next { opacity: 0.75; outline: 2px solid var(--accent); border-radius: 6px; }
+#aims .points { font-weight: 600; font-size: 13px; }
+#aims button { font-size: 12px; }

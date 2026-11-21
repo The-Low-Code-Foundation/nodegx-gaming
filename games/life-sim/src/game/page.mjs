@@ -6,6 +6,8 @@
 //   ?seed=1 (free will's dice, for tests)  ?year=CE2 (the school year the work questions are pitched at)
 //   ?colleagues=2,3,4,5 (who works at the office; default four others, at random) | none
 //   ?traits=lazy,joker,neat (round 16: the first Sim's traits; ?traits2= the flatmate's; a test's URL has none otherwise)
+//   ?goal=family|career|dreamHouse|popular|chef (round 16, phase 2: the first Sim's dream; ?goal2= the flatmate's;
+//   ?goals=1 rolls them; a test's URL has no dreams, wants or happy points otherwise)
 //   ?story=savings|friend|sweetheart|broke|inherit (round 16: how the life begins, starts.mjs; a test's URL: as before)
 //   ?town=N (round 16: the town's seed; a test's URL has the classic Sunny Lane, 0, and a new game a town of its own)
 // Round 10: a plain /life/ starts with "carry on, or a new game?" (a save in this browser) or the create-a-Sim screen,
@@ -25,7 +27,7 @@ import { Sim } from '../sim.mjs';
 import { Life, SPEEDS, SKILL_LEVELS, skillLevel } from './life.mjs';
 import { NEEDS, MOODLETS, EMOTIONS } from './needs.mjs';
 import { offersFor, offerById } from './actions.mjs';
-import { INTERACTIONS, interactionById, bondOf, lockOf, friendshipLevel, romanceLevel, allBonds, setBonds, spouseOf } from './social.mjs';
+import { INTERACTIONS, interactionById, bondOf, peekBond, lockOf, friendshipLevel, romanceLevel, allBonds, setBonds, spouseOf } from './social.mjs';
 import { CAREERS, START_MONEY, TASK, weekday, levelOfJob, nextLevel, careerOf } from './work.mjs';
 import { YEARS, DEFAULT_YEAR, ask, record, topicsFor } from './school/school.mjs';
 import { t } from './strings.mjs';
@@ -42,6 +44,7 @@ import { CHILDCARE, NURSERY_CARED, careNow, careCost, nurseryOpen } from './chil
 import { STARTS, startById, surprise } from './starts.mjs';
 import { TRAITS, rollTraits, cleanTraits } from './traits.mjs';
 import { rollLikes, cleanLikes, GIFT } from './likes.mjs';
+import { GOALS, goalById, openGoals, rollGoal, stepsDone, STEP_POINTS, GOAL_POINTS } from './goals.mjs';
 
 const params = new URLSearchParams(location.search);
 const $ = (id) => document.getElementById(id);
@@ -153,6 +156,8 @@ const hhmm = (m) => `${String(Math.floor((m % 1440) / 60)).padStart(2, '0')}:${S
 const NAMES = ['Ada', 'Bea', 'Cleo', 'Dora', 'Eva', 'Flo', 'Gus', 'Hugo', 'Ivan', 'Jules', 'Kofi', 'Leo'];
 const quick = ['seed', 'person', 'flatmate'].some((k) => params.has(k)) && !params.has('menu');
 const saving = !quick || params.has('save');
+// Round 16, phase 2: dreams, wishes and happy points (goals.mjs, wants.mjs). Off on a test's URL unless asked for.
+const aimsOn = !quick || params.has('goal') || params.has('goals');
 const template = await loadTemplate(CANDIDATES.find((c) => c.id === 'rocketbox'), { renderer, scene, camera });
 // Every Sim is a clone of their person; the person's own body stays aside to lend its hair and clothes (looks.mjs).
 const folk = people(template);
@@ -173,6 +178,19 @@ const person = start?.kind === 'new' ? start.who : saved ? saved.lives[0].who : 
 // Round 16: how this life begins (starts.mjs): chosen after making the Sim, or ?story= on a test's URL.
 const story = saved ? null : startById(start?.story ?? params.get('story'));
 const mate = saved ? null : params.get('flatmate') === 'none' ? null : params.has('flatmate') ? Number(params.get('flatmate')) : story && !story.mate ? null : (person + 1 + Math.floor(Math.random() * 11)) % 12;
+// Round 16, phase 2: and what do they dream of? (goals.mjs) One card each, and "surprise me".
+function goalCard(name) {
+  return new Promise((resolve) => {
+    $('card').innerHTML = `<h2>${t('goal.title', { name })}</h2><p class="intro">${t('goal.intro')}</p>${goalRows(openGoals())}
+      <div class="actions"><button class="go" id="goal-surprise">🎲 ${t('start.surprise')}</button></div>`;
+    $('card').hidden = $('card-back').hidden = false;
+    const done = (id) => (($('card').hidden = $('card-back').hidden = true), resolve(id));
+    for (const b of $('card').querySelectorAll('[data-goal]')) b.onclick = () => done(b.dataset.goal);
+    $('goal-surprise').onclick = () => done(rollGoal());
+  });
+}
+const goalRows = (list) =>
+  list.map((g) => `<div class="offer"><div class="big">${g.icon}</div><div><b>${t(`goal.${g.id}`)}</b><div>${t(`goal.${g.id}.does`)}</div></div><button class="go" data-goal="${g.id}">${t('start.pick')}</button></div>`).join('');
 // How does it begin? The game's starts, one card each, and "surprise me".
 function storyCard() {
   return new Promise((resolve) => {
@@ -235,9 +253,10 @@ async function startScreen(save) {
   scene.fog = haze;
   skyDome.mesh.visible = true;
   const story = await storyCard();
+  const goal = await goalCard(made.name);
   view = null;
   setView(home);
-  return { kind: 'new', ...made, story: story.id };
+  return { kind: 'new', ...made, story: story.id, goal };
 }
 
 // A bubble a Sim, a column to click them by, and their place in the game. `body`: one already made (the create-a-Sim
@@ -323,6 +342,13 @@ for (const [i, m] of members.entries()) {
   // A save from before round 16 (v1, v2): three traits and favourites for each of them now (save.mjs).
   if (m.s && !cleanTraits(life.traits).length) life.traits = rollTraits();
   if (m.s && !cleanLikes(life.likes)) life.likes = rollLikes();
+  // Round 16, phase 2: their dream (chosen on the start screen, or rolled; the flatmate's rolled). `quiet`: steps that
+  // are already true when it begins are ticked off without points (a Team member's first career steps).
+  if (!m.s && aimsOn) {
+    const asked = i === 0 ? start?.goal ?? params.get('goal') : params.get('goal2');
+    const id = goalById(asked) && !goalById(asked).later ? asked : rollGoal();
+    life.goal = id ? { id, step: 0, quiet: true } : null;
+  }
   if (!m.s) life.traits = params.has(i ? 'traits2' : 'traits') ? cleanTraits(params.get(i ? 'traits2' : 'traits').split(',')) : quick ? [] : rollTraits(Math.random, cleanTraits(m.traits));
   life.freeWill = params.get('freewill') !== '0';
   lives.push(life);
@@ -981,6 +1007,8 @@ function sendHome(l, key) {
 }
 // Arriving somewhere (Life `onArrive`): a welcome at a friend's, a party's welcome (or a gatecrasher's), a house to buy.
 function arrived(l, p) {
+  // Round 16: where they have been (wants, dreams).
+  if (lives.includes(l)) l.count(`go.${p === park ? 'park' : p === office ? 'office' : p === street ? 'street' : p === home ? 'home' : 'house'}`);
   if (!lives.includes(l) || !p.house || p === home) return;
   l.visitOver = false;
   const id = p.house, h = houseById(id);
@@ -991,6 +1019,7 @@ function arrived(l, p) {
     const asked = invited(id);
     bondOf(l, host).friendship += asked ? 3 : -3;
     l.addMoodlet(asked ? 'party' : 'gatecrasher');
+    l.count('party');
     toast(t(asked ? 'ui.party.welcome' : 'ui.party.crash', { name: l.name, host: host.name }));
   } else toast(t('ui.visit.welcome', { name: l.name, host: host.name }));
 }
@@ -1049,6 +1078,7 @@ async function throwParty() {
   homeParty = { until: minutes + HOME_PARTY.minutes, decor: partyDecor(home.bounds.w, home.bounds.d) };
   home.group.add(homeParty.decor);
   for (const l of lives) if (l.present && l.place === home) l.addMoodlet('party');
+  sel.count('hostParty');
   const came = friends.filter((f) => inviteOver(f, true, HOME_PARTY.minutes));
   toast(t(came.length ? 'ui.party.home' : 'ui.party.homeNobody', { n: came.length }));
   save();
@@ -1455,8 +1485,100 @@ function renderPeople() {
 const barColour = (v) => (v > 60 ? '#4caf50' : v > 30 ? '#e6b729' : '#e05a47');
 $('needs').innerHTML = NEEDS.map((n) => `<div class="need"><span class="icon">${n.icon}</span><span>${t(`need.${n.id}`)}</span><div class="bar"><i id="need-${n.id}"></i></div></div>`).join('');
 const SKILL_ICONS = { science: '🔬', maths: '🔢', geography: '🌍', french: '📝', english: '☎️', history: '🏺' };
+// ---- dreams (round 16, phase 2: goals.mjs) ----
+// What a dream's steps are tested on (goals.mjs, its top): a Sim's friends and romances, the household, the home.
+function factsOf(l) {
+  const bonds = everyone.filter((o) => o !== l && !o.carer).map((o) => peekBond(l, o)).filter(Boolean);
+  const has = {};
+  for (const e of furniture) has[e.id] = true;
+  return {
+    friends: bonds.filter((b) => b.friendship >= 25).length,
+    goodFriends: bonds.filter((b) => b.friendship >= 55).length,
+    bestFriends: bonds.filter((b) => b.friendship >= 85).length,
+    romance: Math.max(0, ...bonds.map((b) => b.romance)),
+    married: bonds.some((b) => b.married),
+    together: lives.some((o) => partners(l, o)),
+    babies: babies.length,
+    job: l.job ? l.job.level + 1 : 0,
+    homeSize: homeState.size,
+    ownHouse: homeState.id !== 'flat',
+    beauty: beauty(),
+    things: extras().length,
+    has,
+    science: skillLevel(l.skills.science ?? 0),
+    tally: l.tally
+  };
+}
+// Every few moments: a step done is happy points and a toast; the last one, the dream come true.
+function checkGoals() {
+  if (!aimsOn) return;
+  for (const l of lives) {
+    const g = goalById(l.goal?.id);
+    if (!g) continue;
+    const n = stepsDone(l.goal, factsOf(l));
+    if (l.goal.quiet) {
+      l.goal.step += n;
+      delete l.goal.quiet;
+    } else
+      for (let k = 0; k < n; k++) {
+        const st = g.steps[l.goal.step++];
+        l.points += STEP_POINTS;
+        toast(t('goal.stepDone', { name: l.name, step: t(`goal.${g.id}.${st.id}`), points: STEP_POINTS }));
+        milestone(st.icon, 'diary.step', { name: l.name, step: `goal.${g.id}.${st.id}`, goal: `goal.${g.id}` });
+      }
+    if (l.goal.step >= g.steps.length) dreamComeTrue(l, g);
+    else if (n) save();
+  }
+}
+// The celebration: points, hearts and a moodlet for everyone at home, and a card to choose the next dream.
+function dreamComeTrue(l, g) {
+  l.points += GOAL_POINTS;
+  l.goalsDone.push(g.id);
+  l.goal = null;
+  for (const o of lives) if (o.present && o.place === l.place) o.hearts.push({ icon: '🏆' }, { icon: '🎉' });
+  l.addMoodlet('dreamComeTrue');
+  milestone('🏆', 'diary.dream', { name: l.name, goal: `goal.${g.id}` });
+  save();
+  openGoalPicker(l, g);
+}
+function openGoalPicker(l, done = null) {
+  if (card) closeCard();
+  const open = openGoals(l.goalsDone);
+  const head = done ? `<h2>🎉 ${t('goal.cameTrue', { name: l.name, goal: t(`goal.${done.id}`) })}</h2><p class="intro">${t('goal.cameTrueText', { name: l.name, points: GOAL_POINTS })}</p>` : `<h2>${t('goal.title', { name: l.name })}</h2>`;
+  openCard(l, 'goal', `${head}${open.length ? `<p class="intro">${t('goal.next', { name: l.name })}</p>${goalRows(open)}` : `<p class="intro">${t('goal.allDone', { name: l.name })}</p>`}
+    <div class="actions"><button id="goal-later">${t('goal.later')}</button>${open.length ? `<button class="go" id="goal-roll">🎲 ${t('start.surprise')}</button>` : ''}</div>`);
+  const pick = (id) => {
+    closeCard();
+    if (!id) return;
+    l.goal = { id, step: 0, quiet: true };
+    toast(t('goal.chosen', { name: l.name, goal: t(`goal.${id}`) }));
+    milestone(goalById(id).icon, 'diary.newGoal', { name: l.name, goal: `goal.${id}` });
+    save();
+  };
+  for (const b of $('card').querySelectorAll('[data-goal]')) b.onclick = () => pick(b.dataset.goal);
+  $('goal-roll')?.addEventListener('click', () => pick(rollGoal(l.goalsDone)));
+  $('goal-later').onclick = closeCard;
+}
+// The Aims panel: the dream and how far along, the happy points (round 16, phase 2).
+let aimsShown = null;
+function renderAims() {
+  $('aims-panel').hidden = !aimsOn || !lives.includes(sel);
+  if ($('aims-panel').hidden) return;
+  const g = goalById(sel.goal?.id);
+  const dots = g ? g.steps.map((st, k) => `<span class="${k < sel.goal.step ? 'done' : k === sel.goal.step ? 'next' : ''}" title="${t(`goal.${g.id}.${st.id}`)}">${st.icon}</span>`).join('') : '';
+  const goalHtml = g
+    ? `<div class="goal"><b>${g.icon} ${t(`goal.${g.id}`)}</b><div class="steps">${dots}</div><small>${t('goal.nextStep', { step: t(`goal.${g.id}.${g.steps[Math.min(sel.goal.step, g.steps.length - 1)].id}`) })}</small></div>`
+    : `<div class="goal"><button id="aims-pick">🌠 ${t('goal.pick')}</button></div>`;
+  const html = `${goalHtml}<div class="points">🌟 ${t('ui.points', { n: sel.points })}</div>`;
+  if (html === aimsShown) return;
+  $('aims').innerHTML = aimsShown = html;
+  $('aims-pick')?.addEventListener('click', () => openGoalPicker(sel));
+}
+// The life story (2.4) gathers these; until then, nothing.
+function milestone() {}
 function renderPanels() {
   $('clock').textContent = clockText();
+  renderAims();
   $('money').textContent = t('ui.coins', { n: household.money });
   renderJob();
   renderSelf();
@@ -1913,7 +2035,7 @@ async function placeHere(cx, cy) {
   if (p.fromBox) {
     storage.splice(storage.indexOf(p.s.id), 1);
     if (boxedBase.includes(p.s.id)) (base = true), boxedBase.splice(boxedBase.indexOf(p.s.id), 1);
-  } else if (!p.move) household.money -= p.s.price;
+  } else if (!p.move) (household.money -= p.s.price), sel.count('buy');
   const item = await placeExtra({ id: p.s.id, x, z, turn: p.turn, ...(was?.width ? { width: was.width } : {}), ...(base ? { base: true } : {}) });
   if (owner) (item.owner = owner), (owner.home = item);
   if (twinOwner && item.twin) (item.twin.owner = twinOwner), (twinOwner.home = item.twin);
@@ -2145,6 +2267,7 @@ function frame(now) {
     renderPanels();
     streetTick();
     shareBeds();
+    checkGoals();
     renderPeople();
     renderToasts();
     renderCards();
@@ -2184,6 +2307,8 @@ window.__life = {
   life, sim, lives, everyone, colleagues, place, places, camera, controls, renderer, t, bondOf, select, beds, household, ask, closeCard, openStation, setView, desks, props,
   get card() { return card; }, get year() { return year; }, get speed() { return speed; }, get view() { return nameOf(view); },
   get sel() { return sel; }, colleaguesLoaded, town: TOWN, HOUSES, streetName, story,
+  // Round 16, phase 2.
+  factsOf, checkGoals, openGoalPicker, aimsOn,
   folk, get extras() { return extras(); }, furniture, storage, save, snapshot, openShop, startPlacing, stopPlacing, turnPlacing, placeHere, hover, sell, beauty, openLook, get home() { return home; }, saving,
   get placing() { return placing; }, get start() { return start?.kind ?? null; },
   setSpeed, advance, get minutes() { return minutes; }, set minutes(v) { minutes = v; },

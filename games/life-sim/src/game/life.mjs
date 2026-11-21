@@ -67,6 +67,12 @@ export class Life {
     this.carer = false; // a nanny (round 13): here only for the babies
     this.traits = []; // round 16 (traits.mjs): three ids, who they are
     this.likes = null; // round 16 (likes.mjs): { food, colour, activity, dislike }
+    // Round 16, phase 2 (goals.mjs, wants.mjs): what they have done (`count`), their dream, the dreams come true, and
+    // their happy points. `onDid(id)`: the page's, told each time (wants come true).
+    this.tally = {};
+    this.goal = null; // { id, step }
+    this.goalsDone = [];
+    this.points = 0;
     sim.freeWill = false;
   }
 
@@ -158,6 +164,7 @@ export class Life {
     job.level++;
     job.performance = 0;
     this.addMoodlet('promoted');
+    this.count('promoted');
     this.cheerLeft = 3;
     this.hearts.push({ icon: '🎉' });
     this.events.push({ key: 'ui.job.promoted', vars: { name: this.name, job: `job.${job.career}.${levelOfJob(job).id}`, pay: levelOfJob(job).pay } });
@@ -423,6 +430,7 @@ export class Life {
     const o = d.offer;
     if (o.opens) this.card = o.opens;
     if (o.moodlet && (!o.moodletIf || o.moodletIf(d.before))) this.addMoodlet(o.moodlet);
+    this.count(o.id);
     // Round 16: what their traits make of it (a foodie's "yum", a clumsy Sim's "oops").
     for (const a of afterOf(this.traits, o.id)) if (MOODLETS[a.moodlet] && (a.chance >= 1 || this.random() < a.chance)) this.addMoodlet(a.moodlet);
     if (o.babyAfter === 'sleep') d.item?.baby?.fallAsleep();
@@ -593,6 +601,7 @@ export class Life {
     const knew = bondOf(lead, partner).friendship >= GIFT.knows;
     const { was, now } = applyOutcome(ix, bondOf(lead, partner), ok, done * (dating && ix.romance ? 1.5 : 1));
     if (ok && done >= 0.999 && ix.likes) lead.likeOutcome(ix, partner, knew);
+    if (ok && done >= 0.999) lead.count(ix.id);
     if (done >= 0.999) {
       const mine = ok ? ix.moodlet : 'failMoodlet' in ix ? ix.failMoodlet : 'awkward';
       const theirs = ok ? ix.partnerMoodlet : ix.partnerFailMoodlet;
@@ -627,6 +636,12 @@ export class Life {
       const kind = this.random() < 0.5 ? 'food' : 'colour';
       this.events.push({ key: `ui.gift.${kind}`, vars: { a: this.name, b: partner.name, thing: `like.${kind}.${partner.likes[kind]}` } });
     } else if (ix.likes === 'gift') this.events.push({ key: 'ui.gift.nice', vars: { a: this.name, b: partner.name } });
+  }
+
+  // Round 16: something done, by its id (an offer's, an interaction's, or the page's: 'go.park', 'hostParty', 'buy').
+  count(id) {
+    this.tally[id] = (this.tally[id] ?? 0) + 1;
+    this.onDid?.(this, id);
   }
 
   // ---- free will ----

@@ -39,7 +39,9 @@ export function lifeState(l) {
     needs: { ...l.needs }, skills: { ...l.skills }, timed: [...l.timed],
     job: l.job ? { ...l.job } : null,
     traits: [...(l.traits ?? [])],
-    likes: l.likes ? { ...l.likes } : null
+    likes: l.likes ? { ...l.likes } : null,
+    // Round 16, phase 2: their dream, the dreams come true, happy points, what they have done.
+    goal: l.goal ? { id: l.goal.id, step: l.goal.step } : null, goalsDone: [...(l.goalsDone ?? [])], points: l.points ?? 0, tally: { ...(l.tally ?? {}) }
   };
 }
 // And back onto a Life just made for them. A work day they had started (`lastDay` today, not yet over) they go back to.
@@ -52,6 +54,10 @@ export function restoreLife(l, s, minutes) {
   // Round 16: traits (a save from before has none, and gets three: page.mjs).
   l.traits = Array.isArray(s.traits) ? [...s.traits] : [];
   l.likes = s.likes ? { ...s.likes } : null;
+  l.goal = s.goal?.id ? { id: s.goal.id, step: Number(s.goal.step) || 0 } : null;
+  l.goalsDone = Array.isArray(s.goalsDone) ? [...s.goalsDone] : [];
+  l.points = Math.max(0, Number(s.points) || 0);
+  l.tally = s.tally && typeof s.tally === 'object' ? { ...s.tally } : {};
   if (s.job) {
     l.job = { ...s.job };
     if (l.job.lastDay === Math.floor(minutes / 1440)) l.job.lastDay = -1;

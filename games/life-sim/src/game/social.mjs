@@ -81,6 +81,8 @@ export function bondOf(a, b) {
   if (!bonds.has(key)) bonds.set(key, { friendship: 5, romance: 0, married: false });
   return bonds.get(key);
 }
+// A bond if there is one (round 16: looking, without making one for every pair).
+export const peekBond = (a, b) => bonds.get([a.name, b.name].sort().join('+')) ?? null;
 // Every bond, for the save (round 10), and back again: [[key, { friendship, romance }], …].
 export const allBonds = () => [...bonds].map(([k, b]) => [k, { ...b }]);
 export function setBonds(list) {
