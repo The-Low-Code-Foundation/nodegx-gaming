@@ -57,6 +57,27 @@ export const CAREERS = {
       { id: 'headChef', pay: 200, days: 5 },
       { id: 'starChef', pay: 260 }
     ]
+  },
+  // The scientist: in the office building (its lab bench, the number cruncher, the map table, the archive), later in
+  // the day than the office (10:00 to 16:00), Monday to Friday. No new place: the cheapest on the tablet.
+  scientist: {
+    icon: '🧪',
+    skills: true,
+    place: 'office',
+    days: [0, 1, 2, 3, 4],
+    leave: 9 * 60 + 30,
+    starts: 10 * 60,
+    ends: 16 * 60,
+    work: { id: 'work', slows: { hunger: 0.7, energy: 1, bladder: 0, hygiene: 0.8, fun: 0.9, social: 0.8 } },
+    stations: ['science', 'maths', 'geography', 'history'],
+    levels: [
+      { id: 'labAssistant', pay: 55, days: 3 },
+      { id: 'technician', pay: 80, days: 4 },
+      { id: 'researcher', pay: 115, days: 4 },
+      { id: 'seniorResearcher', pay: 155, days: 5 },
+      { id: 'labHead', pay: 205, days: 5 },
+      { id: 'professor', pay: 275 }
+    ]
   }
 };
 
