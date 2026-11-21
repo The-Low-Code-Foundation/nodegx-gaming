@@ -43,8 +43,9 @@ export const startFor = (day, yearDay) => (((yearDay - day) % YEAR_DAYS) + YEAR_
 export const rollBirthday = (random) => Math.floor(random() * YEAR_DAYS);
 // On the day: the moodlet all day, a cake (baked at the oven, or bought by phone for `buy` coins), a party if wanted
 // (the household's own party, round 15), presents from friends (from `friends` friendship, at most `most` of them),
-// each one of the things they love (likes.mjs: their favourite food, colour or thing to do), the life story.
-export const BIRTHDAY = { buy: 25, friends: 25, most: 3, presentFriendship: 3, wish: 40 };
+// each one of the things they love (likes.mjs: their favourite food, colour or thing to do), the life story. Told at
+// `at` o'clock (or when the game is opened later that day). The town's people's birthdays go on the notice board.
+export const BIRTHDAY = { at: 8, buy: 25, friends: 25, most: 3, presentFriendship: 3, wish: 40 };
 // What a present is, by the like it is about: strings.mjs `birthday.present.<kind>` with the like's own word.
 export const PRESENT_KINDS = ['food', 'colour', 'activity'];
 

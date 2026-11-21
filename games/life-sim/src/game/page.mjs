@@ -1379,7 +1379,7 @@ async function welcome({ who, house, traits, likes, dream }, day) {
 }
 // The notice board's news (4.2). Someone the household is Friends with: told, and glad for them (a moodlet). Someone
 // new: everyone hears, and a wish to go round and say hello (not for the shy).
-const GLAD = ['news.sweethearts', 'news.inLove', 'news.married', 'news.baby', 'news.bestFriends', 'news.newHome', 'news.bigger'];
+const GLAD = ['news.birthday', 'news.sweethearts', 'news.inLove', 'news.married', 'news.baby', 'news.bestFriends', 'news.newHome', 'news.bigger'];
 const newsText = (n) => t(n.key, { ...n.vars, dream: n.vars.dream ? t(`goal.${n.vars.dream}`) : '' });
 function tellNews(n, day) {
   townLife.news.unshift({ day, icon: n.icon, key: n.key, vars: { ...n.vars }, who: [...n.who] });
@@ -1448,7 +1448,7 @@ function inviteOver(other, quiet = false, stay = GUEST.stays) {
   if (!quiet) toast(t('ui.guest.asked', { name: sel.name, other: other.name }));
   return true;
 }
-async function throwParty() {
+async function throwParty(who = sel) {
   if (homeParty || household.money < HOME_PARTY.cost) return;
   await loadNeighbours();
   const friends = npcs().filter((l) => lives.some((h) => bondOf(h, l).friendship >= INVITED));
@@ -1456,8 +1456,8 @@ async function throwParty() {
   homeParty = { until: minutes + HOME_PARTY.minutes, decor: partyDecor(home.bounds.w, home.bounds.d) };
   home.group.add(homeParty.decor);
   for (const l of lives) if (l.present && l.place === home) l.addMoodlet('party');
-  sel.count('hostParty');
-  milestone('🥳', 'diary.party', { name: sel.name });
+  who.count('hostParty');
+  milestone('🥳', birthdayToday(who) ? 'diary.birthdayParty' : 'diary.party', { name: who.name });
   const came = friends.filter((f) => inviteOver(f, true, HOME_PARTY.minutes));
   toast(t(came.length ? 'ui.party.home' : 'ui.party.homeNobody', { n: came.length }));
   save();
@@ -1612,6 +1612,21 @@ const dateText = () => {
   const d = dateNow();
   return t('season.date', { icon: seasonById(d.season).icon, season: t(`season.${d.season}`), n: d.dayOfSeason });
 };
+// Round 16, phase 6.2: everyone's birthday, a day of the year. The town's people's (and the flatmate's, and anyone who
+// moves in) by the town's dice, so the same town has the same birthdays; the Sim you made, as chosen on that screen.
+// A save from before phase 6: the town's roll for each of them. ?birthday=today (or 1 to 28) on a test URL: the first
+// Sim's is today (that day). Nobody gets older: a birthday is cake, presents and friends.
+const npcBirthday = (who) => rollBirthday(townDice(TOWN.seed, 300 + who));
+const birthdayOf = (l) => (Number.isInteger(l.birthday) ? l.birthday : npcBirthday(l.who));
+if (calendarOn) {
+  const asked = params.get('birthday');
+  if (!saved && Number.isInteger(start?.birthday)) lives[0].birthday = start.birthday;
+  if (asked) lives[0].birthday = asked === 'today' ? dateNow().yearDay : Math.max(1, Math.min(YEAR_DAYS, Number(asked) || 1)) - 1;
+  for (const l of lives) l.birthday = birthdayOf(l);
+}
+const birthdayToday = (l) => calendarOn && birthdayOf(l) === dateNow().yearDay;
+// Is it the birthday of someone in the household today (the cake and the party are there: actions.mjs `birthday`)?
+const birthdayHere = () => lives.some(birthdayToday);
 // Day 1 is a Monday (work.mjs: the work days are Monday to Friday).
 const clockText = () => `${t('ui.day', { day: Math.floor(minutes / 1440) + 1, weekday: t(`day.${weekday(minutes)}`) })} · ${hhmm(minutes)}`;
 const SPEED_ICONS = ['⏸', '▶', '⏩', '⏭'];
@@ -1736,7 +1751,7 @@ renderer.domElement.addEventListener('pointerup', (e) => {
 function openMenu(item, x, y, point = null) {
   const atHome = view === home;
   // Round 14: a front door's "Go home" is for anyone's door but your own.
-  const offers = item ? offersFor(item).filter((o) => o.offered !== false && !(o.baby && item.baby?.away) && !(o.away && atHome) && inWeather(o)) : [{ id: 'goHere', act: 'walk' }];
+  const offers = item ? offersFor(item).filter((o) => o.offered !== false && !(o.baby && item.baby?.away) && !(o.away && atHome) && inWeather(o) && (!o.birthday || birthdayHere())) : [{ id: 'goHere', act: 'walk' }];
   const gain = (o) =>
     Object.entries(o.advertises ?? o.gives ?? {})
       .filter(([, v]) => v > 0)
@@ -1836,8 +1851,8 @@ function renderSelf() {
   for (const b of $('self').children) {
     const o = SELF[b.dataset.i];
     // A pizza is delivered to the flat; a job is looked for once.
-    b.hidden = (o.id === 'findJob' && !!sel.job) || (o.id === 'orderPizza' && sel.place !== home) || (o.id === 'adoptPet' && pets.length >= MAX_PETS);
-    b.disabled = !!o.cost && household.money < o.cost;
+    b.hidden = (o.id === 'findJob' && !!sel.job) || ((o.id === 'orderPizza' || o.id === 'orderCake') && sel.place !== home) || (o.id === 'adoptPet' && pets.length >= MAX_PETS) || (o.birthday && !birthdayHere());
+    b.disabled = (!!o.cost && household.money < o.cost) || (o.id === 'birthdayParty' && (household.money < HOME_PARTY.cost || !!homeParty));
     b.title = b.disabled ? t('ui.money.short', { name: sel.name, cost: o.cost }) : '';
   }
 }
@@ -2005,6 +2020,13 @@ function wantsTick() {
 // Life `count` tells us what was done: a wish that was for it comes true.
 function wished(l, id) {
   if (id === 'buildSnowman') buildSnowman(l);
+  // Round 16, phase 6.2: a birthday cake baked or bought, and a birthday party (the household's own: round 15).
+  if (id === 'bakeCake' || id === 'orderCake') birthdayCake(l, id === 'bakeCake' ? 'baked' : 'bought');
+  if (id === 'birthdayParty' && lives.includes(l)) {
+    if (homeParty) toast(t('town.partyOn'));
+    else if (household.money < HOME_PARTY.cost) toast(t('ui.money.short', { name: l.name, cost: HOME_PARTY.cost }));
+    else throwParty(l);
+  }
   // Round 16, phase 5.2: the neighbour helped is glad of it.
   if (id === 'oddJob' && l.place?.house) for (const r of residentsOf(l.place.house)) bondOf(l, r).friendship += 6;
   if (!aimsOn || !lives.includes(l)) return;
@@ -2193,6 +2215,7 @@ let seasonShown = null;
 function calendarTick() {
   if (!calendarOn) return;
   const d = dateNow();
+  birthdaysTick(d);
   if (d.season !== seasonShown) {
     seasonLook(d.season);
     household.crop = seasonById(d.season).crop;
@@ -2203,6 +2226,44 @@ function calendarTick() {
       calendar.told = told;
       toast(t(first ? 'season.now' : 'season.new', { icon: seasonById(d.season).icon, season: t(`season.${d.season}`) }));
     }
+  }
+}
+// The day's birthdays (6.2), once a day from BIRTHDAY.at: someone in the household's is told, and their friends bring
+// presents; a townsperson's goes on the notice board. `calendar.day`: the last day done (a reload doesn't do it twice).
+function birthdaysTick(d) {
+  const day = Math.floor(minutes / 1440);
+  if (calendar.day === day || (minutes % 1440) < BIRTHDAY.at * 60) return;
+  calendar.day = day;
+  for (const l of lives) if (birthdayOf(l) === d.yearDay) birthday(l);
+  if (townLifeOn) for (const o of npcs()) if (!lives.includes(o) && birthdayOf(o) === d.yearDay) tellNews({ icon: '🎂', key: 'news.birthday', vars: { a: o.name }, who: [o.name] }, day);
+}
+function birthday(l) {
+  l.addMoodlet('birthday');
+  toast(t('birthday.today', { name: l.name }));
+  milestone('🎂', 'diary.birthday', { name: l.name });
+  if (aimsOn) giveWant(l, 'birthdayCake');
+  // Presents from their closest friends in the town, each one of their favourite things (likes.mjs), as a friend knows.
+  const friends = npcs().filter((o) => !lives.includes(o) && (peekBond(l, o)?.friendship ?? 0) >= BIRTHDAY.friends)
+    .sort((a, b) => peekBond(l, b).friendship - peekBond(l, a).friendship).slice(0, BIRTHDAY.most);
+  for (const [k, o] of friends.entries()) {
+    const kind = PRESENT_KINDS[(birthdayOf(l) + k) % PRESENT_KINDS.length];
+    bondOf(l, o).friendship += BIRTHDAY.presentFriendship;
+    l.addMoodlet('present');
+    toast(l.likes ? t(`birthday.present.${kind}`, { a: o.name, b: l.name, thing: t(`like.${kind}.${l.likes[kind]}`) }) : t('birthday.present', { a: o.name, b: l.name }));
+  }
+  if (friends.length) milestone('🎁', 'diary.presents', { name: l.name, n: friends.length });
+  window.__life.lastBirthday = { name: l.name, presents: friends.map((o) => o.name), at: minutes };
+}
+// The birthday cake (baked or bought: actions.mjs `bakeCake`, `orderCake`): whoever's birthday it is blows out the
+// candles, once a birthday (`calendar.cake`: the year each one last had it).
+function birthdayCake(by, how) {
+  for (const l of lives.filter(birthdayToday)) {
+    if (calendar.cake[l.name] === yearKey()) continue;
+    calendar.cake[l.name] = yearKey();
+    l.addMoodlet('birthdayCake');
+    l.count('birthdayCake');
+    milestone('🎂', `diary.cake.${how}`, { name: l.name, by: by.name });
+    toast(t('birthday.candles', { name: l.name }));
   }
 }
 // How much keener free will is on an offer now: the season's (calendar.mjs SEASONS `lean`).
@@ -2237,6 +2298,8 @@ const eventPeople = (l) =>
   npcs().filter((o) => !lives.includes(o) && !o.carer).map((o) => ({
     life: o, friendship: peekBond(l, o)?.friendship ?? 0, romance: peekBond(l, o)?.romance ?? 0, traits: o.traits, neighbour: neighbours.includes(o), colleague: colleagues.includes(o),
     free: !o.shift && !workDayNow(o) && !guests.some((g) => g.life === o),
+    // Round 16, phase 6.2: with the calendar on, a birthday party or cake at work is on their birthday only.
+    birthday: calendarOn ? birthdayToday(o) : undefined,
     house: !!o.house && HOUSES.some((h) => h.id === o.house && h.kind === 'lived')
   }));
 // Round 16, phase 3: why an offer isn't there now (a key for the menu's note), or null: in a power cut at home, the telly
@@ -3154,7 +3217,7 @@ window.__life = {
   // Round 16, phase 4.
   townLifeOn, townLife, townLifeTick, playTownDay, TOWNLIFE, babiesAt, newsText, npcs, openNews, reachTick, REACH, DRAWN, lastReach: null,
   // Round 16, phase 6.
-  calendarOn, calendar, dateNow, seasonNow, weekendNow, calendarTick, SEASONS, TOWN_EVENTS,
+  calendarOn, calendar, dateNow, seasonNow, weekendNow, calendarTick, SEASONS, TOWN_EVENTS, birthdayOf, birthdayToday, birthdayHere, npcBirthday,
   weatherNow, weatherTick, get weather() { return weather && { ...weather }; }, set weatherId(id) { weather = { day: Math.floor(minutes / 1440), id, told: true }; }, snowmen, weatherFx, ducks,
   folk, get extras() { return extras(); }, furniture, storage, save, snapshot, openShop, startPlacing, stopPlacing, turnPlacing, placeHere, hover, sell, beauty, openLook, get home() { return home; }, saving,
   get placing() { return placing; }, get start() { return start?.kind ?? null; },

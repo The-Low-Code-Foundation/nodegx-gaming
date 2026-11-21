@@ -6,6 +6,7 @@ import * as THREE from 'three';
 import { Face } from '../face.mjs';
 import { HAIR_COLOURS, CLOTH_COLOURS, blankLook, randomLook } from './looks.mjs';
 import { TRAITS, TRAIT_IDS, PER_SIM, rollTraits, fits } from './traits.mjs';
+import { SEASONS, CALENDAR, dateOf, yearDayOf, rollBirthday } from './calendar.mjs';
 
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 
@@ -105,6 +106,8 @@ export function createSim({ renderer, scene, camera, controls, folk, t, names, y
   let who = person, name = names[person], look = blankLook(), chosenYear = year;
   // Round 16 (traits.mjs): three to begin with, rolled; a click takes one off or puts one on.
   let traits = rollTraits();
+  // Round 16, phase 6.2 (calendar.mjs): their birthday, a day of the year (a season and a day of it), rolled to begin with.
+  let birthday = rollBirthday(Math.random);
   let shown = null, mixer = null, face = null, loading = 0, fabricsNow = [];
   const looks = new Map(); // each person's look, kept while you flip between them
 
@@ -151,6 +154,10 @@ export function createSim({ renderer, scene, camera, controls, folk, t, names, y
       <h3>${t('ui.create.year')}</h3>
       <div class="levels">${years.map((y) => `<button data-year="${y}" class="${y === chosenYear ? 'on' : ''}">${y}</button>`).join('')}</div>
       <p class="note">${t('ui.create.yearHint')}</p>
+      <h3>${t('ui.create.birthday')} <button id="create-bday-roll" class="small">🎲 ${t('ui.create.traitsRoll')}</button></h3>
+      <div class="levels" id="create-bday-season">${SEASONS.map((x) => `<button data-bday-season="${x.id}" class="${dateOf(birthday).season === x.id ? 'on' : ''}">${x.icon} ${t(`season.${x.id}`)}</button>`).join('')}</div>
+      <div class="levels" id="create-bday-day">${Array.from({ length: CALENDAR.seasonDays }, (_, k) => `<button data-bday-day="${k + 1}" class="${dateOf(birthday).dayOfSeason === k + 1 ? 'on' : ''}">${k + 1}</button>`).join('')}</div>
+      <p class="note">${t('ui.create.birthdayHint', { date: `${SEASONS.find((x) => x.id === dateOf(birthday).season).icon} ${t(`season.${dateOf(birthday).season}`)} ${dateOf(birthday).dayOfSeason}` })}</p>
       <div class="actions"><button id="create-random">🎲 ${t('ui.create.random')}</button><button id="create-go" class="go" ${bad ? 'disabled' : ''}>🏠 ${t('ui.create.go', { name: esc(name.trim() || '…') })}</button></div>
       <p class="note" id="create-loading"></p>`;
     controls_ = lookControls($('create-look'), { folk, t, who, look, names, body: true, onChange: dressed });
@@ -182,6 +189,9 @@ export function createSim({ renderer, scene, camera, controls, folk, t, names, y
         render();
       };
     $('create-roll').onclick = () => ((traits = rollTraits()), render());
+    for (const b of root.querySelectorAll('[data-bday-season]')) b.onclick = () => ((birthday = yearDayOf(b.dataset.bdaySeason, dateOf(birthday).dayOfSeason)), render());
+    for (const b of root.querySelectorAll('[data-bday-day]')) b.onclick = () => ((birthday = yearDayOf(dateOf(birthday).season, Number(b.dataset.bdayDay))), render());
+    $('create-bday-roll').onclick = () => ((birthday = rollBirthday(Math.random)), render());
     $('create-random').onclick = async () => {
       status(t('ui.look.loading'));
       look = await randomLook(folk, who);
@@ -224,9 +234,9 @@ export function createSim({ renderer, scene, camera, controls, folk, t, names, y
       Object.assign(controls, { minDistance: was.min, maxDistance: was.max, maxPolarAngle: was.polar });
       controls.target.copy(was.target);
       camera.position.copy(was.camera);
-      resolve({ who, name: name.trim(), look, year: chosenYear, body: shown, traits: [...traits] });
+      resolve({ who, name: name.trim(), look, year: chosenYear, body: shown, traits: [...traits], birthday });
     });
     // For tests: the screen's state, and a way to set the name without typing.
-    window.__create = { get who() { return who; }, get look() { return look; }, get name() { return name; }, setName: (n) => ((name = n), render()), pick: (j) => root.querySelector(`#create-people [data-j="${j}"]`)?.click(), get shown() { return shown; }, get traits() { return traits; } };
+    window.__create = { get who() { return who; }, get look() { return look; }, get name() { return name; }, setName: (n) => ((name = n), render()), pick: (j) => root.querySelector(`#create-people [data-j="${j}"]`)?.click(), get shown() { return shown; }, get traits() { return traits; }, get birthday() { return birthday; } };
   });
 }
