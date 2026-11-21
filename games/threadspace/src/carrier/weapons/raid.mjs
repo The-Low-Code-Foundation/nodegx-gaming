@@ -40,8 +40,9 @@ export const raidParts = {
     return this.raider;
   },
 
-  /** A raider comes in from `from` (port, starboard, above, below) for `passes` firing passes. */
-  raid(from = 'port', passes = this.W.raider.passes) {
+  /** A raider comes in from `from` (port, starboard, above, below) for `passes` firing passes, with `escorts` bandits
+   *  (weapons/bandits.mjs; the layout's `bandit.count` by default). */
+  raid(from = 'port', passes = this.W.raider.passes, escorts = this.W.bandit?.count ?? 0) {
     if (this.raider && !this.raider.gone) {
       if (!this.raider.target) return this.raider;
       this.endRaid(); // a target still out is cut loose: the real thing has turned up
@@ -52,10 +53,12 @@ export const raidParts = {
     setThrust(obj, 1);
     this.tubeT = this.W.tubes?.first ?? 6; // the CIC needs a firing solution before its first salvo
     for (const b of Object.values(this.broad ?? {})) b.t = Math.max(b.t, this.W.broadside.first ?? 20);
-    return this.contact(obj, R, from, this.passes(from, d, passes), {
-      label: 'RAIDER', centre: new THREE.Vector3(0, 1, -6), hull: R.hull,
+    const raider = this.contact(obj, R, from, this.passes(from, d, passes), {
+      kind: 'raider', label: 'RAIDER', centre: new THREE.Vector3(0, 1, -6), hull: R.hull,
       torpLeft: R.torpedo?.stock ?? 0, torpT: 3 + this.rand() * 3, pdcT: 0, pdcAim: null
     });
+    this.escorts(raider, escorts);
+    return raider;
   },
 
   /** A gunnery drill: a tug streams a target sled down the side `from` on straight, steady passes (the layout's

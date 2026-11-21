@@ -1,0 +1,13 @@
+{
+  "id": "splash-bandit",
+  "about": "A bandit is destroyed (weapons/bandits.mjs).",
+  "who": "ship",
+  "say": [
+    "Splash one bandit."
+  ],
+  "to": {
+    "bridge": "headset",
+    "flight": "radio"
+  },
+  "priority": 3
+}

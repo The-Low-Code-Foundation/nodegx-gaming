@@ -387,6 +387,7 @@ export class Cockpit {
         g.fillText(`${e.label} ${rng}`, p.x + b + 6, p.y - 8);
         g.fillText(e.hits != null ? `HITS ${e.hits}` : e.shield > 0.01 ? `SHD ${Math.round(e.shield * 100)}%` : `HULL ${Math.round(e.hull * 100)}%`, p.x + b + 6, p.y + 8);
         g.fillText(`${e.closing >= 0 ? 'closing' : 'opening'} ${Math.abs(e.closing).toFixed(0)} m/s`, p.x + b + 6, p.y + 24);
+        if (e.count > 1) g.fillText(`X: next of ${e.count}`, p.x + b + 6, p.y + 40);
       }
       if (e.lead) {
         const lp = project(e.lead.clone().sub(cam.position).normalize());
@@ -400,6 +401,21 @@ export class Cockpit {
         }
       }
       g.textAlign = 'left';
+      g.shadowColor = 'rgba(80, 255, 150, 0.6)';
+      g.strokeStyle = g.fillStyle = GREEN;
+    }
+    // The other contacts: a small red bracket each, its name beside it.
+    if (s.marks?.length) {
+      g.strokeStyle = g.fillStyle = RED;
+      g.shadowColor = 'rgba(255, 90, 70, 0.6)';
+      g.font = font(10);
+      g.textAlign = 'left';
+      for (const k of s.marks) {
+        const p = project(k.point.clone().sub(cam.position).normalize());
+        if (p.behind || p.x < 0 || p.x > W || p.y < 0 || p.y > H) continue;
+        g.strokeRect(p.x - 6, p.y - 6, 12, 12);
+        g.fillText(k.label, p.x + 10, p.y + 4);
+      }
       g.shadowColor = 'rgba(80, 255, 150, 0.6)';
       g.strokeStyle = g.fillStyle = GREEN;
     }

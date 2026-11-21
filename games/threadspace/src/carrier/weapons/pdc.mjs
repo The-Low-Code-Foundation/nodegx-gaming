@@ -9,12 +9,15 @@ export const pdcParts = {
 
   /** One tracer (a burst of rounds) from `p` at velocity `v`, world. `side` is whose it is. */
   round(p, v, side, life, dmg = 0) {
-    if (this.pdRounds.length >= ROUND_MAX) return;
-    this.pdRounds.push({ pos: p.clone(), prev: p.clone(), vel: v.clone(), side, life, dmg });
+    if (this.pdRounds.length >= ROUND_MAX) return null;
+    const r = { pos: p.clone(), prev: p.clone(), vel: v.clone(), side, life, dmg };
+    this.pdRounds.push(r);
+    return r;
   },
 
-  /** The carrier's point defence: each gun picks the nearest torpedo inbound (or, with none, the raider when it is
-   *  close) inside its arc and reach, slews onto the lead, and fires while it is laid. */
+  /** The carrier's point defence: each gun picks the nearest torpedo inbound (or, with none, the nearest bandit inside
+   *  `fighterRange`, or the raider when it is close) inside its arc and reach, slews onto the lead, and fires while it
+   *  is laid. A gun the bandits have shot up (`hp` under 25) is out of action. */
   pdcFrame(dt) {
     const P = this.W.pdc;
     if (!P) return;
@@ -26,9 +29,11 @@ export const pdcParts = {
     for (const g of this.pdcs) {
       const mag = this.ship.node(g.m.magazine)?.health ?? 100;
       const health = g.node ? g.node.health : 100;
-      g.ok = health >= 25 && mag >= 15 && this.ship.power;
-      g.why = !this.ship.power ? 'no power' : health < 25 ? 'wrecked' : mag < 15 ? 'magazine wrecked' : g.stock <= 0 ? 'empty' : hot ? 'heat' : '';
+      g.ok = health >= 25 && mag >= 15 && g.hp >= 25 && this.ship.power;
+      g.why = !this.ship.power ? 'no power' : health < 25 ? 'wrecked' : g.hp < 25 ? 'shot up' : mag < 15 ? 'magazine wrecked' : g.stock <= 0 ? 'empty' : hot ? 'heat' : '';
       g.firing = false;
+      // Mended between raids (the repair drones): `repair` hit points a second.
+      if (g.hp < 100 && (!R || R.gone)) g.hp = Math.min(100, g.hp + dt * (P.repair ?? 0));
       const pivot = this.C.frame.localToWorld(_a.copy(g.pivot));
       const up = _b.copy(g.up).applyQuaternion(this.C.obj.quaternion);
       // The nearest threat it can bear on.
@@ -39,6 +44,12 @@ export const pdcParts = {
           const d = t.pos.distanceTo(pivot);
           if (d < P.range && d < bd && _c.subVectors(t.pos, pivot).normalize().dot(up) > cosArc) (best = t), (bd = d);
         }
+        if (!best)
+          for (const B of this.bandits) {
+            if (B.dead || B.gone) continue;
+            const d = B.pos.distanceTo(pivot);
+            if (d < (P.fighterRange ?? 0) && d < bd && _c.subVectors(B.pos, pivot).normalize().dot(up) > cosArc) (best = B), (bd = d);
+          }
         if (!best && raiderLive) {
           const d = R.obj.position.distanceTo(pivot);
           if (d < P.raiderRange && _c.subVectors(R.obj.position, pivot).normalize().dot(up) > cosArc) best = R;
@@ -73,16 +84,19 @@ export const pdcParts = {
       if (want && g.laid && g.ok && !hot && g.stock > 0) {
         g.firing = true;
         g.spinV = 60;
+        // A fighter is small and jinking: the fire control's track of one is rougher (`fighterSpread`).
+        const spread = best.kind === 'bandit' ? P.fighterSpread ?? P.spread : P.spread;
         while (g.coolT <= 0) {
           g.coolT += 1 / P.rate;
           g.stock--;
           const d = _c.copy(want);
-          d.x += (this.rand() - 0.5) * 2 * P.spread;
-          d.y += (this.rand() - 0.5) * 2 * P.spread;
-          d.z += (this.rand() - 0.5) * 2 * P.spread;
+          d.x += (this.rand() - 0.5) * 2 * spread;
+          d.y += (this.rand() - 0.5) * 2 * spread;
+          d.z += (this.rand() - 0.5) * 2 * spread;
           d.normalize();
           const muzzle = _d.copy(pivot).addScaledVector(d, 3.6);
-          this.round(muzzle, _e.copy(d).multiplyScalar(P.speed).add(this.body.vel), 'ours', P.range / P.speed + 0.3, P.damage);
+          const rd = this.round(muzzle, _e.copy(d).multiplyScalar(P.speed).add(this.body.vel), 'ours', P.range / P.speed + 0.3, P.damage);
+          if (rd) rd.fdmg = P.fighterDamage ?? 0; // what it does to a bandit it passes close to
           this.plant?.addHeat(P.heat);
         }
         if ((g.soundT = (g.soundT ?? 0) - dt) <= 0) (g.soundT = 0.18), this.sfx?.play('hit', this.ear ? Math.min(900, this.ear.distanceTo(pivot) * 0.7) : 600);
@@ -135,6 +149,18 @@ export const pdcParts = {
       } else if (r.side === 'ours' && raiderLive && r.dmg && r.pos.distanceTo(R.obj.position) < 80 && this.hitsRaider(r.prev, r.pos, _b)) {
         this.raiderHit(_b, r.dmg, false, true);
         r.life = 0;
+      } else if (r.side === 'ours' && r.fdmg && this.bandits.length) {
+        // A burst that passes within `radius` of a bandit.
+        for (const B of this.bandits) {
+          if (B.dead || B.gone || B.pos.distanceTo(r.pos) > 60) continue;
+          const ab = _b.subVectors(r.pos, r.prev), ap = _c.subVectors(B.pos, r.prev);
+          const k = clamp(ap.dot(ab) / Math.max(1e-9, ab.lengthSq()), 0, 1);
+          if (ap.addScaledVector(ab, -k).length() < radius) {
+            this.banditHit(B, _d.copy(r.prev).addScaledVector(ab, k), r.fdmg, false, true);
+            r.life = 0;
+            break;
+          }
+        }
       }
       if (r.life <= 0) continue;
       // A streak along its way past the carrier.

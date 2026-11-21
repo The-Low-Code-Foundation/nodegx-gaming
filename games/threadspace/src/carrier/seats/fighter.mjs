@@ -11,7 +11,8 @@ const PROMPTS = {
 };
 const _p = new THREE.Vector3();
 const _f = new THREE.Vector3();
-const FOE = {}; // what the fighter's sight shows of the raider (weapons.mjs `foe`)
+const FOE = {}; // what the fighter's sight shows of the contact she has selected (weapons/fighter-guns.mjs `foe`)
+const MARKS = []; // the other contacts (`foeMarks`)
 const range = (d) => (d < 1000 ? `${Math.round(d)} m` : `${(d / 1000).toFixed(2)} km`);
 
 /** How a landing you flew yourself went: speed and how far off the line when flight control caught you. */
@@ -50,6 +51,7 @@ export class FighterSeat {
     if (code === 'KeyV') fighter.view = fighter.view === 'cockpit' ? 'chase' : 'cockpit';
     else if (code === 'KeyM') fighter.toggleMouse();
     else if (code === 'KeyT') fighter.debugRefill();
+    else if (code === 'KeyX' && fighter.flying) this.G.guns.nextFoe(); // the next contact on her sight
     else if (code === 'KeyE') {
       if (fighter.phase === 'seated') this.G.fadeThen(() => this.leave());
       else if (fighter.canLand(body.vel)) {
@@ -92,7 +94,7 @@ export class FighterSeat {
     cockpit.frame(dt, {
       fighter, carrier: body, C, lane, approach, camera, aim, bayDist: dist, closing, entryDist,
       cockpit: fighter.view === 'cockpit', bayOpen: doors.open, pad: fighter.index + 1,
-      foe: fighter.flying ? guns.foe(FOE) : null, rounds: guns.rounds, roundsMax: L.weapons.fighter?.rounds,
+      foe: fighter.flying ? guns.foe(FOE) : null, marks: fighter.flying ? guns.foeMarks(MARKS) : null, rounds: guns.rounds, roundsMax: L.weapons.fighter?.rounds,
       hull: guns.fhull != null ? guns.fhull / L.weapons.fighter.hull : 1
     });
   }

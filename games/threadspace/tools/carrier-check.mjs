@@ -11,6 +11,7 @@
 //   carrier.html?at=helm&voice=0&crew=0&dc=0&hold=1&seed=7       → run('helm')
 //   carrier.html?at=fighter&voice=0&crew=0&dc=0&hold=1&seed=7    → run('landing')
 //   carrier.html?at=fighter&voice=0&crew=0&dc=0&hold=1&seed=7    → run('collide')
+//   carrier.html?at=fighter&voice=0&crew=0&dc=0&hold=1&seed=7    → run('bandits')
 //   carrier.html?at=bridge&voice=0&crew=0&dc=0&hold=1&seed=7     → run('walk')
 //   carrier.html?at=bridge&voice=0&crew=0&dc=0&hold=1&seed=7     → run('float')
 //   carrier.html?at=bridge&voice=0&crew=0&dc=0&hold=1&seed=7     → run('brace')
@@ -94,6 +95,42 @@ const scenarios = {
     c.ship.attack('port');
     const t = run_(c, 200, () => c.guns.raider?.gone);
     return { t, ...n, raiderDead: !!c.guns.raider?.dead, raiderHull: r3(c.guns.raider?.hull ?? 0), ...snap(c) };
+  },
+
+  /** A raid with its escorts (weapons/bandits.mjs), with your fighter out 1.5 km off her port beam, holding still: the
+   *  bandits in formation, their strafing runs on her point defence, the point defence on them, and the nearest one
+   *  coming for your fighter. */
+  async bandits(c) {
+    const f = c.fighter, g = c.guns, C = c.C, THREE = await import('three');
+    c.bayNow();
+    run_(c, 60, () => f.flight.online && f.refuelT <= 0);
+    c.input.keys.add('KeyW');
+    run_(c, 30, () => f.flying);
+    c.input.keys.delete('KeyW');
+    run_(c, 1);
+    C.obj.updateMatrixWorld(true);
+    const cq = C.obj.getWorldQuaternion(new THREE.Quaternion());
+    f.obj.position.copy(C.obj.localToWorld(new THREE.Vector3(-1500, 0, -300)));
+    f.obj.quaternion.copy(cq).multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(0, Math.PI / 2, 0)));
+    f.flight.aim.copy(f.obj.quaternion);
+    f.body.vel.copy(c.body.vel);
+    f.body.ang.set(0, 0, 0);
+    const n = counters(c);
+    let strafed = 0;
+    const sh = g.strafeHit.bind(g);
+    g.strafeHit = (...a) => { const h = sh(...a); if (h) strafed++; return h; };
+    c.ship.attack('port');
+    const states = [];
+    let t = 0, near = Infinity;
+    while (t < 220 && !(g.raider?.gone && !g.bandits.length)) {
+      t += run_(c, 5);
+      states.push(g.bandits.map((B) => (B.dead ? 'x' : B.gone ? '-' : B.state[0])).join(''));
+      for (const B of g.bandits) if (!B.dead && !B.gone) near = Math.min(near, g.hullBox().distanceToPoint(C.frame.worldToLocal(B.obj.position.clone())));
+    }
+    return {
+      t: r3(t), ...n, strafed, states: states.join(' '), kills: (g.kills ?? []).map((k) => `${k.who}@${r3(k.t)}`), near: r3(near),
+      pdcHp: g.pdcs.map((p) => r3(p.hp)), fhull: r3(g.fhull), raiderDead: !!g.raider?.dead, ...snap(c)
+    };
   },
 
   /** The helm: the drive's stand-by from cold, a burn, the radiators, a raid and the broadside railguns on Q. */
@@ -501,7 +538,7 @@ export async function run(name) {
 }
 
 const PAGES = {
-  raid: 'at=bridge', helm: 'at=helm', landing: 'at=fighter', collide: 'at=fighter', walk: 'at=bridge', float: 'at=bridge', brace: 'at=bridge', career: ''
+  raid: 'at=bridge', helm: 'at=helm', landing: 'at=fighter', collide: 'at=fighter', bandits: 'at=fighter', walk: 'at=bridge', float: 'at=bridge', brace: 'at=bridge', career: ''
 };
 
 /** Every scenario, each in a fresh page of its own (an iframe), from any page of this site: `{ name: { hash, … } }`.

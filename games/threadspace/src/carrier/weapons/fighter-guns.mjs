@@ -39,14 +39,53 @@ export const fighterGunParts = {
     this.sfx?.play('hit', 30); // felt through the airframe more than heard
   },
 
-  /** What the fighter's sight shows of the contact: where it is, where to point her nose so her rounds meet it (null
-   *  out of range), its name, range and state. Null with nothing out there. */
+  /** What her sight can show: every live enemy craft, or the target sled on a drill. */
+  contacts() {
+    const R = this.raider;
+    return R?.target && !R.gone ? [R] : this.foes();
+  },
+
+  /** The contact her sight shows: the one picked with X while it lives, else the nearest. */
+  selected() {
+    const fi = this.fighter, all = this.contacts();
+    if (!fi?.obj || !all.length) return null;
+    if (this.picked && all.includes(this.picked)) return this.picked;
+    this.picked = null;
+    let best = null, bd = Infinity;
+    for (const F of all) {
+      const d = F.obj.position.distanceTo(fi.obj.position);
+      if (d < bd) (bd = d), (best = F);
+    }
+    return best;
+  },
+
+  /** X in the fighter: the next contact, nearest first. */
+  nextFoe() {
+    const fi = this.fighter, all = this.contacts();
+    if (!fi?.obj || !all.length) return null;
+    all.sort((a, b) => a.obj.position.distanceTo(fi.obj.position) - b.obj.position.distanceTo(fi.obj.position));
+    const now = this.selected();
+    this.picked = all[(all.indexOf(now) + 1) % all.length];
+    return this.picked;
+  },
+
+  /** The other contacts, for small brackets on her HUD: `[{ point, label }]`. */
+  foeMarks(out = []) {
+    out.length = 0;
+    const sel = this.selected();
+    for (const F of this.contacts()) if (F !== sel) out.push({ point: F.obj.position, label: F.label });
+    return out;
+  },
+
+  /** What the fighter's sight shows of the contact it has selected: where it is, where to point her nose so her rounds
+   *  meet it (null out of range), its name, range and state. Null with nothing out there. */
   foe(out = {}) {
-    const R = this.raider, F = this.W.fighter, fi = this.fighter;
-    if (!F || !fi?.obj || !R || R.gone || R.dead) return null;
+    const F = this.W.fighter, fi = this.fighter;
+    const R = this.selected();
+    if (!F || !fi?.obj || !R) return null;
     const me = fi.obj.getWorldPosition(_a);
     const r = _b.subVectors(R.obj.position, me);
-    const v = _c.copy(R.v).add(this.body.vel).sub(fi.body.vel); // its velocity as she sees it
+    const v = R.kind === 'bandit' ? _c.copy(R.body.vel).sub(fi.body.vel) : _c.copy(R.v).add(this.body.vel).sub(fi.body.vel); // its velocity as she sees it
     const range = r.length();
     const tt = range < F.range * 1.5 ? intercept(r, v, F.shell) : null;
     out.point = R.obj.position;
@@ -56,6 +95,8 @@ export const fighterGunParts = {
     out.closing = range > 1 ? -r.dot(v) / range : 0;
     out.shield = null; // nobody has shields
     out.hull = R.target ? null : Math.max(0, R.hull) / R.K.hull;
+    out.bandit = R.kind === 'bandit';
+    out.count = this.contacts().length;
     out.hits = R.target ? R.hits : null;
     return out;
   },

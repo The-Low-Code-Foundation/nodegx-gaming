@@ -1,0 +1,14 @@
+{
+  "id": "pdc-down",
+  "about": "A bandit has shot up one of the point defence guns (weapons/bandits.mjs).",
+  "who": "ai",
+  "say": [
+    "Point defence mount out of action."
+  ],
+  "to": {
+    "bridge": "headset",
+    "dc": "headset"
+  },
+  "priority": 3,
+  "again": 8
+}

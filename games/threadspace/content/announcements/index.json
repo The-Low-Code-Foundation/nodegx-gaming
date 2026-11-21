@@ -43,6 +43,9 @@
     "nav-turnover",
     "nav-on-station",
     "bridge-line",
-    "pipe"
+    "pipe",
+    "bandits",
+    "splash-bandit",
+    "pdc-down"
   ]
 }

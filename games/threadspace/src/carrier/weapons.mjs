@@ -38,8 +38,12 @@
 // nothing fired either way but your own shells, and each hit counted.
 //
 // The fighter you fly has a twin cannon (`fly`, `cannonFrame`): its rounds are shells like any other, and `foe()` is what
-// her head-up display shows of the contact (cockpit.mjs draws it). The raider's turrets fire back at her (`flakShot`):
-// her hull is `fhull`, and at nothing she is dead in space and flight control brings her in.
+// her head-up display shows of the contact she has selected (X picks the next; cockpit.mjs draws it, and `foeMarks()`
+// the rest). The raider's turrets fire back at her (`flakShot`): her hull is `fhull`, and at nothing she is dead in
+// space and flight control brings her in.
+//
+// The raider brings escorts (weapons/bandits.mjs): enemy fighters flown on the same `Flight` as yours by an AI pilot,
+// which strafe her point defence guns and go for your fighter. `foes()` is every live enemy craft; `foeHit()` hits one.
 //
 // The layout's `weapons` entry has every number. In the console: `__carrier.guns.raid('port')`, `.raider`, `.torps`,
 // `.pdcs`, `.turrets`.
@@ -53,6 +57,7 @@ import { pdcParts } from './weapons/pdc.mjs';
 import { railgunParts } from './weapons/railgun.mjs';
 import { turretParts } from './weapons/turrets.mjs';
 import { fighterGunParts } from './weapons/fighter-guns.mjs';
+import { banditParts } from './weapons/bandits.mjs';
 
 export class Weapons {
   /** `ship` the integrity (holes, health, `inHull`), `body` the carrier's rigid body (her world velocity), `hooks.man(t)`
@@ -68,12 +73,13 @@ export class Weapons {
     this.sfx = sfx;
     this.dc = dc;
     this.hooks = hooks;
-    C.bus?.on('raid', ({ from }) => this.raid(from)); // action stations for a raider (integrity.mjs `attack`)
+    C.bus?.on('raid', ({ from, escorts }) => this.raid(from, undefined, escorts)); // action stations for a raider (integrity.mjs `attack`)
     this.rand = mulberry((seed % 2147483647) + 7);
     this.time = 0;
     this.shells = [];
     this.fx = [];
     this.raider = null;
+    this.bandits = []; // the raider's escort fighters (weapons/bandits.mjs)
     this.log = []; // torpedoes shot down: { t, kill (whose), by }
     this.manned = null;
     this.zoom = 0;
@@ -185,7 +191,8 @@ export class Weapons {
       m, ...mesh, node, up, id: m.id, name: m.id.replace(/^pdc-/, '').replace(/-/g, ' '),
       pivot: at0.clone().addScaledVector(up, 3.5), // ship frame: where its rounds come from
       inv: new THREE.Quaternion().setFromUnitVectors(up, new THREE.Vector3(0, 1, 0)), // ship frame to the mount's own
-      yawA: 0, elev: 0.3, stock: this.W.pdc.stock, coolT: 0, firing: false, target: null, spinV: 0
+      yawA: 0, elev: 0.3, stock: this.W.pdc.stock, coolT: 0, firing: false, target: null, spinV: 0,
+      hp: 100 // the gun itself: a bandit's rounds shoot it up (weapons/bandits.mjs `strafeHit`); under 25 it is out of action
     };
   }
 
@@ -199,6 +206,7 @@ export class Weapons {
     this.inv.copy(this.C.frame.matrixWorld).invert();
     if (mode === 'gun' && f.wheel) this.zoomStep(f.wheel > 0 ? -1 : 1);
     this.raiderFrame(dt);
+    this.banditsFrame(dt);
     this.tubesFrame(dt);
     this.broadsideFrame(dt);
     this.torpsFrame(dt);
@@ -217,4 +225,4 @@ export class Weapons {
 
 // The rest of `Weapons` lives in weapons/, a file per kind of gun (design/ROADMAP.md, phase 2). Each is a set of
 // methods mixed in here, so `this` is the one `Weapons` everywhere and the methods call each other as before.
-Object.assign(Weapons.prototype, raidParts, projectileParts, torpedoParts, broadsideParts, pdcParts, railgunParts, turretParts, fighterGunParts);
+Object.assign(Weapons.prototype, raidParts, projectileParts, torpedoParts, broadsideParts, pdcParts, railgunParts, turretParts, fighterGunParts, banditParts);

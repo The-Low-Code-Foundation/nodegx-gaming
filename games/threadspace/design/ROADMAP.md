@@ -333,6 +333,20 @@ No physics engine. The ship already has its own Newtonian code (`newton.mjs`, `f
   hot sinks: the plant's heat is already modelled), a lock tone and a lock box on the HUD, the torpedoes' guidance
   scaled down, and the enemy's point defence and decoys against them. Four on the rails, reloaded on the pad.
 
+  **Built (phase 7's first session):** enemies are a list (`foes()`: the raider and its escorts; your fighter's sight
+  shows the one picked with X, or the nearest, and a small bracket on the rest), and the first new kind is the bandit
+  (`src/carrier/weapons/bandits.mjs`, numbers in the layout's `weapons.bandit`): two Rook fighters come with every raid,
+  each on its own `Flight` with an AI pilot that burns along the change of velocity it wants and otherwise keeps its
+  nose on what it is shooting, trimming on the side jets. They hold formation until the raider starts its passes, then
+  make gun runs along her side past her point defence guns (a gun shot up below 25 hp is out of action until the drones
+  mend it between raids); the nearest to your fighter, and any you hit, fight you instead. They keep clear of her hull,
+  and go home on bingo (either tank: the jets' cold gas runs out fast if they jink all the time, which is why their
+  jinks are short pops). The point defence takes them when no torpedo is up, with a rougher aim than on a torpedo. As
+  tuned, they live about a minute in a raid, one in two is shot down, and one raid in two loses a gun. Three new calls
+  (`bandits`, `splash-bandit`, `pdc-down`) are not recorded yet. A `bandits` scenario in `tools/carrier-check.mjs`.
+  Not done: point defence in kinds, heat-seekers (the second session); a Blender model of the enemy fighter (it is the
+  main game's code-built Rook); bandits colliding with anything; the turrets' crews never lay on a bandit.
+
 ## Phase 8. Talking to people (three or more sessions) [13]
 
 - **The story first, by Gemini, with you as editor.** A story bible before any dialogue: the ship's name and history,

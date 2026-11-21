@@ -1,0 +1,14 @@
+{
+  "id": "bandits",
+  "about": "The raider has escort fighters with it (weapons/bandits.mjs).",
+  "who": "ship",
+  "say": [
+    "Bandits. Enemy fighters escorting the raider. Point defence will engage them as they close."
+  ],
+  "to": {
+    "all": "tannoy",
+    "flight": "radio"
+  },
+  "priority": 3,
+  "again": 30
+}

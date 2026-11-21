@@ -19,7 +19,7 @@ export const projectileParts = {
 
   shellsFrame(dt) {
     const prev = new THREE.Vector3();
-    const R = this.raider;
+    const foes = this.foes();
     const centre = this.C.obj.position;
     for (const s of this.shells) {
       prev.copy(s.pos);
@@ -33,9 +33,14 @@ export const projectileParts = {
       const len = Math.min(sp * (s.rail ? 0.012 : 0.03), s.rail ? 110 : 40), w = s.w ?? (s.ours ? 0.7 : 1.1);
       s.mesh.scale.set(w, w, len);
       if (s.ours) {
-        if (R && !R.gone && !R.dead && this.hitsRaider(prev, s.pos, _b)) {
-          if (s.you) R.byYou = (R.byYou ?? 0) + 1; // your own hits (the career counts them)
-          this.raiderHit(_b, s.dmg, s.you);
+        // The raider (or a target sled) and its bandits.
+        const R = this.raider;
+        let hit = R?.target && !R.gone && this.hitsFoe(R, prev, s.pos, _b) ? R : null;
+        const seg = prev.distanceTo(s.pos);
+        for (const F of foes) if (!hit && !F.dead && F.obj.position.distanceTo(s.pos) < 200 + seg && this.hitsFoe(F, prev, s.pos, _b)) hit = F;
+        if (hit) {
+          if (s.you && hit.kind !== 'bandit') hit.byYou = (hit.byYou ?? 0) + 1; // your own hits (the career counts them)
+          this.foeHit(hit, _b, s.dmg, s.you);
           s.life = 0;
         } else if (s.cannon && s.pos.distanceTo(centre) < 240 && this.ship.inHull(_b.copy(s.pos).applyMatrix4(this.inv))) {
           // A fighter's round that finds the carrier: stopped by her plating, with a spark to show for it.
@@ -46,15 +51,17 @@ export const projectileParts = {
           const t = this.torpHit(prev, s.pos, 'theirs', s.cannon ? this.W.fighter.radius ?? 3 : 4);
           if (t) (s.life = 0), this.killTorp(t, s.you ? 'you' : 'gun');
         }
-      } else if (s.flak) {
-        // A shot at the fighter: a hit if its path this frame passes within her hull's reach.
+      } else if (s.flak || s.bandit) {
+        // A shot at the fighter (the raider's flak, a bandit's cannon): a hit if its path this frame passes within her
+        // hull's reach. A bandit's round that misses her may meet the carrier (`strafeHit`).
         const fi = this.fighter;
-        if (fi?.flying) {
+        if (s.bandit && (prev.distanceTo(centre) < 280 || s.pos.distanceTo(centre) < 280) && this.strafeHit(s, prev, s.pos)) s.life = 0;
+        else if (fi?.flying) {
           const ab = _b.subVectors(s.pos, prev), ap = _c.subVectors(fi.obj.position, prev);
           const k = clamp(ap.dot(ab) / Math.max(1e-9, ab.lengthSq()), 0, 1);
           // She moves too: test against where she was at that moment of the frame.
           ap.addScaledVector(fi.body.vel, -(1 - k) * dt).addScaledVector(ab, -k);
-          if (ap.length() < (this.W.raider.flak?.radius ?? 4)) {
+          if (ap.length() < ((s.bandit ? this.W.bandit.gun.radius : this.W.raider.flak?.radius) ?? 4)) {
             this.fighterHit(_d.copy(prev).addScaledVector(ab, k), s.dmg);
             s.life = 0;
           }
@@ -69,7 +76,12 @@ export const projectileParts = {
 
   /** Does the segment a→b (world) pass through the raider's ellipsoid? Where, in `out`. */
   hitsRaider(a, b, out) {
-    const R = this.raider, size = R.K.size, o = R.centre;
+    return this.hitsFoe(this.raider, a, b, out);
+  },
+
+  /** Does the segment a→b (world) pass through foe `R`'s ellipsoid (its `K.size` about its `centre`)? Where, in `out`. */
+  hitsFoe(R, a, b, out) {
+    const size = R.K.size, o = R.centre;
     const inv = _m.copy(R.obj.matrixWorld).invert();
     const A = _c.copy(a).applyMatrix4(inv), B = _d.copy(b).applyMatrix4(inv);
     for (const P of [A, B]) P.set((P.x - o.x) / size[0], (P.y - o.y) / size[1], (P.z - o.z) / size[2]);

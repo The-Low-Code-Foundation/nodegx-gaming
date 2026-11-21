@@ -190,7 +190,11 @@
    "radius": 4,
    "damage": 0.04,
    "stock": 2400,
-   "heat": 0.00008
+   "heat": 0.00008,
+   "fighterRange": 1500,
+   "fighterDamage": 1.5,
+   "fighterSpread": 0.04,
+   "repair": 0.5
   },
   "torpedo": {
    "accel": 220,
@@ -388,6 +392,84 @@
      0,
      -2.4
     ]
+   }
+  },
+  "bandit": {
+   "about": "The raider's escort fighters (weapons/bandits.mjs): Rook fighters flown on the same `Flight` as yours (the layout's `fighter`: mass, thrust, tanks, jets) by an AI pilot. `count` come with each raid, in `slots` (metres in the raider's frame; a third and fourth go twice as far out). `hull` (the cannon does `fighter.damage` a round) and the hit ellipsoid `size` about `centre`. Once the raider is on its firing passes and the carrier is inside `start` m they strafe her point defence: runs along her side `pass` m out, at `run` m/s past her (closing on the line at up to `close` m/s, `gain` per metre off it), each started `fire` + `lead` m short of the gun, firing from `fire` m, turning for the next `extend` m past the gun; `look` s ahead they keep `clearance` m off her hull. The nearest to your fighter inside `engage` m (and any you have hit) fights you, holding at about `stand` m. With a target in reach it only turns away to burn when its velocity is `shootSlack` m/s off what it wants; less than that its side jets take out. `bingo` (a fraction of either tank, the drive's or the jets') sends one back to the raider; at `clear` m from the carrier, leaving, it is gone. `jink`: inside `near` m of the carrier or your fighter, a `pop` s random pop on the side jets every `every` s (the jets' tank is small: held, they would empty it in a minute). Shooting, the side jets take out more than `trim` m/s of the velocity it wants across the nose. `gun`: rounds at `shell` m/s on top of its own velocity, one every `every` s in bursts of `burst` s with `pause` s between, `spread` per round and `err` (radians) per burst, gone after `range` m; a round within `radius` m of your fighter does `damage`, within `pdcRadius` m of a point defence gun takes `pdcDamage` off its 100, and through a spread radiator hurts it by `radiator`; the nose must be within `cone` radians of the lead to fire.",
+   "count": 2,
+   "hull": 90,
+   "size": [
+    6,
+    2,
+    5.5
+   ],
+   "centre": [
+    0,
+    0,
+    -1
+   ],
+   "slots": [
+    [
+     -110,
+     15,
+     60
+    ],
+    [
+     110,
+     -15,
+     60
+    ]
+   ],
+   "start": 4000,
+   "pass": 350,
+   "run": 200,
+   "gain": 0.15,
+   "close": 220,
+   "fire": 1500,
+   "lead": 700,
+   "extend": 1400,
+   "look": 5,
+   "clearance": 120,
+   "engage": 6000,
+   "stand": 700,
+   "shootSlack": 60,
+   "bingo": 0.2,
+   "clear": 6000,
+   "jink": {
+    "every": [
+     0.6,
+     1.6
+    ],
+    "pop": 0.3,
+    "near": 2200
+   },
+   "trim": 4,
+   "gun": {
+    "shell": 1100,
+    "every": 0.11,
+    "burst": [
+     0.6,
+     1.4
+    ],
+    "pause": [
+     0.8,
+     2
+    ],
+    "spread": 0.004,
+    "err": 0.006,
+    "range": 1800,
+    "radius": 3,
+    "damage": [
+     2,
+     4
+    ],
+    "pdcRadius": 7,
+    "pdcDamage": [
+     10,
+     16
+    ],
+    "radiator": 0.01,
+    "cone": 0.03
    }
   },
   "brace": {
