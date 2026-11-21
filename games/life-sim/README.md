@@ -16,17 +16,38 @@ the cheek and a wedding; nobody ages or dies.
   do with it; what you pick goes on the to-do list at the bottom.
 - **Drag** to look around; scroll to zoom. Walls drop when they are in the way.
 - The clock (top left) has pause and three speeds. **Buy things** opens the shop.
-- The places bar at the top switches between Home, Work, the Park and the Town.
+- The places bar at the top switches between Home, Work, the Park and **the street** (each new game names its own). Walk down it, click a
+  house's door to knock, go to a party (or gatecrash it), or look round a house for sale; 🗺️ opens the town map.
 - **Free will** (bottom left) lets your Sim choose for itself when you have nothing planned.
-- The game saves in this browser as you play. The start screen offers to carry on or begin again.
+- A new game starts with **Make your Sim** (traits, school year, birthday), then how the life begins and what your Sim
+  dreams of. The game saves in this browser as you play. The start screen offers to carry on or begin again.
 
 The work questions are maths, French, English, science, history and geography, pitched at a school year you choose in
-Settings (French school years, CP to 5e: ages 6 to 12).
+Settings (French school years, CP to 5e: ages 6 to 12). At the boulangerie the maths is about baking.
 
 ## State
 
-Playable end to end, built over fourteen rounds of play-testing on a laptop and a tablet. Not done: the tablet needs a measured performance pass for big parties, a double bed for two, inside walls for
-bigger houses, a walk-round furniture shop.
+Playable end to end, built over fourteen rounds of play-testing on a laptop and a tablet, plus a fifteenth: Sunny Lane
+as a street to walk down. Not done: the tablet needs a measured performance pass for big parties (and the street), a
+inside walls for bigger houses, a walk-round furniture shop. A couple who live together share a double bed (from the
+shop) and sleep side by side. Round 16 (see [ROADMAP.md](ROADMAP.md)): every new game has its own town (street name,
+houses, prices, neighbours), a choice of five ways to begin (or "surprise me"), and Sims with three personality traits
+and favourite things. Phase 2: each Sim has a dream to work towards (a big family, the top of the career, a dream
+house, the most friends, master chef), three small wishes on screen, happy points to spend on perks, things and a new
+trait, and a Life story of the big moments. Phase 3: things happen (a few small events a day, each a card with choices:
+the loo breaks, a cat at the door, a birthday party, a talent show), the town's people phone and knock, and every day
+has its weather (rain hides the ducks; snow brings snowmen). Phase 4: the town lives without you (its people make
+friends, fall in love, marry, have babies and move house; houses go on and off the market; new people move in), a
+notice board on the street says what changed, and the town's people come over to chat, joke, flirt or tease. Phase 5:
+seven skills learnt from things at home (cooking, fitness, painting, music, gardening, handiness, charm), faster or
+slower by trait; paintings, vegetables, busking and odd jobs bring in a little money; three new careers (café chef at a
+new café, scientist, vet at a new vet's), and later a baker at a French boulangerie-pâtisserie; a cat or a dog to adopt (the stray cat at the door, or the shelter by phone),
+to feed, play with and cuddle; and the artist dream. Phase 6: the calendar. Four seasons of a week each change the
+weather (snow in winter), the colours of the grass and trees, what grows in the planter, and what happens; everyone has
+a birthday (cake baked or bought, presents from friends, a party, and nobody gets older); the town has an event each
+season (a spring plant sale, a summer fair, an autumn bake-off, winter lights on the street) with stalls, the town's
+people and a contest for a rosette; and weekends bring lie-ins, trips to the park and friends, a market and a
+kick-about.
 
 ## Run it locally
 

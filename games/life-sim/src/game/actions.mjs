@@ -20,6 +20,8 @@
 //   travel     going somewhere else ('park', 'home'): walk to the door, and come out at that place's way in
 //   hand       round 10: what they hold in their right hand meanwhile (props.mjs: 'fork', 'book', 'phone'…)
 //   table      round 10: what stands on the table in front of them (sitting), or on the thing they use ('pan')
+//   bread      only there while the household has bread a baker brought home (the page)
+//   birthday   round 16, phase 6.2: only there on the birthday of someone in the household (the page: calendar.mjs)
 //   steps      round 10: one action in parts, each until a share of its time (`upTo`), with its own clip, `hand`,
 //              and `open` (a fridge's door open): take something out of the fridge, then eat it
 // Free will (life.mjs) scores offers by `gives` alone: what doing it would do for the Sim's needs.
@@ -39,11 +41,18 @@ export const OFFERS = {
   ],
   Kitchen_Fridge: [
     { id: 'snack', act: 'interact', minutes: 10, gives: { hunger: 110 }, steps: FROM_FRIDGE('sandwich') },
-    { id: 'juice', act: 'interact', minutes: 8, gives: { hunger: 30, fun: 25, bladder: -60 }, steps: FROM_FRIDGE('glass') }
+    { id: 'juice', act: 'interact', minutes: 8, gives: { hunger: 30, fun: 25, bladder: -60 }, steps: FROM_FRIDGE('glass') },
+    // A baker's bread brought home (work.mjs CAREERS.baker `home`): there while there is some (`bread`, the page).
+    { id: 'freshBread', act: 'interact', minutes: 12, gives: { hunger: 150, fun: 15 }, steps: FROM_FRIDGE('bread'), moodlet: 'freshBread', bread: true, icon: '🥖' }
   ],
-  Kitchen_Oven: [{ id: 'cook', act: 'interact', minutes: 30, gives: { fun: 8 }, then: { item: 'Chair_1', id: 'eat' }, advertises: { hunger: 160 }, table: 'pan' }],
+  Kitchen_Oven: [
+    { id: 'cook', act: 'interact', minutes: 30, gives: { fun: 8 }, then: { item: 'Chair_1', id: 'eat' }, advertises: { hunger: 160 }, table: 'pan' },
+    // Round 16, phase 6.2: a birthday cake, baked (or bought by phone, below), then a slice at the table.
+    { id: 'bakeCake', act: 'interact', minutes: 45, gives: { fun: 15 }, skill: { cooking: 1 }, then: { item: 'Chair_1', id: 'eatCake' }, table: 'pan', free: false, birthday: true, icon: '🎂' }
+  ],
   Chair_1: [
     { id: 'eat', act: 'sit', clip: 'mc_eat', hand: 'fork', table: 'plate', minutes: 25, gives: { hunger: 180 }, until: 'hunger', moodlet: 'tasty', offered: false },
+    { id: 'eatCake', act: 'sit', clip: 'mc_eat', hand: 'fork', table: 'cakePlate', minutes: 20, gives: { hunger: 90, fun: 60 }, moodlet: 'birthdayCake', offered: false, icon: '🍰' },
     { id: 'eatPizza', act: 'sit', clip: 'mc_eat', hand: 'pizzaSlice', table: 'pizzaPlate', minutes: 25, gives: { hunger: 200, fun: 50 }, until: 'hunger', moodlet: 'pizza', offered: false },
     { id: 'sitDown', act: 'sit', minutes: 30, gives: { energy: 3 } }
   ],
@@ -68,9 +77,42 @@ export const OFFERS = {
     // Round 8: money, and a job. A pizza is ordered on the phone and eaten at the table; looking for a job ends with
     // the jobs going on a card (page.mjs), where the player chooses.
     { id: 'orderPizza', act: 'self', clip: 'mc_phone', hand: 'phone', minutes: 8, gives: {}, advertises: { hunger: 200, fun: 50 }, cost: 25, free: false, then: { item: 'Chair_1', id: 'eatPizza' }, icon: '🍕' },
+    // Round 16, phase 6.2: on a birthday, a cake bought (BIRTHDAY.buy coins) and a party (the page's own: round 15).
+    { id: 'orderCake', act: 'self', clip: 'mc_phone', hand: 'phone', minutes: 8, gives: {}, cost: 25, free: false, then: { item: 'Chair_1', id: 'eatCake' }, birthday: true, icon: '🎂' },
+    { id: 'birthdayParty', act: 'self', clip: 'mc_phone', hand: 'phone', minutes: 10, gives: { social: 20 }, free: false, birthday: true, icon: '🥳' },
     { id: 'findJob', act: 'self', clip: 'mc_phone', hand: 'phone', minutes: 10, gives: {}, free: false, opens: 'jobs', icon: '💼' }
   ]
 };
+
+// Round 16, phase 6.3: the stalls at the town's events (calendar.mjs TOWN_EVENTS, world.mjs stallModel), by kind.
+// What costs is the household's to choose (free will spends no coins); the show is the contest (a skill's: the page
+// says how they did) and the stage, which anyone stops to watch.
+Object.assign(OFFERS, {
+  stall_plants: [
+    { id: 'buyPlant', act: 'interact', minutes: 10, gives: { fun: 25 }, cost: 8, free: false, moodlet: 'townEvent', icon: '🪴' },
+    { id: 'browseStall', act: 'interact', minutes: 15, gives: { fun: 20, social: 10 }, icon: '👀' }
+  ],
+  stall_cakes: [
+    { id: 'buySlice', act: 'interact', clip: 'mc_drink', hand: 'fork', minutes: 12, gives: { hunger: 70, fun: 20 }, cost: 4, free: false, icon: '🍰' },
+    { id: 'browseStall', act: 'interact', minutes: 15, gives: { fun: 20, social: 10 }, icon: '👀' }
+  ],
+  stall_treats: [
+    { id: 'buyTreat', act: 'interact', clip: 'mc_drink', minutes: 10, gives: { hunger: 35, fun: 35 }, cost: 3, free: false, icon: '🍭' },
+    { id: 'browseStall', act: 'interact', minutes: 15, gives: { fun: 20, social: 10 }, icon: '👀' }
+  ],
+  stall_cocoa: [
+    { id: 'buyCocoa', act: 'interact', clip: 'mc_drink', hand: 'mug', minutes: 12, gives: { hunger: 20, fun: 25, energy: 8 }, cost: 3, free: false, icon: '☕' },
+    { id: 'browseStall', act: 'interact', minutes: 15, gives: { fun: 20, social: 10 }, icon: '👀' }
+  ],
+  stall_games: [
+    { id: 'playHoopla', act: 'interact', minutes: 15, gives: { fun: 60 }, cost: 3, free: false, icon: '🎯' },
+    { id: 'watchShow', act: 'interact', clip: 'mc_talk', minutes: 20, gives: { fun: 30, social: 25 }, icon: '👏' }
+  ],
+  stall_show: [
+    { id: 'enterContest', act: 'interact', minutes: 30, gives: { fun: 30 }, free: false, icon: '🏅' },
+    { id: 'watchShow', act: 'interact', clip: 'mc_talk', minutes: 20, gives: { fun: 30, social: 25 }, icon: '👏' }
+  ]
+});
 
 // Round 9: the office (lifeOffice) and the park (lifePark).
 Object.assign(OFFERS, {
@@ -83,10 +125,21 @@ Object.assign(OFFERS, {
   officeSink: [{ id: 'hotChocolate', act: 'interact', clip: 'mc_drink', hand: 'mug', minutes: 8, gives: { hunger: 25, fun: 40 }, moodlet: 'cosy' }],
   // A rest when tired or bored, not instead of work.
   officeCouch: [{ id: 'rest', act: 'sit', minutes: 30, gives: { energy: 10, fun: 12 }, when: (n) => n.energy < 45 || n.fun < 40 }],
+  // Round 16, phase 5.3: the café's tables (world.mjs lifeCafe), served between the stations' questions, as a desk.
+  cafeTable: [{ id: 'serveTables', act: 'interact', clip: 'mc_talk', talk: true, minutes: 45, gives: { social: 15 }, bonus: () => 0.15, icon: '🍽️' }],
+  // Round 16, phase 5.4: the vet's kennels (world.mjs lifeVet), between questions, as the café's tables are.
+  // The boulangerie's till (the baker's work): serving between the bakes.
+  bakeryTill: [{ id: 'serveCustomers', act: 'interact', clip: 'mc_talk', talk: true, minutes: 45, gives: { social: 15 }, bonus: () => 0.15, icon: '🥖' }],
+  vetKennel: [{ id: 'tendPatients', act: 'interact', clip: 'Interact', minutes: 45, gives: { social: 10, fun: 10 }, bonus: () => 0.15, icon: '🐾' }],
   bench: [{ id: 'sitBench', act: 'sit', minutes: 30, gives: { energy: 4, fun: 20 } }],
   ducks: [{ id: 'feedDucks', act: 'interact', minutes: 20, gives: { fun: 90 }, moodlet: 'ducks', hand: 'bread' }],
   flowers: [{ id: 'smellFlowers', act: 'interact', minutes: 5, gives: { fun: 60 } }],
-  parkDance: [{ id: 'dance', act: 'dance', minutes: 45, gives: { fun: 70, energy: -8 }, until: 'fun', moodlet: 'danced' }],
+  parkDance: [
+    { id: 'dance', act: 'dance', minutes: 45, gives: { fun: 70, energy: -8 }, until: 'fun', moodlet: 'danced' },
+    // Round 16, phase 3.4: only in that weather (`weather`, weather.mjs): a snowman (it stays until the snow goes), puddles.
+    { id: 'buildSnowman', act: 'interact', clip: 'Interact', minutes: 40, gives: { fun: 85, energy: -6 }, moodlet: 'snowman', weather: 'snow', icon: '⛄' },
+    { id: 'splashPuddles', act: 'dance', minutes: 20, gives: { fun: 75, hygiene: -12 }, moodlet: 'splashy', weather: 'rain', icon: '💦' }
+  ],
   // Round 10: what can be bought (shop.mjs). The telescope: fun, and science at the same rate as studying. The chest of
   // drawers: a new look (clothes and hair; the page's card, `opens: 'look'`), never free will's.
   telescope: [{ id: 'stargaze', act: 'interact', minutes: 45, gives: { fun: 50 }, skill: { science: 1 }, icon: '🔭' }],
@@ -108,8 +161,18 @@ Object.assign(OFFERS, {
     { id: 'goHome', act: 'travel', travel: 'home', minutes: 1, gives: {}, free: false, icon: '🏠', away: true },
     { id: 'goPark', act: 'travel', travel: 'park', minutes: 1, gives: {}, free: false, icon: '🌳' }
   ],
-  busStop: [{ id: 'goHome', act: 'travel', travel: 'home', minutes: 1, gives: {}, free: false, icon: '🏠' }]
+  busStop: [{ id: 'goHome', act: 'travel', travel: 'home', minutes: 1, gives: {}, free: false, icon: '🏠' }],
+  // Round 15: Sunny Lane's bus stop, to the park (and back to your own door). The houses' doors on the street are the
+  // page's (who lives there, a party, for sale: page.mjs openDoorMenu).
+  streetBus: [
+    { id: 'goPark', act: 'travel', travel: 'park', minutes: 1, gives: {}, free: false, icon: '🌳' },
+    { id: 'goHome', act: 'travel', travel: 'home', minutes: 1, gives: {}, free: false, icon: '🏠' }
+  ]
 });
+
+// Round 15: a double bed (shop.mjs bigBed): each side sleeps and naps as a single bed does. Whose side is whose is the
+// page's (shareBeds); free will leaves the other side of someone's bed to their partner (life.mjs `score`).
+OFFERS.doubleBed = OFFERS.Bed_Single;
 
 const night = (h) => h >= 22 || h < 6;
 
@@ -119,7 +182,7 @@ export const offerById = (itemName, id) => (OFFERS[itemName] ?? []).find((o) => 
 // The icon an action shows in the to-do list: the need it is mostly for.
 export function offerIcon(offer, needIcon) {
   if (offer.icon) return offer.icon;
-  if (offer.skill) return '🔬';
+  if (offer.skill?.science) return '🔬';
   if (offer.act === 'walk') return '👣';
   const [best] = Object.entries(offer.advertises ?? offer.gives ?? {}).sort((a, b) => b[1] - a[1]);
   return best ? needIcon(best[0]) : '•';

@@ -13,6 +13,16 @@
 //   work       how the needs fall at work (`slows`: they use the loo there, and the office has no loo to show), as the
 //              actions.mjs offers say it
 //   levels     lowest first: `pay` a day, `days` (days at work that fill the promotion bar on their own)
+// Round 16, phase 5.3 (more careers):
+//   place      where the work is (the page's place, built the first time someone has the job): 'office' if not said
+//   stations   the work stations there, by school subject (world.mjs STATIONS): all six if not said. Their names are
+//              the career's (strings.mjs `station.<career>.<subject>`), the questions the school year's
+//   learns     skill points each right answer gives too (skills.mjs: a café chef learns cooking)
+//   skills     true: only in a game with skills on (a test URL needs ?skills=1)
+//   helps      a skill that makes the work go better: each right answer fills the promotion bar this much more a level
+//              of it ({ cooking: 0.08 }: a baker at cooking 5 fills it 40% faster)
+//   home       what they bring home at the end of the day (the page: `bread`, loaves for the fridge; on a birthday in
+//              the household, the birthday cake instead)
 export const CAREERS = {
   office: {
     icon: '🏢',
@@ -29,6 +39,98 @@ export const CAREERS = {
       { id: 'manager', pay: 210, days: 5 },
       { id: 'boss', pay: 280 }
     ]
+  },
+  // The café chef: Wednesday to Sunday (the weekend is the café's busy time), late morning to late afternoon, at the
+  // café (world.mjs lifeCafe). Pay a little under the office's, and cooking learnt at every right answer.
+  cafe: {
+    icon: '☕',
+    skills: true,
+    place: 'cafe',
+    days: [2, 3, 4, 5, 6],
+    leave: 10 * 60 + 30,
+    starts: 11 * 60,
+    ends: 17 * 60,
+    work: { id: 'work', slows: { hunger: 0.7, energy: 1, bladder: 0, hygiene: 0.8, fun: 0.9, social: 0.8 } },
+    stations: ['maths', 'science', 'geography', 'english'],
+    learns: { cooking: 0.3 },
+    levels: [
+      { id: 'kitchenHelper', pay: 50, days: 3 },
+      { id: 'commis', pay: 75, days: 4 },
+      { id: 'cook', pay: 105, days: 4 },
+      { id: 'sousChef', pay: 145, days: 5 },
+      { id: 'headChef', pay: 200, days: 5 },
+      { id: 'starChef', pay: 260 }
+    ]
+  },
+  // The scientist: in the office building (its lab bench, the number cruncher, the map table, the archive), later in
+  // the day than the office (10:00 to 16:00), Monday to Friday. No new place: the cheapest on the tablet.
+  scientist: {
+    icon: '🧪',
+    skills: true,
+    place: 'office',
+    days: [0, 1, 2, 3, 4],
+    leave: 9 * 60 + 30,
+    starts: 10 * 60,
+    ends: 16 * 60,
+    work: { id: 'work', slows: { hunger: 0.7, energy: 1, bladder: 0, hygiene: 0.8, fun: 0.9, social: 0.8 } },
+    stations: ['science', 'maths', 'geography', 'history'],
+    levels: [
+      { id: 'labAssistant', pay: 55, days: 3 },
+      { id: 'technician', pay: 80, days: 4 },
+      { id: 'researcher', pay: 115, days: 4 },
+      { id: 'seniorResearcher', pay: 155, days: 5 },
+      { id: 'labHead', pay: 205, days: 5 },
+      { id: 'professor', pay: 275 }
+    ]
+  },
+  // Round 16, phase 5.4: the vet, at the vet's (world.mjs lifeVet), Tuesday to Saturday (pets' owners bring them on a
+  // Saturday), 9:00 to 15:00. Check-ups and care: no animal there is ill or hurt. Talking to the owners all day, a vet
+  // gets more charming at every right answer.
+  vet: {
+    icon: '🐾',
+    skills: true,
+    place: 'vet',
+    days: [1, 2, 3, 4, 5],
+    leave: 8 * 60 + 30,
+    starts: 9 * 60,
+    ends: 15 * 60,
+    work: { id: 'work', slows: { hunger: 0.7, energy: 1, bladder: 0, hygiene: 0.8, fun: 0.9, social: 0.8 } },
+    stations: ['maths', 'science', 'geography', 'english'],
+    learns: { charm: 0.2 },
+    levels: [
+      { id: 'kennelHelper', pay: 55, days: 3 },
+      { id: 'vetNurse', pay: 80, days: 4 },
+      { id: 'juniorVet', pay: 115, days: 4 },
+      { id: 'vet', pay: 155, days: 5 },
+      { id: 'seniorVet', pay: 210, days: 5 },
+      { id: 'headVet', pay: 285 }
+    ]
+  },
+  // The baker, at a French-style boulangerie-pâtisserie (world.mjs lifeBakery), Tuesday to Saturday (closed Sunday
+  // and Monday, as many are). A baker's hours: off at 05:30, baking from 06:00, home by 13:00. Five stations, one a
+  // bake (strings.mjs `station.baker.<subject>`), with bakery maths at the dough table (school/bakery.mjs). Cooking is
+  // learnt at every right answer, a good cook does better there, and fresh bread comes home.
+  baker: {
+    icon: '🥖',
+    skills: true,
+    place: 'bakery',
+    days: [1, 2, 3, 4, 5],
+    leave: 5 * 60 + 30,
+    starts: 6 * 60,
+    ends: 13 * 60,
+    work: { id: 'work', slows: { hunger: 0.7, energy: 1, bladder: 0, hygiene: 0.8, fun: 0.9, social: 0.8 } },
+    stations: ['maths', 'science', 'french', 'geography', 'english'],
+    learns: { cooking: 0.3 },
+    helps: { cooking: 0.08 },
+    home: { bread: 2 },
+    levels: [
+      { id: 'apprentice', pay: 50, days: 3 },
+      { id: 'baker', pay: 75, days: 4 },
+      { id: 'pastryCook', pay: 105, days: 4 },
+      { id: 'pastryChef', pay: 145, days: 5 },
+      { id: 'headBaker', pay: 200, days: 5 },
+      { id: 'masterBaker', pay: 265 }
+    ]
   }
 };
 
@@ -44,6 +146,9 @@ export const START_MONEY = 100;
 
 export const weekday = (minutes) => Math.floor(minutes / 1440) % 7;
 export const careerOf = (job) => CAREERS[job.career];
+// Where a career's work is (a place's name), and its stations.
+export const workPlaceOf = (job) => careerOf(job).place ?? 'office';
+export const stationsOf = (job, all) => careerOf(job).stations ?? all;
 export const levelOfJob = (job) => careerOf(job).levels[job.level];
 export const nextLevel = (job) => careerOf(job).levels[job.level + 1] ?? null;
 // Is `minutes` (game minutes since day 1 began) inside a work day's going-to-work window?

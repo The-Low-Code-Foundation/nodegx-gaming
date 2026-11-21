@@ -19,7 +19,10 @@ import * as THREE from 'three';
 import { NEEDS, NEED_IDS, MOODLETS, EMOTIONS, moodOf, urge, needIcon } from './needs.mjs';
 import { OFFERS, offersFor, offerById, offerIcon } from './actions.mjs';
 import { INTERACTIONS, bondOf, lockOf, chanceOf, applyOutcome } from './social.mjs';
-import { CAREERS, MOOD_AT_WORK, TASK, careerOf, levelOfJob, nextLevel, timeForWork } from './work.mjs';
+import { CAREERS, MOOD_AT_WORK, TASK, careerOf, levelOfJob, nextLevel, timeForWork, workPlaceOf } from './work.mjs';
+import { decayOf, likingOf, chanceBonus, alwaysOf, ignoredBy, afterOf, learnOf } from './traits.mjs';
+import { keenOn, shared, GIFT, SHARED } from './likes.mjs';
+import { EARNING } from './skills.mjs';
 
 // Game minutes a real second at each speed: paused, normal, fast, very fast.
 export const SPEEDS = [0, 1, 4, 12];
@@ -63,7 +66,22 @@ export class Life {
     this.card = null; // a card for the page to show: 'jobs' (the jobs going), { kind: 'station', station } (a task)
     this.today = { tasks: {}, coins: 0, right: 0 }; // what they did at work today, for the page
     this.carer = false; // a nanny (round 13): here only for the babies
+    this.traits = []; // round 16 (traits.mjs): three ids, who they are
+    this.likes = null; // round 16 (likes.mjs): { food, colour, activity, dislike }
+    // Round 16, phase 2 (goals.mjs, wants.mjs): what they have done (`count`), their dream, the dreams come true, and
+    // their happy points. `onDid(id)`: the page's, told each time (wants come true).
+    this.tally = {};
+    this.goal = null; // { id, step }
+    this.goalsDone = [];
+    this.points = 0;
+    this.wants = []; // { id, until }: wants.mjs
+    this.perks = []; // lasting bonuses bought with happy points (traits.mjs PERKS)
     sim.freeWill = false;
+  }
+
+  // Round 16: their traits and the perks bought with happy points, read together (traits.mjs).
+  get kit() {
+    return this.perks.length ? [...this.traits, ...this.perks] : this.traits;
   }
 
   // The others here with them, who can be talked to.
@@ -103,8 +121,9 @@ export class Life {
   goToWork() {
     const now = this.clock?.() ?? 0, day = Math.floor(now / 1440);
     if (!this.job || this.job.lastDay === day || !timeForWork(this.job, now) || this.shift) return;
-    const office = this.places.office;
-    if (!office) return;
+    // Round 16, phase 5.3: the career's own place (the café); the page builds it the first time (`needPlace`).
+    const to = workPlaceOf(this.job), office = this.places[to];
+    if (!office) return this.needPlace?.(to);
     const c = careerOf(this.job);
     if (!this.homePlace && (now % 1440) < c.leave + (this.lateBy ?? 0)) return;
     this.job.lastDay = day;
@@ -116,7 +135,7 @@ export class Life {
       return this.startShift(day * 1440 + c.ends);
     }
     if (this.doing) this.stop('work');
-    this.queue.unshift({ offer: { id: 'goToWork', act: 'travel', travel: 'office', minutes: 1, gives: {}, icon: '💼', free: false }, by: 'job', endsAt: day * 1440 + c.ends });
+    this.queue.unshift({ offer: { id: 'goToWork', act: 'travel', travel: to, minutes: 1, gives: {}, icon: c.icon === '🏢' ? '💼' : c.icon, free: false }, by: 'job', endsAt: day * 1440 + c.ends });
     this.say('ui.work.off');
   }
 
@@ -154,6 +173,7 @@ export class Life {
     job.level++;
     job.performance = 0;
     this.addMoodlet('promoted');
+    this.count('promoted');
     this.cheerLeft = 3;
     this.hearts.push({ icon: '🎉' });
     this.events.push({ key: 'ui.job.promoted', vars: { name: this.name, job: `job.${job.career}.${levelOfJob(job).id}`, pay: levelOfJob(job).pay } });
@@ -161,23 +181,26 @@ export class Life {
 
   // ---- places ----
   // In at a place's way in (its door, the park's bus stop), standing about. `away`: a colleague going home, out of sight.
-  arrive(place) {
+  // Round 15: a place with many ways in (the street: a door for each house, the bus stop) says which one someone coming
+  // from `from` comes out of (`doorFor`).
+  arrive(place, from = null) {
     this.sim.release();
     this.place = place;
     this.sim.home = place;
     this.sim.path = [];
+    const door = (from && place.doorFor?.(from)) || place.door;
     // Two coming in together (a date, the end of the day) stand side by side, not inside each other.
     const here = this.everyone.filter((o) => o !== this && o.present && o.place === place).map((o) => o.sim.position);
-    const spot = place.door.spot.clone();
+    const spot = door.spot.clone();
     for (const [dx, dz] of [[0, 0], [0.7, 0], [-0.7, 0], [0, 0.7], [0, -0.7], [0.7, 0.7], [-0.7, -0.7]]) {
-      const p = place.door.spot.clone().add(new THREE.Vector3(dx, 0, dz));
+      const p = door.spot.clone().add(new THREE.Vector3(dx, 0, dz));
       if (place.grid.free(p) && here.every((h) => h.distanceTo(p) > 0.6)) {
         spot.copy(p);
         break;
       }
     }
     this.sim.position.copy(spot);
-    this.sim.group.rotation.y = place.door.facing + Math.PI;
+    this.sim.group.rotation.y = door.facing + Math.PI;
     this.sim.finish();
   }
   travel(to) {
@@ -193,8 +216,23 @@ export class Life {
     }
     const place = this.places[to];
     if (!place) return;
-    this.arrive(place);
-    if (d?.offer.travel === 'office') this.startShift(d.endsAt);
+    // Round 15: from home to a house in the town (or to the park), the way is along the street (the page's `via`): out of
+    // this door onto Sunny Lane, a walk to the other door, and in. Still the one thing on the to-do list.
+    const hop = this.via?.(this.place, to);
+    const street = hop && this.places[hop];
+    if (street && street !== this.place && street !== place) {
+      const from = this.place;
+      this.arrive(street, from);
+      this.onArrive?.(this, street);
+      if (!d) return;
+      this.doing = d;
+      d.waiting = 0;
+      const door = street.doorTo?.(to) ?? street.door;
+      return this.sim.goTo(door.spot, () => this.doing === d && this.travel(to));
+    }
+    const from = this.place;
+    this.arrive(place, from);
+    if (d?.offer.id === 'goToWork') this.startShift(d.endsAt);
     // A date begins at the park: both have the moodlet, and three hours of it.
     if (to === 'park' && this.date) this.date.until ??= (this.clock?.() ?? 0) + 180;
     if (to === 'park' && this.date) this.addMoodlet('date');
@@ -214,8 +252,14 @@ export class Life {
     this.household.money += coins;
     this.today.coins += coins;
     this.today.right++;
-    if (job && nextLevel(job)) job.performance = Math.min(100, job.performance + TASK.bar);
+    // A skill the career needs makes the work go better (work.mjs `helps`: a baker who cooks well).
+    const helps = Object.entries(careerOf(job ?? { career: 'office' })?.helps ?? {}).reduce((k, [id, per]) => k + per * skillLevel(this.skills[id] ?? 0), 1);
+    if (job && nextLevel(job)) job.performance = Math.min(100, job.performance + TASK.bar * helps);
+    // A bake done right at the bakery counts as cooking (goals.mjs: the master chef dream).
+    if (job?.career === 'baker') this.count('bake');
     this.learn(station, TASK.skill);
+    // Round 16, phase 5.3: what the job teaches too (a café chef: cooking).
+    for (const [id, pts] of Object.entries(careerOf(job ?? { career: 'office' })?.learns ?? {})) this.learn(id, pts);
     return coins;
   }
   // A round of questions finished (`asked` of them, `right` right). `more`: they stay at the station for another round.
@@ -290,7 +334,10 @@ export class Life {
     const d = this.doing;
     const active = d?.started;
     const workSlows = this.shift && this.job ? careerOf(this.job).work.slows : null;
-    if (!this.carer) for (const n of NEEDS) this.needs[n.id] -= (n.decay * (active ? d.offer.slows?.[n.id] ?? 1 : 1) * (workSlows?.[n.id] ?? 1) * min) / 60;
+    // Round 16: their traits make some needs fall faster or slower (a foodie is hungry sooner; a night owl wide awake at
+    // midnight). Read every tick, so a trait changed is felt at once.
+    const hour = (now % 1440) / 60;
+    if (!this.carer) for (const n of NEEDS) this.needs[n.id] -= (n.decay * decayOf(this.kit, n.id, hour) * (active ? d.offer.slows?.[n.id] ?? 1 : 1) * (workSlows?.[n.id] ?? 1) * min) / 60;
     if (d?.other) this.faceThem(d, min);
     if (active) {
       d.minutes += min;
@@ -309,6 +356,8 @@ export class Life {
       for (const [id, rate] of Object.entries(d.offer.skill ?? {})) this.learn(id, (rate * min) / 60);
       // Seeing to the baby in the cot (round 12): the baby's needs, as `gives` is for their own.
       if (d.offer.baby && d.item?.baby && !d.item.baby.away) d.item.baby.care(d.offer.baby, min);
+      // Round 16, phase 5.4: and the pet's, at its basket (pets.mjs).
+      if (d.offer.pet && d.item?.pet) d.item.pet.care(d.offer.pet, min);
     } else if (d) {
       // On the way. A thing that can't be reached is given up after a while (not the way to work: they always get there).
       d.waiting += min;
@@ -318,11 +367,22 @@ export class Life {
     if (active && d.role === 'lead') this.converse(d, min);
     // The other side of an interaction ends when the one who started it does (complete / stop).
     const babyFull = d?.offer.babyUntil && d.item?.baby && d.item.baby.needs[d.offer.babyUntil] >= 99.5;
-    if (active && d.role !== 'partner' && (d.minutes >= (d.length ?? d.offer.minutes) || (d.offer.until && this.needs[d.offer.until] >= 99.5) || babyFull)) this.complete();
+    const petFull = d?.offer.petUntil && d.item?.pet && d.item.pet.needs[d.offer.petUntil] >= 99.5;
+    // Round 16, phase 6.4: a lie-in at the weekend (the page's `lieIn`): rested, and the night's sleep over, but still
+    // asleep until the morning's lie-in ends.
+    const lie = d?.offer.id === 'sleep' && !!this.lieIn?.();
+    const full = d?.offer.until && this.needs[d.offer.until] >= 99.5;
+    if (active && d.role !== 'partner' && ((!lie && (d.minutes >= (d.length ?? d.offer.minutes) || full)) || babyFull || petFull)) this.complete();
 
     for (const [id, left] of [...this.timed]) left - min <= 0 ? this.timed.delete(id) : this.timed.set(id, left - min);
     const had = new Set(this.moodlets);
-    this.moodlets = [...Object.keys(MOODLETS).filter((id) => MOODLETS[id].when?.(this.needs, had.has(id))), ...this.timed.keys()];
+    // Round 16: a trait's own moodlet (`trait`: only for them, while its `when` holds), and the need ones it ignores.
+    const ignored = ignoredBy(this.traits);
+    this.moodlets = [
+      ...Object.keys(MOODLETS).filter((id) => !MOODLETS[id].trait && !ignored.has(id) && MOODLETS[id].when?.(this.needs, had.has(id))),
+      ...alwaysOf(this.kit).filter((id) => MOODLETS[id] && (!MOODLETS[id].when || MOODLETS[id].when(this.needs, had.has(id)))),
+      ...this.timed.keys()
+    ];
     for (const id of this.moodlets) if (!had.has(id) && MOODLETS[id].when) this.think(MOODLETS[id].icon, `moodlet.${id}.text`);
     this.mood = moodOf(this.moodlets);
 
@@ -348,8 +408,7 @@ export class Life {
     this.idleFor = 0;
     const d = (this.doing = { ...entry, started: false, minutes: 0, waiting: 0, before: { ...this.needs } });
     this.log.push({ at: this.clock?.() ?? 0, what: offer.id, by: entry.by, why: entry.why ?? null, with: entry.other?.name ?? null });
-    if (offer.act === 'social') return this.approach(d);
-    // A thing that costs: paid now, or not done ("not enough coins").
+    // A thing that costs: paid now, or not done ("not enough coins"). Round 16: a present too (social).
     if (offer.cost) {
       if (this.household.money < offer.cost) {
         this.doing = null;
@@ -357,6 +416,7 @@ export class Life {
       }
       this.household.money -= offer.cost;
     }
+    if (offer.act === 'social') return this.approach(d);
     const started = () => {
       if (this.doing !== d) return;
       d.started = true;
@@ -365,7 +425,11 @@ export class Life {
     this.sim.walkClip = this.needs.energy < 20 || this.mood.emotion === 'sad' ? 'mc_walkSlow' : 'Walk_Loop';
     if (offer.act === 'walk') return this.sim.goTo(entry.point, () => this.doing === d && this.complete());
     // Somewhere else: to this place's way out, and in at the other's.
-    if (offer.act === 'travel') return this.place.door ? this.sim.goTo(this.place.door.spot, () => this.doing === d && this.travel(offer.travel)) : this.travel(offer.travel);
+    // Round 15: a place with many ways out (the street) says which door goes there (`doorTo`).
+    if (offer.act === 'travel') {
+      const door = this.place.doorTo?.(offer.travel) ?? this.place.door;
+      return door ? this.sim.goTo(door.spot, () => this.doing === d && this.travel(offer.travel)) : this.travel(offer.travel);
+    }
     // A work station: the page asks its questions once they are there; it ends when they are answered (taskDone).
     if (offer.task)
       return this.sim.use(item, { act: offer.act, clip: offer.clip, started: () => {
@@ -388,6 +452,11 @@ export class Life {
     const o = d.offer;
     if (o.opens) this.card = o.opens;
     if (o.moodlet && (!o.moodletIf || o.moodletIf(d.before))) this.addMoodlet(o.moodlet);
+    // Round 16, phase 5.2: a painting finished, a crop grown, coins earned (skills.mjs EARNING).
+    if (o.makes || o.grows || o.earn) this.earn(o, 1);
+    this.count(o.id);
+    // Round 16: what their traits make of it (a foodie's "yum", a clumsy Sim's "oops").
+    for (const a of afterOf(this.traits, o.id)) if (MOODLETS[a.moodlet] && (a.chance >= 1 || this.random() < a.chance)) this.addMoodlet(a.moodlet);
     if (o.babyAfter === 'sleep') d.item?.baby?.fallAsleep();
     if (o.then) {
       // Round 14: a stool or another chair will do, when there is no Chair_1 (anything that offers the same thing).
@@ -400,12 +469,59 @@ export class Life {
     this.sim.leave(() => this.sim.finish());
   }
 
+  // Round 16, phase 5.2: earning from skills (skills.mjs EARNING). The household's side earnings (`household.side`):
+  // the paintings not yet sold, the vegetables' growth, today's odd job, and all that has been earned so.
+  earn(o, share = 1) {
+    const side = this.household.side;
+    if (!side) return;
+    const lv = (id) => skillLevel(this.skills[id] ?? 0), today = Math.floor((this.clock?.() ?? 0) / 1440);
+    let coins = 0;
+    if (o.makes === 'painting') {
+      const worth = EARNING.paintings.worth(lv('painting'));
+      if (side.paintings.length < EARNING.paintings.most) side.paintings.push(worth);
+      this.events.push({ key: 'ui.earn.painted', vars: { name: this.name, n: side.paintings.length } });
+    }
+    // Round 16, phase 6.1: the season's crop (calendar.mjs SEASONS `crop`, the page's `household.crop`): faster in
+    // summer, slow in winter, worth more in autumn. No calendar: as phase 5.
+    const crop = this.household.crop ?? null;
+    if (o.grows && side.veg < 100 && side.vegDay !== today) {
+      side.veg = Math.min(100, side.veg + Math.round(EARNING.veg.grow(lv('gardening')) * (crop?.grow ?? 1)));
+      side.vegDay = today;
+      if (side.veg >= 100) this.events.push(crop ? { key: 'ui.earn.cropRipe', vars: { name: this.name, crop: `crop.${crop.id}` } } : { key: 'ui.earn.ripe', vars: { name: this.name } });
+    }
+    if (o.earn === 'paintings' && side.paintings.length) {
+      const n = side.paintings.length;
+      coins = side.paintings.reduce((a, b) => a + b, 0);
+      side.paintings = [];
+      for (let k = 0; k < n; k++) this.count('paintingSold');
+      this.events.push({ key: 'ui.earn.sold', vars: { name: this.name, n, coins } });
+    }
+    if (o.earn === 'veg' && side.veg >= 100) {
+      coins = Math.round(EARNING.veg.worth(lv('gardening')) * (crop?.worth ?? 1));
+      side.veg = 0;
+      this.events.push(crop ? { key: 'ui.earn.crop', vars: { name: this.name, coins, crop: `crop.${crop.id}` } } : { key: 'ui.earn.veg', vars: { name: this.name, coins } });
+    }
+    if (o.earn === 'busk') {
+      coins = Math.round(EARNING.busk.tips(lv('music')) * (o.minutes / 60) * Math.min(1, share));
+      if (coins) this.events.push({ key: 'ui.earn.busk', vars: { name: this.name, coins } });
+    }
+    if (o.earn === 'oddJob' && side.oddJob && !side.oddJob.done) {
+      coins = EARNING.oddJob.pay(lv('handiness'));
+      side.oddJob.done = true;
+      this.events.push({ key: 'ui.earn.oddJob', vars: { name: this.name, coins } });
+    }
+    this.household.money += coins;
+    side.earned += coins;
+  }
+
   stop(reason) {
     const d = this.doing;
     if (!d) return;
     // An interaction cut short: what they managed so far counts, and the other one is let go too.
     if (d.other) return this.endTogether(d, d.started ? d.minutes / d.offer.minutes : 0, reason);
     this.doing = null;
+    // Busking cut short: the tips for the time played.
+    if (d.offer.earn === 'busk' && d.started) this.earn(d.offer, d.minutes / d.offer.minutes);
     // Woken before they had slept enough (not by the alarm for work).
     if (d.offer.act === 'sleep' && d.started && this.needs.energy < 70 && reason !== 'work') this.addMoodlet('wokenUp');
     // A station's task given up (the card closed by a need that can't wait): the card goes too.
@@ -489,7 +605,11 @@ export class Life {
     d.started = p.started = true;
     d.before = { ...this.needs };
     p.before = { ...d.other.needs };
-    d.ok = this.random() < chanceOf(d.offer, bondOf(this, d.other), d.other.mood.emotion);
+    // Round 16: and their traits (a joker's jokes land; a grumpy Sim is hard to please), within the usual bounds.
+    const base = chanceOf(d.offer, bondOf(this, d.other), d.other.mood.emotion);
+    // Round 16, phase 5: charm (skills.mjs) makes a friendly thing a little likelier to go well, a point a level.
+    const charm = d.offer.skill?.charm ? skillLevel(this.skills.charm ?? 0) * 0.01 : 0;
+    d.ok = this.random() < (base >= 1 ? 1 : Math.max(0.05, Math.min(0.97, base + charm + chanceBonus(this.kit, d.other.kit ?? [], d.offer.id))));
     // Wedding clothes on (round 12), for as long as it goes on.
     if (d.offer.dressUp) this.onDressUp?.([this, d.other], true);
     d.beat = 0;
@@ -551,7 +671,10 @@ export class Life {
     const ix = ld.offer, ok = ld.ok;
     // On a date in the park, a romance grows half as fast again.
     const dating = lead.date?.with === partner && lead.place === lead.places.park;
+    const knew = bondOf(lead, partner).friendship >= GIFT.knows;
     const { was, now } = applyOutcome(ix, bondOf(lead, partner), ok, done * (dating && ix.romance ? 1.5 : 1));
+    if (ok && done >= 0.999 && ix.likes) lead.likeOutcome(ix, partner, knew);
+    if (ok && done >= 0.999) lead.count(ix.id);
     if (done >= 0.999) {
       const mine = ok ? ix.moodlet : 'failMoodlet' in ix ? ix.failMoodlet : 'awkward';
       const theirs = ok ? ix.partnerMoodlet : ix.partnerFailMoodlet;
@@ -563,9 +686,37 @@ export class Life {
       if (ok && ix.after === 'moveIn') lead.moveIn(partner);
       if (ok && ix.after === 'baby') lead.haveBaby(partner);
       if (ok && ix.after === 'marry') lead.marry(partner);
+      // Round 16, phase 5 (skills.mjs SOCIAL_CHARM): charm, for the one who started it.
+      if (ok && ix.skill) for (const [id, pts] of Object.entries(ix.skill)) lead.learn(id, pts * done);
     }
     for (const kind of ['friendship', 'romance'])
       if (now[kind] !== was[kind]) lead.events.push({ key: `ui.bond.${kind}`, vars: { a: lead.name, b: partner.name, level: `${kind}.${now[kind]}` } });
+  }
+
+  // Round 16 (likes.mjs): talking about favourite things went well: more if they love the same thing (and both feel
+  // it). A present: from a friend who knows them, their favourite, and they love it.
+  likeOutcome(ix, partner, knew) {
+    const bond = bondOf(this, partner);
+    if (ix.likes === 'shared') {
+      const both = shared(this.likes, partner.likes);
+      if (both.length) {
+        bond.friendship = Math.min(100, bond.friendship + SHARED.extra);
+        for (const l of [this, partner]) l.addMoodlet('kindred');
+        this.events.push({ key: 'ui.likes.shared', vars: { a: this.name, b: partner.name, thing: `like.${both[0].kind}.${both[0].id}` } });
+      } else if (partner.likes) this.events.push({ key: 'ui.likes.learned', vars: { a: this.name, b: partner.name, thing: `like.activity.${partner.likes.activity}` } });
+    }
+    if (ix.likes === 'gift' && knew && partner.likes) {
+      bond.friendship = Math.min(100, bond.friendship + GIFT.extra);
+      partner.addMoodlet('favouriteGift');
+      const kind = this.random() < 0.5 ? 'food' : 'colour';
+      this.events.push({ key: `ui.gift.${kind}`, vars: { a: this.name, b: partner.name, thing: `like.${kind}.${partner.likes[kind]}` } });
+    } else if (ix.likes === 'gift') this.events.push({ key: 'ui.gift.nice', vars: { a: this.name, b: partner.name } });
+  }
+
+  // Round 16: something done, by its id (an offer's, an interaction's, or the page's: 'go.park', 'hostParty', 'buy').
+  count(id) {
+    this.tally[id] = (this.tally[id] ?? 0) + 1;
+    this.onDid?.(this, id);
   }
 
   // ---- free will ----
@@ -579,8 +730,16 @@ export class Life {
     for (const item of [...this.place.items.filter((i) => i.spot && offersFor(i).length), null]) {
       if (item?.user && item.user !== this.sim) continue;
       if (item && item.owner && item.owner !== this) continue;
+      // Round 15: the other side of someone's double bed is their partner's (`partnerOf`, the page's), not anyone's.
+      const mate = item?.twin?.owner;
+      if (mate && !item.owner && (mate === this || !this.partnerOf?.(mate))) continue;
+      // A Sim with a bed of their own sleeps in it when it is here (a couple given a double bed left their single beds
+      // free, and the nearer one won).
+      if (item?.use?.act === 'sleep' && this.home && item !== this.home && !this.home.gone && this.place.items.includes(this.home)) continue;
       for (const offer of offersFor(item)) {
         if (offer.offered === false || offer.free === false || offer.cost || offer.travel || offer.task) continue;
+        // Round 16, phase 3: not now (the page's: a power cut, the weather).
+        if (this.offerOk && !this.offerOk(offer)) continue;
         if (this.carer && !offer.baby) continue;
         const gives = offer.advertises ?? offer.gives;
         if (only && !(gives[only] > 0)) continue;
@@ -593,12 +752,23 @@ export class Life {
           if (care < 0.05) continue;
           score += care * 1.5;
         }
+        // Round 16, phase 5.4: the pet's basket, only for a pet that needs it.
+        if (offer.pet) {
+          const care = item?.pet ? item.pet.relief(offer) : 0;
+          if (care < 0.05) continue;
+          score += care * 1.2;
+        }
         for (const [id, rate] of Object.entries(gives)) {
           const v = this.needs[id];
           score += urge(v) - urge(Math.min(100, v + (rate * offer.minutes) / 60));
         }
         // Studying gives nothing a body needs; a Sim in a good mood with nothing pressing likes to.
-        if (offer.skill && this.mood.emotion.endsWith('appy')) score += 0.04;
+        // (Round 16, phase 5: the subjects only, so the new skills leave seeded free will as it was.)
+        if (offer.skill?.science && this.mood.emotion.endsWith('appy')) score += 0.04;
+        // Round 16: what they like doing (traits.mjs `likes`), and their favourite (likes.mjs).
+        score *= likingOf(this.traits, offer.id) * keenOn(this.likes, offer.id);
+        // Round 16, phase 6: the season's and the weekend's leanings (the page's, calendar.mjs).
+        if (this.lean) score *= this.lean(offer.id, hour);
         const far = item ? item.spot.distanceTo(this.sim.position) : 0;
         options.push({ offer, item, score: score / (1 + far / 8) });
       }
@@ -618,6 +788,7 @@ export class Life {
         // Better with someone they like (and worth it however long it takes: a chat is not "far"); on a date, with them.
         score *= 1 + Math.max(0, bond.friendship) / 100;
         if (this.date?.with === other) score *= 2;
+        score *= likingOf(this.traits, ix.id, true);
         options.push({ offer: ix, other, score: score / (1 + other.sim.position.distanceTo(this.sim.position) / 8) });
       }
     }
@@ -635,7 +806,7 @@ export class Life {
     const relief = ([id, rate]) => urge(this.needs[id]) - urge(Math.min(100, this.needs[id] + (rate * pick.offer.minutes) / 60));
     // Work at the desk helps no need (round 9): no reason but the job, and its own icon.
     const why = only ?? Object.entries(pick.offer.advertises ?? pick.offer.gives).sort((a, b) => relief(b) - relief(a))[0]?.[0] ?? null;
-    this.think(pick.offer.skill ? '🔬' : why ? needIcon(why) : pick.offer.icon ?? '💭', `action.${pick.offer.id}`);
+    this.think(pick.offer.skill?.science ? '🔬' : pick.offer.skill && pick.offer.icon ? pick.offer.icon : why ? needIcon(why) : pick.offer.icon ?? '💭', `action.${pick.offer.id}`);
     this.start({ offer: pick.offer, item: pick.item, other: pick.other, by: 'self', why });
   }
 
@@ -676,6 +847,7 @@ export class Life {
   }
 
   learn(skill, points) {
+    points *= learnOf(this.kit, skill);
     const was = skillLevel(this.skills[skill] ?? 0);
     this.skills[skill] = (this.skills[skill] ?? 0) + points;
     const now = skillLevel(this.skills[skill]);
@@ -683,6 +855,8 @@ export class Life {
       this.addMoodlet('learned');
       this.events.push({ key: 'ui.levelUp', vars: { name: this.name, level: now, skill: `skill.${skill}` } });
       this.cheerLeft = 3;
+      // Round 16, phase 5: a level up is something done (wishes, dreams).
+      this.count('levelUp');
     }
   }
 

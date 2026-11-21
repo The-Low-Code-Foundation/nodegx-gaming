@@ -29,7 +29,8 @@ export const SHOP = [
   { id: 'shelf', kind: 'lovely', icon: '🧺', price: 40, model: 'Shelf_Large', fit: 1.8, use: { decor: true }, beauty: 1 },
   // Round 14 (the brief, 11-11: "be able to move, delete or add furniture … a furniture shop"): the flat's own things
   // are in the shop too (so anything in a home can be moved, sold or put away, and bought again), and more besides.
-  { id: 'bigBed', kind: 'sleep', icon: '🛏️', price: 200, model: 'Bed_King', fit: 0.7, use: { act: 'sleep', label: 'Sleep', offers: 'Bed_Single' }, beauty: 1 },
+  // Round 15: the big bed is a double bed: two sides (world.mjs twinOf), one for each of a couple (page.mjs shareBeds).
+  { id: 'bigBed', kind: 'sleep', icon: '🛏️', price: 200, model: 'Bed_King', fit: 0.7, use: { act: 'sleep', label: 'Sleep', offers: 'doubleBed', double: true }, beauty: 1 },
   { id: 'nightstand2', kind: 'sleep', icon: '🗄️', price: 25, model: 'NightStand_2', fit: 0.55, use: { decor: true }, beauty: 1 },
   { id: 'smallCouch', kind: 'sit', icon: '🛋️', price: 70, model: 'Couch_Small1', fit: 0.85, use: { act: 'sit', label: 'Sit', offers: 'Couch_Medium1' } },
   { id: 'cornerCouch', kind: 'sit', icon: '🛋️', price: 180, model: 'Couch_L', fit: 0.85, use: { act: 'sit', label: 'Sit', offers: 'Couch_Medium1' }, beauty: 1 },
@@ -57,7 +58,13 @@ export const SHOP = [
   { id: 'bushyPlant', kind: 'lovely', icon: '🌿', price: 25, model: 'Houseplant_5', fit: 0.8, use: { decor: true, trim: 0.5 }, beauty: 1 },
   { id: 'flowerPot', kind: 'lovely', icon: '🌺', price: 25, model: 'Houseplant_7', fit: 0.7, use: { decor: true, trim: 0.5 }, beauty: 1 },
   { id: 'lamp2', kind: 'lovely', icon: '💡', price: 35, model: 'Light_Floor3', fit: 1.5, use: { decor: true, trim: 0.6 }, beauty: 1 },
-  { id: 'lamp3', kind: 'lovely', icon: '🏮', price: 35, model: 'Light_Stand1', fit: 1.5, use: { decor: true, trim: 0.6 }, beauty: 1 }
+  { id: 'lamp3', kind: 'lovely', icon: '🏮', price: 35, model: 'Light_Stand1', fit: 1.5, use: { decor: true, trim: 0.6 }, beauty: 1 },
+  // Round 16, phase 5 (skills.mjs): things for the new skills, made in code (world.mjs MADE). `skills`: only in the
+  // shop when the skills are on (a real game, or `?skills=1`).
+  { id: 'easel', kind: 'learn', icon: '🎨', price: 70, made: 'EASEL', fit: 1.72, use: { act: 'interact', label: 'Paint', offers: 'easel' }, beauty: 1, skills: true },
+  { id: 'keyboard', kind: 'learn', icon: '🎹', price: 110, made: 'KEYBOARD', fit: 0.87, use: { act: 'interact', label: 'Play music', offers: 'keyboard' }, skills: true },
+  { id: 'planter', kind: 'learn', icon: '🌱', price: 45, made: 'PLANTER', fit: 0.68, use: { act: 'interact', label: 'Garden', offers: 'planter' }, beauty: 1, skills: true },
+  { id: 'workbench', kind: 'learn', icon: '🔧', price: 90, made: 'WORKBENCH', fit: 1.65, use: { act: 'interact', label: 'Tinker', offers: 'workbench' }, skills: true }
 ];
 
 export const shopItem = (id) => SHOP.find((s) => s.id === id);
@@ -80,7 +87,9 @@ export const CAMP_BED = { id: 'campBed', made: 'CAMP_BED', fit: 0.53, use: { act
 // A cot comes with a baby (round 12, baby.mjs): placed by itself, saved with what was bought, moved like it, never sold.
 export const COT = { id: 'cot', icon: '👶', made: 'COT', fit: 1.55, use: { act: 'interact', label: 'Baby', offers: 'cot' } };
 // Any thing a home can hold, by its id: the shop's, the camp bed, a cot.
-export const kindOf = (id) => (id === 'campBed' ? CAMP_BED : id === 'cot' ? COT : shopItem(id));
+// Round 16, phase 5.4: the pet's basket and bowl (pets.mjs), placed when a pet comes home, moved like a cot, never sold.
+export const PET_BED = { id: 'petBed', icon: '🧺', made: 'PET_BED', fit: 0.3, use: { act: 'interact', label: 'Pet', offers: 'petBed' } };
+export const kindOf = (id) => (id === 'campBed' ? CAMP_BED : id === 'cot' ? COT : id === 'petBed' ? PET_BED : shopItem(id));
 // Sold back for half.
 export const sellPrice = (s) => Math.floor(s.price / 2);
 // A new look at the chest of drawers (clothes and hair; the body is chosen once, when the Sim is made).

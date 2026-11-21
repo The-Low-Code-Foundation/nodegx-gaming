@@ -67,7 +67,72 @@ export const MOODLETS = {
   justMarried: { emotion: 'happy', weight: 3, icon: '💍', minutes: 2880 },
   // Round 14: a party (at a friend's, or yours), and turning up at one nobody asked you to.
   party: { emotion: 'happy', weight: 2, icon: '🎉', minutes: 300 },
-  gatecrasher: { emotion: 'happy', weight: 1, icon: '🙊', minutes: 240 }
+  gatecrasher: { emotion: 'happy', weight: 1, icon: '🙊', minutes: 240 },
+  // Round 16: from a Sim's traits (traits.mjs). `trait`: only someone with the trait has it (`always`, while `when`
+  // holds); the rest come after doing something they love (`after`).
+  sunny: { emotion: 'happy', weight: 1, icon: '☀️', trait: true },
+  grumbly: { emotion: 'cross', weight: 1, icon: '😒', trait: true, when: (n) => n.fun < 45 },
+  yum: { emotion: 'happy', weight: 1, icon: '🤤', minutes: 180 },
+  cosyNap: { emotion: 'happy', weight: 1, icon: '😪', minutes: 120 },
+  pumped: { emotion: 'happy', weight: 1, icon: '💪', minutes: 180 },
+  goodBook: { emotion: 'happy', weight: 1, icon: '📖', minutes: 180 },
+  quietTime: { emotion: 'happy', weight: 1, icon: '🤫', minutes: 120 },
+  spotless: { emotion: 'happy', weight: 1, icon: '✨', minutes: 180 },
+  starry: { emotion: 'happy', weight: 1, icon: '🌠', minutes: 180 },
+  oops: { emotion: 'uncomfortable', weight: 1, icon: '🤭', minutes: 30 },
+  // Round 16: likes (likes.mjs): two who love the same thing, a present, their favourite.
+  kindred: { emotion: 'happy', weight: 2, icon: '💞', minutes: 240 },
+  niceGift: { emotion: 'happy', weight: 1, icon: '🎁', minutes: 240 },
+  favouriteGift: { emotion: 'happy', weight: 2, icon: '🥰', minutes: 480 },
+  // Round 16, phase 2: a dream come true (goals.mjs), a wish come true (wants.mjs).
+  dreamComeTrue: { emotion: 'happy', weight: 3, icon: '🏆', minutes: 2880 },
+  wishCameTrue: { emotion: 'happy', weight: 1, icon: '✨', minutes: 120 },
+  // Round 16, phase 3: things that happen (events.mjs).
+  cake: { emotion: 'happy', weight: 1, icon: '🍰', minutes: 180 },
+  crunchy: { emotion: 'happy', weight: 1, icon: '🍞', minutes: 60 },
+  foundCoins: { emotion: 'happy', weight: 1, icon: '🪙', minutes: 120 },
+  goodDeed: { emotion: 'happy', weight: 1, icon: '😇', minutes: 240 },
+  sorted: { emotion: 'happy', weight: 1, icon: '👍', minutes: 90 },
+  handy: { emotion: 'happy', weight: 2, icon: '🔧', minutes: 360 },
+  soggy: { emotion: 'uncomfortable', weight: 1, icon: '🧦', minutes: 45 },
+  candlelit: { emotion: 'happy', weight: 1, icon: '🕯️', minutes: 180 },
+  spooky: { emotion: 'happy', weight: 1, icon: '👻', minutes: 180 },
+  brave: { emotion: 'happy', weight: 1, icon: '🦸', minutes: 240 },
+  catCuddle: { emotion: 'happy', weight: 2, icon: '🐱', minutes: 240 },
+  // Round 16, phase 5.4 (pets.mjs): playing with the pet, a cuddle with it, and a happy pet at home.
+  petPlay: { emotion: 'happy', weight: 1, icon: '🧶', minutes: 180 },
+  petCuddle: { emotion: 'happy', weight: 1, icon: '💕', minutes: 180 },
+  happyPet: { emotion: 'happy', weight: 1, icon: '🐾', minutes: 90 },
+  music: { emotion: 'happy', weight: 1, icon: '🎶', minutes: 120 },
+  invited: { emotion: 'happy', weight: 1, icon: '✉️', minutes: 600 },
+  weddingGuest: { emotion: 'happy', weight: 2, icon: '💒', minutes: 600 },
+  standingOvation: { emotion: 'happy', weight: 3, icon: '👏', minutes: 1440 },
+  gaveItAGo: { emotion: 'happy', weight: 1, icon: '🎤', minutes: 360 },
+  picnic: { emotion: 'happy', weight: 2, icon: '🧺', minutes: 300 },
+  birdsong: { emotion: 'happy', weight: 1, icon: '🐦', minutes: 120 },
+  helpedOut: { emotion: 'happy', weight: 2, icon: '🤝', minutes: 360 },
+  juicyNews: { emotion: 'happy', weight: 1, icon: '🗞️', minutes: 120 },
+  // Round 16, phase 4: good news about a friend (townlife.mjs, the notice board).
+  gladForThem: { emotion: 'happy', weight: 1, icon: '🥰', minutes: 360 },
+  // Round 16, phase 3.4: the weather's.
+  snowman: { emotion: 'happy', weight: 2, icon: '⛄', minutes: 300 },
+  splashy: { emotion: 'happy', weight: 1, icon: '💦', minutes: 120 },
+  singingInRain: { emotion: 'happy', weight: 2, icon: '☔', minutes: 180 },
+  rainbow: { emotion: 'happy', weight: 2, icon: '🌈', minutes: 240 },
+  brrr: { emotion: 'uncomfortable', weight: 1, icon: '🥶', minutes: 30 },
+  iceCream: { emotion: 'happy', weight: 1, icon: '🍦', minutes: 120 },
+  // Round 16, phase 6: the calendar's (calendar.mjs).
+  blossom: { emotion: 'happy', weight: 1, icon: '🌸', minutes: 180 },
+  leafPile: { emotion: 'happy', weight: 1, icon: '🍂', minutes: 180 },
+  carols: { emotion: 'happy', weight: 2, icon: '🎶', minutes: 240 },
+  birthday: { emotion: 'happy', weight: 3, icon: '🎂', minutes: 1440 },
+  birthdayCake: { emotion: 'happy', weight: 2, icon: '🍰', minutes: 360 },
+  freshBread: { emotion: 'happy', weight: 1, icon: '🥖', minutes: 240 },
+  present: { emotion: 'happy', weight: 1, icon: '🎁', minutes: 360 },
+  lieIn: { emotion: 'happy', weight: 1, icon: '😌', minutes: 180 },
+  townEvent: { emotion: 'happy', weight: 2, icon: '🎡', minutes: 300 },
+  rosette: { emotion: 'happy', weight: 2, icon: '🏅', minutes: 600 },
+  market: { emotion: 'happy', weight: 1, icon: '🧺', minutes: 180 }
 };
 
 export const EMOTIONS = {

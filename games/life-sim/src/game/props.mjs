@@ -45,7 +45,11 @@ const M = {
   skin: std(0xf1c6a8, { roughness: 0.6 }),
   cheek: std(0xf2a0a0, { roughness: 0.7 }),
   eye: std(0x2a2020),
-  mouth: std(0xd06a72)
+  mouth: std(0xd06a72),
+  sponge: std(0xe8c48a, { roughness: 0.8 }),
+  icing: std(0xf7c6d9, { roughness: 0.4 }),
+  candle: std(0x7fb8e8),
+  flame: new THREE.MeshBasicMaterial({ color: 0xffc94a })
 };
 
 // Each prop in metres, made to sit in a right hand whose palm faces the body's middle: its origin is where the fingers
@@ -71,6 +75,11 @@ const PROPS = {
   // On a table or a hob.
   plate: () => group(mesh(new THREE.CylinderGeometry(0.12, 0.09, 0.015, 24), M.white), mesh(new THREE.SphereGeometry(0.06, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2), M.stew, [0, 0.008, 0]), mesh(new THREE.SphereGeometry(0.03, 10, 8), M.lettuce, [0.05, 0.015, 0.03])),
   pizzaPlate: () => group(mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.012, 24), M.crust), mesh(new THREE.CylinderGeometry(0.135, 0.135, 0.014, 24), M.pizza, [0, 0.004, 0]), ...[[0.05, 0.03], [-0.06, 0.04], [0.02, -0.07], [-0.03, -0.02]].map(([x, z]) => mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.016, 10), M.pepperoni, [x, 0.006, z]))),
+  // A birthday cake (round 16, phase 6.2): pink icing, three candles lit.
+  cakePlate: () => group(
+    mesh(new THREE.CylinderGeometry(0.15, 0.12, 0.015, 24), M.white), mesh(new THREE.CylinderGeometry(0.11, 0.11, 0.07, 24), M.sponge, [0, 0.042, 0]), mesh(new THREE.CylinderGeometry(0.113, 0.113, 0.02, 24), M.icing, [0, 0.085, 0]),
+    ...[[0.04, 0], [-0.02, 0.035], [-0.02, -0.035]].flatMap(([x, z]) => [mesh(new THREE.CylinderGeometry(0.006, 0.006, 0.05, 8), M.candle, [x, 0.12, z]), mesh(new THREE.SphereGeometry(0.009, 8, 6), M.flame, [x, 0.152, z])])
+  ),
   // A baby's bottle of milk (round 12).
   bottle: () => group(mesh(new THREE.CylinderGeometry(0.028, 0.028, 0.12, 14), M.glass), mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.08, 14), M.white, [0, -0.015, 0]), mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.02, 14), M.teatRing, [0, 0.065, 0]), mesh(new THREE.ConeGeometry(0.014, 0.035, 10), M.teat, [0, 0.09, 0])),
   // A baby (round 12, baby.mjs): wrapped in a blanket of `colour` with a hood, lying on their back, along X with the

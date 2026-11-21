@@ -4,7 +4,8 @@
 // and the room, the Sims' "walls down"), the things a Sim can use and where it stands to use them, and a walk grid.
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { dressHome, dressHouse, dressOffice, dressPark, pondLife, lampGlow } from './dressing.mjs';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { dressHome, dressHouse, dressOffice, dressCafe, dressVet, dressBakery, dressPark, dressStreet, pondLife, lampGlow, streetLabel, seasonalScenery } from './dressing.mjs';
 import { kindOf } from './game/shop.mjs';
 
 const loader = new GLTFLoader();
@@ -26,6 +27,8 @@ async function unitModel(url) {
         const parts = [];
         root.traverse((o) => o.isMesh && parts.push({ geometry: o.geometry, material: o.material, matrix: fit.clone().multiply(o.matrixWorld) }));
         if (url.includes('/furniture/')) for (const p of parts) for (const m of [p.material].flat()) polish(m);
+        // Round 16, phase 6.1: the leaves the seasons recolour (dressing.mjs seasonLook).
+        if (url.includes('/scenery/')) seasonalScenery(url, parts.flatMap((p) => [p.material].flat()));
         return { parts, size: size.clone().divideScalar(size.y) };
       })
     );
@@ -143,6 +146,15 @@ const PHONE_BOX = madeModel([
 const blue = new THREE.MeshStandardMaterial({ color: 0x2b6cc4, roughness: 0.5 });
 const BUS_STOP = madeModel([cyl(0.04, 2.4, 0, 1.2, 0, metal), box(0.5, 0.5, 0.04, 0, 2.2, 0.02, blue), box(0.06, 2.1, 0.06, 0.9, 1.05, -0.3, metal), box(1.4, 0.05, 0.7, 0.55, 2.1, -0.1, new THREE.MeshStandardMaterial({ color: 0xd8ecf6, roughness: 0.1, transparent: true, opacity: 0.25, depthWrite: false }))], 2.45);
 // (Round 11: the roof was 80% opaque and hid a couple arriving by bus from the camera above; now clear glass.)
+// Round 16, phase 4.2: the street's notice board, by the bus stop: two posts, a little roof, a cork board with notes
+// pinned to it (what has changed in the town: the page's).
+const cork = new THREE.MeshStandardMaterial({ color: 0xb5835a, roughness: 0.95 });
+const NOTICE_BOARD = madeModel([
+  box(0.08, 2.0, 0.08, -0.7, 1.0, 0, wood), box(0.08, 2.0, 0.08, 0.7, 1.0, 0, wood), box(1.7, 0.06, 0.4, 0, 2.03, 0, wood),
+  box(1.4, 0.9, 0.05, 0, 1.45, 0.02, cork),
+  box(0.34, 0.26, 0.01, -0.42, 1.62, 0.05, paper), box(0.3, 0.36, 0.01, 0.02, 1.52, 0.05, paper), box(0.34, 0.24, 0.01, 0.44, 1.66, 0.05, paper),
+  box(0.3, 0.22, 0.01, -0.36, 1.24, 0.05, paper), box(0.36, 0.2, 0.01, 0.4, 1.22, 0.05, paper), box(0.06, 0.06, 0.012, 0.02, 1.7, 0.056, red)
+], 2.06);
 // A camp bed: where someone who moves in sleeps (the flat has two beds; round 9).
 const CAMP_BED = madeModel([box(0.85, 0.06, 1.9, 0, 0.3, 0, metal), box(0.8, 0.12, 1.85, 0, 0.39, 0, glassMat(0x4a6fa5)), box(0.6, 0.08, 0.3, 0, 0.49, -0.75, paper), ...[[-0.38, -0.88], [0.38, -0.88], [-0.38, 0.88], [0.38, 0.88]].map(([x, z]) => box(0.04, 0.3, 0.04, x, 0.15, z, metal))], 0.53);
 
@@ -288,7 +300,73 @@ const COT = madeModel([
   cyl(0.012, 0.62, -0.62, 1.24, -0.3, cotWhite), box(0.02, 0.02, 0.62, -0.62, 1.54, -0.02, cotWhite),
   ...[[0.05, 0xf2c43a], [0.2, 0x7fb8e8], [0.35, 0xf29ab8]].map(([z, c]) => cyl(0.035, 0.012, -0.62, 1.38, z - 0.05, new THREE.MeshStandardMaterial({ color: c, roughness: 0.6 })))
 ], 1.55);
-export const MADE = { CAMP_BED, FRIDGE, TV, TELESCOPE, COT };
+// Round 16, phase 5 (skills.mjs): four things to buy for the new skills, made here (there is no model for them in
+// the furniture pack). Each faces +Z, where the Sim stands.
+const mat5 = (color, roughness = 0.6) => new THREE.MeshStandardMaterial({ color, roughness });
+// Their boxes merged into one mesh per material (a keyboard's keys are one draw call, not ten).
+function merged(parts) {
+  const by = new Map();
+  for (const p of parts) by.set(p.material, [...(by.get(p.material) ?? []), p.geometry.clone().applyMatrix4(p.matrix)]);
+  return [...by].map(([material, list]) => ({ geometry: mergeGeometries(list), material, matrix: new THREE.Matrix4() }));
+}
+const [canvasWhite, soil, leaf, keysWhite, keysBlack, steel] = [mat5(0xfaf7ee, 0.9), mat5(0x5a3e2b, 1), mat5(0x5aa84a, 0.8), mat5(0xf6f6f2, 0.4), mat5(0x1c1c20, 0.4), mat5(0x8a9098, 0.4)];
+// An easel: three legs, a ledge, and a canvas with a painting begun (a sky, a hill, a sun).
+const EASEL = madeModel(merged([
+  box(0.04, 1.7, 0.04, -0.32, 0.85, 0.05, wood), box(0.04, 1.7, 0.04, 0.32, 0.85, 0.05, wood), box(0.04, 1.6, 0.04, 0, 0.8, -0.35, wood),
+  box(0.8, 0.04, 0.1, 0, 0.82, 0.1, wood), box(0.7, 0.6, 0.03, 0, 1.15, 0.1, canvasWhite),
+  box(0.66, 0.26, 0.005, 0, 1.3, 0.117, mat5(0x8cc4e8)), box(0.66, 0.2, 0.005, 0, 1.0, 0.117, mat5(0x6aa84a)), box(0.1, 0.1, 0.006, 0.18, 1.33, 0.12, mat5(0xf2c94c))
+]), 1.72);
+// A keyboard on a stand, with a stool's worth of room in front.
+const KEYBOARD = madeModel(merged([
+  box(0.04, 0.75, 0.04, -0.45, 0.375, 0, metal), box(0.04, 0.75, 0.04, 0.45, 0.375, 0, metal), box(0.95, 0.03, 0.06, 0, 0.3, 0, metal),
+  box(1.1, 0.08, 0.32, 0, 0.79, 0, keysBlack), box(1.0, 0.025, 0.14, 0, 0.84, 0.07, keysWhite),
+  ...[-0.42, -0.34, -0.22, -0.14, -0.06, 0.06, 0.14, 0.26, 0.34, 0.42].map((x) => box(0.035, 0.025, 0.08, x, 0.86, 0.04, keysBlack))
+]), 0.87);
+// A raised planter of vegetables: a wooden box of soil, rows of leaves, a few carrots' tops and tomatoes.
+const PLANTER = madeModel(merged([
+  box(1.2, 0.45, 0.6, 0, 0.225, 0, wood), box(1.12, 0.04, 0.52, 0, 0.45, 0, soil),
+  ...[-0.42, -0.21, 0, 0.21, 0.42].flatMap((x, k) => [box(0.12, 0.14 + (k % 2) * 0.06, 0.1, x, 0.53, -0.13, leaf), box(0.1, 0.1, 0.1, x + 0.05, 0.51, 0.13, leaf)]),
+  ...[[-0.3, 0.13], [0.12, 0.15], [0.36, -0.1]].map(([x, z]) => box(0.06, 0.06, 0.06, x, 0.6, z, mat5(0xd8402a, 0.4)))
+]), 0.68);
+// A workbench: a sturdy top, a shelf, a vice, a hammer and a saw on the wall board behind.
+const WORKBENCH = madeModel(merged([
+  box(1.4, 0.06, 0.6, 0, 0.88, 0, wood), ...[[-0.65, -0.25], [0.65, -0.25], [-0.65, 0.25], [0.65, 0.25]].map(([x, z]) => box(0.06, 0.86, 0.06, x, 0.43, z, wood)),
+  box(1.3, 0.04, 0.5, 0, 0.25, 0, wood), box(1.4, 0.7, 0.03, 0, 1.3, -0.29, mat5(0xc8a878)),
+  box(0.14, 0.1, 0.1, 0.5, 0.96, 0.2, steel), box(0.05, 0.3, 0.02, -0.3, 1.35, -0.27, wood), box(0.12, 0.05, 0.03, -0.3, 1.5, -0.26, steel), box(0.36, 0.12, 0.01, 0.2, 1.3, -0.27, steel)
+]), 1.65);
+// Round 16, phase 5.4: the pet's basket, with a bowl in front (pets.mjs). Faces +Z, where the Sim stands.
+const PET_BED = madeModel(merged([
+  box(0.7, 0.12, 0.55, 0, 0.06, -0.1, mat5(0xb07a4a, 0.9)), box(0.6, 0.06, 0.45, 0, 0.13, -0.1, mat5(0xd8574a, 1)),
+  box(0.7, 0.2, 0.06, 0, 0.16, -0.36, mat5(0xb07a4a, 0.9)),
+  cyl(0.09, 0.06, 0.22, 0.03, 0.3, mat5(0x2b6cc4, 0.4)), cyl(0.075, 0.02, 0.22, 0.06, 0.3, mat5(0x8a5a2a, 1))
+]), 0.3);
+export const MADE = { CAMP_BED, FRIDGE, TV, TELESCOPE, COT, EASEL, KEYBOARD, PLANTER, WORKBENCH, PET_BED };
+
+// Round 16, phase 6.3: a stall for the town's events (calendar.mjs TOWN_EVENTS `stalls`): a counter under a striped
+// awning on two posts, its goods on top by kind. Faces +Z, where the Sim stands. One model a kind (its boxes merged
+// into one mesh per material), made the first time it is needed. The page puts them up and takes them down.
+const STALL_AWNING = { plants: 0x4f9a4a, cakes: 0xe07aa0, treats: 0xe8b43a, cocoa: 0xc8483e, games: 0x3f7fd0, show: 0x8a5ac8 };
+const STALL_GOODS = {
+  plants: () => [-0.5, -0.17, 0.17, 0.5].flatMap((x, k) => [cyl(0.09, 0.14, x, 0.99, 0.05, mat5(0xc0643a, 0.9)), box(0.16, 0.18 + (k % 2) * 0.08, 0.16, x, 1.15, 0.05, leaf)]),
+  cakes: () => [[-0.45, 0xe8c48a], [0, 0xf7c6d9], [0.45, 0x6b3f22]].flatMap(([x, c]) => [cyl(0.15, 0.015, x, 0.93, 0.05, mat5(0xfbfbf8, 0.4)), cyl(0.12, 0.12, x, 1.0, 0.05, mat5(c, 0.7))]),
+  treats: () => [[-0.5, 0xf08ac0], [-0.25, 0x7fb8e8], [0, 0xf2c94c], [0.25, 0x7ed36a], [0.5, 0xe8484a]].map(([x, c]) => box(0.16, 0.1, 0.16, x, 0.97, 0.05, mat5(c, 0.5))),
+  cocoa: () => [cyl(0.14, 0.4, -0.45, 1.12, -0.05, steel), ...[-0.1, 0.08, 0.26, 0.44].map((x) => cyl(0.045, 0.1, x, 0.97, 0.1, mat5(0xd8574a, 0.5)))],
+  games: () => [...[-0.45, -0.15, 0.15, 0.45].map((x) => cyl(0.025, 0.3, x, 1.07, 0.05, wood)), ...[-0.3, 0, 0.3].map((x) => box(0.1, 0.1, 0.1, x, 0.97, 0.18, mat5(0xe8484a, 0.5)))],
+  show: () => [box(1.3, 0.02, 0.62, 0, 0.93, 0, mat5(0xfbfbf8, 0.9)), box(0.9, 0.6, 0.03, 0, 1.55, -0.28, mat5(0x2b6cc4, 0.7)), cyl(0.12, 0.02, 0, 1.6, -0.25, mat5(0xf2c94c, 0.3))]
+};
+const STALLS = {};
+export function stallModel(kind) {
+  if (STALLS[kind]) return STALLS[kind];
+  const awning = mat5(STALL_AWNING[kind] ?? 0x8a5ac8, 0.8), white = mat5(0xfaf7ee, 0.8);
+  STALLS[kind] = madeModel(merged([
+    box(1.5, 0.9, 0.6, 0, 0.45, 0, wood), box(1.56, 0.04, 0.66, 0, 0.92, 0, wood),
+    box(0.06, 2.3, 0.06, -0.72, 1.15, -0.28, wood), box(0.06, 2.3, 0.06, 0.72, 1.15, -0.28, wood),
+    box(1.7, 0.05, 0.95, 0, 2.3, 0.05, awning),
+    ...[-0.68, -0.34, 0, 0.34, 0.68].map((x, k) => box(0.34, 0.18, 0.02, x, 2.2, 0.53, k % 2 ? white : awning)),
+    ...(STALL_GOODS[kind]?.() ?? [])
+  ]), 2.33);
+  return STALLS[kind];
+}
 
 // A sign over a work station: the subject's icon and name, always facing the camera.
 function sign(text, icon, colour) {
@@ -386,7 +464,25 @@ async function furnish(group, placements) {
     }
   }
   spots(items);
+  // A double bed (round 15): its second side, after everything placed (the page counts what it placed by position).
+  for (const it of [...items]) if (it.use?.double && it.bed) items.push(twinOf(it));
   return items;
+}
+// The other side of a double bed: the same bed (no drawing of its own, the same footprint), a place of its own to lie
+// (the far half; the first side lies on the near half), and a spot of its own to get in from, a little towards the
+// foot on the same side as the first's (the far side is often against a wall). Owned and used like a bed of its own,
+// so two Sims can sleep side by side; `twin` points each side at the other, `side` marks this one.
+function twinOf(it) {
+  const { head, feet, top, across, halfWide } = it.bed;
+  const off = halfWide * 0.42;
+  it.bed = { ...it.bed, feet: feet.clone().addScaledVector(across, off) };
+  const twin = {
+    name: it.name, obj: it.obj, use: it.use, footprint: it.footprint, half: it.half, side: true, twin: it,
+    spot: it.spot.clone().addScaledVector(head, -0.6), facing: it.facing,
+    bed: { head, top, across, halfWide, feet: feet.clone().addScaledVector(across, -off) }
+  };
+  it.twin = twin;
+  return twin;
 }
 
 // Where a Sim stands to use a thing: in front of it, facing it (to sit, backed up to it, facing the way it faces).
@@ -400,13 +496,15 @@ function spots(items) {
     // Used from inside (a shower): stand in the middle, facing out.
     if (it.use.inside) (it.spot = it.footprint.getCenter(new THREE.Vector3()).setY(0)), (it.facing = Math.atan2(fwd.x, fwd.z));
     if (it.use.act === 'sleep') {
-      // Lie along the bed's long side, head at the end nearer a wall; get in from the side facing the room.
-      const b = it.footprint, alongX = b.max.x - b.min.x > b.max.z - b.min.z;
+      // Lie along the bed, head at its headboard (the back of the model: every bed's front faces +Z); get in from the
+      // side facing the room. Round 15: the headboard, not the end nearer a wall (a bed out in the room had its sleeper
+      // lying with their feet on the pillow).
+      const b = it.footprint, back = fwd.clone().negate(), alongX = Math.abs(back.x) > Math.abs(back.z);
       const c = b.getCenter(new THREE.Vector3());
-      const head = alongX ? new THREE.Vector3(Math.sign(c.x) || 1, 0, 0) : new THREE.Vector3(0, 0, Math.sign(c.z) || -1);
+      const head = alongX ? new THREE.Vector3(Math.sign(back.x), 0, 0) : new THREE.Vector3(0, 0, Math.sign(back.z));
       const across = alongX ? new THREE.Vector3(0, 0, -Math.sign(c.z) || 1) : new THREE.Vector3(-Math.sign(c.x) || 1, 0, 0);
       const halfLong = (alongX ? b.max.x - b.min.x : b.max.z - b.min.z) / 2, halfWide = (alongX ? b.max.z - b.min.z : b.max.x - b.min.x) / 2;
-      it.bed = { head, feet: c.clone().setY(0).addScaledVector(head, -halfLong + 0.32), top: b.max.y };
+      it.bed = { head, feet: c.clone().setY(0).addScaledVector(head, -halfLong + 0.32), top: b.max.y, across, halfWide };
       it.spot = c.clone().setY(0).addScaledVector(across, halfWide + 0.3);
       it.facing = Math.atan2(-across.x, -across.z);
     }
@@ -681,6 +779,216 @@ async function lifeOffice(group, { labels = {} } = {}) {
   return { w, d, walls, items, cell: 0.25, view: { target: [0, 0.6, 0.5], camera: [9, 10, 13], max: 26, fog: [30, 80] }, starts: [], shadow: 10, fade };
 }
 
+// ---- the café (round 16, phase 5.3; work.mjs CAREERS.cafe, 10 × 8 m) ----
+// Where the café chef works: built the first time someone has the job (page.mjs). Four stations (the till, the oven,
+// the menu board, the spice shelf: a school subject each, as at the office, with the café's own names: `labels`), the
+// tables to serve between questions (what free will does there, as at a desk), a fridge and a sink for a snack and a
+// hot chocolate. The kitchen along the back.
+const chalk = mat5(0x2e3a34, 0.95);
+// The till on its counter: a box, a little screen, a drawer.
+const TILL = madeModel(merged([
+  box(1.5, 0.95, 0.6, 0, 0.475, 0, wood), box(1.56, 0.05, 0.66, 0, 0.975, 0, deskTop),
+  box(0.36, 0.16, 0.3, 0.3, 1.08, -0.05, metal), box(0.26, 0.16, 0.02, 0.3, 1.22, -0.12, screen), box(0.3, 0.05, 0.24, 0.3, 1.025, 0.12, steel),
+  box(0.2, 0.2, 0.2, -0.45, 1.1, 0, glassMat(0xf2d8a0))
+]), 1.3);
+// A chalk menu board on legs (the day's specials, written for the tourists).
+const MENU_BOARD = madeModel(merged([
+  box(0.05, 1.5, 0.05, -0.45, 0.75, -0.08, wood), box(0.05, 1.5, 0.05, 0.45, 0.75, -0.08, wood),
+  box(0.95, 0.75, 0.04, 0, 1.05, 0, wood), box(0.85, 0.65, 0.01, 0, 1.05, 0.025, chalk),
+  ...[1.25, 1.12, 0.99, 0.86].map((y, k) => box(0.5 - (k % 2) * 0.15, 0.02, 0.005, -0.1, y, 0.032, canvasWhite))
+]), 1.5);
+async function lifeCafe(group, { labels = {} } = {}) {
+  const w = 10, d = 8;
+  const walls = makeWalls(group, w, d);
+  const st = (id) => ({ act: 'interact', label: labels[id] ?? id, offers: 'station', station: id });
+  const serve = { act: 'interact', label: 'Serve', offers: 'cafeTable' };
+  const P = [
+    [F('Door_1'), -4.9, 2.4, Q, 2.05, { act: 'door', label: 'Way out', offers: 'officeDoor' }],
+    // The kitchen along the back: fridge, oven (science), sink, drawers; the spice shelf (geography) at the end.
+    [FRIDGE, -4.3, -3.5, 0, 1.9, { act: 'interact', label: 'Get a snack', offers: 'officeFridge', moving: 'fridge' }],
+    [F('Kitchen_2Drawers'), -3.45, -3.55, 0, 0.92],
+    [F('Kitchen_Oven_Large'), -2.4, -3.55, 0, 0.92, st('science')],
+    [F('Kitchen_3Drawers'), -1.35, -3.55, 0, 0.92],
+    [F('Kitchen_Sink'), -0.45, -3.55, 0, 0.92, { act: 'interact', label: 'Hot chocolate', offers: 'officeSink' }],
+    [F('Shelf_Large'), 1.2, -3.6, 0, 1.8, st('geography')],
+    // The till (maths) and the menu board (English) by the door.
+    [TILL, -2.6, 0.2, 0, 1.3, st('maths')],
+    [MENU_BOARD, -4.2, -0.6, Q, 1.5, st('english')],
+    // The tables: three, two chairs each (only looked at), and served.
+    ...[[1.2, 0.2], [3.4, -1.4], [3.2, 2.0]].flatMap(([x, z]) => [
+      [F('Table_RoundSmall'), x, z, 0, 0.75, serve],
+      [F('Chair_1'), x - 0.75, z, Q, 0.95], [F('Chair_1'), x + 0.75, z, -Q, 0.95]
+    ]),
+    [F('Houseplant_4'), 4.5, -3.5, 0, 1.2], [F('Houseplant_6'), 4.5, 3.4, 0, 1.2], [F('Light_Floor1'), -4.4, 3.4, 0, 1.7], [F('Trashcan_Small1'), -0.2, 3.6, 0, 0.35]
+  ];
+  const items = await furnish(group, P);
+  const fade = await dressCafe(group, walls, furnish, S, { w, d });
+  for (const it of items) {
+    const s = STATIONS.find((x) => x.id === it.use?.station);
+    if (!s || typeof document === 'undefined') continue;
+    const sp = sign(labels[s.id] ?? s.id, s.icon, s.colour);
+    sp.position.set(it.obj.position.x, 2.55, it.obj.position.z);
+    sp.userData.station = s.id;
+    group.add(sp);
+    it.sign = sp;
+  }
+  return { w, d, walls, items, cell: 0.25, view: { target: [0, 0.6, 0.3], camera: [6, 8.5, 10], max: 20, fog: [30, 80] }, starts: [], shadow: 7, fade };
+}
+
+// ---- the vet's (round 16, phase 5.4; work.mjs CAREERS.vet, 10 × 8 m) ----
+// Where the vet works: built the first time someone has the job (page.mjs), as the café is. Four stations (the
+// reception desk, the exam table, the animal atlas, the pinboard of care cards: a school subject each, with the vet's
+// own names: `labels`), the kennels to see to between questions (what free will does there), a fridge and a sink for a
+// snack and a hot chocolate, chairs to wait on. The patients are the pets' models (pets.mjs), only looked at: a dog
+// on the table having a check-up, cats resting in the kennels. Nobody is ill or hurt: it's check-ups and care.
+const A = (n) => `assets/animals/${n}.glb`;
+// The pets' models face +X: turned this much, one faces +Z like the furniture.
+const FACE_Z = -Math.PI / 2;
+const bars = mat5(0xc8ccd2, 0.35), mint = mat5(0x7cc8b4, 0.6), blanket = mat5(0x6a8fd8, 1);
+// The exam table: a steel top on a pedestal, a blue mat on it.
+const EXAM_TABLE = madeModel(merged([
+  box(1.2, 0.05, 0.62, 0, 0.88, 0, steel), box(1.0, 0.015, 0.5, 0, 0.912, 0, mint),
+  box(0.22, 0.84, 0.22, 0, 0.42, 0, metal), box(0.6, 0.04, 0.45, 0, 0.02, 0, metal)
+]), 0.92);
+// Kennels: two cages side by side, each with a blanket, behind bars, on a low stand.
+const KENNEL = madeModel(merged([
+  box(1.5, 0.1, 0.7, 0, 0.05, 0, metal), box(1.5, 0.04, 0.7, 0, 0.12, 0, bars), box(1.5, 0.04, 0.7, 0, 0.82, 0, bars),
+  box(1.5, 0.7, 0.03, 0, 0.47, -0.335, bars), box(0.03, 0.7, 0.7, 0, 0.47, 0, bars),
+  box(0.03, 0.7, 0.7, -0.735, 0.47, 0, bars), box(0.03, 0.7, 0.7, 0.735, 0.47, 0, bars),
+  ...[-0.6, -0.45, -0.3, -0.15, 0.15, 0.3, 0.45, 0.6].map((x) => box(0.015, 0.66, 0.015, x, 0.47, 0.335, bars)),
+  box(0.6, 0.03, 0.5, -0.37, 0.155, -0.02, blanket), box(0.6, 0.03, 0.5, 0.37, 0.155, -0.02, blanket)
+]), 0.84);
+async function lifeVet(group, { labels = {} } = {}) {
+  const w = 10, d = 8;
+  const walls = makeWalls(group, w, d);
+  const st = (id) => ({ act: 'interact', label: labels[id] ?? id, offers: 'station', station: id });
+  const tend = { act: 'interact', label: 'See to the patients', offers: 'vetKennel' };
+  const P = [
+    [F('Door_1'), -4.9, 2.4, Q, 2.05, { act: 'door', label: 'Way out', offers: 'officeDoor' }],
+    // Along the back: the fridge and sink, the animal atlas (geography), the exam table (science), the medicine shelf.
+    [FRIDGE, -4.3, -3.5, 0, 1.9, { act: 'interact', label: 'Get a snack', offers: 'officeFridge', moving: 'fridge' }],
+    [F('Kitchen_Sink'), -3.45, -3.55, 0, 0.92, { act: 'interact', label: 'Hot chocolate', offers: 'officeSink' }],
+    [F('Bookshelf'), -1.9, -3.75, 0, 1.9, st('geography')],
+    [EXAM_TABLE, 0.6, -3.1, 0, 0.92, st('science')],
+    [A('Dog'), 0.6, -3.1, 0, 0.5, null, 0.93], // along the table, looking to the right
+    [F('Shelf_Large'), 2.9, -3.6, 0, 1.8],
+    // The reception desk (maths) and the pinboard of care cards (English).
+    [DESK, -2.2, 0.4, 0, 0.75, st('maths')],
+    [MONITOR, -2.5, 0.25, 0.2, 0.47, null, 0.75],
+    [NOTICE_BOARD, -4.75, -1.2, Q, 2.06, st('english')],
+    // The kennels on the right, facing in, a cat resting in two of the cages (side on, to be seen).
+    [KENNEL, 4.6, -1.3, -Q, 0.84, tend],
+    [KENNEL, 4.6, 0.6, -Q, 0.84, tend],
+    [A('Cat'), 4.62, -0.93, FACE_Z, 0.3, null, 0.17],
+    [A('Cat'), 4.62, 0.23, -FACE_Z, 0.3, null, 0.17],
+    // Chairs to wait on by the front windows (only looked at), plants, a lamp, a bin.
+    ...[0.2, 1.0, 1.8].map((x) => [F('Chair_1'), x, 3.45, Math.PI, 0.95]),
+    [F('Houseplant_4'), 4.5, 3.4, 0, 1.2], [F('Houseplant_6'), -1.0, 3.5, 0, 1.0], [F('Light_Floor1'), -4.4, 3.4, 0, 1.7], [F('Trashcan_Small1'), -1.0, -3.6, 0, 0.35]
+  ];
+  const items = await furnish(group, P);
+  const fade = await dressVet(group, walls, furnish, S, { w, d });
+  for (const it of items) {
+    const s = STATIONS.find((x) => x.id === it.use?.station);
+    if (!s || typeof document === 'undefined') continue;
+    const sp = sign(labels[s.id] ?? s.id, s.icon, s.colour);
+    sp.position.set(it.obj.position.x, 2.55, it.obj.position.z);
+    sp.userData.station = s.id;
+    group.add(sp);
+    it.sign = sp;
+  }
+  return { w, d, walls, items, cell: 0.25, view: { target: [0, 0.6, 0.3], camera: [6, 8.5, 10], max: 20, fog: [30, 80] }, starts: [], shadow: 7, fade };
+}
+
+// ---- the boulangerie-pâtisserie (after round 16, phase 6; work.mjs CAREERS.baker, 10 × 8 m) ----
+// Where the baker works: built the first time someone has the job (page.mjs), as the café is. Five stations, a bake
+// each (a school subject each, with the baker's own names: `labels`): the dough table (baguettes: maths, with bakery
+// maths), the bread oven (croissants and pains au chocolat: science), the piping table (éclairs: French), the tart
+// stand (tarts: geography) and the pastry case at the counter (macarons: English, for the customers). The till, for
+// serving between questions (what free will does there), the bread racks, a fridge and a sink for a snack and a hot
+// chocolate. Made in code (no bakery models in the packs), each merged per material; the counter faces the shop.
+const [flourW, crust, doughM, choc, brassB, cream] = [mat5(0xf7f3ea, 0.95), mat5(0xc98a3c, 0.7), mat5(0xf0dcb0, 0.9), mat5(0x5a3420, 0.5), mat5(0xc8a050, 0.35), mat5(0xf4e6c8, 0.6)];
+const caseGlass = new THREE.MeshStandardMaterial({ color: 0xdff2fb, roughness: 0.08, transparent: true, opacity: 0.22, depthWrite: false });
+const MACARON = [0xf29ab8, 0x9ad89a, 0xf2d06a, 0xb89ae0, 0x8ac8f0, 0xf0a070];
+// The bread oven: a steel deck oven, three decks with dark glass doors and brass handles, a tray of croissants on top.
+const BREAD_OVEN = madeModel(merged([
+  box(1.6, 1.75, 0.9, 0, 0.875, -0.05, steel), box(1.64, 0.08, 0.94, 0, 1.79, -0.05, metal),
+  ...[0.55, 0.95, 1.35].flatMap((y) => [box(1.4, 0.26, 0.02, 0, y, 0.41, screen), box(1.0, 0.03, 0.04, 0, y + 0.17, 0.43, brassB)]),
+  box(0.9, 0.02, 0.4, 0, 1.84, -0.05, metal),
+  ...[-0.3, -0.1, 0.1, 0.3].map((x) => box(0.14, 0.05, 0.08, x, 1.875, -0.05, crust))
+]), 1.9);
+// The dough table: a floured wooden top, dough balls, baguettes shaped and waiting, the scales.
+const DOUGH_TABLE = madeModel(merged([
+  box(1.6, 0.06, 0.85, 0, 0.88, 0, wood), ...[[-0.72, -0.36], [0.72, -0.36], [-0.72, 0.36], [0.72, 0.36]].map(([x, z]) => box(0.06, 0.85, 0.06, x, 0.425, z, wood)),
+  box(1.4, 0.1, 0.7, 0, 0.3, 0, wood), box(0.9, 0.005, 0.55, -0.2, 0.913, 0.02, flourW),
+  ...[-0.5, -0.3, -0.1].map((x) => cyl(0.07, 0.07, x, 0.95, -0.12, doughM)),
+  ...[0.05, 0.15, 0.25].map((z) => box(0.62, 0.06, 0.06, -0.15, 0.945, z, crust)),
+  box(0.3, 0.06, 0.24, 0.55, 0.94, 0, steel), cyl(0.11, 0.02, 0.55, 0.98, 0, steel)
+]), 1.0);
+// The piping table: steel, a tray of éclairs with their chocolate tops, a piping bag.
+const PIPING_TABLE = madeModel(merged([
+  box(1.4, 0.05, 0.75, 0, 0.9, 0, steel), ...[[-0.65, -0.32], [0.65, -0.32], [-0.65, 0.32], [0.65, 0.32]].map(([x, z]) => box(0.05, 0.88, 0.05, x, 0.44, z, metal)),
+  box(0.8, 0.02, 0.45, -0.15, 0.935, 0, metal),
+  ...[-0.13, 0, 0.13].flatMap((z) => [-0.4, -0.15, 0.1].flatMap((x) => [box(0.18, 0.045, 0.055, x, 0.965, z, crust), box(0.17, 0.015, 0.045, x, 0.995, z, choc)])),
+  box(0.08, 0.08, 0.3, 0.45, 0.97, 0.05, cream), box(0.03, 0.03, 0.08, 0.45, 0.97, 0.24, steel)
+]), 1.0);
+// The tart stand: a wooden display table, tarts on two tiers (strawberry, apple, lemon, apricot).
+const TART_STAND = madeModel(merged([
+  box(1.3, 0.05, 0.7, 0, 0.85, 0, wood), box(1.2, 0.82, 0.6, 0, 0.41, 0, wood), box(1.0, 0.04, 0.3, 0, 1.2, -0.15, wood),
+  box(0.04, 0.35, 0.04, -0.45, 1.02, -0.15, wood), box(0.04, 0.35, 0.04, 0.45, 1.02, -0.15, wood),
+  ...[[-0.35, 0.92, 0.12, 0xd8402a], [0.05, 0.92, 0.12, 0xe8c060], [0.42, 0.92, 0.12, 0xf2e060], [-0.25, 1.27, -0.15, 0xf0a040], [0.25, 1.27, -0.15, 0xd8402a]]
+    .flatMap(([x, y, z, c]) => [cyl(0.16, 0.04, x, y, z, crust), cyl(0.14, 0.02, x, y + 0.025, z, mat5(c, 0.4))])
+]), 1.32);
+// The pastry case at the counter: a wooden base, glass all round, macarons in rows and éclairs on the shelves.
+const PASTRY_CASE = madeModel(merged([
+  box(1.9, 0.75, 0.75, 0, 0.375, 0, wood), box(1.94, 0.04, 0.79, 0, 0.77, 0, deskTop),
+  box(1.9, 0.5, 0.7, 0, 1.04, 0, caseGlass), box(1.8, 0.02, 0.6, 0, 1.03, 0, deskTop),
+  ...[-0.7, -0.45, -0.2, 0.05].flatMap((x, i) => [-0.15, 0.05, 0.22].map((z, j) => cyl(0.035, 0.035, x, 0.81, z, mat5(MACARON[(i + j * 2) % MACARON.length], 0.6)))),
+  ...[0.35, 0.6].flatMap((x) => [-0.12, 0.12].flatMap((z) => [box(0.18, 0.045, 0.055, x, 0.81, z, crust), box(0.17, 0.015, 0.045, x, 0.84, z, choc)])),
+  ...[-0.5, -0.1, 0.3].flatMap((x, k) => [cyl(0.12, 0.035, x, 1.06, 0, crust), cyl(0.1, 0.02, x, 1.085, 0, mat5([0xd8402a, 0xf2e060, 0xf0a040][k], 0.4))])
+]), 1.3);
+// The bread racks on the wall: shelves of wicker baskets, baguettes standing up, round loaves (pains de campagne).
+const BREAD_RACK = madeModel(merged([
+  box(2.0, 1.9, 0.04, 0, 0.95, -0.2, wood), box(0.05, 1.9, 0.45, -0.98, 0.95, 0, wood), box(0.05, 1.9, 0.45, 0.98, 0.95, 0, wood),
+  ...[0.35, 0.9, 1.45].map((y) => box(1.96, 0.04, 0.45, 0, y, 0, wood)),
+  ...[-0.55, 0.05, 0.6].map((x) => box(0.5, 0.22, 0.32, x, 0.48, 0, mat5(0xb08850, 0.95))),
+  ...[-0.7, -0.6, -0.5, -0.4, 0.0, 0.1, 0.2].map((x, k) => cyl(0.025, 0.55, x, 0.75, (k % 2) * 0.08 - 0.04, crust)),
+  ...[-0.55, -0.15, 0.25, 0.65].map((x) => cyl(0.13, 0.12, x, 1.0, 0, crust)),
+  ...[-0.6, -0.3, 0, 0.3, 0.6].map((x) => box(0.16, 0.06, 0.1, x, 1.5, 0, crust))
+]), 1.9);
+async function lifeBakery(group, { labels = {} } = {}) {
+  const w = 10, d = 8;
+  const walls = makeWalls(group, w, d);
+  const st = (id) => ({ act: 'interact', label: labels[id] ?? id, offers: 'station', station: id });
+  const P = [
+    [F('Door_1'), -4.9, 2.4, Q, 2.05, { act: 'door', label: 'Way out', offers: 'officeDoor' }],
+    // The bakehouse along the back: fridge, the bread oven (science), the sink; the dough table and the piping table.
+    [FRIDGE, -4.3, -3.5, 0, 1.9, { act: 'interact', label: 'Get a snack', offers: 'officeFridge', moving: 'fridge' }],
+    [BREAD_OVEN, -2.75, -3.45, 0, 1.9, st('science')],
+    [F('Kitchen_Sink'), -1.45, -3.55, 0, 0.92, { act: 'interact', label: 'Hot chocolate', offers: 'officeSink' }],
+    [DOUGH_TABLE, 0.3, -2.7, 0, 1.0, st('maths')],
+    [PIPING_TABLE, 2.4, -2.7, 0, 1.0, st('french')],
+    [BREAD_RACK, 4.7, -1.4, -Q, 1.9],
+    // The shop: the pastry case (English, for the customers) and the till, the staff behind them; the tarts by the wall.
+    [PASTRY_CASE, -0.4, 0.9, Math.PI, 1.3, st('english')],
+    [TILL, -2.7, 0.9, Math.PI, 1.3, { act: 'interact', label: 'Serve', offers: 'bakeryTill' }],
+    [TART_STAND, 4.35, 1.6, -Q, 1.32, st('geography')],
+    [F('Table_RoundSmall'), 1.9, 3.0, 0, 0.75], [F('Chair_1'), 1.15, 3.0, Q, 0.95], [F('Chair_1'), 2.65, 3.0, -Q, 0.95],
+    [F('Houseplant_4'), -4.4, 3.4, 0, 1.2], [F('Light_Floor1'), 4.5, 3.4, 0, 1.7], [F('Trashcan_Small1'), -0.6, -3.6, 0, 0.35]
+  ];
+  const items = await furnish(group, P);
+  const fade = await dressBakery(group, walls, furnish, S, { w, d });
+  for (const it of items) {
+    const s = STATIONS.find((x) => x.id === it.use?.station);
+    if (!s || typeof document === 'undefined') continue;
+    const sp = sign(labels[s.id] ?? s.id, s.icon, s.colour);
+    sp.position.set(it.obj.position.x, 2.55, it.obj.position.z);
+    sp.userData.station = s.id;
+    group.add(sp);
+    it.sign = sp;
+  }
+  return { w, d, walls, items, cell: 0.25, view: { target: [0, 0.6, 0.3], camera: [6, 8.5, 10], max: 20, fog: [30, 80] }, starts: [], shadow: 7, fade };
+}
+
 // ---- the life game's park: round 2's park, with a bus stop to come and go by, and things to do on a date ----
 async function lifePark(group) {
   const p = await park(group, true);
@@ -704,6 +1012,43 @@ async function lifeHouse(group, spec) {
   return {
     w, d, walls, items, fade, cell: 0.25, shadow: Math.max(w, d) / 2 + 1.5, starts: [],
     view: { target: [0, 0.7, 0], camera: [7.5 * k, 7.5 * Math.min(k, 1.35), 9 * k], max: 18 * k, fog: [24 * k, 60 * k] }
+  };
+}
+// ---- Sunny Lane (round 15): the street, a place to walk down ----
+// The brief's round-14 list: "The street to walk down instead of the town card (a fifth place: the houses' fronts, the
+// bus)". Each house's front door (Door_1 in its front wall, facing the street: `use.front` is the house's id, or 'flat'),
+// low hedges between the front gardens (so the way from one door to the next is out along the pavement), lamps across
+// the road, and the bus stop to the park. Which door goes where is the page's (`doorTo`, `doorFor`): it knows whose
+// home is whose. `spec`: { w, d, fronts } (town.mjs STREET_SIZE and streetLayout()).
+async function lifeStreet(group, { w, d, fronts, name }) {
+  const z0 = -d / 2, P = [];
+  for (const [k, f] of fronts.entries()) {
+    P.push([F('Door_1'), f.x - f.width / 2 + 1.3, z0 + 0.06, 0, 2.05, { act: 'door', label: `No. ${f.no}`, offers: 'streetDoor', front: f.id }]);
+    // A hedge between this garden and the next.
+    const next = fronts[k + 1];
+    if (next) for (const z of [z0 + 0.4, z0 + 1.3]) P.push([S('Bush_2'), (f.x + f.width / 2 + next.x - next.width / 2) / 2, z, k + z, 0.95]);
+  }
+  const lamps = [];
+  for (let x = -w / 2 + 6; x < w / 2 - 2; x += 12) if (Math.abs(x - (fronts[0].x + fronts[fronts.length - 1].x) / 2) > 2) lamps.push([x, z0 + 12.1]);
+  for (const [x, z] of lamps) P.push([S('Streetlight_Single'), x, z, Math.PI, 3.8]);
+  lampGlow(group, lamps.map(([x, z]) => [x, 3.45, z]));
+  // The bus stop on the far pavement, halfway along (no Sim walks the whole street to catch the bus), facing the road.
+  const mid = (fronts[0].x + fronts[fronts.length - 1].x) / 2;
+  P.push([BUS_STOP, mid, z0 + 11.4, Math.PI, 2.45, { act: 'door', label: 'Bus stop', offers: 'streetBus' }]);
+  // Round 16, phase 4.2: the notice board beside it, facing the houses, with a name board over it (the page's).
+  P.push([NOTICE_BOARD, mid + 3.2, z0 + 11.2, Math.PI, 2.06, { act: 'look', label: 'Notice board', offers: 'streetBoard', board: true }]);
+  const items = await furnish(group, P);
+  const dressed = await dressStreet(group, furnish, S, { w, d, fronts, name });
+  const boardLabel = typeof document === 'undefined' ? null : streetLabel();
+  if (boardLabel) {
+    boardLabel.sprite.position.set(mid + 3.2, 3.0, z0 + 11.2);
+    boardLabel.sprite.scale.multiplyScalar(0.7);
+    boardLabel.sprite.userData.board = true;
+    group.add(boardLabel.sprite);
+  }
+  return {
+    w, d, walls: [], items, cell: 0.5, starts: [], shadow: 12, fade: dressed.fade, street: { fronts, labels: dressed.labels, balloons: dressed.balloons, signs: dressed.signs, hits: [...dressed.hits, ...(boardLabel ? [boardLabel.sprite] : [])], board: boardLabel },
+    view: { target: [0, 3, -4], camera: [5, 13.5, 22], max: 34, fog: [44, 120] }
   };
 }
 // A shop thing ({ id, x, z, turn, width? }, as saved) as `furnish` places it.
@@ -733,7 +1078,7 @@ export function houseFurniture(w, d, n = 1, seed = 1) {
   return out.map(([id, x, z, turn]) => ({ id, x, z, turn }));
 }
 
-export const PLACES = { home, park, office, lifeHome, lifeOffice, lifePark, lifeHouse };
+export const PLACES = { home, park, office, lifeHome, lifeOffice, lifeCafe, lifeVet, lifeBakery, lifePark, lifeHouse, lifeStreet };
 
 // Builds a place into its own group (call once; switching places adds/removes the group).
 export async function buildPlace(name, options) {
@@ -759,6 +1104,8 @@ export async function buildPlace(name, options) {
     name, group, floor, grid, walls: p.walls, items: p.items.filter((i) => i.obj), view: p.view, bounds: { w: p.w, d: p.d }, starts: p.starts,
     clickable: group.children.filter((c) => c.isInstancedMesh && c.userData.items?.some((i) => i.use?.act || i.use?.decor)),
     door: p.items.find((i) => i.use?.act === 'door') ?? null,
+    // Round 15: the street's fronts, name boards and party balloons (dressing.mjs dressStreet).
+    street: p.street ?? null,
     shadow: p.shadow ?? 6,
     // The parts that move (round 10): { item, kind: 'fridge' | 'tv' | 'shower', update(dt, on) }. The page says when each
     // is on (the door open, the picture playing, the water running).
@@ -781,7 +1128,9 @@ export async function buildPlace(name, options) {
         mesh.instanceMatrix.needsUpdate = true;
       }
       item.gone = true;
-      for (const list of [p.items, this.items]) list.splice(list.indexOf(item), 1);
+      // A double bed's other side goes too (round 15).
+      if (item.twin) item.twin.gone = true;
+      for (const it of [item, item.twin]) for (const list of [p.items, this.items]) if (it && list.includes(it)) list.splice(list.indexOf(it), 1);
       // Round 14: its moving part too (a TV sold kept playing in the air; a shower moved left its water behind).
       for (const m of moving.filter((m) => m.item === item)) {
         for (const o of m.parts ?? []) o.removeFromParent();
@@ -794,6 +1143,8 @@ export async function buildPlace(name, options) {
     // and every spot a Sim uses (and the way in) still reachable from the door with it there. `except`: things to
     // leave out (the camp bed a new bed replaces).
     fits(item, except = []) {
+      // A double bed's other side goes with it (moving the bed, it is not in its own way).
+      except = [...except, ...except.map((i) => i?.twin).filter(Boolean)];
       const others = p.items.filter((i) => !except.includes(i) && !i.gone);
       const users = others.filter((i) => i.spot && i.use?.act && !i.use.walkable && i.use.act !== 'door');
       if (item.spot && item.use?.act) users.push(item);
