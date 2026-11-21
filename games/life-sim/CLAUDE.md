@@ -50,13 +50,17 @@ Time: one game minute a second at speed 1 (`SPEEDS` in `life.mjs`). Every need n
   generated question bank (maths, French, English, history, science); `school/france.mjs` the geography banks;
   `stem.mjs` the older promotion questions.
 - `shop.mjs`: `SHOP`, everything that can be bought (field list at the top), `kindOf`, `FLAT_FURNITURE`.
-- `town.mjs`: `SIZES` (home sizes), `EXTENSION` prices, `HOUSES` on Sunny Lane, who lives where, `PARTY` timetable,
+- `town.mjs`: `SIZES` (home sizes), `EXTENSION` prices, `makeTown(seed)` (round 16: fills `HOUSES`,
+  `COLLEAGUE_HOUSES`, `NEIGHBOURS` and `TOWN` from `RECIPE`; seed 0 is the classic Sunny Lane), `PARTY` timetable,
   `streetLayout()` (where each house's front stands on the street, by number).
+- `starts.mjs`: `STARTS`, the ways a new life begins (round 16).
+- `traits.mjs`: `TRAITS`, 14 personality traits, three a Sim, and what Life asks of them (round 16).
+- `likes.mjs`: `LIKES`, favourite food, colour and activity and one dislike (round 16).
 - `baby.mjs`, `childcare.mjs`: the baby's needs and names; the nanny and the nursery.
 - `create.mjs`, `looks.mjs`: make-your-Sim screen; a Sim's look as data and how it is dressed.
 - `props.mjs`: what is in a Sim's hands or on the table, the eating motion, wedding clothes.
-- `save.mjs`: the save in `localStorage` (`lifesim.save.v1` key, format v2; a v1 save from an earlier round still
-  loads and is upgraded).
+- `save.mjs`: the save in `localStorage` (`lifesim.save.v1` key, format v3 since round 16; a v1 or v2 save from an
+  earlier round still loads and is upgraded: the classic town, and traits and likes rolled for everyone).
 - `strings.mjs`: every word, by key (`t('need.hunger')`). English only; a language is a new table with the same keys.
 
 Other files: `index.html` (the HUD's empty panels), `style.css` + `life.css`, `assets/` (models and clips, see
@@ -64,7 +68,10 @@ CREDITS.md), `wardrobe/catalogue.json`, `vendor/` (three.js r186 build and the a
 
 URL switches (top of `page.mjs`): `?seed=5` (repeatable dice; starts straight in and does not save), `?freewill=0`,
 `?person=0…11`, `?flatmate=0…11|none`, `?colleagues=2,3,8,9|none`, `?start=10:00`, `?speed=0…3`, `?year=CE2`,
-`?menu` (the start screen and saving on a test URL).
+`?menu` (the start screen and saving on a test URL). Round 16: `?town=N` (the town's seed; test URLs get the classic
+town, 0), `?story=savings|friend|sweetheart|broke|inherit` (how the life begins), `?traits=a,b,c` and `?traits2=`
+(the household's traits; a test's URL gives the household no traits and no likes otherwise, so seeded free will
+chooses as it did before round 16).
 
 ## How to add a thing to buy
 
@@ -114,11 +121,33 @@ front or its name board opens `openDoorMenu` in `page.mjs` (knock, go to the par
 in, the town map), even while the one you look after is indoors: they walk out to it. The places bar's 🗺️ opens the
 old town card (extensions, a party at home).
 
+## Every game its own town and its own people (round 16)
+
+The roadmap is [ROADMAP.md](ROADMAP.md); phase 1 is built. A new game rolls a town seed (`rollTown`, saved as
+`town.seed`). `makeTown(seed)` builds the town from `RECIPE` with the town's own dice (`seeded`), never the game's, so
+`?seed=` still repeats a game: the street's name (`town.street.N` in strings), house numbers, sizes, looks (brick or
+render, roof), sale prices and names, who shares a house, how many neighbours. Colleagues, neighbours and their traits
+and likes come from `townDice(seed, salt)`, so a town's people are the same people each time. The street is built
+after the start screen (it is the town's). Then `STARTS` (starts.mjs) sets money, home, flatmate, bond and job.
+
+Traits (`traits.mjs`) are data that Life reads in five places: `tick` (need decay, by time of day too), the moodlet
+list (a trait's own `always` moodlet, `ignores`), `complete` (`after` moodlets), `score` (`likes`, `social`) and
+`begin` (`chance`, `received`). Likes (`likes.mjs`) add `keenOn` to `score`, and the `talkLikes` and `gift`
+interactions (social.mjs `likes`) end in `Life.likeOutcome`. An interaction may now have a `cost`.
+
+To add a trait: an entry in `TRAITS` (fields at the top of the file), `trait.<id>` and `trait.<id>.does` in strings,
+and any moodlet it adds in `needs.mjs` `MOODLETS` (with `trait: true` for an always-on one) and its strings.
+
 ## How to add a house to the street (the nearest thing to a level)
 
-1. Add an entry to `HOUSES` in `src/game/town.mjs`: `{ id: 's4', no: 8, kind: 'sale', size: 3, price: 1500, look: { feature: 0xe0e8d0, floor: 'carpet', curtains: 0x406080 } }`.
-   `size` indexes `SIZES`; `look` is the wall, floor and curtains (`dressing.mjs` `dressHouse`). Its front goes up on
-   Sunny Lane by itself (`streetLayout`, in number order; `FRONT.widths` says how wide by size).
+Round 16: `HOUSES` is filled by `makeTown`. The classic town (seed 0) is the `CLASSIC` list; a seeded town follows
+`RECIPE` (four lived in, `h1`–`h4`, and three for sale, `s1`–`s3`). To add a house, add it to `CLASSIC` and a branch
+to `makeTown`'s seeded half (numbers come from `RECIPE.numbers`; keep the street under `STREET_SIZE.w`).
+
+1. An entry looks like `{ id: 's4', no: 8, kind: 'sale', size: 3, price: 1500, name: 3, look: { feature: 0xe0e8d0, floor: 'carpet', curtains: 0x406080 } }`.
+   `size` indexes `SIZES`; `look` is the wall, floor and curtains (`dressing.mjs` `dressHouse`), and on the street
+   `brick` and `roof`; `name` is `house.name.N`. Its front goes up by itself (`streetLayout`, in number order;
+   `FRONT.widths` says how wide by size).
 2. A house for sale stands empty (the household's own furniture moves in when it is bought). A lived-in house is
    furnished by `houseFurniture(w, d, n, seed)` in `src/world.mjs` (called from `page.mjs`); to give a house its own
    layout, add a branch there that returns `{ id, x, z, turn }` entries using `SHOP` ids.

@@ -320,6 +320,9 @@ for (const [i, m] of members.entries()) {
   // three for the flatmate. A test's URL: none unless ?traits= (so a seeded test's free will chooses as it did).
   // And (likes.mjs) their favourites; none on a test's URL, for the same reason.
   if (!m.s) life.likes = quick ? null : rollLikes();
+  // A save from before round 16 (v1, v2): three traits and favourites for each of them now (save.mjs).
+  if (m.s && !cleanTraits(life.traits).length) life.traits = rollTraits();
+  if (m.s && !cleanLikes(life.likes)) life.likes = rollLikes();
   if (!m.s) life.traits = params.has(i ? 'traits2' : 'traits') ? cleanTraits(params.get(i ? 'traits2' : 'traits').split(',')) : quick ? [] : rollTraits(Math.random, cleanTraits(m.traits));
   life.freeWill = params.get('freewill') !== '0';
   lives.push(life);

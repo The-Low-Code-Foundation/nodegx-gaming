@@ -10,14 +10,17 @@ export function readSave() {
     const s = JSON.parse(localStorage.getItem(KEY));
     // v2 (round 14): the whole home's furniture, the boxes, which home and how big, the town. A v1 save is read as the
     // flat as it came plus what was added to it (page.mjs).
-    return (s?.v === 1 || s?.v === 2) && Array.isArray(s.lives) && s.lives.length ? s : null;
+    // v3 (round 16): the town's seed (`town.seed`), how the life began (`story`), each Sim's traits and likes, and
+    // everyone else's by person (`traits`, `likes`). A v1 or v2 save is upgraded as it loads (page.mjs): the classic
+    // Sunny Lane (town seed 0, which it was), and traits and likes rolled for everyone.
+    return [1, 2, 3].includes(s?.v) && Array.isArray(s.lives) && s.lives.length ? s : null;
   } catch {
     return null;
   }
 }
 export function writeSave(state) {
   try {
-    localStorage.setItem(KEY, JSON.stringify({ v: 2, savedAt: Date.now(), ...state }));
+    localStorage.setItem(KEY, JSON.stringify({ v: 3, savedAt: Date.now(), ...state }));
     return true;
   } catch {
     return false;

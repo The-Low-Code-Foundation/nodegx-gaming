@@ -79,4 +79,5 @@ Each one has a default, so none of them blocks phase 1.
 
 ## Progress
 
-- Phase 1: in progress on branch `life-sim-variety`.
+- Phase 1: built on branch `life-sim-variety` (one commit per task; 1.1 and 1.2 share one), checked in the browser.
+  The checks are listed in [tests/r16-variety.md](tests/r16-variety.md).
