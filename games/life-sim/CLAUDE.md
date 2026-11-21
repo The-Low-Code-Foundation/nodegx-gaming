@@ -31,7 +31,8 @@ Time: one game minute a second at speed 1 (`SPEEDS` in `life.mjs`). Every need n
   house's layout), `STATIONS` (the office's work stations).
 - `dressing.mjs`: everything only looked at: painted floor and wall textures, the sky and the sun, windows, the
   garden and street, party decorations (`partyDecor`), the pond and its ducks, lamp glow, Sunny Lane's house fronts
-  (`dressStreet`: name boards, For sale boards and party balloons the page shows and hides).
+  (`dressStreet`: name boards, For sale boards and party balloons the page shows and hides), the weather (`weatherLook`:
+  rain and snow; `greySky`; a `snowman`).
 
 `src/game/` (the game):
 
@@ -59,12 +60,15 @@ Time: one game minute a second at speed 1 (`SPEEDS` in `life.mjs`). Every need n
 - `goals.mjs`: `GOALS`, the life goals (dreams), each a chain of steps tested on a Sim's facts (round 16, phase 2).
 - `wants.mjs`: `WANTS`, the small wishes on screen and how likely each is for a Sim (`weightOf`, `rollWant`).
 - `rewards.mjs`: `REWARDS`, what happy points buy: perks (`traits.mjs` `PERKS`), things for the home, a new trait.
+- `events.mjs`: `EVENTS`, the things that happen (cards with choices and dice), and `DECK`, how often (round 16, phase 3).
+- `weather.mjs`: `WEATHER`, the day's sun, rain or snow and what each takes off the menu (its look is dressing.mjs's).
 - `baby.mjs`, `childcare.mjs`: the baby's needs and names; the nanny and the nursery.
 - `create.mjs`, `looks.mjs`: make-your-Sim screen; a Sim's look as data and how it is dressed.
 - `props.mjs`: what is in a Sim's hands or on the table, the eating motion, wedding clothes.
-- `save.mjs`: the save in `localStorage` (`lifesim.save.v1` key, format v4 since round 16 phase 2; a v1, v2 or v3 save
+- `save.mjs`: the save in `localStorage` (`lifesim.save.v1` key, format v5 since round 16 phase 3; a v1 to v4 save
   from an earlier round still loads and is upgraded: the classic town, traits and likes rolled for everyone, no dream
-  yet (a "Pick a dream" button), new wishes, 0 happy points, a life story that starts with "before this story").
+  yet (a "Pick a dream" button), new wishes, 0 happy points, a life story that starts with "before this story", a fresh
+  event deck and the day's weather rolled).
 - `strings.mjs`: every word, by key (`t('need.hunger')`). English only; a language is a new table with the same keys.
 
 Other files: `index.html` (the HUD's empty panels), `style.css` + `life.css`, `assets/` (models and clips, see
@@ -76,7 +80,9 @@ URL switches (top of `page.mjs`): `?seed=5` (repeatable dice; starts straight in
 town, 0), `?story=savings|friend|sweetheart|broke|inherit` (how the life begins), `?traits=a,b,c` and `?traits2=`
 (the household's traits; a test's URL gives the household no traits and no likes otherwise, so seeded free will
 chooses as it did before round 16). Phase 2: `?goal=id` and `?goal2=id` (the household's dreams), `?goals=1` (dreams,
-wishes and happy points on a test URL; a test URL has none otherwise).
+wishes and happy points on a test URL; a test URL has none otherwise). Phase 3: `?events=1` (things happen on a test URL),
+`?event=id` (that event at once, then the deck as usual), `?weather=sun|rain|snow` (that weather, all game; a test URL
+has sunshine otherwise, and no weather icon).
 
 ## How to add a thing to buy
 
@@ -165,6 +171,28 @@ into entries, and goals, rewards, moves and parties add their own.
 To add a dream: an entry in `GOALS` and its strings (`goal.<id>`, `.does`, `.<step>`). A wish: an entry in `WANTS`
 whose `did` is something counted, and `want.<id>`. A reward: an entry in `REWARDS` (and a perk in `PERKS`), and its
 strings. Checks: [tests/r16-phase2.md](tests/r16-phase2.md).
+
+## Things happen: events and weather (round 16, phase 3)
+
+`EVENTS` (events.mjs) is data; the page's `eventsTick` (in the UI tick) looks at the deck every `DECK.every` game minutes
+in the day and now and then picks one for the Sim you look after, weighted by where they are, the hour, the weekday, the
+weather, their traits, their dream, a favourite activity, and who in the town it could be about (`who`: `eventPeople`
+lists the town's people with their bond and traits; `keen` events come up more when the people are chatty and close).
+Never while a card is open, at a work station, asleep or travelling. `openEvent` shows the card; `outcomeOf` rolls the
+dice (`chance`, plus the traits' `+p`); `eventOutcome` puts the outcome into what the game already has: needs,
+moodlets, `befriend` (the bond, and the level toast), coins, happy points, `count` (wishes and dreams), the life story,
+`inviteOver` (a guest at the door), `deck.party` (a birthday party is tonight's party, and you're asked), `planDate`, a
+power cut (`deck.powerOff`: POWER_CUT's offers greyed and skipped), a trip (`go`). The deck is saved.
+
+The weather (weather.mjs) is rolled each morning (`weatherNow`, saved as `{ day, id }`). `offerWhy` greys an offer in
+the menus with why (the weather's `off`, a power cut) and Life's `offerOk` keeps free will off it; an offer with a
+`weather` field (actions.mjs: the snowman, the puddles) is only there in that weather. Wishes skip what is off (`off` in
+`wantCtx`). The look (dressing.mjs `weatherLook`, `greySky`, `snowman`) is one draw call of points for rain or snow,
+moved in the vertex shader, and one unshadowed sheet of snow; outdoors only.
+
+To add an event: an entry in `EVENTS` (fields at the top of the file), and its strings: `event.<id>`, `.text`, and for
+each choice `.<choice>` and `.<choice>.good|bad|done` (`.diary` if an outcome has `diary`). New moodlets go in needs.mjs.
+Checks: [tests/r16-phase3.md](tests/r16-phase3.md).
 
 ## How to add a house to the street (the nearest thing to a level)
 

@@ -84,3 +84,8 @@ Each one has a default, so none of them blocks phase 1.
 - Phase 2: built on branch `life-sim-goals`, cut from `life-sim-variety` (one commit per task, then save v4 and the
   checks), checked in the browser. Five dreams can be chosen; the artist waits for phase 5 (painting), and the master
   chef counts meals cooked until cooking is a skill. The checks are listed in [tests/r16-phase2.md](tests/r16-phase2.md).
+- Phase 3: built on branch `life-sim-events`, cut from `life-sim-goals` (one commit per task, then save v5 and the
+  checks), checked in the browser. 36 events (25 for 3.2, 7 calls and knocks for 3.3, 4 for the weather). Events go
+  wrong only as a mild hassle (the roadmap's default). Adopting the stray cat waits for pets (phase 5); fixing the loo
+  is dice on traits until there is a handiness skill (phase 5); snow is just rare until the seasons (phase 6). The
+  checks are listed in [tests/r16-phase3.md](tests/r16-phase3.md).

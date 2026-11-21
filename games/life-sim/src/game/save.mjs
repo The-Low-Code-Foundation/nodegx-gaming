@@ -16,14 +16,17 @@ export function readSave() {
     // v4 (round 16, phase 2): each Sim's dream, dreams come true, wishes, happy points, perks and tally, and the
     // household's life story (`diary`). A v3 save or older loads with no dream yet (the panel offers to pick one),
     // fresh wishes, no points, and a life story that begins on loading.
-    return [1, 2, 3, 4].includes(s?.v) && Array.isArray(s.lives) && s.lives.length ? s : null;
+    // v5 (round 16, phase 3): the event deck (`deck`: when it was last looked at, what came up when, a party you said
+    // yes to, a power cut) and the day's weather (`weather`). A v4 save or older loads with a fresh deck (the first event
+    // an hour or more after loading) and the day's weather rolled.
+    return [1, 2, 3, 4, 5].includes(s?.v) && Array.isArray(s.lives) && s.lives.length ? s : null;
   } catch {
     return null;
   }
 }
 export function writeSave(state) {
   try {
-    localStorage.setItem(KEY, JSON.stringify({ v: 4, savedAt: Date.now(), ...state }));
+    localStorage.setItem(KEY, JSON.stringify({ v: 5, savedAt: Date.now(), ...state }));
     return true;
   } catch {
     return false;

@@ -33,7 +33,9 @@ shop) and sleep side by side. Round 16 (see [ROADMAP.md](ROADMAP.md)): every new
 houses, prices, neighbours), a choice of five ways to begin (or "surprise me"), and Sims with three personality traits
 and favourite things. Phase 2: each Sim has a dream to work towards (a big family, the top of the career, a dream
 house, the most friends, master chef), three small wishes on screen, happy points to spend on perks, things and a new
-trait, and a Life story of the big moments.
+trait, and a Life story of the big moments. Phase 3: things happen (a few small events a day, each a card with choices:
+the loo breaks, a cat at the door, a birthday party, a talent show), the town's people phone and knock, and every day
+has its weather (rain hides the ducks; snow brings snowmen).
 
 ## Run it locally
 

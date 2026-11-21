@@ -1822,7 +1822,9 @@ function eventsTick() {
 }
 // The card. `who`: the person it is about (or null).
 function openEvent(e, who = null, l = sel) {
-  deck.seen[e.id] = Math.floor(minutes / 1440);
+  const day = Math.floor(minutes / 1440);
+  if (deck.day !== day) Object.assign(deck, { day, today: 0 });
+  deck.seen[e.id] = day;
   deck.today++;
   deck.last = minutes;
   const c = eventCtx(l), mate = mateOf(l);
