@@ -1,19 +1,21 @@
 // Living weightless (design/ROADMAP.md, phase 4): the handholds in every weightless room, and moving by them.
 //
-// Build time, `dressHolds(C, I, c, open)` (layout.mjs, for each room with `float`): rails along every wall at two
-// heights, broken at doors and windows; grab handles either side of each door; short handles across the deck and the
-// deckhead; and a handle by each thing in the room you use (a console, a locker, a ladder). Each is a hold in `I.holds`:
-// a segment `a`→`b` in the deck's frame, with `n`, the wall's normal into the room.
+// Build time, `dressHolds(C, I, c, open)` (layout.mjs, for each room with `float`): a rail along each wall at hand
+// height, in lengths with gaps between, broken at doors, windows and furniture; grab handles either side of each door;
+// a sparse line of handles on the deckhead (and in rooms on the deck); and a handle by each thing in the room you use
+// (a console, a locker). Each is a hold in `I.holds`: a segment `a`→`b` in the deck's frame, with `n`, the wall's
+// normal into the room. Kept sparse on purpose: enough to get about by, not a hold everywhere you look.
 //
 // Run time, `Floater` (walker.floater, called by Walker.frame while `float`): you are either holding a hold or
 // drifting. Holding, you are still (the drive's push doesn't move you); W pushes off along where you look, harder the
-// longer you hold it before you let go, Shift with W a hard push; A, D and S pull you along the hold you have, and on
-// to the next one at its end. Drifting, you cannot change course: you go where the push sent you until a wall stops
-// you (a soft stop) or you catch a hold. Space catches the hold in reach, and with none in reach fires the suit's
-// cold-gas puffer against your drift; WASD on the puffer push you gently where you look. Its gas is limited, and topped
-// up wherever there is weight (a drum, a hub ring, a walking deck). Drifting slowly past a hold, you take it anyway.
-// Out of gas in air you can still swim, very slowly. You move in three dimensions: up to the deckhead, down to the
-// deck, through a door only below its lintel.
+// longer you hold it before you let go, Shift with W a big push at once; A, D and S pull you along the hold you have,
+// hand over hand, and on to the next one at its end. Drifting, you cannot change course: you go where the push sent
+// you until a wall stops you or you take a hold, and nothing is ever taken for you: Space takes the hold in reach (a
+// soft glow marks it, a little ahead of you where you look), and with none in reach fires the suit's cold-gas puffer
+// against your drift; WASD on the puffer push you gently where you look. Its gas is limited, and topped up wherever
+// there is weight (a drum, a hub ring, a walking deck) and at the PUFFER GAS refill points. Out of gas in air you can
+// still swim, very slowly. You move in three dimensions: up to the deckhead, down to the deck, through a door only
+// below its lintel.
 //
 // The airless hangar has no handholds of these: you cross it by its gangway (sets/hangar.mjs), whose rails are its holds,
 // clipped by a lanyard to the safety wire over it (`I.tethers`, `tether()`), so you can never drift off into the bay.
@@ -32,18 +34,16 @@ import { box, at, mat, glow } from '../util.mjs';
 const EYE = 1.6; // the walker's eye above its `pos` (walk.mjs)
 const R = 0.38; // your body's radius against the walls
 export const HOLD = {
-  reach: 1.05, // m from your eye to a hold you can take
-  pull: 1.3, // m/s along a hold, hand over hand (WASD)
+  reach: 1.45, // m from your eye to a hold you can take (Space)
+  pull: 1.3, // m/s along a hold, hand over hand (A D S)
   fast: 2.2, // m/s: with Shift
   gangway: 1.35, // the gangway's rails are made for it: pulling along them is this much quicker
-  swap: 1.6, // m from your hand to the next hold you reach for, at a hold's end or across it
-  push: [0.7, 3], // m/s: a tap of Space, and Space held for `charge` seconds
-  charge: 1,
-  hard: 4, // m/s: Shift with Space
-  leash: 1.5, // m/s: the hardest push off where you are clipped on (the hangar's gangway is for pulling along)
-  coast: 1.2, // s after a push off when nothing is taken for you: you go where you pushed
+  swap: 1.9, // m from your hand to the next hold you reach for, at a hold's end or across it
+  push: [1.3, 4.2], // m/s: a tap of W, and W held for `charge` seconds
+  charge: 0.8,
+  hard: 6.5, // m/s: Shift with W, a big push at once
+  leash: 2.6, // m/s: the hardest push off where you are clipped on (the lanyard catches you)
   scrape: 0.55, // what is left of your slide along a wall you meet
-  slow: 0.4, // m/s: drifting slower than this past a hold, you take it
   haul: [1.8, 1.4], // m/s² and m/s: hauling yourself in on your lanyard (Space, clipped on, nothing in reach)
   low: 0.35, // the puffer's bottle under this: the refill points glow, and the HUD says where the nearest is
   gas: 12, // m/s of the puffer's Δv in a full bottle
@@ -57,7 +57,25 @@ export const HOLD = {
   tether: 3.2, // m: the furthest your eye gets from the safety wire you are clipped to (the airless hangar's gangway)
 };
 
-const RAIL = mat('#d8a530'); // the airless hangar's rails (sets/hangar.mjs) are this yellow too
+const RAIL = mat('#d8a530');
+
+/** A soft round glow, bright in the middle and gone at the edge: the grab hint's texture. */
+let DOT = null;
+function softDot() {
+  if (DOT) return DOT;
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = 64;
+  const g = cv.getContext('2d'), gr = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+  gr.addColorStop(0, 'rgba(255,255,255,1)');
+  gr.addColorStop(0.18, 'rgba(255,255,255,0.75)');
+  gr.addColorStop(0.5, 'rgba(255,255,255,0.22)');
+  gr.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = gr;
+  g.fillRect(0, 0, 64, 64);
+  DOT = new THREE.CanvasTexture(cv);
+  DOT.colorSpace = THREE.SRGBColorSpace;
+  return DOT;
+} // the airless hangar's rails (sets/hangar.mjs) are this yellow too
 const FOOT = mat('#5b626c');
 const STRIP = glow('#4e6078'); // dim: under the bloom aboard a brighter strip reads as a white line
 const PAD = mat('#3a424c');
@@ -178,7 +196,11 @@ function runs(a0, b0, gaps, min = 0.5) {
   const out = [];
   let cur = a0;
   for (const [a, b] of gaps.slice().sort((p, q) => p[0] - q[0])) {
-    if (a - cur >= min) out.push([cur, a]);
+    if (cur >= b0) break;
+    // A gap that starts past the end of the wall (furniture in the next room, on the same line) ends the run at the
+    // wall's end, not at the gap: without this, rails and brace straps were built out past the corner, into thin air.
+    const end = Math.min(a, b0);
+    if (end - cur >= min) out.push([cur, end]);
     cur = Math.max(cur, b);
   }
   if (b0 - cur >= min) out.push([cur, b0]);
@@ -211,6 +233,10 @@ export function dressHolds(C, I, c, open) {
   // height off the deck and below the deckhead, broken at every opening.
   const walls = [['n', z1, x1, x2, true, 1], ['s', z2, x1, x2, true, -1], ['w', x1, z1, z2, false, 1], ['e', x2, z1, z2, false, -1]];
   const braces = [];
+  // Where something else is used (a console, a locker, and the ladders, which are built after this): no brace strap
+  // within reach of it. [x, z, how near is too near].
+  const busy = [...I.interactables.filter((u) => u.id !== 'refill').map((u) => [u.pos.x, u.pos.z, Math.max(2.2, (u.r ?? 1.5) + 0.8)]),
+    ...C.L.ladders.flatMap((l) => ['a', 'b'].filter((e) => l[e].deck === I.deck?.id).map((e) => [l[e].at[0], l[e].at[1], 3.2]))];
   let spare = null; // the best place for a refill point if no door has one
   for (const [side, line, a0, b0, alongX, inward] of walls) {
     const n = alongX ? V(0, 0, inward) : V(inward, 0, 0);
@@ -228,25 +254,36 @@ export function dressHolds(C, I, c, open) {
       q[nk] = line + inward * 0.11;
       I.group.add(at(alongX ? box(len, 0.05, 0.03, STRIP) : box(0.03, 0.05, len, STRIP), q.x, q.y, q.z));
     }
-    // The brace straps: one in each free stretch of wall a metre or more long, and one every five metres along a long
-    // one. The lower rail (and an upper one low enough to meet the headrest) breaks for each.
-    const free = runs(a0 + 0.5, b0 - 0.5, [...gaps, ...against(y + 0.6), ...against(y + 1.3), ...against(y + 1.9)], 1);
+    // The brace straps: one in a free stretch of wall 1.2 m or more long, about every nine metres, and never within
+    // reach of something else you use (a ladder, a console, a hatch: E there must do that, not strap you in). The rail
+    // breaks for each.
+    const free = runs(a0 + 0.5, b0 - 0.5, [...gaps, ...against(y + 0.6), ...against(y + 1.3), ...against(y + 1.9)], 1.2);
+    const at3 = (u, yy, w) => (alongX ? V(u, yy, line + inward * w) : V(line + inward * w, yy, u));
+    const clearOfUses = (u) => { const q = at3(u, y, 0.55); return !busy.some(([x, z, r]) => Math.hypot(q.x - x, q.z - z) < r); };
     const mine = [];
     for (const [ra, rb] of free) {
-      const k = Math.max(1, Math.round((rb - ra) / 5));
-      for (let i = 0; i < k; i++) mine.push(ra + ((i + 0.5) * (rb - ra)) / k);
+      const k = Math.max(1, Math.round((rb - ra) / 9));
+      for (let i = 0; i < k; i++) {
+        const u = ra + ((i + 0.5) * (rb - ra)) / k;
+        if (clearOfUses(u) && !braces.some((b) => b.eye.distanceTo(at3(u, y + 1.72, 0.55)) < 4)) mine.push(u);
+      }
     }
-    const at3 = (u, yy, w) => (alongX ? V(u, yy, line + inward * w) : V(line + inward * w, yy, u));
     for (const u of mine) {
       braceStrap(I, at3, alongX, u, y);
+      // Solid: you float into its pad, not through it.
+      const p0 = at3(u - 0.3, y, 0), p1 = at3(u + 0.3, y + 2.0, 0.2);
+      I.collider(Math.min(p0.x, p1.x), y, Math.min(p0.z, p1.z), Math.max(p0.x, p1.x), y + 2.0, Math.max(p0.z, p1.z));
       braces.push({ room: c.id, I, n: n.clone(), eye: at3(u, y + 1.72, 0.55) });
     }
     const strapGaps = mine.map((u) => [u - 0.42, u + 0.42]);
-    for (const hy of [1.0, h - 0.5]) for (const [ra, rb] of runs(a0 + 0.4, b0 - 0.4, [...gaps, ...against(y + hy), ...(hy < 2.2 ? strapGaps : [])])) {
-      const k = Math.max(1, Math.round((rb - ra + 0.4) / 2.6)), seg = (rb - ra - (k - 1) * 0.4) / k;
+    // One rail at hand height, in lengths of at most 1.5 m about every 3.2 m (the gaps are a reach, so A D still
+    // carry you along it), broken for the brace straps.
+    const hy = 1.1;
+    for (const [ra, rb] of runs(a0 + 0.4, b0 - 0.4, [...gaps, ...against(y + hy), ...strapGaps], 0.6)) {
+      const k = Math.max(1, Math.round((rb - ra) / 3.2)), step = (rb - ra) / k, seg = Math.min(1.5, step);
       for (let i = 0; i < k; i++) {
-        const u0 = ra + i * (seg + 0.4);
-        hold(I, c, pt(u0, y + hy), pt(u0 + seg, y + hy), n, 'rail');
+        const mid = ra + (i + 0.5) * step;
+        hold(I, c, pt(mid - seg / 2, y + hy), pt(mid + seg / 2, y + hy), n, 'rail');
       }
     }
     // Upright grab handles either side of each door, on the room's side.
@@ -279,18 +316,21 @@ export function dressHolds(C, I, c, open) {
     for (let i = 0; i < k; i++) out.push(a + ((i + 0.5) * (b - a)) / k);
     return out;
   };
-  const xs = Math.min(w, d) < 4.5 && long === 'z' ? [(x1 + x2) / 2] : lines(x1 + 1, x2 - 1, 2.6);
-  const zs = Math.min(w, d) < 4.5 && long === 'x' ? [(z1 + z2) / 2] : lines(z1 + 1, z2 - 1, 2.6);
+  // Sparse: a line of them down a passage's deckhead every five metres or so, a grid about 4.5 m apart in a room.
+  const narrow = Math.min(w, d) < 4.5;
+  const xs = narrow && long === 'z' ? [(x1 + x2) / 2] : lines(x1 + 1, x2 - 1, narrow ? 5 : 4.5);
+  const zs = narrow && long === 'x' ? [(z1 + z2) / 2] : lines(z1 + 1, z2 - 1, narrow ? 5 : 4.5);
   const half = 0.25;
   for (const x of xs) for (const z of zs) {
     const across = long === 'z' ? [V(x - half, 0, z), V(x + half, 0, z)] : [V(x, 0, z - half), V(x, 0, z + half)];
-    if (!inHole(x, z, 'floor') && !blocked(x, z, y - 0.1, y + 0.4)) hold(I, c, across[0].clone().setY(y + 0.07), across[1].clone().setY(y + 0.07), V(0, 1, 0), 'deck');
+    if (!narrow && !inHole(x, z, 'floor') && !blocked(x, z, y - 0.1, y + 0.4)) hold(I, c, across[0].clone().setY(y + 0.07), across[1].clone().setY(y + 0.07), V(0, 1, 0), 'deck');
     if (!inHole(x, z, 'ceil') && !blocked(x, z, y + h - 0.5, y + h + 0.1)) hold(I, c, across[0].clone().setY(y + h - 0.25), across[1].clone().setY(y + h - 0.25), V(0, -1, 0), 'deckhead');
   }
   // A handle by each thing to use here: upright on the nearest wall if it is within a metre and a half, else across the
   // deck beside it.
   for (const u of I.interactables) {
     const p = u.pos;
+    if (u.id === 'refill') continue;
     if (p.x < x1 || p.x > x2 || p.z < z1 || p.z > z2 || (u.room && u.room !== c.id)) continue;
     const dist = [[p.z - z1, 'n'], [z2 - p.z, 's'], [p.x - x1, 'w'], [x2 - p.x, 'e']].sort((a, b) => a[0] - b[0])[0];
     if (dist[0] < 1.5) {
@@ -338,9 +378,10 @@ export class Floater {
     this.puffing = false;
     this.was = new Set(); // last frame's keys, for presses and releases
     this.last = new THREE.Vector3();
-    // Where your hand would go: a small glow on the hold in reach.
-    this.marker = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 6), new THREE.MeshBasicMaterial({ color: '#ffd77a', toneMapped: false, transparent: true, opacity: 0.85 }));
+    // Where your hand would go: a soft glow (a hint, not a thing) on the hold in reach, a little ahead where you look.
+    this.marker = new THREE.Sprite(new THREE.SpriteMaterial({ map: softDot(), color: '#ffd77a', transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }));
     this.marker.visible = false;
+    this.markT = 0;
     this.marker.userData.live = true;
     // Clipped on (a room with safety wires, `I.tethers`: the airless hangar's gangway): the wire's point nearest you, and
     // your lanyard to it, drawn from your chest.
@@ -356,7 +397,6 @@ export class Floater {
     this.hurtEl = document.getElementById('c-hurt');
     this.braceEl = document.getElementById('c-brace');
     this.html = '';
-    this.coast = 0; // seconds since a push off when nothing is taken for you
     this.swapT = 0; // a beat between reaching from one hold to the next
     this.settle = false; // take the nearest hold next frame (off a ladder)
     this.refillNear = null; // { d, p } the nearest refill point on your deck, while the bottle is low
@@ -500,11 +540,12 @@ export class Floater {
     this.lanyard.visible = false;
   }
 
-  /** The nearest hold in reach, or null: { h, t, d, p, foot }. Your hands reach `reach` from your eye; with `body`
+  /** The hold in reach you would take, or null: { h, t, d, p, foot }. Your hands reach `reach` from your eye; with `body`
    *  your feet reach a hold at the deck under you too (a foot rail, a deck handle: `foot`), from as low as `HOLD.legs`
-   *  below your eye. */
-  find(I, eye, skip = null, reach = HOLD.reach, body = false) {
-    let best = null;
+   *  below your eye. With `look` (where you look), the one most ahead of you wins over a nearer one behind, and the
+   *  point taken on it is the one nearest a spot just ahead of your eye, so the hint shows where you can see it. */
+  find(I, eye, skip = null, reach = HOLD.reach, body = false, look = null) {
+    let best = null, bs = Infinity;
     for (const h of I.holds ?? []) {
       if (h === skip) continue;
       if (Math.min(h.a.x, h.b.x) - reach > eye.x || Math.max(h.a.x, h.b.x) + reach < eye.x) continue;
@@ -513,10 +554,19 @@ export class Floater {
       // The point of you nearest the hold: your eye, or with `body` anywhere down to your feet.
       _f2.copy(eye);
       if (body && h.n.y > 0.5) _f2.y = Math.max(eye.y - HOLD.legs, Math.min(eye.y, (h.a.y + h.b.y) / 2));
-      const t = Math.min(1, Math.max(0, _d.dot(_p.subVectors(_f2, h.a)) / (h.len * h.len || 1)));
+      const foot = _f2.y < eye.y - 0.8;
+      // Where along it: nearest your eye, or (looking) nearest a spot 0.7 m ahead of it, if that is still in reach.
+      let t = Math.min(1, Math.max(0, _d.dot(_p.subVectors(_f2, h.a)) / (h.len * h.len || 1)));
+      if (look && !foot) {
+        const ta = Math.min(1, Math.max(0, _d.dot(_p.copy(_f2).addScaledVector(look, 0.7).sub(h.a)) / (h.len * h.len || 1)));
+        if (_p.copy(h.a).addScaledVector(_d, ta).distanceTo(_f2) <= reach) t = ta;
+      }
       _p.copy(h.a).addScaledVector(_d, t);
-      const d = _p.distanceTo(_f2), foot = _f2.y < eye.y - 0.8;
-      if (d <= (foot ? 0.6 : reach) && (!best || d < best.d)) best = { h, t, d, p: _p.clone(), foot };
+      const d = _p.distanceTo(_f2);
+      if (d > (foot ? 0.6 : reach)) continue;
+      const cos = look && d > 1e-3 ? _j.subVectors(_p, _f2).dot(look) / d : 0;
+      const sc = d * (1.3 - 0.5 * cos);
+      if (sc < bs) (bs = sc), (best = { h, t, d, p: _p.clone(), foot });
     }
     return best;
   }
@@ -532,7 +582,6 @@ export class Floater {
     const on = this.held ? this.held.h.I : this.strapped?.I;
     if (on && (on !== I || walker.pos.distanceTo(this.last) > 2)) this.reset();
     this.ignoreT = Math.max(0, this.ignoreT - dt);
-    this.coast = Math.max(0, this.coast - dt);
     this.swapT = Math.max(0, this.swapT - dt);
     this.glow(walker, dt);
     // In a brace strap: held to the wall, whatever the drive or a hit does. E (its use) lets you go.
@@ -561,12 +610,14 @@ export class Floater {
     this.tether(walker, dt);
     this.was = new Set(keys);
     this.last.copy(walker.pos);
-    // The glow where your hand is, or would go.
+    // The glow where your hand would go (pulsing gently), or faint where it is.
     const m = this.marker, show = this.held ?? this.near;
+    this.markT += dt;
     if (show) {
       if (m.parent !== I.group) I.group.add(m);
       m.position.copy(this.held ? _p.copy(this.held.h.a).lerp(this.held.h.b, this.held.t) : show.p);
-      m.material.opacity = this.held ? 0.35 : 0.85;
+      m.material.opacity = this.held ? 0.18 : 0.75 + 0.2 * Math.sin(this.markT * 5);
+      m.scale.setScalar(this.held ? 0.12 : 0.24 + 0.05 * Math.sin(this.markT * 5));
     }
     m.visible = !!show;
   }
@@ -592,23 +643,21 @@ export class Floater {
     this.held = { h: n.h, t: n.t, off: eye.clone().sub(n.p), foot: !!n.foot };
     walker.vel.set(0, 0, 0);
     this.charge = -1;
-    this.coast = 0;
     this.G.sfx?.cue('clunk', { vol: quiet ? 0.1 : Math.min(1, 0.12 + speed * 0.12) });
     if (speed > 2.2) walker.pitch += Math.min(0.12, (speed - 2.2) * 0.05); // the jolt as your arm takes it
   }
 
-  /** Holding on. WASD: hand over hand along the hold that way (where you look, and your left and right), and on to the
-   *  next hold when it ends or runs across the way you want (`reachFor`). Space: held, a push off where you look when
-   *  you let go, harder the longer you held it; with Shift, a hard push at once. */
+  /** Holding on. W: held, a push off where you look when you let go, harder the longer you held it; Shift with W, a
+   *  big push at once. A D S: hand over hand along the hold (S back the way you face, A and D to the sides), and on to
+   *  the next hold when it ends or runs across the way you want (`reachFor`). */
   holding(walker, dt, { down, pressed, released, shift }) {
     const H = this.held;
     walker.vel.set(0, 0, 0);
     let fx = 0, fz = 0;
-    if (down('KeyW')) fz -= 1;
     if (down('KeyS')) fz += 1;
     if (down('KeyA')) fx -= 1;
     if (down('KeyD')) fx += 1;
-    if (fx || fz) {
+    if ((fx || fz) && this.charge < 0) {
       _dir.copy(_r).multiplyScalar(fx).addScaledVector(_f, -fz).normalize();
       this.pull(walker, _dir, dt, (shift ? HOLD.fast : HOLD.pull) * (this.clip ? HOLD.gangway : 1));
     }
@@ -620,25 +669,24 @@ export class Floater {
     }
     const grip = _e.copy(H.h.a).lerp(H.h.b, H.t);
     walker.pos.copy(grip).add(H.off).y -= EYE;
-    // Space: the longer you hold it, the harder you push off when you let go. Shift with it, a hard push at once.
-    if (pressed('Space')) this.charge = 0;
-    if (this.charge >= 0 && down('Space')) this.charge += dt;
-    const go = this.charge >= 0 && (released('Space') || (down('Space') && shift));
+    // W: the longer you hold it, the harder you push off when you let go. Shift with it, a big push at once.
+    if (pressed('KeyW')) this.charge = 0;
+    if (this.charge >= 0 && down('KeyW')) this.charge += dt;
+    const go = this.charge >= 0 && (released('KeyW') || (down('KeyW') && shift));
     if (!go) return;
     const k = Math.min(1, this.charge / HOLD.charge);
     let speed = shift ? HOLD.hard : HOLD.push[0] + (HOLD.push[1] - HOLD.push[0]) * k;
-    if (this.clip) speed = Math.min(speed, HOLD.leash); // on the gangway, a gentle push: you are on a lanyard
+    if (this.clip) speed = Math.min(speed, HOLD.leash); // on the gangway: your lanyard will catch you
     // You push off what you hold: looking into its wall or deck, you go along it, not through it.
     const n = H.h.n, into = _d.copy(_f).dot(n);
     if (into < 0 && !H.h.free) _d.addScaledVector(n, -into * 1.05);
     if (_d.lengthSq() < 0.04) _d.copy(n);
     walker.vel.copy(_d.normalize()).multiplyScalar(speed);
     this.ignore = H.h;
-    this.ignoreT = 0.5;
-    this.coast = HOLD.coast;
+    this.ignoreT = 0.6;
     this.held = null;
     this.charge = -1;
-    this.G.sfx?.cue('clunk', { vol: 0.1 + 0.05 * speed });
+    this.G.sfx?.cue('clunk', { vol: 0.1 + 0.04 * speed });
   }
 
   /** Hand over hand along the hold you have, toward `dir` (level or not), at `speed`; at its end, or when it runs across
@@ -688,15 +736,14 @@ export class Floater {
     return best;
   }
 
-  /** Adrift. You keep your course until a wall stops you (and takes most of your slide) or you take a hold. Space: the
-   *  hold in reach; with none, clipped on, haul yourself in on your lanyard; else the puffer against your drift. WASD
-   *  puff you gently where you look (in air with an empty bottle, you swim). Slow past a hold, you take it, but not for a
-   *  moment after a push off or a puff: you are going somewhere. */
+  /** Adrift. You keep your course until a wall stops you (and takes most of your slide) or you take a hold, and only
+   *  Space takes one: the hold in reach; with none, clipped on, haul yourself in on your lanyard; else the puffer
+   *  against your drift. WASD puff you gently where you look (in air with an empty bottle, you swim). */
   drifting(walker, dt, { down, shift }) {
     const v = walker.vel, speed0 = v.length();
     v.addScaledVector(walker.shove, dt); // under a drive, nothing holds you but your hands
     const eye = walker.eye(_e);
-    const n = (this.near = this.find(walker.interior, eye, this.ignoreT > 0 ? this.ignore : null, HOLD.reach, true));
+    const n = (this.near = this.find(walker.interior, eye, this.ignoreT > 0 ? this.ignore : null, HOLD.reach, true, _f));
     if (down('Space') && n) return this.grab(walker, n, speed0);
     let fx = 0, fz = 0;
     if (down('KeyW')) fz -= 1;
@@ -731,8 +778,6 @@ export class Floater {
     }
     if (this.puffing && !this.puffT) (this.puffT = 0.25), this.G.sfx?.cue('hiss', { dur: 0.3, vol: 0.25 });
     this.puffT = Math.max(0, (this.puffT ?? 0) - dt);
-    // Puffing (and half a second after), you are going somewhere: a hold you drift past slowly is not taken for you.
-    this.puffed = this.puffing || this.hauling ? 0.5 : Math.max(0, (this.puffed ?? 0) - dt);
     const hit = this.move(walker, v.x * dt, v.y * dt, v.z * dt);
     if (hit.any) {
       const into = hit.into;
@@ -741,8 +786,6 @@ export class Floater {
       if (into > 2.5) walker.pitch += Math.min(0.1, (into - 2.5) * 0.04);
       this.injure(into);
     }
-    // Come nearly to rest by a hold (drifting slowly past it, or stopped against a wall by it): you take it.
-    if (n && !this.puffed && this.coast <= 0 && v.length() < HOLD.slow) this.grab(walker, n, v.length());
   }
 
   /** Clipped to a safety wire (`I.tethers`, each `{ a, b, room }` in the deck's frame: the airless hangar's gangway,
@@ -883,8 +926,8 @@ export class Floater {
   prompt() {
     if (this.strapped) return { key: 'E', label: 'Unstrap' };
     if (this.held) {
-      if (this.charge >= 0) return { key: 'Space', label: `Let go to push off ${'▮'.repeat(1 + Math.floor(Math.min(1, this.charge / HOLD.charge) * 4)).padEnd(5, '▯')}` };
-      return { key: 'WASD', label: `Pull yourself along · Space: push off where you look${this.clip ? ' (gently: you are clipped on)' : ', hold for harder'}` };
+      if (this.charge >= 0) return { key: 'W', label: `Let go to push off ${'▮'.repeat(1 + Math.floor(Math.min(1, this.charge / HOLD.charge) * 4)).padEnd(5, '▯')}` };
+      return { key: 'W', label: `Push off where you look (hold for harder, Shift: big push) · A D S pull yourself along${this.clip ? ' · clipped on' : ''}` };
     }
     if (this.near) return { key: 'Space', label: this.near.foot ? 'Hook your feet in' : 'Take hold' };
     if (this.clip) return { key: 'Space', label: 'Haul yourself in on your lanyard' };

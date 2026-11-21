@@ -342,6 +342,7 @@
   },
   "fighter": {
    "shell": 1100,
+   "shellMass": 0.4,
    "every": 0.11,
    "spread": 0.004,
    "range": 1800,
@@ -563,12 +564,13 @@
    }
   },
   "brace": {
-   "about": "Brace for impact. When one of the raider's torpedoes will arrive within `eta` seconds the ship calls brace and counts down (weapons/torpedoes.mjs braceFrame), and the brace straps on the weightless rooms' walls show \"Strap in\"; the countdown stays up `hold` s after the last one. A hit kicks the structure: `kick` m/s at the hit for a torpedo (`shell` for a gun shell, `glance` for one the armour stopped), less with distance (`fade` m halves it). Strapped in, you ride it; a hand on a rail holds below `grip` m/s and your feet in a rail below `feet` m/s; anyone else keeps going. Meeting a wall faster than `hurt` m/s hurts, `per` of an injury for each m/s over; a whole one (1) blacks you out (the damage control party picks you up), and it heals at `heal` a minute.",
+   "about": "Brace for impact. When one of the raider's torpedoes will arrive within `eta` seconds the ship calls brace and counts down (weapons/torpedoes.mjs braceFrame), and the brace straps on the weightless rooms' walls show \"Strap in\"; the countdown stays up `hold` s after the last one. A hit kicks the structure: `kick` m/s at the hit for a torpedo (`shell` for a gun shell, `glance` for one the armour stopped), less with distance (`fade` m halves it). Strapped in, you ride it; a hand on a rail holds below `grip` m/s and your feet in a rail below `feet` m/s; anyone else keeps going. The blast also shoves the whole ship: `shove` N·s on her body at the hit, along the blast, [torpedo, shell, glance] (weapons/projectiles.mjs `struck`), so off her centre it turns her and flight assist fires to take it out. Meeting a wall faster than `hurt` m/s hurts, `per` of an injury for each m/s over; a whole one (1) blacks you out (the damage control party picks you up), and it heals at `heal` a minute.",
    "eta": 6,
    "hold": 1.5,
    "kick": 8,
    "shell": 2.5,
    "glance": 1.2,
+   "shove": [250000000, 8000000, 2000000],
    "fade": 25,
    "grip": 4.5,
    "feet": 3.5,

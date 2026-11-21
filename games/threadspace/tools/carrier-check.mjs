@@ -362,9 +362,9 @@ const scenarios = {
     return out;
   },
 
-  /** Weightless in the spine and the crew tunnel (weightless.mjs): puff to a wall and take the rail there, push off
-   *  along it, take the next one, pull along it, a hard push up to the deckhead, a drift aft under the drive, and
-   *  holding on under it. */
+  /** Weightless in the spine and the crew tunnel (weightless.mjs): nothing is taken for you; puff to a wall and take
+   *  the rail there with Space, push off along it with W, take the next one, pull along it with S, a hard push
+   *  (Shift W) up to the deckhead, a drift aft under the drive, and holding on under it. */
   async float(c) {
     c.career.free();
     const w = c.walker, F = w.floater, K = c.input.keys, out = {};
@@ -373,15 +373,18 @@ const scenarios = {
     out.holds = [...c.C.decks.values()].reduce((n, I) => n + (I.holds?.length ?? 0), 0);
     c.place(4, 0, -50, -Math.PI / 2); // the spine, facing starboard
     run_(c, 0.2);
-    out.start = at(); // the deck handle under you, taken
-    F.reset(); // let go, and puff toward the starboard rail
+    out.start = at(); // adrift: nothing taken
+    F.reset(); // puff toward the starboard rail
     hold('KeyW', 1);
     out.puffed = at();
-    out.caught = { t: run_(c, 5, () => F.held), ...at() };
-    if (!F.held) (K.add('Space'), (out.caught.space = run_(c, 1, () => F.held)), K.delete('Space'), run_(c, 0.2)); // take the rail you met
+    run_(c, 3);
+    K.add('Space'); // take the rail you met
+    out.caught = { t: run_(c, 1, () => F.held), ...at() };
+    K.delete('Space');
+    run_(c, 0.2);
     w.yaw = 0;
     w.pitch = 0;
-    hold('Space', 0.6); // charge, and let go: off the hold where you look
+    hold('KeyW', 0.6); // charge, and let go: off the hold where you look
     run_(c, 1 / 30);
     out.pushed = at();
     run_(c, 2);
@@ -393,7 +396,7 @@ const scenarios = {
     out.pulled = at();
     w.pitch = 1.2;
     K.add('ShiftLeft');
-    hold('Space', 1 / 30); // Shift+Space: a hard push
+    hold('KeyW', 1 / 30); // Shift+W: a hard push
     K.delete('ShiftLeft');
     run_(c, 1.5);
     out.up = at();

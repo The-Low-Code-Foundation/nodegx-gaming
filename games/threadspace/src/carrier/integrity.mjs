@@ -658,10 +658,17 @@ export class Integrity {
     const d = you.distanceTo(p);
     // A torpedo's warhead is felt the length of her: a hard shake anywhere aboard, and the structure lurching along
     // the blast (`lurch`, its direction in the ship's frame, played on the camera by main.mjs). A shell is felt near.
+    // Aboard, the warhead's sound and the slow roll of her whole structure come through `feel` (gunfeel.mjs), and
+    // the blast shoves her body (`knock`: weapons/projectiles.mjs `struck`), so she turns and her thrusters fight it.
     if (kind === 'kick') {
       this.shake = Math.max(this.shake, 0.9 + 1.6 / (1 + d / 60));
-      this.lurch = { dir: dir.clone().normalize(), size: 1 / (1 + d / 120), t: 0 };
-    } else this.shake = Math.max(this.shake, 1.6 / (1 + d / 25));
+      this.lurch = { dir: dir.clone().normalize(), size: 0.6 + 1 / (1 + d / 120), t: 0 };
+      if (this.aboard !== false && this.feel) this.feel.blast(d);
+    } else {
+      this.shake = Math.max(this.shake, 1.6 / (1 + d / 25));
+      if (this.aboard !== false) this.feel?.thump(0.5 / (1 + d / 30), 8, 3.5, 0.6);
+    }
+    this.knock?.(p, dir, kind);
     this.sfx?.play('boom', Math.min(1000, 120 + d * 3), 40);
     this.C.bus?.emit('jolt', { at: p.clone(), dir: dir.clone().normalize(), kind });
   }

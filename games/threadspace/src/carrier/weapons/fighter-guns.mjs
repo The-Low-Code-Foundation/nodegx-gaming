@@ -32,11 +32,29 @@ export const fighterGunParts = {
     const muzzles = w.userData.muzzles ?? [];
     const p = w.localToWorld((muzzles[i] ?? new THREE.Vector3(0, -0.8, -5.6)).clone());
     const d = _b.set((r() - 0.5) * 2 * F.spread, (r() - 0.5) * 2 * F.spread, -1).normalize().transformDirection(w.matrixWorld);
+    // Each round kicks her back a little (`shellMass` kg at `shell` m/s), so a long burst slows her along her nose.
+    if (F.shellMass && fi.body?.mass) fi.body.vel.addScaledVector(d, (-F.shell * F.shellMass) / fi.body.mass);
+    this.cannonBlast(p, d);
     const s = this.fire(p, d.multiplyScalar(F.shell).add(fi.body.vel), true, F.range / F.shell, F.damage[0] + r() * (F.damage[1] - F.damage[0]));
     s.you = s.cannon = true;
     s.w = 0.22;
-    this.flash(p, 0.7, '#ffd9a0', 0.05);
-    this.sfx?.play('hit', 30); // felt through the airframe more than heard
+    // Felt through the airframe more than heard: a chug and a shiver in the seat (gunfeel.mjs), or the old knock.
+    if (this.feel) this.feel.fighterShot();
+    else this.sfx?.play('hit', 30);
+  },
+
+  /** The cannon's muzzle at `p` along `d` (world, unit): a flash, a star, and a puff of hot gas (unseeded: looks only). */
+  cannonBlast(p, d) {
+    this.flash(p, 1.2, '#ffd9a0', 0.06);
+    this.flash(_c.copy(p).addScaledVector(d, 0.8), 0.6, '#ffffff', 0.03);
+    const G = this.gas, v0 = this.fighter.body.vel;
+    for (let i = 0; G && i < 3; i++) {
+      const v = _c.copy(d).multiplyScalar(15 + 25 * Math.random()).add(v0);
+      v.x += (Math.random() - 0.5) * 12;
+      v.y += (Math.random() - 0.5) * 12;
+      v.z += (Math.random() - 0.5) * 12;
+      G.emit(p, v, 0.25 + 0.3 * Math.random(), 0.2, 1 + Math.random(), 0.3, 0.8, 0);
+    }
   },
 
   /** What her sight can show: every live enemy craft, or the target sled on a drill. */

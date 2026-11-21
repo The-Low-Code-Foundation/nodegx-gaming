@@ -66,7 +66,17 @@ export const broadsideParts = {
       _m.lookAt(p, _c.copy(p).add(dir), Y);
       t.obj.quaternion.setFromRotationMatrix(_m);
       this.flash(p, 3, '#d8e8ff', 0.2);
+      // The tube's charge of cold gas blowing out round it: frost, not fire.
+      for (let j = 0; this.gas && j < 14; j++) {
+        const v = _c.copy(dir).multiplyScalar(8 + 14 * Math.random()).add(this.body.vel);
+        v.x += (Math.random() - 0.5) * 10;
+        v.y += (Math.random() - 0.5) * 10;
+        v.z += (Math.random() - 0.5) * 10;
+        this.gas.emit(p, v, 1 + Math.random(), 1, 5 + 4 * Math.random(), 0.2, 0, 1);
+      }
     }
+    const first = _c.set(...S.at[b.next % S.at.length]); // ship frame
+    this.feel?.gun('tube', 0, this.ship.you ? first.distanceTo(this.ship.you) : 200, this.ship.aboard !== false);
     b.next = (b.next + n) % S.at.length;
     b.stock -= n;
     b.t = B.reload;

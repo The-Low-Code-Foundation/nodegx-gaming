@@ -128,6 +128,26 @@ export const projectileParts = {
     return { pen: pick(T.pen), damage: pick(T.damage), hole: pick(T.hole), torpedo: true };
   },
 
+  /** A big gun's muzzle blast at `p` (world) along `d` (world, unit): the flash, a hot core, and a cone of propellant
+   *  gas thrown out ahead and round the muzzle that cools and spreads (gas.mjs; `this.gas`, set by main.mjs). `size`
+   *  1 is a turret's round. Unseeded randoms: what you see, never what happens. */
+  blast(p, d, size, color = '#ffd090') {
+    this.flash(p, 3.5 * size, color, 0.14 + 0.06 * size);
+    this.flash(_c.copy(p).addScaledVector(d, 2.5 * size), 2 * size, '#ffffff', 0.06);
+    const G = this.gas, v0 = this.body?.vel;
+    if (!G) return;
+    const n = Math.round(10 + 14 * size);
+    for (let i = 0; i < n; i++) {
+      const fwd = Math.random(), sp = (1 - fwd) * 0.9 + 0.15;
+      const v = _d.copy(d).multiplyScalar((20 + 60 * fwd) * size);
+      v.x += (Math.random() - 0.5) * 2 * sp * 40 * size;
+      v.y += (Math.random() - 0.5) * 2 * sp * 40 * size;
+      v.z += (Math.random() - 0.5) * 2 * sp * 40 * size;
+      if (v0) v.add(v0);
+      G.emit(p, v, 0.5 + 1.2 * Math.random(), 0.8 * size, (4 + 6 * Math.random()) * size, 0.25 + 0.2 * Math.random(), 0.6 + 0.4 * Math.random() * (1 - fwd), 0);
+    }
+  },
+
   flash(p, size, color, life) {
     const m = new THREE.Mesh(FLASH_GEO, new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 1, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }));
     m.position.copy(p);
@@ -161,8 +181,9 @@ export const projectileParts = {
 
   /** A gun's kick: impulse `J` (world, N·s: the push on the ship, the other way from the shot) at world point `p`. It
    *  changes her velocity and, off her centre of mass, her turn; flight assist then fires her thrusters to take it out.
-   *  Aboard you feel it, the harder the heavier the shot and the nearer the gun. */
-  recoil(p, J) {
+   *  Aboard you feel it, the harder the heavier the shot and the nearer the gun, and hear it through her structure
+   *  (gunfeel.mjs: `kind` is 'cannon', 'rail', 'tube' or 'pdc'). */
+  recoil(p, J, kind = 'cannon') {
     const B = this.body, j = J.length();
     if (!B?.mass || !(j > 0)) return;
     B.vel.addScaledVector(J, 1 / B.mass);
@@ -174,6 +195,22 @@ export const projectileParts = {
     B.ang.z += tau.z / B.I.z;
     this.kicked = (this.kicked ?? 0) + j; // the console's tally (tests)
     this.C.bus?.emit('fire', { at: p, impulse: j });
-    this.ship.shake = Math.max(this.ship.shake, Math.min(1, j / 2.8e6) / (1 + d / 25) + j / 1.2e8);
+    this.ship.shake = Math.max(this.ship.shake, (0.45 * Math.min(1, j / 2.8e6)) / (1 + d / 25) + j / 2.4e8); // the jitter: the sway is `feel`'s
+    this.feel?.gun(kind, j, d, this.ship.aboard !== false);
+  },
+
+  /** A hit's shove on her: `p` and `dir` in the ship's frame, `kind` 'kick' (a torpedo), 'shell' or 'glance'; the
+   *  impulse is the layout's `weapons.brace.shove`. Like a recoil it moves her and, off her centre, turns her. */
+  struck(p, dir, kind) {
+    const B = this.body, S = this.W.brace?.shove;
+    if (!B?.mass || !S) return;
+    const j = S[kind === 'kick' ? 0 : kind === 'shell' ? 1 : 2];
+    if (!(j > 0)) return;
+    const J = _k2.copy(dir).normalize().multiplyScalar(j);
+    const tau = _k1.copy(p).sub(this.com).cross(J);
+    B.ang.x += tau.x / B.I.x;
+    B.ang.y += tau.y / B.I.y;
+    B.ang.z += tau.z / B.I.z;
+    B.vel.addScaledVector(J.applyQuaternion(this.C.frame.getWorldQuaternion(_kq)), 1 / B.mass);
   }
 };

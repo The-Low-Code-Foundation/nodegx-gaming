@@ -53,9 +53,12 @@ export const turretParts = {
       t.slewing = Math.abs(dT) > mT + 0.002 || Math.abs(dE) > mE + 0.002; // could not catch the order this frame
       t.house.rotation.y = t.train;
       t.guns.rotation.x = t.s * t.elev;
-      // Recoil: the guns run back and out again.
-      t.recoil = Math.max(0, t.recoil - dt * 2.4);
-      const back = _a.set(0, -t.s * Math.sin(t.elev), Math.cos(t.elev)).multiplyScalar(1.1 * Math.sin(Math.min(1, t.recoil) * Math.PI * 0.5));
+      // Recoil: the guns slam back in a twentieth of a second and the recuperator runs them out again over one, the
+      // house rocking on its ring with the shock.
+      const rt = (t.recoilT = (t.recoilT ?? 9) + dt);
+      const run = rt < 0.05 ? rt / 0.05 : Math.exp(-(rt - 0.05) * 3.2) * (1 + (rt - 0.05) * 3.2);
+      const back = _a.set(0, -t.s * Math.sin(t.elev), Math.cos(t.elev)).multiplyScalar(1.6 * run);
+      t.house.rotation.z = rt < 1.5 ? 0.012 * Math.exp(-rt * 4) * Math.sin(rt * 38) : 0;
       t.guns.position.copy(t.home).add(back);
       t.cool[0] -= dt;
       t.cool[1] -= dt;
@@ -100,12 +103,12 @@ export const turretParts = {
     const dmg = G.damage[0] + r() * (G.damage[1] - G.damage[0]);
     const J = _r3.copy(d).multiplyScalar(-G.shell * (G.shellMass ?? 0)); // before `d` becomes the shell's velocity
     this.fire(p, d.multiplyScalar(G.shell).add(this.body.vel), true, G.range / G.shell, dmg).you = you;
-    if (G.shellMass) this.recoil(p, J);
-    this.flash(p, 3.5, '#ffd090', 0.12);
+    if (G.shellMass) this.recoil(p, J, 'cannon');
+    this.blast(p, _r3.copy(d).normalize(), 1);
     t.cool[i] = you ? G.reload : G.crewReload;
     t.barrel = 1 - i;
     t.ready--;
-    t.recoil = 1;
+    t.recoilT = 0;
     if (you) this.kick = 1;
     this.sfx?.play('boom', you ? 40 : this.ear ? this.ear.distanceTo(p) : 400, you ? 22 : 14);
   },
@@ -143,8 +146,14 @@ export const turretParts = {
     const up = _b.set(0, t.s, 0).transformDirection(this.C.frame.matrixWorld);
     _m.lookAt(camera.position, _c.copy(camera.position).add(d), up);
     camera.quaternion.setFromRotationMatrix(_m);
-    this.kick = Math.max(0, (this.kick ?? 0) - dt * 4);
-    if (this.kick > 0.01) camera.rotateX(this.kick * 0.006 * (Math.random() + 0.5));
+    // Your gun firing: the sight jumps up and back with the cab, and settles.
+    this.kick = Math.max(0, (this.kick ?? 0) - dt * 2.2);
+    if (this.kick > 0.01) {
+      const k = this.kick * this.kick;
+      camera.rotateX(k * 0.03);
+      camera.translateZ(k * 0.25);
+      camera.rotateZ((Math.random() - 0.5) * k * 0.01);
+    }
   },
 
   where() {

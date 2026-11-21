@@ -40,6 +40,7 @@ import { Weapons } from './weapons.mjs';
 import { Plant } from './plant.mjs';
 import { HelmSight } from './helmsight.mjs';
 import { Sfx } from '../sfx.mjs';
+import { Feel } from './gunfeel.mjs';
 import { Gas } from './gas.mjs';
 import { FlightAudio } from './flight-audio.mjs';
 import { Career } from './career.mjs';
@@ -186,6 +187,12 @@ const guns = new Weapons(C, world, {
     man: (t) => (career.allows('guns') ? fadeThen(() => gunSeat.man(t)) : career.refuse('guns'))
   }
 });
+// How her guns and the hits on her are heard and felt aboard: through the structure, and as the room swaying
+// (gunfeel.mjs); and a hit's shove on her body (weapons/projectiles.mjs `struck`). `ship.aboard`: set each frame.
+const feel = new Feel(sfx);
+guns.feel = ship.feel = feel;
+guns.gas = carrierGas;
+ship.knock = (p, dir, kind) => guns.struck(p, dir, kind);
 // A fighter shot dead in space: flight control takes her, from wherever she is, and brings her in.
 // The weightless crew brace at the call and take a hit's kick (floating.mjs).
 C.bus.on('brace', (e) => crewBrace(e.on));
@@ -434,14 +441,20 @@ function tick(dt) {
   }
   // A torpedo hit's lurch (integrity.mjs `impact`): the room jumps along the blast and rings back, so the view jumps
   // the other way. Loose and weightless, the Floater throws you for real as well (weightless.mjs `jolt`).
+  // A sharp jump that rings at 2 Hz, then the slow sway of the whole hull taking it, at half a hertz.
   const lurch = ship.lurch;
-  if (lurch && (lurch.t += dt) < 1.2) {
+  if (lurch && (lurch.t += dt) < 3) {
     if (mode === 'walk' || mode === 'gun' || bridgeView) {
-      const k = lurch.size * 0.28 * Math.exp(-lurch.t * 3.5) * Math.cos(lurch.t * 14);
+      const t = lurch.t;
+      const k = lurch.size * (0.32 * Math.exp(-t * 3) * Math.cos(t * 13) + 0.18 * Math.exp(-t * 1.1) * Math.sin(t * 3.2));
       camera.position.addScaledVector(_lurch.copy(lurch.dir).transformDirection(C.frame.matrixWorld), -k);
       camera.rotateX(k * 0.12);
+      camera.rotateZ(lurch.size * 0.025 * Math.exp(-t * 1.1) * Math.sin(t * 2.6));
     }
   } else if (lurch) ship.lurch = null;
+  // Her guns and the hits, through the structure (gunfeel.mjs); in the cockpit, your own cannon's shiver.
+  ship.aboard = mode === 'walk' || mode === 'gun' || mode === 'helm';
+  feel.frame(dt, camera, mode === 'walk' || mode === 'gun' || bridgeView ? 'aboard' : mode === 'fighter' && fighter.view === 'cockpit' ? 'cockpit' : null);
   // A hit on your fighter throws you about in the seat.
   if (mode === 'fighter' && guns.jolt > 0.01) {
     camera.rotateZ((Math.random() - 0.5) * guns.jolt * 0.05);
@@ -550,7 +563,7 @@ window.addEventListener('keydown', wake, { once: true });
 
 window.__carrier = {
   C, L, K, W, crew, routine, hands, body, helm, thrusters, walker, renderer, camera, cut, fighter, dc, ship, guns, plant, helmSight, sfx, approach, cockpit, career, voices, announcer,
-  gas, carrierGas, flightAudio, composer, bloom, ABOARD, ambience, input, G, seats, drive, doors,
+  gas, carrierGas, feel, flightAudio, composer, bloom, ABOARD, ambience, input, G, seats, drive, doors,
   mode: () => mode,
   tick: (n = 1, dt = 1 / 60) => {
     for (let i = 0; i < n; i++) tick(dt);

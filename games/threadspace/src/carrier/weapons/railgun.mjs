@@ -84,12 +84,13 @@ export const railgunParts = {
     s.rail = true;
     s.you = you;
     s.w = 1.4;
-    this.flash(p, 14, '#cfe4ff', 0.35);
-    this.flash(p, 6, '#ffffff', 0.1);
+    this.flash(p, 18, '#cfe4ff', 0.45);
+    this.flash(p, 7, '#ffffff', 0.12);
+    this.blast(p, _r2.copy(d), 1.6, '#cfe4ff'); // the sabot and the rails' plasma thrown out ahead of her
     this.plant?.addHeat(G.heat);
-    this.sfx?.play('boom', 60, 50);
-    if (G.slug) this.recoil(p, J);
-    else this.ship.shake = Math.max(this.ship.shake, 0.6);
+    this.sfx?.play('boom', this.ship.aboard ? 160 : this.ear ? this.ear.distanceTo(p) : 60, 50);
+    if (G.slug) this.recoil(p, J, 'rail');
+    else (this.ship.shake = Math.max(this.ship.shake, 0.6)), this.feel?.gun('rail', 0, 100, this.ship.aboard !== false);
   },
 
   /** The capacitors charging, and the CIC firing a broadside railgun as the raider crosses its line when nobody is at

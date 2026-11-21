@@ -1,7 +1,7 @@
 // Point defence: the automatic gatlings that take the nearest torpedo (or the raider), their rounds, and the raider's
 // own point defence against ours. Part of `Weapons` (weapons.mjs).
 
-import { at, clamp, DEG, _a, _b, _c, _d, _e, _f, _g, _q, _m, Z, turn, leadAccel, ROUND_MAX } from './shared.mjs';
+import { THREE, at, clamp, DEG, _a, _b, _c, _d, _e, _f, _g, _q, _m, Z, turn, leadAccel, ROUND_MAX } from './shared.mjs';
 
 /** Mixed into `Weapons` (weapons.mjs). */
 export const pdcParts = {
@@ -104,7 +104,11 @@ export const pdcParts = {
           if (rd) rd.fdmg = P.fighterDamage ?? 0; // what it does to a bandit it passes close to
           this.plant?.addHeat(P.heat);
         }
-        if ((g.soundT = (g.soundT ?? 0) - dt) <= 0) (g.soundT = 0.18), this.sfx?.play('hit', this.ear ? Math.min(900, this.ear.distanceTo(pivot) * 0.7) : 600);
+        if ((g.soundT = (g.soundT ?? 0) - dt) <= 0) {
+          g.soundT = 0.18;
+          this.sfx?.play('hit', this.ear ? Math.min(900, this.ear.distanceTo(pivot) * 0.7) : 600);
+          if (this.feel && this.ship.you) this.feel.gun('pdc', 0, this.C.frame.worldToLocal(new THREE.Vector3().copy(pivot)).distanceTo(this.ship.you), this.ship.aboard !== false);
+        }
       } else g.coolT = Math.max(g.coolT, 0);
       g.spin.rotation.z += g.spinV * dt;
     }
