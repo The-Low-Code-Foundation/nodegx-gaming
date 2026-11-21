@@ -219,10 +219,17 @@ C.bus.on('fighter-wreck-over', () => fadeThen(() => {
 const plant = new Plant(C, { ship, thrusters: thrusterList, dc, sfx });
 guns.plant = plant;
 ship.status = () => {
-  const pdcUp = guns.pdcs.filter((g) => g.ok && g.stock > 0).length;
-  const pdcRounds = guns.pdcs.reduce((a, g) => a + g.stock, 0), pdcMax = guns.pdcs.length * (L.weapons.pdc?.stock ?? 1);
+  // Each kind of point defence its own row: guns in action, and the rounds left in their magazines.
+  const kind = (type) => {
+    const gs = guns.pdcs.filter((g) => g.type === type);
+    const up = gs.filter((g) => g.ok && g.stock > 0).length;
+    const full = gs.length * ((type === 'flak' ? L.weapons.flak : L.weapons.pdc)?.stock ?? 1);
+    return { n: gs.length, text: `${up}/${gs.length} guns · ${Math.round((gs.reduce((a, g) => a + g.stock, 0) / Math.max(1, full)) * 100)}% rounds` };
+  };
+  const close = kind('close'), flak = kind('flak');
   return [
-    ['Point defence', ship.sys('pdc'), `${pdcUp}/${guns.pdcs.length} guns · ${Math.round((pdcRounds / Math.max(1, pdcMax)) * 100)}% rounds`],
+    ['Close-in guns', ship.sys('pdc'), close.text],
+    ...(flak.n ? [['Flak', ship.sys('pdc'), flak.text]] : []),
     ['Torpedo tubes', (ship.node(L.weapons.tubes?.magazine)?.health ?? 100) / 100, `${guns.tubeStock} torpedoes`],
     L.weapons.railgun && !guns.railSides
       ? ['Railgun', ship.power && !plant.hot ? 1 : 0.3, `${guns.rail.stock} slugs · ${guns.rail.charge >= 1 ? 'charged' : `${Math.round(guns.rail.charge * 100)}%`}`]

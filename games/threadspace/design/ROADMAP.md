@@ -361,6 +361,20 @@ No physics engine. The ship already has its own Newtonian code (`newton.mjs`, `f
   Not done: point defence in kinds (close-in guns and flak); missiles on the carrier or the raider; the cockpit's own
   missile and flare sounds (it uses the existing ones and a synthesised tone).
 
+  **Built (phase 7's third session, 21 November 2026):** point defence in kinds (`weapons/pdc.mjs`, numbers in the
+  layout's `weapons.pdc` and `weapons.flak`, each `pdc` mount's `gun` saying which). Six close-in guns, three down each
+  side, are for what homes on her: torpedoes and missiles, out to 1.9 km, 32 tracers a second, a bandit only inside
+  400 m and never the raider. Four flak guns, new, two on the hangar's roof and two under it (built in code, `flakMesh`,
+  with sponsons in hull.glb), take the bandits first, then a torpedo beyond the close-in guns' reach, then the raider:
+  twin barrels firing in turn, shells fused for the meeting the fire control works out, with a proximity fuse, whose
+  splinters hit a bandit by chance, the nearer the likelier. The status board and the HUDs show each kind's guns.
+  `tools/raid-sim.mjs` is new: many headless raids, averaged, with in-page tweaks to try numbers. As tuned over 20
+  raids: four torpedoes in five killed and two salvos in three stopped outright (about one hit a raid, where it was
+  one every other raid), three bandits in five shot down (one in three before), nearly all by the flak, and a gun shot
+  up every third raid. The turrets stay the guns for ships: their crews still never lay on a bandit, on purpose.
+  Not done: missiles on the carrier or the raider; bandits on a turret gunner's sight (it shows the raider and
+  torpedoes only); not yet played by hand.
+
 ## Phase 8. Talking to people (three or more sessions) [13]
 
 - **The story first, by Gemini, with you as editor.** A story bible before any dialogue: the ship's name and history,

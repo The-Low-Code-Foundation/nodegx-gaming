@@ -121,8 +121,11 @@ export const fighterGunParts = {
 
   /** The point defence in a line: guns up, torpedoes inbound. */
   pdLine(red = '#ff5a4a') {
-    const up = this.pdcs.filter((g) => g.ok && g.stock > 0).length;
+    const of = (type) => this.pdcs.filter((g) => g.type === type);
+    const up = (gs) => gs.filter((g) => g.ok && g.stock > 0).length;
+    const close = of('close'), flak = of('flak');
     const inbound = this.torps.filter((t) => !t.dead && t.side === 'theirs').length;
-    return [`point defence ${up}/${this.pdcs.length}${inbound ? `  ·  ${inbound} torpedo${inbound > 1 ? 'es' : ''} inbound` : ''}`, inbound || up < this.pdcs.length ? red : '#cfe8ff'];
+    const down = up(close) < close.length || up(flak) < flak.length;
+    return [`close-in ${up(close)}/${close.length}${flak.length ? `  flak ${up(flak)}/${flak.length}` : ''}${inbound ? `  ·  ${inbound} torpedo${inbound > 1 ? 'es' : ''} inbound` : ''}`, inbound || down ? red : '#cfe8ff'];
   }
 };

@@ -411,17 +411,19 @@ turret('turret-ventral', [0, -12.6, bow.z[0] + 52], [0, -1, 0]);
 hTurrets.forEach((z, i) => { turret(`turret-h${i + 1}d`, [-10, hgr.s.h / 2, z], [0, 1, 0]); turret(`turret-h${i + 1}v`, [10, -hgr.s.h / 2, z], [0, -1, 0]); });
 turret('turret-stern-d', [0, stn.s.h / 2, sz1 - 7], [0, 1, 0]);
 turret('turret-stern-v', [0, -stn.s.h / 2, sz0 + 9], [0, -1, 0]);
-const pdc = (id, at, up, magazine) => mounts.push({ id, kind: 'pdc', at, up, magazine });
-// Eight point defence guns, where the first cut had eighteen (design/ROADMAP.md, phase 1): three down each side (bow,
-// hangar, stern) and one on top and one underneath amidships, so a raid from either beam meets five of them. Fewer,
-// better guns: `weapons.pdc` below gives each a faster rate and a wider burst, which the headless raids put back to
-// what eighteen did (about three torpedoes in four shot down, a raid about a minute long) for less heat.
+const pdc = (id, at, up, magazine, gun = 'close') => mounts.push({ id, kind: 'pdc', gun, at, up, magazine });
+// Point defence in two kinds (design/ROADMAP.md, phase 7), where the first cut had eighteen of one: six close-in guns,
+// small fast rounds at short range for torpedoes and missiles, three down each side (bow, hangar, stern); and four flak
+// guns, twin guns firing bigger, slower, fused shells out to longer range for fighters (and the raider when no fighter
+// is up), two on the hangar's roof and two under it, so they bear on either beam. A raid from one beam meets three
+// close-in guns and all four flak guns. `weapons.pdc` and `weapons.flak` below have their numbers.
 {
   const zb = bow.z[0];
   pdc('pdc-bow-pf', [-19.5, 0, zb + 22], [-1, 0, 0], 'pdc-mag-p'); pdc('pdc-bow-sf', [19.5, 0, zb + 22], [1, 0, 0], 'pdc-mag-s');
-  const hp = (id, at, up) => pdc(id, at, up, 'pdc-mag-h');
+  const hp = (id, at, up, gun) => pdc(id, at, up, 'pdc-mag-h', gun);
   hp('pdc-h-pa', [-23.5, -13, hz1 - 10], [-1, 0, 0]); hp('pdc-h-sa', [23.5, -13, hz1 - 10], [1, 0, 0]);
-  hp('pdc-h-d', [10, 18, hz0 + 40], [0, 1, 0]); hp('pdc-h-v', [-10, -18, hz0 + 76], [0, -1, 0]);
+  hp('flak-h-d1', [10, 18, hz0 + 40], [0, 1, 0], 'flak'); hp('flak-h-d2', [10, 18, hz0 + 76], [0, 1, 0], 'flak');
+  hp('flak-h-v1', [-10, -18, hz0 + 40], [0, -1, 0], 'flak'); hp('flak-h-v2', [-10, -18, hz0 + 76], [0, -1, 0], 'flak');
   const sp2 = (id, at, up) => pdc(id, at, up, 'magazine-sv');
   sp2('pdc-s-pf', [-25, 8, sz0 + 10], [-1, 0, 0]); sp2('pdc-s-sf', [25, 8, sz0 + 10], [1, 0, 0]);
 }
@@ -457,6 +459,28 @@ weapons.pdc = { ...weapons.pdc, rate: 26, radius: 4 };
 // the headless raids from port the escorts live about a minute (one in two is shot down) and put one gun in two
 // raids out of action.
 weapons.pdc = { ...weapons.pdc, fighterRange: 1500, fighterDamage: 1.5, fighterSpread: 0.04, repair: 0.5 };
+// Point defence in kinds (ROADMAP phase 7). The close-in guns (`pdc`, the mounts with `gun: 'close'`) are for what is
+// homing on her: torpedoes and missiles, at short range, with small fast rounds and a high rate. They fire at a bandit
+// only when it comes inside `fighterRange`, and never at the raider: that is the turrets' and the flak's work.
+// Tuned in the headless raids (tools/raid-sim.mjs): at 40 rounds a second out to 2.2 km they let almost nothing
+// through; at 30 out to 1.8 km, one torpedo in four. A close-in gun's tracer does a bandit `fighterDamage` (it was
+// 1.5 out to 1.5 km, when they were the only guns on fighters: left there, they shot down more bandits than the flak).
+weapons.pdc = { ...weapons.pdc, range: 1900, raiderRange: 0, fighterRange: 400, fighterDamage: 0.6, rate: 32, speed: 1400, stock: 3200, heat: 6e-5 };
+// The flak guns (`gun: 'flak'`): twin guns on a slower mount firing fused shells. Each shell is set to burst where the
+// fire control says it will meet its target (`fuse` off by up to `fuseErr` of its flight), or sooner when it passes
+// within `prox` m of an enemy craft or torpedo (a proximity fuse); its splinters hit what is inside `burst` m,
+// with a chance that falls off with distance (a bandit takes `damage` a hit, the raider `raiderDamage`), and kill a
+// torpedo inside `torpKill` m. As tuned (tools/raid-sim.mjs, 20 raids from either beam, nobody at a gun): the close-in
+// guns kill about four torpedoes in five and stop about two salvos in three outright (one hit a raid on her); the flak
+// shoots down three bandits in five, nearly all of them, and the bandits still shoot up a gun every third raid. A
+// flak burst doing steady damage by distance gave all or nothing (two bandits dead every raid, or none): splinters
+// that hit by chance, each a fixed amount, give the spread between.
+weapons.about = weapons.about.replace('`pdc`: the point defence cannons, rotary guns on the layout\'s `pdc` mounts, run by the fire-control computer: each one takes the nearest torpedo (or, with none, the raider inside `raiderRange`)', '`pdc`: the close-in guns, rotary guns on the layout\'s `pdc` mounts with `gun: \'close\'`, run by the fire-control computer: each one takes the nearest torpedo or missile homing on her (or, with none, a bandit inside `fighterRange`, and the raider inside `raiderRange` when that is not 0)');
+weapons.flak = {
+  about: 'The flak guns (weapons/pdc.mjs, the `pdc` mounts with `gun: \'flak\'`): twin guns firing fused shells, for fighters. Each takes the nearest bandit within `range` and `arc` degrees of where its mount faces; with none, a torpedo between `torpRange` metres (beyond the close-in guns); with neither, the raider inside `raiderRange`. It slews at `slew` degrees a second and fires `rate` shells a second at `speed` m/s, off by `spread` radians, each fused to burst at the predicted meeting, off by up to `fuseErr` of its time of flight, or as it passes within `prox` m of a bandit or torpedo. A burst hits a bandit d m away with a chance of (1 − d / `burst`)², for `damage`, `raiderDamage` to the raider when it is within `burst` m of its hull, and kills a torpedo within `torpKill` m. `stock` shells a mount, `heat` each, `shellMass` kg for the kick.',
+  range: 3500, torpRange: [1900, 3500], raiderRange: 2500, arc: 100, slew: 70, rate: 1.5, speed: 750, spread: 0.015,
+  fuseErr: 0.15, prox: 3, burst: 20, damage: 12, raiderDamage: 0.15, torpKill: 10, stock: 400, heat: 5e-4, shellMass: 4,
+};
 weapons.bandit = {
   about: 'The raider\'s escort fighters (weapons/bandits.mjs): Rook fighters flown on the same `Flight` as yours (the layout\'s `fighter`: mass, thrust, tanks, jets) by an AI pilot. `count` come with each raid, in `slots` (metres in the raider\'s frame; a third and fourth go twice as far out). `hull` (the cannon does `fighter.damage` a round) and the hit ellipsoid `size` about `centre`. Once the raider is on its firing passes and the carrier is inside `start` m they strafe her point defence: runs along her side `pass` m out, at `run` m/s past her (closing on the line at up to `close` m/s, `gain` per metre off it), each started `fire` + `lead` m short of the gun, firing from `fire` m, turning for the next `extend` m past the gun; `look` s ahead they keep `clearance` m off her hull. The nearest to your fighter inside `engage` m (and any you have hit) fights you, holding at about `stand` m. With a target in reach it only turns away to burn when its velocity is `shootSlack` m/s off what it wants; less than that its side jets take out. `bingo` (a fraction of either tank, the drive\'s or the jets\') sends one back to the raider; at `clear` m from the carrier, leaving, it is gone. `jink`: inside `near` m of the carrier or your fighter, a `pop` s random pop on the side jets every `every` s (the jets\' tank is small: held, they would empty it in a minute). Shooting, the side jets take out more than `trim` m/s of the velocity it wants across the nose. `gun`: rounds at `shell` m/s on top of its own velocity, one every `every` s in bursts of `burst` s with `pause` s between, `spread` per round and `err` (radians) per burst, gone after `range` m; a round within `radius` m of your fighter does `damage`, within `pdcRadius` m of a point defence gun takes `pdcDamage` off its 100, and through a spread radiator hurts it by `radiator`; the nose must be within `cone` radians of the lead to fire.',
   count: 2,

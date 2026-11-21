@@ -51,7 +51,7 @@
 // The layout's `weapons` entry has every number. In the console: `__carrier.guns.raid('port')`, `.raider`, `.torps`,
 // `.pdcs`, `.turrets`.
 
-import { THREE, metal, at, box, glow, clamp, mulberry, hazardMat, ROUND_MAX, ROUND_OURS, pdcMesh } from './weapons/shared.mjs';
+import { THREE, metal, at, box, glow, clamp, mulberry, hazardMat, ROUND_MAX, ROUND_OURS, pdcMesh, flakMesh } from './weapons/shared.mjs';
 import { raidParts } from './weapons/raid.mjs';
 import { projectileParts } from './weapons/projectiles.mjs';
 import { torpedoParts } from './weapons/torpedoes.mjs';
@@ -179,10 +179,12 @@ export class Weapons {
     }
   }
 
-  /** A point defence cannon on mount `m`: its gun (built in code, so it turns in either hull), the compartment it is
+  /** A point defence gun on mount `m`: a close-in gun, or a flak gun when the mount says `gun: 'flak'` (its numbers
+   *  are then the layout's `weapons.flak`); its gun (built in code, so it turns in either hull), the compartment it is
    *  fixed to, and its magazine. */
   makePdc(m) {
-    const mesh = pdcMesh(m);
+    const flak = m.gun === 'flak' && this.W.flak;
+    const mesh = flak ? flakMesh(m) : pdcMesh(m);
     this.C.frame.add(mesh.g);
     const at0 = new THREE.Vector3(...m.at);
     let node = null, bd = Infinity;
@@ -194,10 +196,11 @@ export class Weapons {
     }
     const up = new THREE.Vector3(...m.up);
     return {
-      m, ...mesh, node, up, id: m.id, name: m.id.replace(/^pdc-/, '').replace(/-/g, ' '),
-      pivot: at0.clone().addScaledVector(up, 3.5), // ship frame: where its rounds come from
+      m, ...mesh, node, up, id: m.id, type: flak ? 'flak' : 'close',
+      name: flak ? m.id.replace(/^flak-h-/, '').replace('d', 'dorsal ').replace('v', 'ventral ') : m.id.replace(/^pdc-/, '').replace(/-/g, ' '),
+      pivot: at0.clone().addScaledVector(up, flak ? 3.3 : 3.5), // ship frame: where its rounds come from
       inv: new THREE.Quaternion().setFromUnitVectors(up, new THREE.Vector3(0, 1, 0)), // ship frame to the mount's own
-      yawA: 0, elev: 0.3, stock: this.W.pdc.stock, coolT: 0, firing: false, target: null, spinV: 0,
+      yawA: 0, elev: 0.3, stock: (flak || this.W.pdc).stock, coolT: 0, barrel: 0, runT: [9, 9], firing: false, target: null, spinV: 0,
       hp: 100 // the gun itself: a bandit's rounds shoot it up (weapons/bandits.mjs `strafeHit`); under 25 it is out of action
     };
   }

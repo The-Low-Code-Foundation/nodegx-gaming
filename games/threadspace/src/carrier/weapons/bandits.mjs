@@ -362,7 +362,7 @@ export const banditParts = {
         if (was >= 25 && g.hp < 25) {
           this.flash(at, 6, '#ff8a30', 0.6);
           this.C.bus?.emit('call', { id: 'pdc-down', gun: g.name });
-          this.dc?.say(null, `Point defence ${g.name} is shot up.`, 0, 5);
+          this.dc?.say(null, `${g.type === 'flak' ? 'Flak gun' : 'Point defence'} ${g.name} is shot up.`, 0, 5);
         }
         return true;
       }

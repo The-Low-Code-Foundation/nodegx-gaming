@@ -8,7 +8,7 @@
 //
 // `gun(kind, impulse, d)`: a shot from one of hers, `d` metres from you (ship frame). Kinds: `cannon` (a turret's
 // round), `rail` (a railgun slug: the whole hull rings), `tube` (a cold torpedo launch), `pdc` (a burst of point
-// defence). `blast(d)`: a torpedo's warhead going off in her. `fighterShot()`: a round from your fighter's cannon,
+// defence), `flak` (a flak gun's shell: a short, sharp version of the cannon). `blast(d)`: a torpedo's warhead going off in her. `fighterShot()`: a round from your fighter's cannon,
 // heard and felt through her airframe. `frame(dt, camera, how)` moves the camera: `how` is 'aboard' (walking, at a
 // gun, on the bridge), 'cockpit' or null (outside: you see it instead, and hear it by distance through sfx.mjs).
 // Numbers are `FEEL`.
@@ -20,6 +20,7 @@ export const FEEL = {
   rail: { size: 1.5, near: 45, felt: 0.9, vol: 0.8 },
   tube: { size: 0.4, near: 25, felt: 0.15, vol: 0.45 },
   pdc: { size: 0.12, near: 15, felt: 0, vol: 0.3 },
+  flak: { size: 0.3, near: 20, felt: 0.04, vol: 0.4 }, // a flak gun's round: a short, sharp thump, lighter than a turret's
   blast: { size: 2.4, near: 60, felt: 1.1, vol: 1 },
   sway: 0.06, // m of camera movement per unit of thump
   roll: 0.012, // radians of roll per unit
@@ -69,12 +70,14 @@ export class Feel {
       if (kind === 'rail') (this.thump(size, 4.5, 1.6, 1.4), this.thump(size * 0.5, 13, 4, 0.3));
       else if (kind === 'cannon') (this.thump(size, 7, 2.6, 1), this.thump(size * 0.35, 16, 6, 0.2));
       else if (kind === 'tube') this.thump(size, 5, 3, 0.4);
+      else if (kind === 'flak') this.thump(size, 11, 4, 0.3);
       else this.thump(size, 22, 8, 0.1);
       const v = K.vol * (0.35 + 0.65 * near);
       if (kind === 'cannon') this.cannon(v, near);
       else if (kind === 'rail') this.rail(v, near);
       else if (kind === 'tube') this.tube(v, near);
       else if (kind === 'pdc') this.pdc(v * near);
+      else if (kind === 'flak') this.cannon(v * 0.6, near);
     }
   }
 

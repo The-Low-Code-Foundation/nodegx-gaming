@@ -133,6 +133,37 @@ export function pdcMesh(m) {
   return { g, yaw, gun, spin };
 }
 
+/** A flak gun on mount `m`: a squat gunhouse on a ring, and twin long barrels in a cradle that elevates. The same
+ *  parts as `pdcMesh` (`spin` is there but nothing in it turns), plus `barrels` for their run-back. */
+export function flakMesh(m) {
+  const dark = metal('#2a2f36'), grey = metal('#6a737e', { metalness: 0.5 });
+  const g = new THREE.Group();
+  g.add(at(cyl(2.6, 2.9, 0.8, dark, 16), 0, 0.4, 0));
+  const yaw = new THREE.Group();
+  yaw.position.y = 2.0; // on its sponson's ring, as a close-in gun
+  yaw.add(at(cyl(2.1, 2.3, 0.6, grey, 16), 0, 0.1, 0));
+  yaw.add(at(box(3.2, 1.9, 3.0, grey), 0, 1.15, 0.5));
+  yaw.add(at(box(0.5, 0.5, 0.9, dark), 1.2, 2.3, 1.2)); // the director's sight on the roof
+  const gun = new THREE.Group();
+  gun.position.set(0, 1.3, -0.6);
+  gun.add(at(box(2.0, 0.9, 1.6, dark), 0, 0, 0));
+  const barrels = [-0.55, 0.55].map((x) => {
+    const b = new THREE.Group();
+    b.position.x = x;
+    b.add(at(cyl(0.17, 0.2, 5.6, dark, 8), 0, 0, -3.4, Math.PI / 2));
+    b.add(at(cyl(0.27, 0.27, 0.7, grey, 8), 0, 0, -6.1, Math.PI / 2)); // the muzzle brake
+    gun.add(b);
+    return b;
+  });
+  yaw.add(gun);
+  g.add(yaw);
+  const spin = new THREE.Group();
+  gun.add(spin);
+  g.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), new THREE.Vector3(...m.up));
+  g.position.set(...m.at);
+  return { g, yaw, gun, spin, barrels };
+}
+
 /** The gunnery target: a sled of three crossed day-glo panels (a corner reflector, so the directors see it too),
  *  streamed `tow` metres astern of a yellow tug on a cable. The group's origin is the sled; -z is the way it goes. */
 export function sled(tow) {

@@ -182,7 +182,7 @@ export const projectileParts = {
   /** A gun's kick: impulse `J` (world, N·s: the push on the ship, the other way from the shot) at world point `p`. It
    *  changes her velocity and, off her centre of mass, her turn; flight assist then fires her thrusters to take it out.
    *  Aboard you feel it, the harder the heavier the shot and the nearer the gun, and hear it through her structure
-   *  (gunfeel.mjs: `kind` is 'cannon', 'rail', 'tube' or 'pdc'). */
+   *  (gunfeel.mjs: `kind` is 'cannon', 'rail', 'tube', 'pdc' or 'flak'). */
   recoil(p, J, kind = 'cannon') {
     const B = this.body, j = J.length();
     if (!B?.mass || !(j > 0)) return;

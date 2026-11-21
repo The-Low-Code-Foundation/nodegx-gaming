@@ -143,6 +143,7 @@
   {
    "id": "pdc-bow-pf",
    "kind": "pdc",
+   "gun": "close",
    "at": [
     -19.5,
     0,
@@ -158,6 +159,7 @@
   {
    "id": "pdc-bow-sf",
    "kind": "pdc",
+   "gun": "close",
    "at": [
     19.5,
     0,
@@ -173,6 +175,7 @@
   {
    "id": "pdc-h-pa",
    "kind": "pdc",
+   "gun": "close",
    "at": [
     -23.5,
     -13,
@@ -188,6 +191,7 @@
   {
    "id": "pdc-h-sa",
    "kind": "pdc",
+   "gun": "close",
    "at": [
     23.5,
     -13,
@@ -201,8 +205,9 @@
    "magazine": "pdc-mag-h"
   },
   {
-   "id": "pdc-h-d",
+   "id": "flak-h-d1",
    "kind": "pdc",
+   "gun": "flak",
    "at": [
     10,
     18,
@@ -216,8 +221,41 @@
    "magazine": "pdc-mag-h"
   },
   {
-   "id": "pdc-h-v",
+   "id": "flak-h-d2",
    "kind": "pdc",
+   "gun": "flak",
+   "at": [
+    10,
+    18,
+    48
+   ],
+   "up": [
+    0,
+    1,
+    0
+   ],
+   "magazine": "pdc-mag-h"
+  },
+  {
+   "id": "flak-h-v1",
+   "kind": "pdc",
+   "gun": "flak",
+   "at": [
+    -10,
+    -18,
+    12
+   ],
+   "up": [
+    0,
+    -1,
+    0
+   ],
+   "magazine": "pdc-mag-h"
+  },
+  {
+   "id": "flak-h-v2",
+   "kind": "pdc",
+   "gun": "flak",
    "at": [
     -10,
     -18,
@@ -233,6 +271,7 @@
   {
    "id": "pdc-s-pf",
    "kind": "pdc",
+   "gun": "close",
    "at": [
     -25,
     8,
@@ -248,6 +287,7 @@
   {
    "id": "pdc-s-sf",
    "kind": "pdc",
+   "gun": "close",
    "at": [
     25,
     8,

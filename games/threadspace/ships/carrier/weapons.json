@@ -1,6 +1,6 @@
 {
  "weapons": {
-  "about": "The carrier's guns, her point defence and her torpedoes, and the raider that attacks her (src/carrier/weapons.mjs). There are no shields: what keeps a ship alive is armour (`integrity.armour`), point defence, and not being where the shot is aimed. `turrets`: each heavy turret is a `mount` (its id, also the name of its gunhouse in hull.glb, and `<id>-guns` its barrels), fed from its `magazine` compartment up its `barbette`; `from` is the hatch you man it from (deck, spot, the way you face when you leave). `gun`, for every turret: `shell` muzzle speed m/s, `reload` seconds per barrel, `crewReload` the same for a turret its crew fires, `train` and `elevate` the fastest it turns (degrees a second), `elevation` its limits (degrees, toward the side the turret stands on), `rack` rounds in the ready rack, `stock` rounds in the magazine, `hoist` seconds to send one round up, `spread` the aim error of a shot (radians), `crewSpread` how far off a crew lays the guns, `range` metres a shell flies, `damage` what one does to the raider's hull, `fouled` metres of line of fire checked against the hull, `heat` what one shot puts into the ship's heat sinks (0 to 1 of them). `pdc`: the point defence cannons, rotary guns on the layout's `pdc` mounts, run by the fire-control computer: each one takes the nearest torpedo (or, with none, the raider inside `raiderRange`) that is within `range` and `arc` degrees of where the mount faces, leads it (for its acceleration too), slews at `slew` degrees a second and fires `rate` tracers a second (each tracer stands for a burst of rounds) at `speed` m/s, off by `spread` radians; a tracer passing within `radius` metres of a torpedo kills it, and one that meets the raider does `damage`. `stock` is the tracers each mount's magazine holds (its `magazine` in the mounts), `heat` what each tracer puts into the sinks. A mount is as healthy as the compartment it is fixed to. `torpedo`: every torpedo, either side's: `accel` m/s² for `burn` seconds, launched at `push` m/s, gone after `life` seconds; `jink` m/s² of random weave once it is within `terminal` metres (what makes point defence miss); `fuse` metres from its target it goes off. Into the carrier it does `pen`, `damage` and `hole` as a shell does (integrity.mjs), never stopped by the armour; into the raider, `raiderDamage`. `tubes`: the carrier's own torpedo tubes, fired by the CIC at a raider between `range` metres: `salvo` at a time, `every` seconds, from `magazine` while it holds `stock`, out of the hull at `at` (ship frame) along `dir`. `raider`: its `hull` (armour and all), `speed` (m/s past the carrier) and `accel`, `jink` (m/s² of evasive weave, changing every second or two: what makes a long shot miss), `standoff` (the range of its passes, metres), `passes`, `size` (half-axes of the ellipsoid shells hit), its `gun` (`shell` m/s, seconds `every` between shots, `spread`, `range`), its `torpedo` launches (a `salvo` every `every` seconds while the carrier is between `range` metres, `stock` in all), its own point defence `pdc` against the carrier's torpedoes (`range`, `rate`, `spread`, `speed`), and its `flak` at a fighter within `range`: a shot `every` so many seconds at `shell` m/s, aimed where she will be if she flies on as she is, off by up to `spread` radians, doing `damage` if it passes within `radius` metres of her. `target`: the gunnery drill's sled, towed `tow` metres astern of a tug on `passes` straight passes `standoff` metres off at `speed`; `size` is the ellipsoid a shell must pass through to score, `clear` how far off the tug is gone. It has no hull to lose: hits are counted. `fighter`: the fighter's twin cannon: `shell` m/s on top of her own velocity, seconds `every` between rounds, `spread`, `range` metres a round flies, `rounds` in the drum (refilled on the pad), the `damage` one round does to a raider (or a torpedo, within `radius`), and her own `hull` (mended on the pad; at nothing she is dead in space and flight control brings her in). `railgun`: the broadside railguns (their own `about`). `broadside`: the torpedo broadside (its own `about`).",
+  "about": "The carrier's guns, her point defence and her torpedoes, and the raider that attacks her (src/carrier/weapons.mjs). There are no shields: what keeps a ship alive is armour (`integrity.armour`), point defence, and not being where the shot is aimed. `turrets`: each heavy turret is a `mount` (its id, also the name of its gunhouse in hull.glb, and `<id>-guns` its barrels), fed from its `magazine` compartment up its `barbette`; `from` is the hatch you man it from (deck, spot, the way you face when you leave). `gun`, for every turret: `shell` muzzle speed m/s, `reload` seconds per barrel, `crewReload` the same for a turret its crew fires, `train` and `elevate` the fastest it turns (degrees a second), `elevation` its limits (degrees, toward the side the turret stands on), `rack` rounds in the ready rack, `stock` rounds in the magazine, `hoist` seconds to send one round up, `spread` the aim error of a shot (radians), `crewSpread` how far off a crew lays the guns, `range` metres a shell flies, `damage` what one does to the raider's hull, `fouled` metres of line of fire checked against the hull, `heat` what one shot puts into the ship's heat sinks (0 to 1 of them). `pdc`: the close-in guns, rotary guns on the layout's `pdc` mounts with `gun: 'close'`, run by the fire-control computer: each one takes the nearest torpedo or missile homing on her (or, with none, a bandit inside `fighterRange`, and the raider inside `raiderRange` when that is not 0) that is within `range` and `arc` degrees of where the mount faces, leads it (for its acceleration too), slews at `slew` degrees a second and fires `rate` tracers a second (each tracer stands for a burst of rounds) at `speed` m/s, off by `spread` radians; a tracer passing within `radius` metres of a torpedo kills it, and one that meets the raider does `damage`. `stock` is the tracers each mount's magazine holds (its `magazine` in the mounts), `heat` what each tracer puts into the sinks. A mount is as healthy as the compartment it is fixed to. `torpedo`: every torpedo, either side's: `accel` m/s² for `burn` seconds, launched at `push` m/s, gone after `life` seconds; `jink` m/s² of random weave once it is within `terminal` metres (what makes point defence miss); `fuse` metres from its target it goes off. Into the carrier it does `pen`, `damage` and `hole` as a shell does (integrity.mjs), never stopped by the armour; into the raider, `raiderDamage`. `tubes`: the carrier's own torpedo tubes, fired by the CIC at a raider between `range` metres: `salvo` at a time, `every` seconds, from `magazine` while it holds `stock`, out of the hull at `at` (ship frame) along `dir`. `raider`: its `hull` (armour and all), `speed` (m/s past the carrier) and `accel`, `jink` (m/s² of evasive weave, changing every second or two: what makes a long shot miss), `standoff` (the range of its passes, metres), `passes`, `size` (half-axes of the ellipsoid shells hit), its `gun` (`shell` m/s, seconds `every` between shots, `spread`, `range`), its `torpedo` launches (a `salvo` every `every` seconds while the carrier is between `range` metres, `stock` in all), its own point defence `pdc` against the carrier's torpedoes (`range`, `rate`, `spread`, `speed`), and its `flak` at a fighter within `range`: a shot `every` so many seconds at `shell` m/s, aimed where she will be if she flies on as she is, off by up to `spread` radians, doing `damage` if it passes within `radius` metres of her. `target`: the gunnery drill's sled, towed `tow` metres astern of a tug on `passes` straight passes `standoff` metres off at `speed`; `size` is the ellipsoid a shell must pass through to score, `clear` how far off the tug is gone. It has no hull to lose: hits are counted. `fighter`: the fighter's twin cannon: `shell` m/s on top of her own velocity, seconds `every` between rounds, `spread`, `range` metres a round flies, `rounds` in the drum (refilled on the pad), the `damage` one round does to a raider (or a torpedo, within `radius`), and her own `hull` (mended on the pad; at nothing she is dead in space and flight control brings her in). `railgun`: the broadside railguns (their own `about`). `broadside`: the torpedo broadside (its own `about`).",
   "turrets": [
    {
     "mount": "turret-dorsal",
@@ -180,19 +180,19 @@
    "calibreNote": "14 m barrels; muzzle speed 5300 m/s in the design (the game's gun.shell is still tuned for play)."
   },
   "pdc": {
-   "range": 3000,
-   "raiderRange": 1400,
+   "range": 1900,
+   "raiderRange": 0,
    "arc": 100,
    "slew": 160,
-   "rate": 26,
-   "speed": 1100,
+   "rate": 32,
+   "speed": 1400,
    "spread": 0.004,
    "radius": 4,
    "damage": 0.04,
-   "stock": 2400,
-   "heat": 0.00008,
-   "fighterRange": 1500,
-   "fighterDamage": 1.5,
+   "stock": 3200,
+   "heat": 0.00006,
+   "fighterRange": 400,
+   "fighterDamage": 0.6,
    "fighterSpread": 0.04,
    "repair": 0.5
   },
@@ -342,7 +342,6 @@
   },
   "fighter": {
    "shell": 1100,
-   "shellMass": 0.4,
    "every": 0.11,
    "spread": 0.004,
    "range": 1800,
@@ -394,6 +393,29 @@
      -2.4
     ]
    }
+  },
+  "flak": {
+   "about": "The flak guns (weapons/pdc.mjs, the `pdc` mounts with `gun: 'flak'`): twin guns firing fused shells, for fighters. Each takes the nearest bandit within `range` and `arc` degrees of where its mount faces; with none, a torpedo between `torpRange` metres (beyond the close-in guns); with neither, the raider inside `raiderRange`. It slews at `slew` degrees a second and fires `rate` shells a second at `speed` m/s, off by `spread` radians, each fused to burst at the predicted meeting, off by up to `fuseErr` of its time of flight, or as it passes within `prox` m of a bandit or torpedo. A burst hits a bandit d m away with a chance of (1 − d / `burst`)², for `damage`, `raiderDamage` to the raider when it is within `burst` m of its hull, and kills a torpedo within `torpKill` m. `stock` shells a mount, `heat` each, `shellMass` kg for the kick.",
+   "range": 3500,
+   "torpRange": [
+    1900,
+    3500
+   ],
+   "raiderRange": 2500,
+   "arc": 100,
+   "slew": 70,
+   "rate": 1.5,
+   "speed": 750,
+   "spread": 0.015,
+   "fuseErr": 0.15,
+   "prox": 3,
+   "burst": 20,
+   "damage": 12,
+   "raiderDamage": 0.15,
+   "torpKill": 10,
+   "stock": 400,
+   "heat": 0.0005,
+   "shellMass": 4
   },
   "bandit": {
    "about": "The raider's escort fighters (weapons/bandits.mjs): Rook fighters flown on the same `Flight` as yours (the layout's `fighter`: mass, thrust, tanks, jets) by an AI pilot. `count` come with each raid, in `slots` (metres in the raider's frame; a third and fourth go twice as far out). `hull` (the cannon does `fighter.damage` a round) and the hit ellipsoid `size` about `centre`. Once the raider is on its firing passes and the carrier is inside `start` m they strafe her point defence: runs along her side `pass` m out, at `run` m/s past her (closing on the line at up to `close` m/s, `gain` per metre off it), each started `fire` + `lead` m short of the gun, firing from `fire` m, turning for the next `extend` m past the gun; `look` s ahead they keep `clearance` m off her hull. The nearest to your fighter inside `engage` m (and any you have hit) fights you, holding at about `stand` m. With a target in reach it only turns away to burn when its velocity is `shootSlack` m/s off what it wants; less than that its side jets take out. `bingo` (a fraction of either tank, the drive's or the jets') sends one back to the raider; at `clear` m from the carrier, leaving, it is gone. `jink`: inside `near` m of the carrier or your fighter, a `pop` s random pop on the side jets every `every` s (the jets' tank is small: held, they would empty it in a minute). Shooting, the side jets take out more than `trim` m/s of the velocity it wants across the nose. `gun`: rounds at `shell` m/s on top of its own velocity, one every `every` s in bursts of `burst` s with `pause` s between, `spread` per round and `err` (radians) per burst, gone after `range` m; a round within `radius` m of your fighter does `damage`, within `pdcRadius` m of a point defence gun takes `pdcDamage` off its 100, and through a spread radiator hurts it by `radiator`; the nose must be within `cone` radians of the lead to fire. `missiles`: heat-seekers it carries (the layout's `missile`), the first not before `missileFirst` s into its fight, then one every `missileEvery` s at most, fired at your fighter when the seeker on its nose has locked her inside `missileRange` m.",
@@ -564,13 +586,12 @@
    }
   },
   "brace": {
-   "about": "Brace for impact. When one of the raider's torpedoes will arrive within `eta` seconds the ship calls brace and counts down (weapons/torpedoes.mjs braceFrame), and the brace straps on the weightless rooms' walls show \"Strap in\"; the countdown stays up `hold` s after the last one. A hit kicks the structure: `kick` m/s at the hit for a torpedo (`shell` for a gun shell, `glance` for one the armour stopped), less with distance (`fade` m halves it). Strapped in, you ride it; a hand on a rail holds below `grip` m/s and your feet in a rail below `feet` m/s; anyone else keeps going. The blast also shoves the whole ship: `shove` N·s on her body at the hit, along the blast, [torpedo, shell, glance] (weapons/projectiles.mjs `struck`), so off her centre it turns her and flight assist fires to take it out. Meeting a wall faster than `hurt` m/s hurts, `per` of an injury for each m/s over; a whole one (1) blacks you out (the damage control party picks you up), and it heals at `heal` a minute.",
+   "about": "Brace for impact. When one of the raider's torpedoes will arrive within `eta` seconds the ship calls brace and counts down (weapons/torpedoes.mjs braceFrame), and the brace straps on the weightless rooms' walls show \"Strap in\"; the countdown stays up `hold` s after the last one. A hit kicks the structure: `kick` m/s at the hit for a torpedo (`shell` for a gun shell, `glance` for one the armour stopped), less with distance (`fade` m halves it). Strapped in, you ride it; a hand on a rail holds below `grip` m/s and your feet in a rail below `feet` m/s; anyone else keeps going. Meeting a wall faster than `hurt` m/s hurts, `per` of an injury for each m/s over; a whole one (1) blacks you out (the damage control party picks you up), and it heals at `heal` a minute.",
    "eta": 6,
    "hold": 1.5,
    "kick": 8,
    "shell": 2.5,
    "glance": 1.2,
-   "shove": [250000000, 8000000, 2000000],
    "fade": 25,
    "grip": 4.5,
    "feet": 3.5,
