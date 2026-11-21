@@ -45,6 +45,7 @@ import { STARTS, startById, surprise } from './starts.mjs';
 import { TRAITS, rollTraits, cleanTraits } from './traits.mjs';
 import { rollLikes, cleanLikes, GIFT } from './likes.mjs';
 import { GOALS, goalById, openGoals, rollGoal, stepsDone, STEP_POINTS, GOAL_POINTS } from './goals.mjs';
+import { WANTS, WANT_SLOTS, WANT_LASTS, rollWant, wantById } from './wants.mjs';
 
 const params = new URLSearchParams(location.search);
 const $ = (id) => document.getElementById(id);
@@ -316,6 +317,7 @@ async function makeSim(who, at, i, { name = null, look = null, body = null, ...o
   life.via = via;
   life.partnerOf = (other) => partners(life, other);
   life.onArrive = arrived;
+  life.onDid = wished;
   life.titleOf = (p) => titleOf(p);
   everyone.push(life);
   return life;
@@ -1559,6 +1561,43 @@ function openGoalPicker(l, done = null) {
   $('goal-roll')?.addEventListener('click', () => pick(rollGoal(l.goalsDone)));
   $('goal-later').onclick = closeCard;
 }
+// ---- wishes (round 16, phase 2: wants.mjs) ----
+// Three for each Sim in the household, weighted by who they are and how things are; a new one when one comes true, or
+// after a day. Math.random rolls them, never the seeded dice (a test's free will must choose as it did).
+function wantCtx(l) {
+  const f = factsOf(l);
+  return { traits: l.traits, likes: l.likes, goal: l.goal?.id ?? null, needs: l.needs, hour: (minutes % 1440) / 60, money: household.money, job: f.job, friends: f.friends, romance: f.romance, babies: f.babies, has: f.has };
+}
+function wantsTick() {
+  if (!aimsOn) return;
+  for (const l of lives) {
+    const kept = l.wants.filter((w) => wantById(w.id) && w.until > minutes);
+    if (kept.length === l.wants.length && kept.length >= WANT_SLOTS) continue;
+    l.wants = kept;
+    while (l.wants.length < WANT_SLOTS) {
+      const w = rollWant(wantCtx(l), l.wants.map((x) => x.id));
+      if (!w) break;
+      l.wants.push({ id: w.id, until: minutes + WANT_LASTS });
+    }
+  }
+}
+// Life `count` tells us what was done: a wish that was for it comes true.
+function wished(l, id) {
+  if (!aimsOn || !lives.includes(l)) return;
+  const k = l.wants.findIndex((w) => wantById(w.id)?.did === id);
+  if (k < 0) return;
+  const w = wantById(l.wants[k].id);
+  l.wants.splice(k, 1);
+  l.points += w.points;
+  l.addMoodlet('wishCameTrue');
+  toast(t('want.done', { name: l.name, want: t(`want.${w.id}`), points: w.points }));
+}
+// Not that one: another in its place.
+function dropWant(l, id) {
+  l.wants = l.wants.filter((w) => w.id !== id);
+  const w = rollWant(wantCtx(l), [...l.wants.map((x) => x.id), id]);
+  if (w) l.wants.push({ id: w.id, until: minutes + WANT_LASTS });
+}
 // The Aims panel: the dream and how far along, the happy points (round 16, phase 2).
 let aimsShown = null;
 function renderAims() {
@@ -1569,10 +1608,13 @@ function renderAims() {
   const goalHtml = g
     ? `<div class="goal"><b>${g.icon} ${t(`goal.${g.id}`)}</b><div class="steps">${dots}</div><small>${t('goal.nextStep', { step: t(`goal.${g.id}.${g.steps[Math.min(sel.goal.step, g.steps.length - 1)].id}`) })}</small></div>`
     : `<div class="goal"><button id="aims-pick">🌠 ${t('goal.pick')}</button></div>`;
-  const html = `${goalHtml}<div class="points">🌟 ${t('ui.points', { n: sel.points })}</div>`;
+  const wants = sel.wants.map((w) => wantById(w.id)).filter(Boolean)
+    .map((w) => `<div class="want"><span class="icon">${w.icon}</span><span>${t(`want.${w.id}`)}</span><small>+${w.points}</small><button data-drop="${w.id}" title="${t('want.drop')}">✖</button></div>`).join('');
+  const html = `${goalHtml}<h3>${t('want.title')}</h3><div class="wants">${wants}</div><div class="points">🌟 ${t('ui.points', { n: sel.points })}</div>`;
   if (html === aimsShown) return;
   $('aims').innerHTML = aimsShown = html;
   $('aims-pick')?.addEventListener('click', () => openGoalPicker(sel));
+  for (const b of $('aims').querySelectorAll('[data-drop]')) b.onclick = () => dropWant(sel, b.dataset.drop);
 }
 // The life story (2.4) gathers these; until then, nothing.
 function milestone() {}
@@ -2268,6 +2310,7 @@ function frame(now) {
     streetTick();
     shareBeds();
     checkGoals();
+    wantsTick();
     renderPeople();
     renderToasts();
     renderCards();
@@ -2308,7 +2351,7 @@ window.__life = {
   get card() { return card; }, get year() { return year; }, get speed() { return speed; }, get view() { return nameOf(view); },
   get sel() { return sel; }, colleaguesLoaded, town: TOWN, HOUSES, streetName, story,
   // Round 16, phase 2.
-  factsOf, checkGoals, openGoalPicker, aimsOn,
+  factsOf, checkGoals, openGoalPicker, aimsOn, wantsTick, wantCtx, wished,
   folk, get extras() { return extras(); }, furniture, storage, save, snapshot, openShop, startPlacing, stopPlacing, turnPlacing, placeHere, hover, sell, beauty, openLook, get home() { return home; }, saving,
   get placing() { return placing; }, get start() { return start?.kind ?? null; },
   setSpeed, advance, get minutes() { return minutes; }, set minutes(v) { minutes = v; },

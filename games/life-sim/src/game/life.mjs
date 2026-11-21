@@ -73,6 +73,7 @@ export class Life {
     this.goal = null; // { id, step }
     this.goalsDone = [];
     this.points = 0;
+    this.wants = []; // { id, until }: wants.mjs
     sim.freeWill = false;
   }
 

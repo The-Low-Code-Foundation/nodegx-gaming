@@ -41,7 +41,8 @@ export function lifeState(l) {
     traits: [...(l.traits ?? [])],
     likes: l.likes ? { ...l.likes } : null,
     // Round 16, phase 2: their dream, the dreams come true, happy points, what they have done.
-    goal: l.goal ? { id: l.goal.id, step: l.goal.step } : null, goalsDone: [...(l.goalsDone ?? [])], points: l.points ?? 0, tally: { ...(l.tally ?? {}) }
+    goal: l.goal ? { id: l.goal.id, step: l.goal.step } : null, goalsDone: [...(l.goalsDone ?? [])], points: l.points ?? 0, tally: { ...(l.tally ?? {}) },
+    wants: (l.wants ?? []).map((w) => ({ id: w.id, until: w.until }))
   };
 }
 // And back onto a Life just made for them. A work day they had started (`lastDay` today, not yet over) they go back to.
@@ -58,6 +59,7 @@ export function restoreLife(l, s, minutes) {
   l.goalsDone = Array.isArray(s.goalsDone) ? [...s.goalsDone] : [];
   l.points = Math.max(0, Number(s.points) || 0);
   l.tally = s.tally && typeof s.tally === 'object' ? { ...s.tally } : {};
+  l.wants = Array.isArray(s.wants) ? s.wants.filter((w) => w?.id).map((w) => ({ id: w.id, until: Number(w.until) || 0 })) : [];
   if (s.job) {
     l.job = { ...s.job };
     if (l.job.lastDay === Math.floor(minutes / 1440)) l.job.lastDay = -1;
