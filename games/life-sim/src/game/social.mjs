@@ -23,6 +23,8 @@
 //                'unmarried': only when neither is married
 //   dressUp      round 12: both put on wedding clothes while it goes on (the page's `onDressUp`)
 //   kiss         round 12: they lean in to each other while the one who started it 'says' it (the page's `lean`)
+//   cost         round 16: coins it costs, paid when it begins (a present)
+//   likes        round 16 (likes.mjs): 'shared' (more when they love the same thing) or 'gift' (more from a friend)
 export const INTERACTIONS = [
   { id: 'chat', icon: '💬', act: 'social', minutes: 30, talk: true, gives: { social: 130, fun: 16 }, friendship: 8, fail: 1, chance: 0.92, moodlet: 'chatted', partnerMoodlet: 'chatted', failMoodlet: null, free: true },
   { id: 'joke', icon: '😂', act: 'social', minutes: 8, clip: 'mc_talkHappy', gives: { social: 140, fun: 220 }, friendship: 5, chance: 0.7, react: 'mc_clap', moodlet: 'laughed', partnerMoodlet: 'laughed', free: true },
@@ -44,6 +46,10 @@ export const INTERACTIONS = [
   // rings and hearts, married, and their own clothes back. Only for two who are married to nobody (`only`).
   { id: 'marry', icon: '💍', act: 'social', minutes: 10, clip: 'Idle_Loop', close: 0.55, gives: { social: 300, fun: 200 }, friendship: 5, romance: 5, chance: 1, lock: { romance: 75 }, react: 'mc_cheer', hearts: '💍', after: 'marry', dressUp: true, kiss: true, only: 'unmarried' },
   { id: 'haveBaby', icon: '👶', act: 'social', minutes: 6, clip: 'Idle_Loop', close: 0.5, gives: { social: 250, fun: 120 }, friendship: 4, romance: 4, chance: 1, lock: { romance: 75 }, react: 'mc_cheer', moodlet: 'smitten', partnerMoodlet: 'smitten', hearts: '💞', after: 'baby', only: 'household' },
+  // Round 16 (likes.mjs): talking about favourite things (better when they share one: Life `likes: 'shared'`), and a
+  // present (it costs; better from a friend who knows their favourites: `likes: 'gift'`). Never a present by free will.
+  { id: 'talkLikes', icon: '💞', act: 'social', minutes: 20, talk: true, gives: { social: 140, fun: 30 }, friendship: 5, fail: 0, chance: 0.9, moodlet: 'chatted', partnerMoodlet: 'chatted', failMoodlet: null, free: true, likes: 'shared' },
+  { id: 'gift', icon: '🎁', act: 'social', minutes: 4, clip: 'mc_talkHappy', cost: 15, gives: { social: 150, fun: 30 }, friendship: 6, chance: 1, react: 'mc_cheer', partnerMoodlet: 'niceGift', hearts: '🎁', likes: 'gift' },
   // PG badness (brief answer 5: "insulting people ok"): fun for the one who does it, not for the other, and the
   // friendship pays. Never chosen by free will.
   { id: 'tease', icon: '😜', act: 'social', minutes: 4, clip: 'mc_talkHappy', gives: { fun: 200, social: 60 }, partnerGives: { fun: -150 }, friendship: -10, fail: -10, chance: 1, react: 'mc_talkSad', partnerMoodlet: 'teased' }

@@ -41,6 +41,7 @@ import { Baby, BABY_NEEDS, BABY_NAMES, BLANKETS, MAX_BABIES } from './baby.mjs';
 import { CHILDCARE, NURSERY_CARED, careNow, careCost, nurseryOpen } from './childcare.mjs';
 import { STARTS, startById, surprise } from './starts.mjs';
 import { TRAITS, rollTraits, cleanTraits } from './traits.mjs';
+import { rollLikes, cleanLikes, GIFT } from './likes.mjs';
 
 const params = new URLSearchParams(location.search);
 const $ = (id) => document.getElementById(id);
@@ -317,6 +318,8 @@ for (const [i, m] of members.entries()) {
   if (m.year) life.year = m.year;
   // Round 16 (traits.mjs): who they are. A new game: the ones chosen on the make-your-Sim screen (or rolled), and any
   // three for the flatmate. A test's URL: none unless ?traits= (so a seeded test's free will chooses as it did).
+  // And (likes.mjs) their favourites; none on a test's URL, for the same reason.
+  if (!m.s) life.likes = quick ? null : rollLikes();
   if (!m.s) life.traits = params.has(i ? 'traits2' : 'traits') ? cleanTraits(params.get(i ? 'traits2' : 'traits').split(',')) : quick ? [] : rollTraits(Math.random, cleanTraits(m.traits));
   life.freeWill = params.get('freewill') !== '0';
   lives.push(life);
@@ -696,6 +699,7 @@ const npcTraits = (who) => {
   const was = cleanTraits(saved?.traits?.[who]);
   return was.length ? was : rollTraits(TOWN.seed ? townDice(TOWN.seed, 100 + who) : Math.random);
 };
+const npcLikes = (who) => cleanLikes(saved?.likes?.[who]) ?? rollLikes(TOWN.seed ? townDice(TOWN.seed, 200 + who) : Math.random);
 // The colleagues (round 9): four other people who work at the office, there on work days from 08:30 to 15:00, each
 // with free will. Loaded once the flat is up (they are not needed before the first work day). Math.random picks them,
 // never the seeded dice. ?colleagues=2,3 pins them; ?colleagues=none: nobody.
@@ -727,6 +731,7 @@ async function loadColleagues() {
     c.sim.group.visible = false;
     c.freeWill = true;
     c.traits = npcTraits(n);
+    c.likes = npcLikes(n);
     // They have worked there a while: some higher up than others.
     c.job = { career: 'office', level: Math.floor((TOWN.seed ? townDice(TOWN.seed, 10 + k) : Math.random)() * 4), performance: 0, lastDay: -1 };
     const was = saved?.colleagues?.find((x) => x.who === n);
@@ -820,7 +825,7 @@ function loadNeighbours() {
     }
     for (const [k, n] of who.entries()) {
       const l = await makeSim(n, park, 30 + k, { household: { money: 0 } });
-      Object.assign(l, { homePlace: null, present: false, house: 'h4', freeWill: true, traits: npcTraits(n) });
+      Object.assign(l, { homePlace: null, present: false, house: 'h4', freeWill: true, traits: npcTraits(n), likes: npcLikes(n) });
       l.sim.group.visible = false;
       makeBubble(l);
       neighbours.push(l);
@@ -1352,7 +1357,10 @@ function openSocialMenu(other, x, y) {
           // A baby needs a cot, and the flat has room for MAX_BABIES (round 12).
           const full = !lock && ix.after === 'baby' && babies.length >= MAX_BABIES;
           const why = lock ? `<span class="gain">🔒 ${t('ui.locked', { level: t(`${lock.kind}.${lock.level}`) })}</span>` : full ? `<span class="gain">🔒 ${t('ui.baby.full')}</span>` : '';
-          return `<button data-id="${ix.id}" ${lock || full ? 'disabled' : ''}>${ix.icon} ${t(`action.${ix.id}`)}${why}</button>`;
+          // Round 16: a present costs (greyed out when the coins are short).
+          const short = !lock && !full && ix.cost && household.money < ix.cost;
+          const price = ix.cost ? ` <span class="cost">${t('ui.cost', { cost: ix.cost })}</span>` : '';
+          return `<button data-id="${ix.id}" ${lock || full || short ? 'disabled' : ''}>${ix.icon} ${t(`action.${ix.id}`)}${price}${why}</button>`;
         })
         .join('');
   $('menu').innerHTML = head + rows;
@@ -1399,7 +1407,12 @@ const bondRows = (a, b) => {
   return `<div class="pair">${a.name} & ${b.name}${bond.married ? ` · 💍 ${t('ui.married.short')}` : ''}</div><div class="bond"><span>🤝</span><span>${t('ui.friendship')}</span><b>${t(`friendship.${friendshipLevel(bond).id}`)}</b>${fBar}</div>${romance}`;
 };
 // Round 16: someone's traits in a line (the friends card, the Sim you look after, the menu over someone).
-const traitLine = (l) => (l?.traits?.length ? `<div class="traitline" title="${l.traits.map((id) => t(`trait.${id}.does`)).join(' · ')}">${l.traits.map((id) => `${TRAITS[id].icon} ${t(`trait.${id}`)}`).join(' · ')}</div>` : '');
+// And their favourites (likes.mjs), once you know them: your own household, or a friend.
+const likeLine = (l) => (l?.likes ? `<div class="traitline">❤️ ${['food', 'colour', 'activity'].map((k) => t(`like.${k}.${l.likes[k]}`)).join(' · ')} · 👎 ${t(`like.activity.${l.likes.dislike}`)}</div>` : '');
+const knowsLikes = (l) => lives.includes(l) || lives.some((h) => bondOf(h, l).friendship >= GIFT.knows);
+const traitLine = (l) =>
+  (l?.traits?.length ? `<div class="traitline" title="${l.traits.map((id) => t(`trait.${id}.does`)).join(' · ')}">${l.traits.map((id) => `${TRAITS[id].icon} ${t(`trait.${id}`)}`).join(' · ')}</div>` : '') +
+  (l?.likes ? (knowsLikes(l) ? likeLine(l) : `<div class="traitline">❤️ ${t('ui.likes.unknown')}</div>`) : '');
 let friendsShown = null;
 function renderPeople() {
   $('who').innerHTML = lives.map((l, i) => `<button data-i="${i}" class="${l === sel ? 'on' : ''}" title="${t('ui.people.hint')}"><span class="face">${EMOTIONS[l.mood.emotion].icon}</span>${l.name}</button>`).join('');
@@ -1686,6 +1699,7 @@ function snapshot() {
     story: story?.id ?? saved?.story ?? null,
     // Round 16: everyone else's traits, by person (the household's are in `lives`).
     traits: { ...(saved?.traits ?? {}), ...Object.fromEntries(npcs().map((l) => [l.who, [...(l.traits ?? [])]])) },
+    likes: { ...(saved?.likes ?? {}), ...Object.fromEntries(npcs().filter((l) => l.likes).map((l) => [l.who, { ...l.likes }])) },
     // Each baby, with the cot they lie in (its place in `furniture`).
     babies: babies.filter((b) => b.cot).map((b) => ({ ...b.saved(), cot: furniture.findIndex((e) => e.item === b.cot) }))
   };

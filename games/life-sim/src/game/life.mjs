@@ -21,6 +21,7 @@ import { OFFERS, offersFor, offerById, offerIcon } from './actions.mjs';
 import { INTERACTIONS, bondOf, lockOf, chanceOf, applyOutcome } from './social.mjs';
 import { CAREERS, MOOD_AT_WORK, TASK, careerOf, levelOfJob, nextLevel, timeForWork } from './work.mjs';
 import { decayOf, likingOf, chanceBonus, alwaysOf, ignoredBy, afterOf, learnOf } from './traits.mjs';
+import { keenOn, shared, GIFT, SHARED } from './likes.mjs';
 
 // Game minutes a real second at each speed: paused, normal, fast, very fast.
 export const SPEEDS = [0, 1, 4, 12];
@@ -65,6 +66,7 @@ export class Life {
     this.today = { tasks: {}, coins: 0, right: 0 }; // what they did at work today, for the page
     this.carer = false; // a nanny (round 13): here only for the babies
     this.traits = []; // round 16 (traits.mjs): three ids, who they are
+    this.likes = null; // round 16 (likes.mjs): { food, colour, activity, dislike }
     sim.freeWill = false;
   }
 
@@ -377,8 +379,7 @@ export class Life {
     this.idleFor = 0;
     const d = (this.doing = { ...entry, started: false, minutes: 0, waiting: 0, before: { ...this.needs } });
     this.log.push({ at: this.clock?.() ?? 0, what: offer.id, by: entry.by, why: entry.why ?? null, with: entry.other?.name ?? null });
-    if (offer.act === 'social') return this.approach(d);
-    // A thing that costs: paid now, or not done ("not enough coins").
+    // A thing that costs: paid now, or not done ("not enough coins"). Round 16: a present too (social).
     if (offer.cost) {
       if (this.household.money < offer.cost) {
         this.doing = null;
@@ -386,6 +387,7 @@ export class Life {
       }
       this.household.money -= offer.cost;
     }
+    if (offer.act === 'social') return this.approach(d);
     const started = () => {
       if (this.doing !== d) return;
       d.started = true;
@@ -588,7 +590,9 @@ export class Life {
     const ix = ld.offer, ok = ld.ok;
     // On a date in the park, a romance grows half as fast again.
     const dating = lead.date?.with === partner && lead.place === lead.places.park;
+    const knew = bondOf(lead, partner).friendship >= GIFT.knows;
     const { was, now } = applyOutcome(ix, bondOf(lead, partner), ok, done * (dating && ix.romance ? 1.5 : 1));
+    if (ok && done >= 0.999 && ix.likes) lead.likeOutcome(ix, partner, knew);
     if (done >= 0.999) {
       const mine = ok ? ix.moodlet : 'failMoodlet' in ix ? ix.failMoodlet : 'awkward';
       const theirs = ok ? ix.partnerMoodlet : ix.partnerFailMoodlet;
@@ -603,6 +607,26 @@ export class Life {
     }
     for (const kind of ['friendship', 'romance'])
       if (now[kind] !== was[kind]) lead.events.push({ key: `ui.bond.${kind}`, vars: { a: lead.name, b: partner.name, level: `${kind}.${now[kind]}` } });
+  }
+
+  // Round 16 (likes.mjs): talking about favourite things went well: more if they love the same thing (and both feel
+  // it). A present: from a friend who knows them, their favourite, and they love it.
+  likeOutcome(ix, partner, knew) {
+    const bond = bondOf(this, partner);
+    if (ix.likes === 'shared') {
+      const both = shared(this.likes, partner.likes);
+      if (both.length) {
+        bond.friendship = Math.min(100, bond.friendship + SHARED.extra);
+        for (const l of [this, partner]) l.addMoodlet('kindred');
+        this.events.push({ key: 'ui.likes.shared', vars: { a: this.name, b: partner.name, thing: `like.${both[0].kind}.${both[0].id}` } });
+      } else if (partner.likes) this.events.push({ key: 'ui.likes.learned', vars: { a: this.name, b: partner.name, thing: `like.activity.${partner.likes.activity}` } });
+    }
+    if (ix.likes === 'gift' && knew && partner.likes) {
+      bond.friendship = Math.min(100, bond.friendship + GIFT.extra);
+      partner.addMoodlet('favouriteGift');
+      const kind = this.random() < 0.5 ? 'food' : 'colour';
+      this.events.push({ key: `ui.gift.${kind}`, vars: { a: this.name, b: partner.name, thing: `like.${kind}.${partner.likes[kind]}` } });
+    } else if (ix.likes === 'gift') this.events.push({ key: 'ui.gift.nice', vars: { a: this.name, b: partner.name } });
   }
 
   // ---- free will ----
@@ -642,8 +666,8 @@ export class Life {
         }
         // Studying gives nothing a body needs; a Sim in a good mood with nothing pressing likes to.
         if (offer.skill && this.mood.emotion.endsWith('appy')) score += 0.04;
-        // Round 16: what they like doing (traits.mjs `likes`).
-        score *= likingOf(this.traits, offer.id);
+        // Round 16: what they like doing (traits.mjs `likes`), and their favourite (likes.mjs).
+        score *= likingOf(this.traits, offer.id) * keenOn(this.likes, offer.id);
         const far = item ? item.spot.distanceTo(this.sim.position) : 0;
         options.push({ offer, item, score: score / (1 + far / 8) });
       }

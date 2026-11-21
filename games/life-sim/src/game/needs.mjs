@@ -79,7 +79,11 @@ export const MOODLETS = {
   quietTime: { emotion: 'happy', weight: 1, icon: '🤫', minutes: 120 },
   spotless: { emotion: 'happy', weight: 1, icon: '✨', minutes: 180 },
   starry: { emotion: 'happy', weight: 1, icon: '🌠', minutes: 180 },
-  oops: { emotion: 'uncomfortable', weight: 1, icon: '🤭', minutes: 30 }
+  oops: { emotion: 'uncomfortable', weight: 1, icon: '🤭', minutes: 30 },
+  // Round 16: likes (likes.mjs): two who love the same thing, a present, their favourite.
+  kindred: { emotion: 'happy', weight: 2, icon: '💞', minutes: 240 },
+  niceGift: { emotion: 'happy', weight: 1, icon: '🎁', minutes: 240 },
+  favouriteGift: { emotion: 'happy', weight: 2, icon: '🥰', minutes: 480 }
 };
 
 export const EMOTIONS = {
