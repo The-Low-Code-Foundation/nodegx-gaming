@@ -74,7 +74,13 @@ export class Life {
     this.goalsDone = [];
     this.points = 0;
     this.wants = []; // { id, until }: wants.mjs
+    this.perks = []; // lasting bonuses bought with happy points (traits.mjs PERKS)
     sim.freeWill = false;
+  }
+
+  // Round 16: their traits and the perks bought with happy points, read together (traits.mjs).
+  get kit() {
+    return this.perks.length ? [...this.traits, ...this.perks] : this.traits;
   }
 
   // The others here with them, who can be talked to.
@@ -323,7 +329,7 @@ export class Life {
     // Round 16: their traits make some needs fall faster or slower (a foodie is hungry sooner; a night owl wide awake at
     // midnight). Read every tick, so a trait changed is felt at once.
     const hour = (now % 1440) / 60;
-    if (!this.carer) for (const n of NEEDS) this.needs[n.id] -= (n.decay * decayOf(this.traits, n.id, hour) * (active ? d.offer.slows?.[n.id] ?? 1 : 1) * (workSlows?.[n.id] ?? 1) * min) / 60;
+    if (!this.carer) for (const n of NEEDS) this.needs[n.id] -= (n.decay * decayOf(this.kit, n.id, hour) * (active ? d.offer.slows?.[n.id] ?? 1 : 1) * (workSlows?.[n.id] ?? 1) * min) / 60;
     if (d?.other) this.faceThem(d, min);
     if (active) {
       d.minutes += min;
@@ -359,7 +365,7 @@ export class Life {
     const ignored = ignoredBy(this.traits);
     this.moodlets = [
       ...Object.keys(MOODLETS).filter((id) => !MOODLETS[id].trait && !ignored.has(id) && MOODLETS[id].when?.(this.needs, had.has(id))),
-      ...alwaysOf(this.traits).filter((id) => MOODLETS[id] && (!MOODLETS[id].when || MOODLETS[id].when(this.needs, had.has(id)))),
+      ...alwaysOf(this.kit).filter((id) => MOODLETS[id] && (!MOODLETS[id].when || MOODLETS[id].when(this.needs, had.has(id)))),
       ...this.timed.keys()
     ];
     for (const id of this.moodlets) if (!had.has(id) && MOODLETS[id].when) this.think(MOODLETS[id].icon, `moodlet.${id}.text`);
@@ -537,7 +543,7 @@ export class Life {
     p.before = { ...d.other.needs };
     // Round 16: and their traits (a joker's jokes land; a grumpy Sim is hard to please), within the usual bounds.
     const base = chanceOf(d.offer, bondOf(this, d.other), d.other.mood.emotion);
-    d.ok = this.random() < (base >= 1 ? 1 : Math.max(0.05, Math.min(0.97, base + chanceBonus(this.traits, d.other.traits ?? [], d.offer.id))));
+    d.ok = this.random() < (base >= 1 ? 1 : Math.max(0.05, Math.min(0.97, base + chanceBonus(this.kit, d.other.kit ?? [], d.offer.id))));
     // Wedding clothes on (round 12), for as long as it goes on.
     if (d.offer.dressUp) this.onDressUp?.([this, d.other], true);
     d.beat = 0;
@@ -762,7 +768,7 @@ export class Life {
   }
 
   learn(skill, points) {
-    points *= learnOf(this.traits);
+    points *= learnOf(this.kit);
     const was = skillLevel(this.skills[skill] ?? 0);
     this.skills[skill] = (this.skills[skill] ?? 0) + points;
     const now = skillLevel(this.skills[skill]);

@@ -33,6 +33,18 @@ export const TRAITS = {
   clumsy: { icon: '🤕', likes: { dance: 1.2 }, chance: { any: -0.03 }, after: { cook: { moodlet: 'oops', chance: 0.3 }, washUp: { moodlet: 'oops', chance: 0.2 }, dance: { moodlet: 'oops', chance: 0.15 } } }
 };
 export const TRAIT_IDS = Object.keys(TRAITS);
+// Round 16, phase 2: lasting bonuses bought with happy points (rewards.mjs). The same fields as a trait; Life reads a
+// Sim's traits and perks together. Words: strings.mjs `perk.<id>`, `perk.<id>.does`.
+export const PERKS = {
+  ironBladder: { icon: '🚽', decay: { bladder: 0.75 } },
+  quickLearner: { icon: '🧠', learn: 1.5 },
+  socialButterfly: { icon: '🦋', decay: { social: 0.85 }, chance: { any: 0.08 } },
+  earlyBird: { icon: '🐦', morningDecay: { energy: 0.6 } },
+  heartyEater: { icon: '🥄', decay: { hunger: 0.85 } },
+  sunnyDisposition: { icon: '🌈', always: 'sunny' }
+};
+// A trait's or a perk's fields, by id.
+const def = (id) => TRAITS[id] ?? PERKS[id] ?? {};
 export const PER_SIM = 3;
 
 // Three traits that go together, at random (`random`: the dice to use; `keep`: ones already chosen).
@@ -56,7 +68,7 @@ const morning = (h) => h >= 6 && h < 11;
 export function decayOf(traits, need, hour) {
   let k = 1;
   for (const id of traits) {
-    const tr = TRAITS[id];
+    const tr = def(id);
     k *= tr.decay?.[need] ?? 1;
     if (night(hour)) k *= tr.nightDecay?.[need] ?? 1;
     if (morning(hour)) k *= tr.morningDecay?.[need] ?? 1;
@@ -66,18 +78,18 @@ export function decayOf(traits, need, hour) {
 // How keen free will is on an offer (social: a friendly thing to do with someone).
 export function likingOf(traits, id, social = false) {
   let k = 1;
-  for (const t of traits) k *= (TRAITS[t].likes?.[id] ?? 1) * (social ? TRAITS[t].social ?? 1 : 1);
+  for (const t of traits) k *= (def(t).likes?.[id] ?? 1) * (social ? def(t).social ?? 1 : 1);
   return k;
 }
 // How much likelier an interaction goes well: the one who starts it, and the one it is done to.
 export function chanceBonus(starter, receiver, id) {
   let p = 0;
-  for (const t of starter) p += (TRAITS[t].chance?.[id] ?? 0) + (TRAITS[t].chance?.any ?? 0);
-  for (const t of receiver) p += (TRAITS[t].received?.[id] ?? 0) + (TRAITS[t].received?.any ?? 0);
+  for (const t of starter) p += (def(t).chance?.[id] ?? 0) + (def(t).chance?.any ?? 0);
+  for (const t of receiver) p += (def(t).received?.[id] ?? 0) + (def(t).received?.any ?? 0);
   return p;
 }
-export const alwaysOf = (traits) => traits.map((t) => TRAITS[t].always).filter(Boolean);
-export const ignoredBy = (traits) => new Set(traits.flatMap((t) => TRAITS[t].ignores ?? []));
+export const alwaysOf = (traits) => traits.map((t) => def(t).always).filter(Boolean);
+export const ignoredBy = (traits) => new Set(traits.flatMap((t) => def(t).ignores ?? []));
 // The moodlets that finishing `offerId` gives them: [{ moodlet, chance }].
-export const afterOf = (traits, offerId) => traits.map((t) => TRAITS[t].after?.[offerId]).filter(Boolean).map((a) => (typeof a === 'string' ? { moodlet: a, chance: 1 } : a));
-export const learnOf = (traits) => traits.reduce((k, t) => k * (TRAITS[t].learn ?? 1), 1);
+export const afterOf = (traits, offerId) => traits.map((t) => def(t).after?.[offerId]).filter(Boolean).map((a) => (typeof a === 'string' ? { moodlet: a, chance: 1 } : a));
+export const learnOf = (traits) => traits.reduce((k, t) => k * (def(t).learn ?? 1), 1);

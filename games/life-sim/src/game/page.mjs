@@ -42,7 +42,8 @@ import { makeProp, wear } from './props.mjs';
 import { Baby, BABY_NEEDS, BABY_NAMES, BLANKETS, MAX_BABIES } from './baby.mjs';
 import { CHILDCARE, NURSERY_CARED, careNow, careCost, nurseryOpen } from './childcare.mjs';
 import { STARTS, startById, surprise } from './starts.mjs';
-import { TRAITS, rollTraits, cleanTraits } from './traits.mjs';
+import { TRAITS, TRAIT_IDS, PERKS, rollTraits, cleanTraits, fits } from './traits.mjs';
+import { REWARDS, rewardById, cantBuy } from './rewards.mjs';
 import { rollLikes, cleanLikes, GIFT } from './likes.mjs';
 import { GOALS, goalById, openGoals, rollGoal, stepsDone, STEP_POINTS, GOAL_POINTS } from './goals.mjs';
 import { WANTS, WANT_SLOTS, WANT_LASTS, rollWant, wantById } from './wants.mjs';
@@ -1446,6 +1447,7 @@ const bondRows = (a, b) => {
 const likeLine = (l) => (l?.likes ? `<div class="traitline">❤️ ${['food', 'colour', 'activity'].map((k) => t(`like.${k}.${l.likes[k]}`)).join(' · ')} · 👎 ${t(`like.activity.${l.likes.dislike}`)}</div>` : '');
 const knowsLikes = (l) => lives.includes(l) || lives.some((h) => bondOf(h, l).friendship >= GIFT.knows);
 const traitLine = (l) =>
+  (l?.perks?.length ? `<div class="traitline">${l.perks.map((id) => `${PERKS[id]?.icon ?? '🏅'} ${t(`perk.${id}`)}`).join(' · ')}</div>` : '') +
   (l?.traits?.length ? `<div class="traitline" title="${l.traits.map((id) => t(`trait.${id}.does`)).join(' · ')}">${l.traits.map((id) => `${TRAITS[id].icon} ${t(`trait.${id}`)}`).join(' · ')}</div>` : '') +
   (l?.likes ? (knowsLikes(l) ? likeLine(l) : `<div class="traitline">❤️ ${t('ui.likes.unknown')}</div>`) : '');
 let friendsShown = null;
@@ -1610,11 +1612,69 @@ function renderAims() {
     : `<div class="goal"><button id="aims-pick">🌠 ${t('goal.pick')}</button></div>`;
   const wants = sel.wants.map((w) => wantById(w.id)).filter(Boolean)
     .map((w) => `<div class="want"><span class="icon">${w.icon}</span><span>${t(`want.${w.id}`)}</span><small>+${w.points}</small><button data-drop="${w.id}" title="${t('want.drop')}">✖</button></div>`).join('');
-  const html = `${goalHtml}<h3>${t('want.title')}</h3><div class="wants">${wants}</div><div class="points">🌟 ${t('ui.points', { n: sel.points })}</div>`;
+  const html = `${goalHtml}<h3>${t('want.title')}</h3><div class="wants">${wants}</div><div class="points">🌟 ${t('ui.points', { n: sel.points })} <button id="aims-spend">🎁 ${t('reward.spend')}</button></div>`;
   if (html === aimsShown) return;
   $('aims').innerHTML = aimsShown = html;
   $('aims-pick')?.addEventListener('click', () => openGoalPicker(sel));
   for (const b of $('aims').querySelectorAll('[data-drop]')) b.onclick = () => dropWant(sel, b.dataset.drop);
+  $('aims-spend').onclick = () => openRewards(sel);
+}
+// ---- what happy points buy (round 16, phase 2: rewards.mjs) ----
+function openRewards(l) {
+  if (card || placing) return;
+  const row = (r) => {
+    const why = cantBuy(r, l);
+    const name = r.kind === 'perk' ? t(`perk.${r.perk}`) : t(`reward.${r.id}`), does = r.kind === 'perk' ? t(`perk.${r.perk}.does`) : t(`reward.${r.id}.does`);
+    return `<div class="offer"><div class="big">${r.icon}</div><div><b>${name}</b><div>${does}</div></div><button class="go" data-reward="${r.id}" ${why ? 'disabled' : ''}>${why === 'have' ? t('reward.have') : `🌟 ${r.cost}`}</button></div>`;
+  };
+  openCard(l, 'rewards', `<h2>🎁 ${t('reward.title', { name: l.name })}</h2><p class="intro">${t('reward.intro', { name: l.name, n: l.points })}</p>
+    <h3>${t('reward.kind.perk')}</h3>${REWARDS.filter((r) => r.kind === 'perk').map(row).join('')}
+    <h3>${t('reward.kind.item')}</h3>${REWARDS.filter((r) => r.kind === 'item').map(row).join('')}
+    <h3>${t('reward.kind.trait')}</h3>${REWARDS.filter((r) => r.kind === 'trait').map(row).join('')}
+    <div class="actions"><button id="card-close">${t('ui.close')}</button></div>`);
+  $('card-close').onclick = closeCard;
+  for (const b of $('card').querySelectorAll('[data-reward]')) b.onclick = () => buyReward(l, rewardById(b.dataset.reward));
+}
+function buyReward(l, r) {
+  if (!r || cantBuy(r, l)) return;
+  if (r.kind === 'trait') return swapTrait(l, r);
+  l.points -= r.cost;
+  closeCard();
+  if (r.kind === 'perk') {
+    l.perks.push(r.perk);
+    toast(t('reward.gotPerk', { name: l.name, perk: t(`perk.${r.perk}`) }));
+    milestone(r.icon, 'diary.perk', { name: l.name, perk: `perk.${r.perk}` });
+  } else {
+    storage.push(r.item);
+    toast(t('reward.boxed', { name: l.name, item: t(`shop.${r.item}`) }));
+  }
+  save();
+}
+// A new trait: which one goes, then which one comes (one that goes with the other two).
+function swapTrait(l, r) {
+  const ask = (html) => (($('card').innerHTML = html), $('card'));
+  const el = ask(`<h2>🔄 ${t('reward.swap.title', { name: l.name })}</h2><p class="intro">${t('reward.swap.which')}</p>
+    <div class="chips traits">${l.traits.map((id) => `<button data-out="${id}">${TRAITS[id].icon} ${t(`trait.${id}`)}</button>`).join('')}</div>
+    <div class="actions"><button id="card-close">${t('ui.close')}</button></div>`);
+  $('card-close').onclick = closeCard;
+  for (const b of el.querySelectorAll('[data-out]'))
+    b.onclick = () => {
+      const keep = l.traits.filter((id) => id !== b.dataset.out);
+      const can = TRAIT_IDS.filter((id) => id !== b.dataset.out && fits(keep, id));
+      ask(`<h2>🔄 ${t('reward.swap.title', { name: l.name })}</h2><p class="intro">${t('reward.swap.for', { trait: t(`trait.${b.dataset.out}`) })}</p>
+        <div class="chips traits">${can.map((id) => `<button data-in="${id}" title="${t(`trait.${id}.does`)}">${TRAITS[id].icon} ${t(`trait.${id}`)}</button>`).join('')}</div>
+        <div class="actions"><button id="card-close">${t('ui.close')}</button></div>`);
+      $('card-close').onclick = closeCard;
+      for (const c of $('card').querySelectorAll('[data-in]'))
+        c.onclick = () => {
+          l.points -= r.cost;
+          l.traits = l.traits.map((id) => (id === b.dataset.out ? c.dataset.in : id));
+          closeCard();
+          toast(t('reward.swapped', { name: l.name, was: t(`trait.${b.dataset.out}`), now: t(`trait.${c.dataset.in}`) }));
+          milestone(TRAITS[c.dataset.in].icon, 'diary.trait', { name: l.name, trait: `trait.${c.dataset.in}` });
+          save();
+        };
+    };
 }
 // The life story (2.4) gathers these; until then, nothing.
 function milestone() {}
@@ -2351,7 +2411,7 @@ window.__life = {
   get card() { return card; }, get year() { return year; }, get speed() { return speed; }, get view() { return nameOf(view); },
   get sel() { return sel; }, colleaguesLoaded, town: TOWN, HOUSES, streetName, story,
   // Round 16, phase 2.
-  factsOf, checkGoals, openGoalPicker, aimsOn, wantsTick, wantCtx, wished,
+  factsOf, checkGoals, openGoalPicker, aimsOn, wantsTick, wantCtx, wished, openRewards, buyReward,
   folk, get extras() { return extras(); }, furniture, storage, save, snapshot, openShop, startPlacing, stopPlacing, turnPlacing, placeHere, hover, sell, beauty, openLook, get home() { return home; }, saving,
   get placing() { return placing; }, get start() { return start?.kind ?? null; },
   setSpeed, advance, get minutes() { return minutes; }, set minutes(v) { minutes = v; },
