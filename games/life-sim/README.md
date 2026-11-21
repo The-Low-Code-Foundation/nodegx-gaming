@@ -40,7 +40,7 @@ friends, fall in love, marry, have babies and move house; houses go on and off t
 notice board on the street says what changed, and the town's people come over to chat, joke, flirt or tease. Phase 5:
 seven skills learnt from things at home (cooking, fitness, painting, music, gardening, handiness, charm), faster or
 slower by trait; paintings, vegetables, busking and odd jobs bring in a little money; three new careers (café chef at a
-new café, scientist, vet at a new vet's); a cat or a dog to adopt (the stray cat at the door, or the shelter by phone),
+new café, scientist, vet at a new vet's), and later a baker at a French boulangerie-pâtisserie; a cat or a dog to adopt (the stray cat at the door, or the shelter by phone),
 to feed, play with and cuddle; and the artist dream. Phase 6: the calendar. Four seasons of a week each change the
 weather (snow in winter), the colours of the grass and trees, what grows in the planter, and what happens; everyone has
 a birthday (cake baked or bought, presents from friends, a party, and nobody gets older); the town has an event each

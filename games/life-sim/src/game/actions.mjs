@@ -20,6 +20,7 @@
 //   travel     going somewhere else ('park', 'home'): walk to the door, and come out at that place's way in
 //   hand       round 10: what they hold in their right hand meanwhile (props.mjs: 'fork', 'book', 'phone'…)
 //   table      round 10: what stands on the table in front of them (sitting), or on the thing they use ('pan')
+//   bread      only there while the household has bread a baker brought home (the page)
 //   birthday   round 16, phase 6.2: only there on the birthday of someone in the household (the page: calendar.mjs)
 //   steps      round 10: one action in parts, each until a share of its time (`upTo`), with its own clip, `hand`,
 //              and `open` (a fridge's door open): take something out of the fridge, then eat it
@@ -40,7 +41,9 @@ export const OFFERS = {
   ],
   Kitchen_Fridge: [
     { id: 'snack', act: 'interact', minutes: 10, gives: { hunger: 110 }, steps: FROM_FRIDGE('sandwich') },
-    { id: 'juice', act: 'interact', minutes: 8, gives: { hunger: 30, fun: 25, bladder: -60 }, steps: FROM_FRIDGE('glass') }
+    { id: 'juice', act: 'interact', minutes: 8, gives: { hunger: 30, fun: 25, bladder: -60 }, steps: FROM_FRIDGE('glass') },
+    // A baker's bread brought home (work.mjs CAREERS.baker `home`): there while there is some (`bread`, the page).
+    { id: 'freshBread', act: 'interact', minutes: 12, gives: { hunger: 150, fun: 15 }, steps: FROM_FRIDGE('bread'), moodlet: 'freshBread', bread: true, icon: '🥖' }
   ],
   Kitchen_Oven: [
     { id: 'cook', act: 'interact', minutes: 30, gives: { fun: 8 }, then: { item: 'Chair_1', id: 'eat' }, advertises: { hunger: 160 }, table: 'pan' },
@@ -125,6 +128,8 @@ Object.assign(OFFERS, {
   // Round 16, phase 5.3: the café's tables (world.mjs lifeCafe), served between the stations' questions, as a desk.
   cafeTable: [{ id: 'serveTables', act: 'interact', clip: 'mc_talk', talk: true, minutes: 45, gives: { social: 15 }, bonus: () => 0.15, icon: '🍽️' }],
   // Round 16, phase 5.4: the vet's kennels (world.mjs lifeVet), between questions, as the café's tables are.
+  // The boulangerie's till (the baker's work): serving between the bakes.
+  bakeryTill: [{ id: 'serveCustomers', act: 'interact', clip: 'mc_talk', talk: true, minutes: 45, gives: { social: 15 }, bonus: () => 0.15, icon: '🥖' }],
   vetKennel: [{ id: 'tendPatients', act: 'interact', clip: 'Interact', minutes: 45, gives: { social: 10, fun: 10 }, bonus: () => 0.15, icon: '🐾' }],
   bench: [{ id: 'sitBench', act: 'sit', minutes: 30, gives: { energy: 4, fun: 20 } }],
   ducks: [{ id: 'feedDucks', act: 'interact', minutes: 20, gives: { fun: 90 }, moodlet: 'ducks', hand: 'bread' }],

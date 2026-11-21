@@ -28,7 +28,7 @@ themselves. For a pet from quaternius.com today: the Ultimate Animated Animal Pa
 and a shiba inu) but no cat, so the cat and dog above stay.
 
 Everything else (the code, the textures painted at run time, the made-in-code fridge, TV, telescope, cot, easel, keyboard,
-planter, workbench, till, menu board, pet basket, exam table, kennels and signs) is
+planter, workbench, till, menu board, pet basket, exam table, kennels, the boulangerie's ovens, tables, bread rack, tart stand and pastry case, and signs) is
 part of this game and MIT.
 
 Not shipped: the anime (VRM) sample and the Quaternius "Casual" woman used in early character tests; the raw

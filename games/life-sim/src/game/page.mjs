@@ -128,7 +128,7 @@ home.house = 'flat';
 const places = { home, office, park };
 // Round 16, phase 5.3: a career's own place (work.mjs `place`: the café), built the first time someone has that job
 // (taking it, a save with it, or the morning they go), as a town house is.
-const CAREER_PLACES = { cafe: 'lifeCafe', vet: 'lifeVet' };
+const CAREER_PLACES = { cafe: 'lifeCafe', vet: 'lifeVet', bakery: 'lifeBakery' };
 const careerLabels = (career) => Object.fromEntries(STATIONS.map((s) => [s.id, stationName(career, s.id)]));
 const workBuilding = new Map();
 function careerPlace(id) {
@@ -136,7 +136,9 @@ function careerPlace(id) {
   if (!CAREER_PLACES[id]) return Promise.resolve(null);
   if (!workBuilding.has(id))
     workBuilding.set(id, (async () => {
-      const p = await buildPlace(CAREER_PLACES[id], { labels: careerLabels(id) });
+      // The stations' names are the career's that works there (the bakery's are the baker's).
+      const career = Object.keys(CAREERS).find((k) => (CAREERS[k].place ?? 'office') === id) ?? id;
+      const p = await buildPlace(CAREER_PLACES[id], { labels: careerLabels(career) });
       shine(p);
       scene.add(p.group);
       p.group.visible = view === p;
@@ -373,7 +375,7 @@ if (homeState.id !== 'flat' || homeState.size) {
 }
 // The money is the household's: whoever earns it, anyone can spend it.
 // `childcare` (round 13): who looks after the babies while everyone is out, 'nanny' or 'nursery' (null: ask).
-const household = { money: saved?.money ?? story?.money ?? START_MONEY, childcare: saved?.childcare ?? null };
+const household = { money: saved?.money ?? story?.money ?? START_MONEY, childcare: saved?.childcare ?? null, bread: saved?.bread ?? 0 };
 // Round 16, phase 5.2: the side earnings (skills.mjs): paintings not yet sold, the vegetables, today's odd job.
 household.side = skillsOn ? { ...freshSide(), ...(saved?.side ?? {}) } : null;
 async function makeSim(who, at, i, { name = null, look = null, body = null, ...opts } = {}) {
@@ -402,7 +404,7 @@ async function makeSim(who, at, i, { name = null, look = null, body = null, ...o
   life.partnerOf = (other) => partners(life, other);
   life.onArrive = arrived;
   life.onDid = wished;
-  life.offerOk = (offer) => inWeather(offer) && !offerWhy(life, offer);
+  life.offerOk = (offer) => inWeather(offer) && !offerWhy(life, offer) && (!offer.bread || household.bread > 0);
   // Round 16, phase 6: the season's and the weekend's leanings, and a weekend lie-in (calendar.mjs).
   if (calendarOn) (life.lean = (id, hour) => leanOf(life, id, hour)), (life.lieIn = () => lieInNow(life));
   life.needPlace = (id) => careerPlace(id);
@@ -1256,6 +1258,7 @@ function sendHome(l, key) {
 function arrived(l, p) {
   // Round 16: where they have been (wants, dreams).
   if (lives.includes(l)) l.count(`go.${p === park ? 'park' : p === office ? 'office' : p === street ? 'street' : p === home ? 'home' : p.work ?? 'house'}`);
+  if (p === home && lives.includes(l)) broughtHome(l);
   if (!lives.includes(l) || !p.house || p === home) return;
   l.visitOver = false;
   const id = p.house, h = houseById(id);
@@ -1756,7 +1759,7 @@ renderer.domElement.addEventListener('pointerup', (e) => {
 function openMenu(item, x, y, point = null) {
   const atHome = view === home;
   // Round 14: a front door's "Go home" is for anyone's door but your own.
-  const offers = item ? offersFor(item).filter((o) => o.offered !== false && !(o.baby && item.baby?.away) && !(o.away && atHome) && inWeather(o) && (!o.birthday || birthdayHere())) : [{ id: 'goHere', act: 'walk' }];
+  const offers = item ? offersFor(item).filter((o) => o.offered !== false && !(o.baby && item.baby?.away) && !(o.away && atHome) && inWeather(o) && (!o.birthday || birthdayHere()) && (!o.bread || household.bread > 0)) : [{ id: 'goHere', act: 'walk' }];
   const gain = (o) =>
     Object.entries(o.advertises ?? o.gives ?? {})
       .filter(([, v]) => v > 0)
@@ -2022,9 +2025,23 @@ function wantsTick() {
     }
   }
 }
+// What a job brings home at the end of the day (work.mjs `home`): a baker's bread for the fridge, once a work day;
+// on a birthday in the household (with the calendar on), the birthday cake from the boulangerie instead.
+function broughtHome(l) {
+  const c = l.job && careerOf(l.job), day = Math.floor(minutes / 1440);
+  if (!c?.home || l.job.lastDay !== day || l.job.broughtDay === day || (minutes % 1440) < c.ends - 60) return;
+  l.job.broughtDay = day;
+  if (calendarOn && birthdayHere() && lives.filter(birthdayToday).some((b) => calendar.cake[b.name] !== yearKey())) {
+    toast(t('ui.baker.cake', { name: l.name }));
+    return birthdayCake(l, 'bakery');
+  }
+  household.bread = Math.min(4, household.bread + c.home.bread);
+  toast(t('ui.baker.bread', { name: l.name }));
+}
 // Life `count` tells us what was done: a wish that was for it comes true.
 function wished(l, id) {
   if (id === 'buildSnowman') buildSnowman(l);
+  if (id === 'freshBread') household.bread = Math.max(0, household.bread - 1);
   // Round 16, phase 6.4: up after a weekend lie-in.
   if (id === 'sleep' && lives.includes(l) && offToday(l) && (minutes % 1440) >= WEEKEND.lieIn * 60 && (minutes % 1440) < (WEEKEND.lieIn + 1.5) * 60) l.addMoodlet('lieIn');
   // Round 16, phase 6.2: a birthday cake baked or bought, and a birthday party (the household's own: round 15).
@@ -2381,8 +2398,10 @@ function enterContest(l) {
   st.entered ??= {};
   if (st.entered[l.name] === day) return toast(t('townEvent.contest.again', { name: l.name, contest }));
   st.entered[l.name] = day;
-  const place = contestPlace(skillLevel(l.skills[e.contest] ?? 0), Math.random);
-  window.__life.lastContest = { name: l.name, event: e.id, skill: e.contest, place };
+  // A career's head start (calendar.mjs `edge`: a baker at the bake-off).
+  const edge = e.edge?.[l.job?.career] ?? 0;
+  const place = contestPlace(skillLevel(l.skills[e.contest] ?? 0) + edge, Math.random);
+  window.__life.lastContest = { name: l.name, event: e.id, skill: e.contest, place, edge };
   if (!place) return toast(t('townEvent.contest.none', { name: l.name, contest, skill: t(`skill.${e.contest}`) }));
   const coins = PRIZES.coins[place - 1];
   household.money += coins;
@@ -2717,7 +2736,7 @@ function openStation(life) {
   };
   const choose = () => {
     const y = yearOf(life);
-    const topics = topicsFor(station, y);
+    const topics = topicsFor(station, y, life.place?.work ?? null);
     const levels = YEARS.map((v) => `<button data-year="${v}" class="${v === y ? 'on' : ''}">${v}</button>`).join('');
     const rows = [`<button data-topic="" class="mix">🎲 ${t('ui.card.station.mix')}</button>`, ...topics.map((tp) => `<button data-topic="${tp.id}">${tp.name}${tp.above ? ` <small>${t('ui.card.station.from', { year: tp.from })}</small>` : ''}</button>`)].join('');
     openCard(life, 'station', `${head}<div class="levels"><span>${t('ui.card.station.level')}</span>${levels}</div>
@@ -2733,7 +2752,7 @@ function openStation(life) {
     $('card-close').onclick = () => (done(false), closeCard());
   };
   const question = (topic, n) => {
-    const q = (life.question = ask({ subject: station, topic, year: yearOf(life) }));
+    const q = (life.question = ask({ subject: station, topic, year: yearOf(life), place: life.place?.work ?? null }));
     openCard(life, 'station', `${head}<p class="count">${t('ui.card.station.count', { n, of: TASK.questions })}</p>
       <p class="question">${q.prompt}</p><div class="answers">${q.choices.map((c, i) => `<button data-i="${i}">${c}</button>`).join('')}</div>
       <p class="calm">${t('ui.card.station.calm')}</p>`);
@@ -2818,7 +2837,7 @@ let savedAt = null;
 function snapshot() {
   const beds = sleepers();
   return {
-    minutes, money: household.money, childcare: household.childcare, year,
+    minutes, money: household.money, childcare: household.childcare, bread: household.bread, year,
     lives: lives.map((l) => ({ ...lifeState(l), bed: beds.indexOf(l.home?.side ? l.home.twin : l.home), ...(l.home?.side ? { side: 1 } : {}) })),
     // Before they have loaded (the first save comes straight away), the ones the save had.
     colleagues: colleaguesIn ? colleagues.map((c) => ({ who: c.who, job: c.job && { ...c.job } })) : saved?.colleagues ?? [],

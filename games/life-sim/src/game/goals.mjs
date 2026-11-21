@@ -59,7 +59,8 @@ export const GOALS = [
   {
     id: 'chef', icon: '👩‍🍳',
     steps: [
-      { id: 'firstMeal', icon: '🍳', test: (f) => (f.tally.cook ?? 0) >= 1 },
+      // A meal cooked, or a bake at the boulangerie (work.mjs CAREERS.baker: Life counts 'bake').
+      { id: 'firstMeal', icon: '🍳', test: (f) => (f.tally.cook ?? 0) + (f.tally.bake ?? 0) >= 1 },
       { id: 'cookingThree', icon: '🍲', test: (f) => (f.skills?.cooking ?? 0) >= 3 },
       { id: 'bigOven', icon: '🔥', test: (f) => !!f.has.bigOven },
       { id: 'cookingFive', icon: '🥘', test: (f) => (f.skills?.cooking ?? 0) >= 5 },

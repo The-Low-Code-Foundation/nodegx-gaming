@@ -19,6 +19,10 @@
 //              the career's (strings.mjs `station.<career>.<subject>`), the questions the school year's
 //   learns     skill points each right answer gives too (skills.mjs: a café chef learns cooking)
 //   skills     true: only in a game with skills on (a test URL needs ?skills=1)
+//   helps      a skill that makes the work go better: each right answer fills the promotion bar this much more a level
+//              of it ({ cooking: 0.08 }: a baker at cooking 5 fills it 40% faster)
+//   home       what they bring home at the end of the day (the page: `bread`, loaves for the fridge; on a birthday in
+//              the household, the birthday cake instead)
 export const CAREERS = {
   office: {
     icon: '🏢',
@@ -100,6 +104,32 @@ export const CAREERS = {
       { id: 'vet', pay: 155, days: 5 },
       { id: 'seniorVet', pay: 210, days: 5 },
       { id: 'headVet', pay: 285 }
+    ]
+  },
+  // The baker, at a French-style boulangerie-pâtisserie (world.mjs lifeBakery), Tuesday to Saturday (closed Sunday
+  // and Monday, as many are). A baker's hours: off at 05:30, baking from 06:00, home by 13:00. Five stations, one a
+  // bake (strings.mjs `station.baker.<subject>`), with bakery maths at the dough table (school/bakery.mjs). Cooking is
+  // learnt at every right answer, a good cook does better there, and fresh bread comes home.
+  baker: {
+    icon: '🥖',
+    skills: true,
+    place: 'bakery',
+    days: [1, 2, 3, 4, 5],
+    leave: 5 * 60 + 30,
+    starts: 6 * 60,
+    ends: 13 * 60,
+    work: { id: 'work', slows: { hunger: 0.7, energy: 1, bladder: 0, hygiene: 0.8, fun: 0.9, social: 0.8 } },
+    stations: ['maths', 'science', 'french', 'geography', 'english'],
+    learns: { cooking: 0.3 },
+    helps: { cooking: 0.08 },
+    home: { bread: 2 },
+    levels: [
+      { id: 'apprentice', pay: 50, days: 3 },
+      { id: 'baker', pay: 75, days: 4 },
+      { id: 'pastryCook', pay: 105, days: 4 },
+      { id: 'pastryChef', pay: 145, days: 5 },
+      { id: 'headBaker', pay: 200, days: 5 },
+      { id: 'masterBaker', pay: 265 }
     ]
   }
 };

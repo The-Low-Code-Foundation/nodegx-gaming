@@ -48,7 +48,7 @@ Time: one game minute a second at speed 1 (`SPEEDS` in `life.mjs`). Every need n
   `ROMANCE` levels, the bonds between Sims.
 - `work.mjs`: `CAREERS` (days, hours, pay per level, days to promotion), `TASK` (questions per station visit).
 - `school/school.mjs`: the work-station questions by school year, subject and topic; `school/rocket.mjs` is a
-  generated question bank (maths, French, English, history, science); `school/france.mjs` the geography banks;
+  generated question bank (maths, French, English, history, science); `school/france.mjs` the geography banks; `school/bakery.mjs` the boulangerie's maths;
   `stem.mjs` the older promotion questions.
 - `shop.mjs`: `SHOP`, everything that can be bought (field list at the top), `kindOf`, `FLAT_FURNITURE`.
 - `town.mjs`: `SIZES` (home sizes), `EXTENSION` prices, `makeTown(seed)` (round 16: fills `HOUSES`,
@@ -252,6 +252,14 @@ someone has that job (`careerPlace`), or as a save with it loads; `goToWork` ask
 works in the office building. The vet (world.mjs `lifeVet`) is built as the café is; its patients are the pets'
 models, only looked at (placed with `furnish` like furniture, so they stand in their rest pose). A right answer also
 teaches the career's `learns` (a café chef: cooking; a vet: charm).
+The baker (after phase 6) works at a French boulangerie-pâtisserie (world.mjs `lifeBakery`, built as the café is; its
+ovens, dough and piping tables, bread rack, tart stand and pastry case are made in code, merged per material), from
+06:00 to 13:00, Tuesday to Saturday. A career's `helps` (skill → bar bonus a level: the baker's cooking) makes each
+right answer move the promotion bar further, and its `home` (`bread`) brings fresh bread home after a work day
+(page.mjs `broughtHome`: two loaves, at most four, eaten from the fridge as `freshBread`), or the birthday cake on a
+household birthday. Its dough table asks bakery maths (`school/bakery.mjs`: each skill makes its own question; asked
+only where its topic's `place` is, where it comes first). Each bake counts as a meal for the master chef dream, and a
+town event's `edge` (calendar.mjs) gives a career levels in its contest (the bake-off: a baker's +2).
 
 Pets (`pets.mjs`) are cared for the way babies are: the basket (shop.mjs `PET_BED`, made in code) carries the pet
 (`item.pet`), its offers carry `pet` (need points a game hour) and `petUntil`; Life calls `item.pet.care` while

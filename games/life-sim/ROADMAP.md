@@ -122,3 +122,9 @@ All six phases are built, each on its own branch cut from the one before (so `li
   10% over a year). All four town events are built (6.3's "one per season if it's cheap"). Save v8 (with 6.2). The
   season looks are a recolour of existing materials, and cost nothing measurable; a town event's stalls add about 40
   draw calls on its day. The checks are listed in [tests/r16-phase6.md](tests/r16-phase6.md).
+- After phase 6, the baker: built on branch `life-sim-baker`, cut from `life-sim-calendar` (one commit), checked in the
+  browser on the Mac. A new career at a French boulangerie-pâtisserie (Boulangerie Belle Croûte): apprentice to master
+  baker, 06:00 to 13:00 Tuesday to Saturday, five stations (baguettes, croissants and pains au chocolat, éclairs, fruit
+  tarts, macarons), bakery maths at the dough table, cooking helps the bar, bread or a birthday cake comes home, the
+  bake-off gives a baker +2. Workplaces aren't on the street, so the bakery isn't either. The bakery costs about what the
+  café does (216 draw calls against 185). The checks are listed in [tests/r16-baker.md](tests/r16-baker.md).

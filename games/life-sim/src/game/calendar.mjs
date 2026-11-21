@@ -55,10 +55,11 @@ export const PRESENT_KINDS = ['food', 'colour', 'activity'];
 // and the town's people go (`people` of them drawn while someone from the household is there, the rest as data). A
 // contest (`contest`: a skill) gives a rosette and a prize by how good they are: `PRIZES`.
 //   decor   what dresses the place (dressing.mjs `eventDecor`): bunting, fairy lights
+//   edge    a career's head start in the contest, in levels (the bake-off: a baker's +2)
 export const TOWN_EVENTS = [
   { id: 'plantSale', icon: '🌱', season: 'spring', day: 3, place: 'park', hours: [10, 16], contest: 'gardening', stalls: ['plants', 'cakes', 'show'], decor: 'bunting' },
   { id: 'summerFair', icon: '🎡', season: 'summer', day: 6, place: 'park', hours: [10, 18], contest: 'painting', stalls: ['games', 'treats', 'show'], decor: 'bunting' },
-  { id: 'bakeOff', icon: '🥧', season: 'autumn', day: 4, place: 'park', hours: [11, 17], contest: 'cooking', stalls: ['treats', 'cakes', 'show'], decor: 'bunting' },
+  { id: 'bakeOff', icon: '🥧', season: 'autumn', day: 4, place: 'park', hours: [11, 17], contest: 'cooking', stalls: ['treats', 'cakes', 'show'], decor: 'bunting', edge: { baker: 2 } },
   { id: 'winterLights', icon: '✨', season: 'winter', day: 5, place: 'street', hours: [16, 21], contest: 'music', stalls: ['cocoa', 'treats', 'show'], decor: 'lights' }
 ];
 export const TOWN_EVENT = { ahead: 3, people: 6, before: 0.5 };

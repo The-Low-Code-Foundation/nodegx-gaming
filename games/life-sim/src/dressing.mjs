@@ -473,6 +473,19 @@ function curtain(w, h, material, x, y, z) {
 // Pictures for the walls, painted: hills, a sunflower, a boat at sunset, a rocket (a child's drawing), the planets, a
 // table of the elements' colours.
 const ART = {
+  // The boulangerie's name board (the baker's work): gold letters on navy.
+  boulangerie(g, W, H) {
+    g.fillStyle = '#1f3a5f';
+    g.fillRect(0, 0, W, H);
+    g.strokeStyle = '#d8b45a';
+    g.lineWidth = Math.max(2, H * 0.06);
+    g.strokeRect(H * 0.08, H * 0.08, W - H * 0.16, H - H * 0.16);
+    g.fillStyle = '#f2d58a';
+    g.font = `bold ${Math.round(H * 0.42)}px Georgia, serif`;
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    g.fillText('Boulangerie · Pâtisserie', W / 2, H / 2 + 1);
+  },
   hills(g, W, H) {
     const s = g.createLinearGradient(0, 0, 0, H);
     s.addColorStop(0, '#8ec5ea'), s.addColorStop(1, '#f6e7c8');
@@ -541,7 +554,8 @@ const ART = {
 };
 function picture(w, h, art, frame = M.darkFrame) {
   const g = new THREE.Group();
-  const tex = canvasTexture(`art-${art}`, 256, Math.round((256 * h) / w), ART[art], { repeat: false });
+  const px = art === 'boulangerie' ? 1024 : 256; // a name board's letters want more pixels than a painting
+  const tex = canvasTexture(`art-${art}`, px, Math.round((px * h) / w), ART[art], { repeat: false });
   g.add(boxMesh(w + 0.06, h + 0.06, 0.03, 0, 0, 0.015, frame));
   const p = planeMesh(w, h, new THREE.MeshStandardMaterial({ map: tex, roughness: 0.6 }), 0, 0, 0.032);
   g.add(p);
@@ -1167,6 +1181,28 @@ export async function dressVet(group, walls, furnish, S, { w, d }) {
     hangOutside(group, front, x, 1.6, windowPiece(2.0, 1.3, { view: 'city', outside: true }));
   }
   hang(group, front, 0.1, 1.6, picture(0.45, 0.6, 'sunflower', M.frame));
+  bake(group, walls);
+  group.add(ground('grass', 120, 120, 0, 0, -0.03));
+  group.add(ground('paving', w + 6, d + 6, 0, 0, -0.02));
+  return [];
+}
+
+// ---- the boulangerie (the baker's work, world.mjs lifeBakery) ----
+// Warm kitchen tiles, cream tiles behind the bakehouse, its name over the dough table, windows on the street.
+export async function dressBakery(group, walls, furnish, S, { w, d }) {
+  if (!DOM) return [];
+  const [back, left, , front] = [side(walls, 0, -1), side(walls, -1, 0), side(walls, 1, 0), side(walls, 0, 1)];
+  group.add(ground('kitchen', w, d, 0, 0, 0));
+  skirting(group, walls);
+  hang(group, back, -1.6, 1.2, wallTiles(4.2, 0.6, [40, 40, 90]));
+  hang(group, back, 1.3, 2.3, picture(2.4, 0.5, 'boulangerie', M.frame));
+  hang(group, back, 3.6, 1.9, clock(0.22));
+  hang(group, left, -1.0, 1.6, windowPiece(1.8, 1.3, { view: 'city', curtains: null }));
+  hangOutside(group, left, -1.0, 1.6, windowPiece(1.8, 1.3, { view: 'city', outside: true }));
+  for (const x of [-2.4, 2.4]) {
+    hang(group, front, x, 1.6, windowPiece(2.2, 1.4, { view: 'city', curtains: null }));
+    hangOutside(group, front, x, 1.6, windowPiece(2.2, 1.4, { view: 'city', outside: true }));
+  }
   bake(group, walls);
   group.add(ground('grass', 120, 120, 0, 0, -0.03));
   group.add(ground('paving', w + 6, d + 6, 0, 0, -0.02));

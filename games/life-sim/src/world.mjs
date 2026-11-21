@@ -5,7 +5,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { dressHome, dressHouse, dressOffice, dressCafe, dressVet, dressPark, dressStreet, pondLife, lampGlow, streetLabel, seasonalScenery } from './dressing.mjs';
+import { dressHome, dressHouse, dressOffice, dressCafe, dressVet, dressBakery, dressPark, dressStreet, pondLife, lampGlow, streetLabel, seasonalScenery } from './dressing.mjs';
 import { kindOf } from './game/shop.mjs';
 
 const loader = new GLTFLoader();
@@ -899,6 +899,96 @@ async function lifeVet(group, { labels = {} } = {}) {
   return { w, d, walls, items, cell: 0.25, view: { target: [0, 0.6, 0.3], camera: [6, 8.5, 10], max: 20, fog: [30, 80] }, starts: [], shadow: 7, fade };
 }
 
+// ---- the boulangerie-pâtisserie (after round 16, phase 6; work.mjs CAREERS.baker, 10 × 8 m) ----
+// Where the baker works: built the first time someone has the job (page.mjs), as the café is. Five stations, a bake
+// each (a school subject each, with the baker's own names: `labels`): the dough table (baguettes: maths, with bakery
+// maths), the bread oven (croissants and pains au chocolat: science), the piping table (éclairs: French), the tart
+// stand (tarts: geography) and the pastry case at the counter (macarons: English, for the customers). The till, for
+// serving between questions (what free will does there), the bread racks, a fridge and a sink for a snack and a hot
+// chocolate. Made in code (no bakery models in the packs), each merged per material; the counter faces the shop.
+const [flourW, crust, doughM, choc, brassB, cream] = [mat5(0xf7f3ea, 0.95), mat5(0xc98a3c, 0.7), mat5(0xf0dcb0, 0.9), mat5(0x5a3420, 0.5), mat5(0xc8a050, 0.35), mat5(0xf4e6c8, 0.6)];
+const caseGlass = new THREE.MeshStandardMaterial({ color: 0xdff2fb, roughness: 0.08, transparent: true, opacity: 0.22, depthWrite: false });
+const MACARON = [0xf29ab8, 0x9ad89a, 0xf2d06a, 0xb89ae0, 0x8ac8f0, 0xf0a070];
+// The bread oven: a steel deck oven, three decks with dark glass doors and brass handles, a tray of croissants on top.
+const BREAD_OVEN = madeModel(merged([
+  box(1.6, 1.75, 0.9, 0, 0.875, -0.05, steel), box(1.64, 0.08, 0.94, 0, 1.79, -0.05, metal),
+  ...[0.55, 0.95, 1.35].flatMap((y) => [box(1.4, 0.26, 0.02, 0, y, 0.41, screen), box(1.0, 0.03, 0.04, 0, y + 0.17, 0.43, brassB)]),
+  box(0.9, 0.02, 0.4, 0, 1.84, -0.05, metal),
+  ...[-0.3, -0.1, 0.1, 0.3].map((x) => box(0.14, 0.05, 0.08, x, 1.875, -0.05, crust))
+]), 1.9);
+// The dough table: a floured wooden top, dough balls, baguettes shaped and waiting, the scales.
+const DOUGH_TABLE = madeModel(merged([
+  box(1.6, 0.06, 0.85, 0, 0.88, 0, wood), ...[[-0.72, -0.36], [0.72, -0.36], [-0.72, 0.36], [0.72, 0.36]].map(([x, z]) => box(0.06, 0.85, 0.06, x, 0.425, z, wood)),
+  box(1.4, 0.1, 0.7, 0, 0.3, 0, wood), box(0.9, 0.005, 0.55, -0.2, 0.913, 0.02, flourW),
+  ...[-0.5, -0.3, -0.1].map((x) => cyl(0.07, 0.07, x, 0.95, -0.12, doughM)),
+  ...[0.05, 0.15, 0.25].map((z) => box(0.62, 0.06, 0.06, -0.15, 0.945, z, crust)),
+  box(0.3, 0.06, 0.24, 0.55, 0.94, 0, steel), cyl(0.11, 0.02, 0.55, 0.98, 0, steel)
+]), 1.0);
+// The piping table: steel, a tray of éclairs with their chocolate tops, a piping bag.
+const PIPING_TABLE = madeModel(merged([
+  box(1.4, 0.05, 0.75, 0, 0.9, 0, steel), ...[[-0.65, -0.32], [0.65, -0.32], [-0.65, 0.32], [0.65, 0.32]].map(([x, z]) => box(0.05, 0.88, 0.05, x, 0.44, z, metal)),
+  box(0.8, 0.02, 0.45, -0.15, 0.935, 0, metal),
+  ...[-0.13, 0, 0.13].flatMap((z) => [-0.4, -0.15, 0.1].flatMap((x) => [box(0.18, 0.045, 0.055, x, 0.965, z, crust), box(0.17, 0.015, 0.045, x, 0.995, z, choc)])),
+  box(0.08, 0.08, 0.3, 0.45, 0.97, 0.05, cream), box(0.03, 0.03, 0.08, 0.45, 0.97, 0.24, steel)
+]), 1.0);
+// The tart stand: a wooden display table, tarts on two tiers (strawberry, apple, lemon, apricot).
+const TART_STAND = madeModel(merged([
+  box(1.3, 0.05, 0.7, 0, 0.85, 0, wood), box(1.2, 0.82, 0.6, 0, 0.41, 0, wood), box(1.0, 0.04, 0.3, 0, 1.2, -0.15, wood),
+  box(0.04, 0.35, 0.04, -0.45, 1.02, -0.15, wood), box(0.04, 0.35, 0.04, 0.45, 1.02, -0.15, wood),
+  ...[[-0.35, 0.92, 0.12, 0xd8402a], [0.05, 0.92, 0.12, 0xe8c060], [0.42, 0.92, 0.12, 0xf2e060], [-0.25, 1.27, -0.15, 0xf0a040], [0.25, 1.27, -0.15, 0xd8402a]]
+    .flatMap(([x, y, z, c]) => [cyl(0.16, 0.04, x, y, z, crust), cyl(0.14, 0.02, x, y + 0.025, z, mat5(c, 0.4))])
+]), 1.32);
+// The pastry case at the counter: a wooden base, glass all round, macarons in rows and éclairs on the shelves.
+const PASTRY_CASE = madeModel(merged([
+  box(1.9, 0.75, 0.75, 0, 0.375, 0, wood), box(1.94, 0.04, 0.79, 0, 0.77, 0, deskTop),
+  box(1.9, 0.5, 0.7, 0, 1.04, 0, caseGlass), box(1.8, 0.02, 0.6, 0, 1.03, 0, deskTop),
+  ...[-0.7, -0.45, -0.2, 0.05].flatMap((x, i) => [-0.15, 0.05, 0.22].map((z, j) => cyl(0.035, 0.035, x, 0.81, z, mat5(MACARON[(i + j * 2) % MACARON.length], 0.6)))),
+  ...[0.35, 0.6].flatMap((x) => [-0.12, 0.12].flatMap((z) => [box(0.18, 0.045, 0.055, x, 0.81, z, crust), box(0.17, 0.015, 0.045, x, 0.84, z, choc)])),
+  ...[-0.5, -0.1, 0.3].flatMap((x, k) => [cyl(0.12, 0.035, x, 1.06, 0, crust), cyl(0.1, 0.02, x, 1.085, 0, mat5([0xd8402a, 0xf2e060, 0xf0a040][k], 0.4))])
+]), 1.3);
+// The bread racks on the wall: shelves of wicker baskets, baguettes standing up, round loaves (pains de campagne).
+const BREAD_RACK = madeModel(merged([
+  box(2.0, 1.9, 0.04, 0, 0.95, -0.2, wood), box(0.05, 1.9, 0.45, -0.98, 0.95, 0, wood), box(0.05, 1.9, 0.45, 0.98, 0.95, 0, wood),
+  ...[0.35, 0.9, 1.45].map((y) => box(1.96, 0.04, 0.45, 0, y, 0, wood)),
+  ...[-0.55, 0.05, 0.6].map((x) => box(0.5, 0.22, 0.32, x, 0.48, 0, mat5(0xb08850, 0.95))),
+  ...[-0.7, -0.6, -0.5, -0.4, 0.0, 0.1, 0.2].map((x, k) => cyl(0.025, 0.55, x, 0.75, (k % 2) * 0.08 - 0.04, crust)),
+  ...[-0.55, -0.15, 0.25, 0.65].map((x) => cyl(0.13, 0.12, x, 1.0, 0, crust)),
+  ...[-0.6, -0.3, 0, 0.3, 0.6].map((x) => box(0.16, 0.06, 0.1, x, 1.5, 0, crust))
+]), 1.9);
+async function lifeBakery(group, { labels = {} } = {}) {
+  const w = 10, d = 8;
+  const walls = makeWalls(group, w, d);
+  const st = (id) => ({ act: 'interact', label: labels[id] ?? id, offers: 'station', station: id });
+  const P = [
+    [F('Door_1'), -4.9, 2.4, Q, 2.05, { act: 'door', label: 'Way out', offers: 'officeDoor' }],
+    // The bakehouse along the back: fridge, the bread oven (science), the sink; the dough table and the piping table.
+    [FRIDGE, -4.3, -3.5, 0, 1.9, { act: 'interact', label: 'Get a snack', offers: 'officeFridge', moving: 'fridge' }],
+    [BREAD_OVEN, -2.75, -3.45, 0, 1.9, st('science')],
+    [F('Kitchen_Sink'), -1.45, -3.55, 0, 0.92, { act: 'interact', label: 'Hot chocolate', offers: 'officeSink' }],
+    [DOUGH_TABLE, 0.3, -2.7, 0, 1.0, st('maths')],
+    [PIPING_TABLE, 2.4, -2.7, 0, 1.0, st('french')],
+    [BREAD_RACK, 4.7, -1.4, -Q, 1.9],
+    // The shop: the pastry case (English, for the customers) and the till, the staff behind them; the tarts by the wall.
+    [PASTRY_CASE, -0.4, 0.9, Math.PI, 1.3, st('english')],
+    [TILL, -2.7, 0.9, Math.PI, 1.3, { act: 'interact', label: 'Serve', offers: 'bakeryTill' }],
+    [TART_STAND, 4.35, 1.6, -Q, 1.32, st('geography')],
+    [F('Table_RoundSmall'), 1.9, 3.0, 0, 0.75], [F('Chair_1'), 1.15, 3.0, Q, 0.95], [F('Chair_1'), 2.65, 3.0, -Q, 0.95],
+    [F('Houseplant_4'), -4.4, 3.4, 0, 1.2], [F('Light_Floor1'), 4.5, 3.4, 0, 1.7], [F('Trashcan_Small1'), -0.6, -3.6, 0, 0.35]
+  ];
+  const items = await furnish(group, P);
+  const fade = await dressBakery(group, walls, furnish, S, { w, d });
+  for (const it of items) {
+    const s = STATIONS.find((x) => x.id === it.use?.station);
+    if (!s || typeof document === 'undefined') continue;
+    const sp = sign(labels[s.id] ?? s.id, s.icon, s.colour);
+    sp.position.set(it.obj.position.x, 2.55, it.obj.position.z);
+    sp.userData.station = s.id;
+    group.add(sp);
+    it.sign = sp;
+  }
+  return { w, d, walls, items, cell: 0.25, view: { target: [0, 0.6, 0.3], camera: [6, 8.5, 10], max: 20, fog: [30, 80] }, starts: [], shadow: 7, fade };
+}
+
 // ---- the life game's park: round 2's park, with a bus stop to come and go by, and things to do on a date ----
 async function lifePark(group) {
   const p = await park(group, true);
@@ -988,7 +1078,7 @@ export function houseFurniture(w, d, n = 1, seed = 1) {
   return out.map(([id, x, z, turn]) => ({ id, x, z, turn }));
 }
 
-export const PLACES = { home, park, office, lifeHome, lifeOffice, lifeCafe, lifeVet, lifePark, lifeHouse, lifeStreet };
+export const PLACES = { home, park, office, lifeHome, lifeOffice, lifeCafe, lifeVet, lifeBakery, lifePark, lifeHouse, lifeStreet };
 
 // Builds a place into its own group (call once; switching places adds/removes the group).
 export async function buildPlace(name, options) {

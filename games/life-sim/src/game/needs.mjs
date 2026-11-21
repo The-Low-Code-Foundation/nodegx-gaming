@@ -127,6 +127,7 @@ export const MOODLETS = {
   carols: { emotion: 'happy', weight: 2, icon: '🎶', minutes: 240 },
   birthday: { emotion: 'happy', weight: 3, icon: '🎂', minutes: 1440 },
   birthdayCake: { emotion: 'happy', weight: 2, icon: '🍰', minutes: 360 },
+  freshBread: { emotion: 'happy', weight: 1, icon: '🥖', minutes: 240 },
   present: { emotion: 'happy', weight: 1, icon: '🎁', minutes: 360 },
   lieIn: { emotion: 'happy', weight: 1, icon: '😌', minutes: 180 },
   townEvent: { emotion: 'happy', weight: 2, icon: '🎡', minutes: 300 },

@@ -252,7 +252,11 @@ export class Life {
     this.household.money += coins;
     this.today.coins += coins;
     this.today.right++;
-    if (job && nextLevel(job)) job.performance = Math.min(100, job.performance + TASK.bar);
+    // A skill the career needs makes the work go better (work.mjs `helps`: a baker who cooks well).
+    const helps = Object.entries(careerOf(job ?? { career: 'office' })?.helps ?? {}).reduce((k, [id, per]) => k + per * skillLevel(this.skills[id] ?? 0), 1);
+    if (job && nextLevel(job)) job.performance = Math.min(100, job.performance + TASK.bar * helps);
+    // A bake done right at the bakery counts as cooking (goals.mjs: the master chef dream).
+    if (job?.career === 'baker') this.count('bake');
     this.learn(station, TASK.skill);
     // Round 16, phase 5.3: what the job teaches too (a café chef: cooking).
     for (const [id, pts] of Object.entries(careerOf(job ?? { career: 'office' })?.learns ?? {})) this.learn(id, pts);
