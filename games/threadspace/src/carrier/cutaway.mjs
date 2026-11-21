@@ -20,8 +20,10 @@ export class Cutaway {
     this.controls = new OrbitControls(camera, canvas);
     this.controls.enabled = false;
     this.controls.enableDamping = true;
-    this.controls.maxDistance = 1600;
-    this.controls.minDistance = 20;
+    // The camera's distances are the carrier's (288 m long), scaled to the ship's length.
+    this.k = C.L.length / 288;
+    this.controls.maxDistance = 1600 * this.k;
+    this.controls.minDistance = 20 * this.k;
     this.levels = [
       { id: 'full', name: 'Whole ship' },
       ...C.L.decks.map((d) => ({ id: `deck-${d.id}`, name: d.name, cut: d.floor + 2.6, deck: d.id })),
@@ -65,7 +67,7 @@ export class Cutaway {
     const at = C.obj.getWorldPosition(new THREE.Vector3());
     this.last = at.clone();
     // Start above the starboard quarter, looking down at the ship.
-    const off = new THREE.Vector3(170, 210, 170).applyQuaternion(C.obj.quaternion);
+    const off = new THREE.Vector3(170, 210, 170).multiplyScalar(this.k).applyQuaternion(C.obj.quaternion);
     this.camera.position.copy(at).add(off);
     this.camera.up.set(0, 1, 0).applyQuaternion(C.obj.quaternion);
     this.controls.target.copy(at);
@@ -121,7 +123,7 @@ export class Cutaway {
     if (you) this.pin.position.copy(you);
     this.pin.rotation.y += dt * 1.5;
     // The pin keeps the same size on screen however far out you zoom.
-    this.pin.scale.setScalar(Math.max(1, this.camera.position.distanceTo(this.controls.target) / 70));
+    this.pin.scale.setScalar(Math.max(Math.min(1, this.k * 3), this.camera.position.distanceTo(this.controls.target) / 70)); // (a smaller pin aboard a small ship)
     this.camera.updateMatrixWorld();
     const lv = this.levels[this.level];
     const w = this.labelsEl.clientWidth, h = this.labelsEl.clientHeight;

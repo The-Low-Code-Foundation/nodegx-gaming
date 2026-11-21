@@ -93,6 +93,10 @@ export class Career {
    *  picked up again, as its step number would land on the wrong order. */
   static key = KEY;
 
+  /** The career of a ship that has none (no career.json): nobody to report to, no orders, nothing refused. It is never
+   *  begun (`on` stays false), so everything aboard is open, as in free roam. */
+  static none = { start: { rank: '' }, people: [], steps: [], refuse: {} };
+
   static saved(K) {
     try {
       const s = JSON.parse(localStorage.getItem(Career.key));

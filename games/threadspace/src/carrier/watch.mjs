@@ -10,7 +10,7 @@
 // From 2200 to 0600 the passages are in red lighting, the way a warship darkens ship at night.
 
 import * as THREE from 'three';
-import { placeCrew, removeCrew } from './crew.mjs';
+import { placeCrew, removeCrew, boardCrew } from './crew.mjs';
 
 const DAY = 86400;
 const HALF = 1800;
@@ -28,6 +28,46 @@ export const fmt = (t) => {
 };
 const NUM = ['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight'];
 const inHours = (s, [a, b]) => (a <= b ? s >= a && s < b : s >= a || s < b);
+
+/** The routine of a ship with no watches.json (the cutter): a clock and nothing else. No watches, bells, pipes, muster,
+ *  bill or bunk; her crew (`crew` false: nobody) stand their posts all the time (crew.mjs `boardCrew`). It answers
+ *  what main.mjs and the walking seat ask of a `Routine`. */
+export class NoRoutine {
+  constructor(C, { crew = true } = {}) {
+    this.C = C;
+    this.rate = 1;
+    this.t = 8 * 3600; // ship seconds from day 1 00:00: she starts at 08:00, and a second is a second
+    this.crew = crew && C.L.stations?.length ? boardCrew(C) : [];
+    this.read = true;
+    this.billOpen = false;
+    this.tell = () => {};
+    this.el = document.getElementById('c-pipe');
+    this.pipeT = 0;
+  }
+
+  setTime(t) {
+    this.t = t;
+  }
+
+  frame(dt) {
+    this.t += dt * this.rate;
+    if (this.pipeT > 0 && (this.pipeT -= dt) <= 0 && this.el) this.el.hidden = true;
+  }
+
+  /** Words on the strip at the top (what `Routine.note` does). */
+  note(text, secs = 6) {
+    if (!this.el) return;
+    this.el.textContent = text;
+    this.el.hidden = false;
+    this.pipeT = secs;
+  }
+
+  openBill() {}
+
+  closeBill() {}
+
+  light() {}
+}
 
 export class Routine {
   /** `W` the routine file. `ctx`: `sfx`, `crew` (false: nobody aboard but the officers), `ship` (integrity: action

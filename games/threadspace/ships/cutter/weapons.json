@@ -1,0 +1,213 @@
+{
+ "weapons": {
+  "about": "The cutter's guns, from the carrier's `weapons` (ships/carrier/weapons.json, whose `about` says what each number is) scaled by tools/cutter.mjs: one dorsal turret (`turrets`, `gun`), two close-in point defence guns (`pdc`), four forward torpedo tubes (`tubes`, `torpedo`), the raider that comes for her (`raider`), the gunnery target (`target`) and brace for impact (`brace`). No broadside, railgun, flak, bandits or fighters.",
+  "turrets": [
+   {
+    "mount": "turret-dorsal",
+    "name": "Dorsal turret",
+    "barbette": "barbette",
+    "magazine": "magazine",
+    "from": {
+     "deck": 1,
+     "at": [
+      -0.5,
+      -4.45
+     ],
+     "yaw": 1.5708,
+     "label": "Up into the dorsal turret"
+    }
+   }
+  ],
+  "gun": {
+   "shell": 1400,
+   "reload": 1.6,
+   "crewReload": 4.2,
+   "train": 28,
+   "elevate": 20,
+   "elevation": [
+    -6,
+    82
+   ],
+   "rack": 16,
+   "stock": 160,
+   "hoist": 2.5,
+   "spread": 0.0012,
+   "crewSpread": 0.02,
+   "range": 4200,
+   "damage": [
+    26,
+    40
+   ],
+   "fouled": 320,
+   "heat": 0.004,
+   "shellMass": 5,
+   "barrels": 2,
+   "calibreNote": "5 m barrels, a twin mount."
+  },
+  "pdc": {
+   "range": 1900,
+   "raiderRange": 0,
+   "arc": 100,
+   "slew": 160,
+   "rate": 32,
+   "speed": 1400,
+   "spread": 0.004,
+   "radius": 4,
+   "damage": 0.04,
+   "stock": 1200,
+   "heat": 0.00006,
+   "fighterRange": 400,
+   "fighterDamage": 0.6,
+   "fighterSpread": 0.04,
+   "repair": 0.5
+  },
+  "torpedo": {
+   "accel": 220,
+   "burn": 26,
+   "push": 30,
+   "life": 40,
+   "jink": 70,
+   "terminal": 1600,
+   "settle": 500,
+   "fuse": 7,
+   "pen": [
+    7,
+    13
+   ],
+   "damage": [
+    70,
+    110
+   ],
+   "hole": [
+    0.6,
+    1.4
+   ],
+   "raiderDamage": [
+    60,
+    90
+   ]
+  },
+  "tubes": {
+   "magazine": "tubes-port",
+   "stock": 8,
+   "salvo": 2,
+   "first": 25,
+   "every": 22,
+   "range": [
+    1200,
+    9000
+   ],
+   "at": [
+    [
+     -3.1,
+     0.5,
+     -12.6
+    ],
+    [
+     -3.6,
+     -0.5,
+     -12.6
+    ],
+    [
+     3.1,
+     0.5,
+     -12.6
+    ],
+    [
+     3.6,
+     -0.5,
+     -12.6
+    ]
+   ],
+   "dir": [
+    0,
+    0,
+    -1
+   ]
+  },
+  "raider": {
+   "hull": 120,
+   "speed": 150,
+   "accel": 38,
+   "jink": 24,
+   "standoff": [
+    480,
+    760
+   ],
+   "passes": 2,
+   "size": [
+    12,
+    8,
+    46
+   ],
+   "gun": {
+    "shell": 900,
+    "every": [
+     2.8,
+     4.2
+    ],
+    "spread": 0.004,
+    "range": 1500
+   },
+   "torpedo": {
+    "salvo": 2,
+    "every": 18,
+    "range": [
+     1800,
+     6000
+    ],
+    "stock": 6
+   },
+   "pdc": {
+    "range": 1600,
+    "rate": 20,
+    "spread": 0.006,
+    "speed": 1000
+   },
+   "flak": {
+    "range": 1300,
+    "every": [
+     0.9,
+     1.6
+    ],
+    "shell": 700,
+    "spread": 0.012,
+    "damage": [
+     14,
+     22
+    ],
+    "radius": 4
+   }
+  },
+  "target": {
+   "speed": 90,
+   "accel": 30,
+   "standoff": [
+    520,
+    640
+   ],
+   "passes": 3,
+   "tow": 260,
+   "size": [
+    9,
+    9,
+    9
+   ],
+   "clear": 2600
+  },
+  "brace": {
+   "about": "Brace for impact. When one of the raider's torpedoes will arrive within `eta` seconds the ship calls brace and counts down (weapons/torpedoes.mjs braceFrame), and the brace straps on the weightless rooms' walls show \"Strap in\"; the countdown stays up `hold` s after the last one. A hit kicks the structure: `kick` m/s at the hit for a torpedo (`shell` for a gun shell, `glance` for one the armour stopped), less with distance (`fade` m halves it). Strapped in, you ride it; a hand on a rail holds below `grip` m/s and your feet in a rail below `feet` m/s; anyone else keeps going. Meeting a wall faster than `hurt` m/s hurts, `per` of an injury for each m/s over; a whole one (1) blacks you out (the damage control party picks you up), and it heals at `heal` a minute.",
+   "eta": 6,
+   "hold": 1.5,
+   "kick": 8,
+   "shell": 2.5,
+   "glance": 1.2,
+   "fade": 25,
+   "grip": 4.5,
+   "feet": 3.5,
+   "hurt": 4.2,
+   "per": 0.3,
+   "heal": 0.15
+  }
+ }
+}

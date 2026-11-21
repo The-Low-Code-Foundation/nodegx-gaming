@@ -30,7 +30,7 @@ export const broadsideParts = {
   /** What the helm's broadside plot shows (helmsight.mjs): each side, the raider and its bearing in the ship's frame. */
   broadsideAim(out = {}) {
     const R = this.raider;
-    out.sides = ['port', 'starboard'].map((k) => this.broadsideSide(k));
+    out.sides = this.broad ? ['port', 'starboard'].map((k) => this.broadsideSide(k)) : []; // (none: the plot still marks the raider)
     out.target = null;
     out.dir = null;
     out.bears = out.sides.find((s) => s.bears)?.k ?? null;

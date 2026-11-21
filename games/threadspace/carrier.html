@@ -39,8 +39,13 @@
       <div id="c-sleep" hidden></div>
       <div id="c-start" class="screen">
         <div class="card">
-          <h1>CARRIER</h1>
-          <p class="sub" id="c-about">A prototype: a 288 m carrier built like a warship, her crew living in two drums that spin
+          <!-- The page runs any ship (?ship=<id>, src/carrier/main.mjs): an element with data-has="drums fighters …" is
+               kept only for a ship that has all of them, data-lacks only for one that has none of them. -->
+          <h1 id="c-name">CARRIER</h1>
+          <p class="sub" data-lacks="fighters">A prototype: a small warship, three or four crew on one weightless deck, with
+            every station seconds away. Float from the flight deck to engineering, take the pilot's couch and fly her, man
+            her turret, and open the cutaway to see what is behind every wall.</p>
+          <p class="sub" id="c-about" data-has="fighters career">A prototype: a 288 m carrier built like a warship, her crew living in two drums that spin
             round a weightless spine for their gravity. You come aboard as the most junior hand on her. Read the watch bill,
             muster with your watch, report to the officers, fight the drill fires, earn a turret, a fighter and the helm. Or
             roam free: ride a lift down into the drums, float along the spine, fly her on thrusters alone, and open the
@@ -54,11 +59,11 @@
             <button id="c-free">Free roam</button>
           </div>
           <p class="back"><a href="index.html">Back to ThreadSpace</a></p>
-          <p class="keys"><b>walk</b> W A S D · <b>look</b> mouse · <b>use</b> E · <b>watch bill</b> B · <b>cutaway</b> Tab<br />
-            Outside the drums there is no weight: <b>W</b> pushes you off a hold, a wall, the deck or the deckhead where you look (a tap is a good push, held is harder, <b>Shift</b> W a big one), and holding on, <b>A D S</b> pull you along, hand over hand · <b>Space</b> takes a hold (the soft glow: one in reach, or one you look at a little further off) · in the hangar you are clipped on: <b>Space</b> hauls you back in · your suit's puffer is off: <b>P</b> switches it on for when you are stranded (<b>W A S D</b> puff, <b>Space</b> brakes; top it up with <b>E</b> at a cyan PUFFER GAS ring)<br />
-            At the helm: <b>thrust</b> W S · <b>slide</b> A D R F · <b>turn</b> mouse · <b>roll</b> Z C · <b>flight assist</b> Space · <b id="c-armkey">broadside</b> click<span id="c-railkey"> · <b>railgun</b> Q</span> · <b>radiators</b> G · <b>nav plot</b> N<br />
+          <p class="keys"><b>walk</b> W A S D · <b>look</b> mouse · <b>use</b> E<span data-has="routine"> · <b>watch bill</b> B</span> · <b>cutaway</b> Tab<br />
+            <span data-has="drums">Outside the drums there is no weight:</span><span data-lacks="drums">Nothing has weight aboard her:</span> <b>W</b> pushes you off a hold, a wall, the deck or the deckhead where you look (a tap is a good push, held is harder, <b>Shift</b> W a big one), and holding on, <b>A D S</b> pull you along, hand over hand · <b>Space</b> takes a hold (the soft glow: one in reach, or one you look at a little further off)<span data-has="fighters"> · in the hangar you are clipped on: <b>Space</b> hauls you back in</span> · your suit's puffer is off: <b>P</b> switches it on for when you are stranded (<b>W A S D</b> puff, <b>Space</b> brakes; top it up with <b>E</b> at a cyan PUFFER GAS ring)<br />
+            At the helm: <b>thrust</b> W S · <b>slide</b> A D R F · <b>turn</b> mouse · <b>roll</b> Z C · <b>flight assist</b> Space<span id="c-armclick"> · <b id="c-armkey">broadside</b> click</span><span id="c-railkey"> · <b>railgun</b> Q</span> · <b>radiators</b> G · <b>nav plot</b> N<span data-has="fighters"><br />
             In the hangar, climb into a fighter: hold <b>W</b> to launch; hold <b>W</b> to burn (<b>Shift</b> for a hard burn, if you can take the g), <b>S</b> the retro jet, the mouse aims and she turns to it with pops of her jets (<b>Space</b> hold on or off, <b>M</b> mouse as a stick); nothing stops her drift but flipping round and burning; land to refuel; hold the mouse button to fire her cannon.<br />
-            To land, fly down the lane of rings off the bay, slowing as each ring asks, or press <b>E</b> near the bay.</p>
+            To land, fly down the lane of rings off the bay, slowing as each ring asks, or press <b>E</b> near the bay.</span></p>
         </div>
       </div>
     </section>

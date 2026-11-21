@@ -374,6 +374,7 @@ export class Integrity {
   /** Is a point (ship frame) inside the hull? */
   inHull(p) {
     for (const list of [this.L.hull.main, this.L.hull.island]) {
+      if (!list) continue; // a hull with no island
       const s = section(list, p.z);
       if (s && Math.abs(p.x) <= s.w / 2 && Math.abs(p.y - s.y) <= s.h / 2) return true;
     }

@@ -1,0 +1,225 @@
+{
+ "about": "The cutter as data, built by tools/cutter.mjs: the first medium ship, a 3–4 crew craft a carrier keeps in her hangar. Metres, the ship's frame (x starboard, y up, -z the bow). One weightless deck, no drums, hangar or fighters. `envelope` is her outside with the radiators folded (what has to fit a hangar and a bay door), `dock` her boarding port, `couches` the flight deck's three seats. The entries the carrier's layout also has mean what they mean there (CLAUDE.md, \"What the layout holds\").",
+ "name": "Cutter",
+ "class": "medium",
+ "version": 2,
+ "length": 34,
+ "mass": 420000,
+ "com": [
+  0,
+  0,
+  2.5
+ ],
+ "envelope": {
+  "about": "Her outside with the radiators folded and the guns trained fore and aft, in the ship's frame: `min` and `max` corners, and `size` [beam, height, length].",
+  "min": [
+   -5.3,
+   -3.2,
+   -17
+  ],
+  "max": [
+   5.3,
+   4.6,
+   19.3
+  ],
+  "size": [
+   10.5,
+   7.8,
+   36.3
+  ]
+ },
+ "sections": [
+  {
+   "id": "bow",
+   "type": "bow",
+   "z": [
+    -17,
+    -8
+   ],
+   "w": 10,
+   "h": 5.8,
+   "mass": 90000
+  },
+  {
+   "id": "midships",
+   "type": "midships",
+   "z": [
+    -8,
+    5.2
+   ],
+   "w": 10,
+   "h": 5.8,
+   "mass": 130000
+  },
+  {
+   "id": "stern",
+   "type": "stern",
+   "z": [
+    5.2,
+    17
+   ],
+   "w": 10,
+   "h": 5.8,
+   "mass": 200000
+  }
+ ],
+ "hull": {
+  "main": [
+   {
+    "z": -17,
+    "w": 3.6,
+    "h": 2.6,
+    "y": 0
+   },
+   {
+    "z": -13,
+    "w": 8.4,
+    "h": 5,
+    "y": 0
+   },
+   {
+    "z": -9,
+    "w": 10,
+    "h": 5.8,
+    "y": 0
+   },
+   {
+    "z": 13,
+    "w": 10,
+    "h": 5.8,
+    "y": 0
+   },
+   {
+    "z": 17,
+    "w": 7.6,
+    "h": 4.8,
+    "y": 0
+   }
+  ]
+ },
+ "helm": {
+  "room": "flight-deck",
+  "at": [
+   0,
+   -10.6
+  ],
+  "eye": [
+   0,
+   -0.19999999999999996,
+   -10.75
+  ]
+ },
+ "couches": {
+  "pilot": [
+   0,
+   -10.6
+  ],
+  "gunner": [
+   1.5,
+   -10.2
+  ],
+  "commander": [
+   -1.4,
+   -9.2
+  ]
+ },
+ "dock": {
+  "about": "Her docking and boarding port: the outer door of `room` (the airlock), in its `side` wall (e: starboard), centred at `at` [x, y, z] in the ship's frame (y is the middle of the door), `w` wide and `h` high, facing `out`. The skin there is at x = `skin`.",
+  "room": "airlock",
+  "side": "e",
+  "at": [
+   4.4,
+   -0.44999999999999996,
+   -2.9
+  ],
+  "w": 1.2,
+  "h": 2.1,
+  "out": [
+   1,
+   0,
+   0
+  ],
+  "skin": 5
+ },
+ "spawn": {
+  "deck": 1,
+  "at": [
+   0,
+   -2.9
+  ],
+  "yaw": 0
+ },
+ "thrusters": {
+  "main": [
+   {
+    "at": [
+     0,
+     0,
+     17
+    ],
+    "r": 1.3,
+    "force": 4200000
+   }
+  ],
+  "rcsForce": 135000,
+  "rcsScale": 0.3,
+  "rcs": [
+   {
+    "at": [
+     -4.6,
+     2.35,
+     -9
+    ]
+   },
+   {
+    "at": [
+     -4.6,
+     2.35,
+     13
+    ]
+   },
+   {
+    "at": [
+     4.6,
+     2.35,
+     -9
+    ]
+   },
+   {
+    "at": [
+     4.6,
+     2.35,
+     13
+    ]
+   },
+   {
+    "at": [
+     -4.6,
+     -2.35,
+     -9
+    ]
+   },
+   {
+    "at": [
+     -4.6,
+     -2.35,
+     13
+    ]
+   },
+   {
+    "at": [
+     4.6,
+     -2.35,
+     -9
+    ]
+   },
+   {
+    "at": [
+     4.6,
+     -2.35,
+     13
+    ]
+   }
+  ]
+ }
+}

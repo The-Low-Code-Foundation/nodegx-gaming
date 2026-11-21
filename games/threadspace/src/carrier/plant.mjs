@@ -39,7 +39,8 @@ export class Plant {
     // The radiators: the hinged objects in hull.glb (each named for its mount), how far spread, how hurt.
     this.radiators = C.L.mounts.filter((m) => m.kind === 'radiator').map((m) => {
       let obj = null;
-      C.blender?.traverse((o) => !obj && o.name === m.id && (obj = o));
+      // (Without hull.glb, a ship whose code-built radiators fold has them by the same names: layout.mjs `buildOutside`.)
+      (C.blender ?? C.outside)?.traverse((o) => !obj && o.name === m.id && (obj = o));
       return { m, obj, k: 1, health: 1, box: { x: [Math.min(...m.x), Math.max(...m.x)], y: [m.y - 1.5, m.y + 1.5], z: m.z } };
     });
     // Their glowing fins: the hull's `RadiatorHot` material, its own copy so the glow is ours to set.

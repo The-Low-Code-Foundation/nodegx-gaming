@@ -1,6 +1,7 @@
-// The one check over the carrier's content: the ship's folder and everything that names something in it.
+// The one check over a ship's content: the ship's folder and everything that names something in it.
 //
 //   node tools/check.mjs            # from this folder; prints what it checked and any problems (exit 1 if any)
+//   node tools/check.mjs cutter     # another ship's folder (ships/cutter/); the default is the carrier
 //   node tools/check.mjs --quiet    # problems only
 //
 // Every content tool runs it (`tools/carrier-v2.mjs` after writing the layout, `tools/voices.mjs` before recording),
@@ -26,6 +27,9 @@
 //   reported; the `nets` name rooms; the condition-one call has the warning's seconds among its values;
 // - the glossary (content/glossary.json): no spoken line (the career, the pipes, the calls) says a word in `avoid`;
 // - how much is recorded: the lines without a clip are reported (they are shown, not spoken).
+//
+// A ship may have no career.json, watches.json or voices.json (the cutter has none: she runs as free roam, without a
+// routine, and the ship's calls show as subtitles). What is not there is not checked, and is noted.
 //
 // To check a new kind of content, add a section below that pushes to `problems` (and `notes` for what is only worth
 // knowing), and a line to the list above.
@@ -70,7 +74,11 @@ export async function check({ root = ROOT, ship = 'carrier' } = {}) {
     problems.push(String(e.message ?? e));
     return { problems, notes, counts };
   }
-  const K = json(`${dir}/career.json`), W = json(`${dir}/watches.json`), V = json(`${dir}/voices.json`);
+  // The optional files: a ship without one is checked as if it were empty.
+  const optional = (f) => (existsSync(path(`${dir}/${f}`)) ? json(`${dir}/${f}`) : (notes.push(`${dir}/${f}: none (optional)`), null));
+  const K = optional('career.json') ?? {}, W = optional('watches.json') ?? {}, V = optional('voices.json');
+  // The ship's own voices (`ai`, `ship`) are the carrier's where a ship has none of her own.
+  const VS = V ?? (existsSync(path('ships/carrier/voices.json')) ? json('ships/carrier/voices.json') : {});
 
   // ---- rooms ----
   const rooms = new Map();
@@ -201,7 +209,7 @@ export async function check({ root = ROOT, ship = 'carrier' } = {}) {
     for (const id of calls.keys()) if (!made.has(id)) notes.push(`${CALLS}/${id}.json: no code makes this call`);
     const warn = L.integrity?.condition?.warn;
     for (const id of ['condition-one', 'condition-one-hull']) if (warn != null && calls.get(id)?.slots?.warn && !calls.get(id).slots.warn.includes(String(warn))) problems.push(`${CALLS}/${id}.json: integrity.condition.warn is ${warn}, not one of its warn values`);
-    for (const [net, list] of Object.entries(V.nets ?? {})) for (const r of list) room(`voices.json nets.${net}`, r);
+    for (const [net, list] of Object.entries(V?.nets ?? {})) for (const r of list) room(`voices.json nets.${net}`, r);
     counts.calls = calls.size;
   }
 
@@ -218,7 +226,7 @@ export async function check({ root = ROOT, ship = 'carrier' } = {}) {
   } else problems.push('content/glossary.json is missing');
 
   // ---- people ----
-  const callers = [...new Set([...calls.values()].map((a) => a.who))].filter((id) => !V.speakers?.[id]);
+  const callers = [...new Set([...calls.values()].map((a) => a.who))].filter((id) => !VS.speakers?.[id]);
   const ids = [...new Set([...peopleNamed(K, W), ...callers])];
   const people = new Map();
   for (const id of ids) {
@@ -236,16 +244,18 @@ export async function check({ root = ROOT, ship = 'carrier' } = {}) {
   counts.people = people.size;
 
   // ---- the cast ----
-  const speakers = { ...Object.fromEntries([...people].map(([id, p]) => [id, p.cast]).filter(([, c]) => c)), ...(V.speakers ?? {}) };
-  for (const k of ['ship', 'ai']) if (!V.speakers?.[k]) problems.push(`${dir}/voices.json: no speakers.${k}`);
+  const speakers = { ...Object.fromEntries([...people].map(([id, p]) => [id, p.cast]).filter(([, c]) => c)), ...(VS.speakers ?? {}) };
+  if (V) for (const k of ['ship', 'ai']) if (!V.speakers?.[k]) problems.push(`${dir}/voices.json: no speakers.${k}`);
   for (const [id, S] of Object.entries(speakers)) for (const k of ['design', 'gender', 'language', 'style']) if (!S?.[k]) problems.push(`speaker ${id}: no ${k} in their cast`);
-  for (const id of Object.keys(V.speakers ?? {})) if (people.has(id)) problems.push(`${dir}/voices.json: ${id} is a person; their cast goes in ${PEOPLE}/${id}.json`);
+  for (const id of Object.keys(V?.speakers ?? {})) if (people.has(id)) problems.push(`${dir}/voices.json: ${id} is a person; their cast goes in ${PEOPLE}/${id}.json`);
   if (existsSync(path('assets/voice/index.json'))) {
     const lines = Object.keys(json('assets/voice/index.json').lines ?? {});
     const unknown = [...new Set(lines.map((k) => k.split('|')[0]).filter((s) => !speakers[s]))];
     // The archived first carrier's speakers keep their clips (tools/voices.mjs says both carriers' lines).
     const v1 = existsSync(path('archive/carrier-v1/carrier-v1.career.json')) ? new Set(json('archive/carrier-v1/carrier-v1.career.json').people.map((p) => p.id)) : new Set();
-    for (const s of unknown) (v1.has(s) ? notes : problems).push(`assets/voice/index.json has clips by "${s}", ${v1.has(s) ? "the archived first carrier's" : 'who is not a speaker'}`);
+    // A ship with no career names no officers: the clips are another ship's people's (content/people/), not hers to check.
+    const others = K.people ? new Set() : new Set(files.map((f) => f.slice(0, -5)));
+    for (const s of unknown) if (!others.has(s)) (v1.has(s) ? notes : problems).push(`assets/voice/index.json has clips by "${s}", ${v1.has(s) ? "the archived first carrier's" : 'who is not a speaker'}`);
     counts.clips = lines.length;
     // What is said without a clip is shown, not heard.
     const have = new Set(lines);
@@ -259,9 +269,10 @@ export async function check({ root = ROOT, ship = 'carrier' } = {}) {
 // ---- run from the command line ----
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   const quiet = process.argv.includes('--quiet');
-  const { problems, notes, counts } = await check();
+  const ship = process.argv.slice(2).find((a) => !a.startsWith('--')) ?? 'carrier';
+  const { problems, notes, counts } = await check({ ship });
   if (!quiet) {
-    console.log(`Checked ships/carrier: ${counts.rooms} rooms, ${counts.steps} career steps, ${counts.people} people, ${counts.calls ?? 0} announcements, ${counts.clips ?? 0} recorded clips.`);
+    console.log(`Checked ships/${ship}: ${counts.rooms} rooms, ${counts.steps} career steps, ${counts.people} people, ${counts.calls ?? 0} announcements, ${counts.clips ?? 0} recorded clips.`);
     for (const n of notes) console.log(`  note: ${n}`);
   }
   if (problems.length) {

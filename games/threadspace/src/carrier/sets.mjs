@@ -24,6 +24,7 @@ import { quarters } from './sets/quarters.mjs';
 import { medbay } from './sets/medbay.mjs';
 import { engControl } from './sets/eng-control.mjs';
 import { drumQuarters, drumMess, drumGalley, drumMedbay } from './sets/drum-sets.mjs';
+import { flightDeck, crewSpace, messNook, engRoom } from './sets/cutter.mjs';
 export { P, couch, desk } from './sets/parts.mjs';
 export { dressHangar } from './sets/hangar.mjs';
 export { dressRoom } from './sets/structure.mjs';
@@ -37,7 +38,9 @@ export const SETS = {
   bridge, cic, mess, galley, medbay, 'eng-control': (C, I, c, h, open) => engControl(C, I, c, open),
   'quarters-a': (C, I, c, h, open) => quarters(C, I, c, open),
   'quarters-b': (C, I, c, h, open) => quarters(C, I, c, open),
-  'quarters-c': (C, I, c, h, open) => quarters(C, I, c, open)
+  'quarters-c': (C, I, c, h, open) => quarters(C, I, c, open),
+  // A small ship's rooms (sets/cutter.mjs; the cutter, ships/cutter/).
+  'flight-deck': flightDeck, 'crew-space': crewSpace, 'mess-nook': messNook, 'eng-room': engRoom
 };
 
 /** The set for drum room `c`, by what the room is for (the galley by name), or null for its fit. */

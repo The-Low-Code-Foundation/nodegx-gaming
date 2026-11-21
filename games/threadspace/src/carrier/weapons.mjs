@@ -192,6 +192,7 @@ export class Weapons {
   makePdc(m) {
     const flak = m.gun === 'flak' && this.W.flak;
     const mesh = flak ? flakMesh(m) : pdcMesh(m);
+    if (m.scale) mesh.g.scale.setScalar(m.scale); // a smaller ship's mount (the layout's `scale`): the same gun, drawn smaller
     this.C.frame.add(mesh.g);
     const at0 = new THREE.Vector3(...m.at);
     let node = null, bd = Infinity;
@@ -205,7 +206,7 @@ export class Weapons {
     return {
       m, ...mesh, node, up, id: m.id, type: flak ? 'flak' : 'close',
       name: flak ? m.id.replace(/^flak-h-/, '').replace('d', 'dorsal ').replace('v', 'ventral ') : m.id.replace(/^pdc-/, '').replace(/-/g, ' '),
-      pivot: at0.clone().addScaledVector(up, flak ? 3.3 : 3.5), // ship frame: where its rounds come from
+      pivot: at0.clone().addScaledVector(up, (flak ? 3.3 : 3.5) * (m.scale ?? 1)), // ship frame: where its rounds come from
       inv: new THREE.Quaternion().setFromUnitVectors(up, new THREE.Vector3(0, 1, 0)), // ship frame to the mount's own
       yawA: 0, elev: 0.3, stock: (flak || this.W.pdc).stock, coolT: 0, barrel: 0, runT: [9, 9], firing: false, target: null, spinV: 0,
       hp: 100 // the gun itself: a bandit's rounds shoot it up (weapons/bandits.mjs `strafeHit`); under 25 it is out of action
@@ -221,20 +222,21 @@ export class Weapons {
     this.ear = camera?.position;
     this.inv.copy(this.C.frame.matrixWorld).invert();
     if (mode === 'gun' && f.wheel) this.zoomStep(f.wheel > 0 ? -1 : 1);
+    // What the layout's `weapons` has runs: a ship with no fighters (`this.fighter`, set by `fly`), no bandits
+    // (`bandit`) or no heat-seekers (`missile`) skips their frames.
+    const W = this.W, fi = !!this.fighter;
     this.raiderFrame(dt);
-    this.banditsFrame(dt);
+    if (W.bandit) this.banditsFrame(dt);
     this.tubesFrame(dt);
     this.broadsideFrame(dt);
     this.torpsFrame(dt);
     this.braceFrame(dt);
     this.pdcFrame(dt);
     this.turretsFrame(dt, f, mode);
-    this.cannonFrame(dt);
-    this.railsFrame(dt);
-    this.missilesFrame(dt);
-    this.flareAI(dt);
-    this.flaresFrame(dt);
-    this.railFrame(dt);
+    if (fi) this.cannonFrame(dt);
+    if (fi && W.missile) this.railsFrame(dt);
+    if (W.missile) this.missilesFrame(dt), this.flareAI(dt), this.flaresFrame(dt);
+    if (W.railgun) this.railFrame(dt);
     this.shellsFrame(dt);
     this.roundsFrame(dt);
     this.fxFrame(dt);

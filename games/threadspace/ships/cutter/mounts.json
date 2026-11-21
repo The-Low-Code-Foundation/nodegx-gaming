@@ -1,0 +1,81 @@
+{
+ "mounts": [
+  {
+   "id": "turret-dorsal",
+   "kind": "turret",
+   "at": [
+    0,
+    2.9,
+    -4.45
+   ],
+   "up": [
+    0,
+    1,
+    0
+   ],
+   "scale": 0.25
+  },
+  {
+   "id": "pdc-port",
+   "kind": "pdc",
+   "gun": "close",
+   "at": [
+    -4.5,
+    -2.45,
+    3
+   ],
+   "up": [
+    -0.7071,
+    -0.7071,
+    0
+   ],
+   "magazine": "pdc-mag",
+   "scale": 0.28
+  },
+  {
+   "id": "pdc-stbd",
+   "kind": "pdc",
+   "gun": "close",
+   "at": [
+    4.5,
+    -2.45,
+    3
+   ],
+   "up": [
+    0.7071,
+    -0.7071,
+    0
+   ],
+   "magazine": "pdc-mag",
+   "scale": 0.28
+  },
+  {
+   "id": "radiator-port",
+   "kind": "radiator",
+   "x": [
+    -9.5,
+    -5
+   ],
+   "y": 0.4,
+   "z": [
+    6.5,
+    12.5
+   ],
+   "fold": true
+  },
+  {
+   "id": "radiator-stbd",
+   "kind": "radiator",
+   "x": [
+    5,
+    9.5
+   ],
+   "y": 0.4,
+   "z": [
+    6.5,
+    12.5
+   ],
+   "fold": true
+  }
+ ]
+}

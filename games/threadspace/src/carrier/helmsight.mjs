@@ -102,7 +102,7 @@ export class HelmSight {
     const rail = !!this.guns.W.railgun && !this.guns.railSides;
     const bore = rail ? project(_a.set(0, 0, -20000).applyQuaternion(q).add(pos)) : null;
     const R = rail ? this.guns.railAim(this.aim) : this.guns.broadsideAim(this.aim);
-    if (!rail) this.broadsidePlot(g, w, h, R);
+    if (!rail && this.guns.broad) this.broadsidePlot(g, w, h, R); // (a ship with neither has no plot)
     if (bore) {
       g.strokeStyle = R.ready ? GREEN : AMBER;
       g.beginPath();

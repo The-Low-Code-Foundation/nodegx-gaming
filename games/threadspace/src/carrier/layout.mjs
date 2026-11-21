@@ -121,7 +121,7 @@ function buildHull(C) {
     add(turnFaces(loft(mid.map(inset), inMat, { uv: 12, ends: [false, false] }), null));
     for (const [sec, out] of [[mid[0], -1], [mid[mid.length - 1], 1]]) add(turnFaces(loft([sec, inset(sec)], hullMat, { uv: 12, ends: [false, false] }), out));
   } else add(loft(C.L.hull.main, hullMat, { uv: 12 }));
-  add(loft(C.L.hull.island, islandMat, { uv: 12 }));
+  if (C.L.hull.island) add(loft(C.L.hull.island, islandMat, { uv: 12 }));
   // Armour belts and seams: dark bands round the hull every 40 m, so its length reads. Each sits on the flat sides and
   // the flat top of the section where it falls.
   const belt = mat('#59616b');
@@ -784,12 +784,13 @@ function machine(system, g, w, h, d, C) {
       break;
     }
     case 'drive': {
-      // Four feed trunks running aft to the bells, with turbopumps on them.
+      // Four feed trunks running aft to the bells, with turbopumps on them. (Sized for the carrier's 6 m bells: `k`
+      // scales them to the bell.)
       for (const t of C.L.thrusters.main) {
-        const x = t.at[0], y = t.at[1];
-        g.add(at(cyl(2.2, 2.6, d * 0.95, mid, 14), x, y - g.position.y, 0, Math.PI / 2));
-        g.add(at(box(3, 3, 4, dark), x, y - g.position.y + 3, -d * 0.25));
-        g.add(at(cyl(0.4, 0.4, d * 0.9, pipeM, 6), x + 2.8, y - g.position.y, 0, Math.PI / 2));
+        const x = t.at[0], y = t.at[1], k = t.r / 6;
+        g.add(at(cyl(2.2 * k, 2.6 * k, d * 0.95, mid, 14), x, y - g.position.y, 0, Math.PI / 2));
+        g.add(at(box(3 * k, 3 * k, 4 * k, dark), x, y - g.position.y + 3 * k, -d * 0.25));
+        g.add(at(cyl(0.4 * k, 0.4 * k, d * 0.9, pipeM, 6), x + 2.8 * k, y - g.position.y, 0, Math.PI / 2));
       }
       break;
     }
@@ -992,6 +993,20 @@ function buildOutside(C) {
     else if (m.kind === 'pdc') O.add(pdcBase(m));
     else if (m.kind === 'radiator') {
       const [a, b] = m.x, [z1, z2] = m.z;
+      if (m.fold) {
+        // A folding radiator (the cutter's): one live object named for its mount, its origin on the edge against the
+        // hull, so plant.mjs runs it in and out by `scale.x` as it does hull.glb's.
+        const inboard = Math.abs(a) < Math.abs(b) ? a : b, out = Math.sign(inboard) || 1, span = Math.abs(b - a);
+        const r = new THREE.Group();
+        r.name = m.id;
+        r.userData.live = true;
+        r.position.set(inboard, m.y, (z1 + z2) / 2);
+        r.add(at(box(span, 0.12, z2 - z1, mat('#3a2e2a')), (out * span) / 2, 0, 0));
+        for (let z = z1 + 0.75; z < z2; z += 1.5) r.add(at(box(span - 0.3, 0.14, 0.12, HOT('#7a2a18')), (out * span) / 2, 0, z - (z1 + z2) / 2));
+        O.add(r);
+        O.add(at(box(0.25, 0.5, z2 - z1 + 0.4, TRIM), inboard + out * 0.1, m.y, (z1 + z2) / 2)); // the slot it runs into
+        continue;
+      }
       const panel = at(box(b - a, 0.5, z2 - z1, mat('#3a2e2a')), (a + b) / 2, m.y, (z1 + z2) / 2);
       O.add(panel);
       // Heat lines across the panel: they glow dull red, the ship shedding heat.
@@ -1015,7 +1030,8 @@ function buildOutside(C) {
       for (const z of [z1, z2]) O.add(at(box(0.8, y1 - y0 + 1, 1, hazardMat()), m.x + out * 0.3, (y0 + y1) / 2, z));
     }
   }
-  // The bridge's armoured shutters: open plates above and below each window, outside the wall.
+  // The bridge's armoured shutters: open plates above and below each window, outside the wall. (The carrier's bridge,
+  // by its id: a ship whose helm is elsewhere, `helm.room`, has none.)
   const br = C.rooms.get('bridge'), fl = br && C.L.decks.find((d) => d.id === br.deck)?.floor;
   for (const w of br?.windows ?? []) {
     const len = w.to - w.from + 1.4, mid = (w.from + w.to) / 2, y1 = fl + (w.head ?? 3.3) + 1.3, y0 = fl + (w.sill ?? 1) + 0.15;
@@ -1047,6 +1063,7 @@ function turret(m) {
   house.add(guns);
   g.add(house);
   g.position.set(...m.at);
+  if (m.scale) g.scale.setScalar(m.scale); // a smaller ship's turret (the layout's `scale`): the same model, smaller
   return g;
 }
 
@@ -1056,6 +1073,7 @@ function pdcBase(m) {
   g.add(at(cyl(2.2, 2.8, 1.6, TRIM, 14), 0, 0.8, 0));
   g.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), new THREE.Vector3(...m.up));
   g.position.set(...m.at);
+  if (m.scale) g.scale.setScalar(m.scale);
   return g;
 }
 

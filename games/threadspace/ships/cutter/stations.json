@@ -1,0 +1,60 @@
+{
+ "stations": [
+  {
+   "room": "flight-deck",
+   "at": [
+    -1.4,
+    -9.2
+   ],
+   "yaw": 0,
+   "pose": "sitChair",
+   "dept": "command",
+   "post": "Commander",
+   "watch": "on"
+  },
+  {
+   "room": "flight-deck",
+   "at": [
+    1.5,
+    -10.2
+   ],
+   "yaw": 0,
+   "pose": "sitChair",
+   "dept": "crew",
+   "post": "Gunner",
+   "watch": "on"
+  },
+  {
+   "room": "eng-room",
+   "at": [
+    0,
+    7.1
+   ],
+   "yaw": 3.14159,
+   "pose": "workTable",
+   "dept": "engineering",
+   "post": "Engineer",
+   "watch": "on"
+  }
+ ],
+ "routes": {
+  "about": "Wayfinding (src/carrier/wayfinding.mjs): each route is a coloured line painted along the floor of every passage, with arrows, that turns off through the door on the way to `to`. The overhead signs and the deck plans use the same colours.",
+  "lines": [
+   {
+    "name": "Flight deck",
+    "to": "flight-deck",
+    "color": "#58b0ff"
+   },
+   {
+    "name": "Engineering",
+    "to": "eng-room",
+    "color": "#ff9a30"
+   },
+   {
+    "name": "Airlock",
+    "to": "airlock",
+    "color": "#e8d84a"
+   }
+  ]
+ }
+}

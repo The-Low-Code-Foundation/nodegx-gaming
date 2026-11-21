@@ -92,7 +92,7 @@ export class Thrusters {
 /** Expands the layout's thruster entries into single thrusters: each main drive points aft; each manoeuvring cluster has
  *  one nozzle pointing outboard, one up or down (away from the centre of mass) and one fore or aft (away from the
  *  middle), which is enough for every turn and every slide. Positions are made relative to the centre of mass. */
-export function thrustersFromLayout(L, { s = 1 } = {}) {
+export function thrustersFromLayout(L, { s = L.thrusters.rcsScale ?? 1 } = {}) {
   const com = new THREE.Vector3(...L.com);
   const out = [];
   for (const m of L.thrusters.main) out.push({ kind: 'main', at: new THREE.Vector3(...m.at), pos: new THREE.Vector3(...m.at).sub(com), dir: new THREE.Vector3(0, 0, 1), force: m.force, r: m.r });

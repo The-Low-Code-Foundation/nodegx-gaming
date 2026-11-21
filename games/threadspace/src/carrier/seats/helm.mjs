@@ -18,7 +18,7 @@ export class HelmSeat {
   leave() {
     const { L, setMode, walk } = this.G;
     setMode('walk');
-    walk.goDeck(1, L.helm.at[0], L.helm.at[1] + 1.4, 0);
+    walk.goDeck(this.G.helmDeck ?? 1, L.helm.at[0], L.helm.at[1] + 1.4, 0);
   }
 
   key(code) {
@@ -41,6 +41,7 @@ export class HelmSeat {
     guns.helmFires = here;
     if (here && f.clicked && !this.G.fading) {
       const spinal = L.weapons.railgun && !guns.railSides;
+      if (!spinal && !guns.broad) return; // a ship with neither a spinal gun nor a broadside: the click fires nothing
       const why = spinal ? guns.railFire() : guns.broadsideFire();
       if (why) helmSight.say(`${spinal ? 'Railgun' : 'Broadside'}: ${why}.`, 2.5);
     }
@@ -50,7 +51,7 @@ export class HelmSeat {
   frame(dt, drive) {
     const { L, C, camera, hud, helm, ship, plant } = this.G;
     const hurt = (ship.power ? '' : ' · emergency power') + (ship.driveFactor < 0.99 ? ` · main drive ${Math.round(ship.driveFactor * 100)}%` : '') + (plant.hot ? ' · HEAT: drive held back' : plant.prop <= 0 ? ' · no reaction mass' : '');
-    hud.where(`At the helm · ${this.outlook === 'bridge' ? 'bridge view' : 'outside view'}${hurt}`);
+    hud.where(`At the helm · ${this.outlook === 'bridge' ? (L.helm.room ? 'view from the seat' : 'bridge view') : 'outside view'}${hurt}`);
     hud.use(null);
     hud.helm(helm);
     if (this.outlook === 'bridge') {
@@ -61,12 +62,14 @@ export class HelmSeat {
       if (drive.lurch > 0) camera.rotateX(drive.lurch * Math.sin(drive.lurch * Math.PI) * 0.025);
     } else {
       // Behind and above her, a little lagging, looking past her toward where she points.
-      const want = C.obj.localToWorld(_v.set(0, 150, 620));
+      // (The distances are the carrier's, 288 m long, scaled to the ship's length.)
+      const k = L.length / 288;
+      const want = C.obj.localToWorld(_v.set(0, 150 * k, 620 * k));
       if (this.chasePos.lengthSq() === 0) this.chasePos.copy(want);
       this.chasePos.lerp(want, Math.min(1, dt * 3));
       camera.position.copy(this.chasePos);
       camera.up.set(0, 1, 0).applyQuaternion(C.obj.quaternion);
-      camera.lookAt(C.obj.localToWorld(_v.set(0, 0, -180)));
+      camera.lookAt(C.obj.localToWorld(_v.set(0, 0, -180 * k)));
     }
   }
 

@@ -1,5 +1,10 @@
 # ThreadSpace carrier: what comes next
 
+> **21 November 2026: the course changed.** After play-testing, the player no longer serves on the carrier herself
+> but on one of the medium ships she carries. Read [The new course](#the-new-course-21-november-2026) at the end of
+> this file first: it replaces decision 1 below and sets phases 10 to 16. Phases 1 to 9 are built and stay as the
+> record of how the carrier got here.
+
 Written 20 November 2026, after the spin-drum rebuild ([`CARRIER-REBUILD.md`](CARRIER-REBUILD.md)) and the polish
 pass ([`CARRIER-POLISH.md`](CARRIER-POLISH.md), commit `e521d64`), both done. It merges fourteen points of play-test
 feedback with what was already open, into phases that each end playable. Each phase says what it fixes (feedback
@@ -627,3 +632,127 @@ gain, so it isn't recommended; the events and the folders above get most of the 
    her sideways without spinning her. You aim by turning her side onto the target, as the broadside already does.
    Their recoil is the big visible kick from phase 1.
 5. **The ship's name**: still open. It carries her history, so it goes in the story bible (phase 8) with Gemini.
+
+
+## The new course (21 November 2026)
+
+### What play-testing found
+
+The carrier is a good place and a poor game. Three things, in the player's words and in the code:
+
+1. **The ship and the battle run on different clocks.** A raid lasts about a minute. From a drum to a turret is the
+   lockers, a nine-second lift, the hub ring, the spine and a hoist trunk. Getting to your station takes longer than
+   the fight, so the walk is only ever in the way.
+2. **A body with no decisions.** Which side to present, when to fold the radiators, what to mend first, when to
+   launch: the ship decides all of it. A junior hand walks, holds E and shoots a turret.
+3. **Rank against freedom.** The living-ship fantasy wants you free to go anywhere and use anything. A hand on a
+   288 m warship cannot walk into the CIC or take a fighter, and the road to a ship of your own was three chapters
+   long.
+
+And one about fighters: flown by Newton they are missile trucks, not dogfighters. The fun there is the sortie (the
+burn out, the release at range, point defence, the fuel home, the landing), not a turning fight.
+
+### The canon now
+
+- **The carrier is home port.** She is too big to go on errands. She grows into a proper carrier: six fighters
+  where she had twelve, and berths in her hangar for **two medium ships**. She keeps everything built in phases 1 to
+  9: the drums, the routine, the watch bill, damage control, her guns.
+- **The medium ship is where you serve.** Working name: the **cutter** (`ships/cutter/`), 3 or 4 crew, about 38 m,
+  weightless inside, one drive, a turret, point defence, torpedoes, a docking port. The carrier sends her on
+  skirmishes, patrols, escorts and boardings. Every station is seconds from every other, and on a crew of four
+  everyone does more than one job, so the game can let you touch everything without breaking its own world.
+- **You start as her most junior hand**, as today, but the ladder is short: hand, then qualified at each station
+  (damage control, the turret, sensors, the helm), then second in command, then **captain of your own sortie**.
+- **Between sorties you live aboard the carrier**: your bunk in a drum, a watch to stand, maintenance on the cutter
+  in the hangar (the phase 9 repair work, now on your own ship), the mess, the people. The carrier is the town.
+- **On the first sorties the captain plans the fight and you follow orders.** Later the paused command map from the
+  first ThreadSpace comes back, and you give the orders.
+- **The first ThreadSpace's mechanics come over, its models do not.** Threads and their gates, sectors, pirates, the
+  approach to another ship, boarding her and fighting her crew, taking her bridge, then claiming or scuttling her.
+  All of it re-seated on this engine (Newtonian flight, ships as layout folders, real compartments).
+- **Still true from before:** no shields, no gravity plating, real heat and reaction mass, damage to real
+  compartments, recorded voices, story and dialogue written by Gemini, slang from the joint-service glossary.
+
+This replaces **decision 1** (the carrier as the first chapters, then other ships, then a captaincy). What it kept
+is what made the change cheap: phase 2 already made the ship a folder and the people content.
+
+### How two ships share one engine
+
+The engine runs **the ship you are aboard**: `carrier.html?ship=<id>` builds `ships/<id>/` as `C`, with her own
+integrity, plant, weapons, crew and seats. Every other craft is **outside**: a hull in the `world` group with a
+`Rigid` of its own and whatever of its systems the scene needs.
+
+- **Going from one ship to the other is a change of scene**, through an airlock: the page loads the other ship
+  (`?ship=`), as the roadmap's "places load and unload" has it. Nothing of the ship you left stays in memory but what
+  is saved.
+- **What is saved is the voyage, not the ship**: who you are (rank, qualifications, flags), which ship you are
+  aboard and where, where each ship is (berthed in which berth, or out), each ship's damage and stores, the clock.
+  The career's own save becomes part of it.
+- **A berthed ship is carried.** While the cutter sits in her berth, her pose is the berth's, in the carrier's
+  frame. Launch is the cradle pushing her sideways out of the bay door, then a hand-over with the velocity she
+  really has (as `Fighter.handOver` does). Recovery is a lane to a gate off the door and a capture (as
+  `Fighter.capture`).
+- **Seen from the cutter, the carrier is a second `buildCarrier`** with no hooks and no systems: her hull, her
+  outside fittings, the hangar deck you are parked in, her bay doors.
+
+### Phases
+
+Each ends playable. Sizes are sessions of the kind phases 1 to 9 were.
+
+**Phase 10. Any ship (two sessions).** The engine takes a ship folder; systems run by what the layout has; a ship
+needs no drums, hangar, fighters, career, routine or cast. `tools/cutter.mjs` writes `ships/cutter/`. Two ships can
+be built in one page. *Status and facts: see "Built so far" below.*
+
+**Phase 11. The bigger carrier (one or two sessions).** The hangar grows to hold six fighters and two cutter berths
+(design, `tools/carrier-v2.mjs`, the Blender hull, every scripted check re-baselined). The layout gains `berths`.
+
+**Phase 12. Berthed, launched, recovered (two sessions).** The voyage save. From the carrier: the cutters parked in
+their berths, a gangway spur to each one's port, E to go aboard. From the cutter: the hangar round you, the
+airlock back to the carrier, the launch (bay door, cradle, hand-over), the lane home and the capture. The carrier
+holds her course while you are out.
+
+**Phase 13. Serving on the cutter (two or three sessions).** Her crew of three as people at stations (pilot and
+commander, gunner, engineer), with voices. The career rewritten for her: first days as her junior hand, then a
+qualification per station. Your watch and the maintenance jobs aboard the carrier between sorties. The carrier's
+"first week" orders are the quarry for both.
+
+**Phase 14. Sorties (three sessions).** A mission is data (`content/missions/`): a briefing, a place, phases with a
+clock, orders given to you by the captain over the announcer, a debrief. **Battles get a clock**: contact is called
+minutes out, closing up is the tense part, then several exchanges. First sorties: a patrol that meets a raider, an
+escort, a tow. Fighters fly sorties too (strike runs with heat-seekers and torpedoes), not dogfights.
+
+**Phase 15. Threads, pirates and boarding (three or four sessions).** Sectors and gates from the first game's data;
+a pirate transport and her crew as new layout folders; the approach and the docking port to port; the boarding
+fight inside her real compartments; her bridge; claim (a prize crew flies her home to the carrier) or scuttle.
+
+**Phase 16. Your own sortie (two sessions).** The paused command map over the plot, plans of chained orders for
+your crew and your wingmen, and the captain's seat.
+
+**After that:** the first ThreadSpace page (`index.html`, `src/game.mjs` and its friends) is retired to `archive/`
+once phase 15 has taken what it needs; the gallery's `play` then points at this game.
+
+### What comes over from the first ThreadSpace (for phases 15 and 16)
+
+Read from the first game's code on 21 November 2026. "Lift" means the logic can move nearly as it is; "rewrite" means
+it leans on the first game's arcade flight (speed set from the throttle, velocity always along the nose, instant
+turns) or on its one-of-each singletons.
+
+| What | Where it is | Verdict |
+|---|---|---|
+| Sectors and threads as data | `data.mjs` `SECTORS`, `STATIONS`; `world.mjs` `World.load` | **Lift the data.** A sector becomes `content/sectors/<id>.json`. `World.load` is a scene builder for the old meshes: rewrite as "what is outside" for this engine. |
+| The jump | `game.mjs` `engage`, `canJump`, `jump`, `enterSector` | **Rewrite, small.** It is a fade and a scene change, which is what this engine's change of scene already is. Arrive with a real velocity, not zero. |
+| Latching on | `game.mjs` `hackableFromFighter`, `latchFighter`, `board` | **Rewrite.** It copies the target's velocity every frame and zeroes it. Here: match velocity and turn rate at the port (the helm's `ref` already measures speed against another ship), then a rigid dock, port to port. |
+| The boarding fight | `controllers/board.mjs` `Boarding` (defenders' sight and hunt, your rifle, your party, 2D push-out, hold E to seize) | **Lift.** Self-contained but for its calls into `game.*`: put those on the bus (`boarded`, `seized`, `boarding-lost`). It walks on the same `Walker` and `Interior` this engine uses. It must learn to fight weightless, or the prize keeps a burn on. |
+| The prize's inside | `interiors.mjs` `capitalInterior` (one procedural plan for both ships) | **Replace.** A prize is a layout folder like any ship, so her compartments, air and damage are real. |
+| Claim or scuttle | `game.mjs` `captured`, `keepShip`, `sendCrew`, `scuttleShip`; `panel.mjs` `tab_boarding` | **Lift the rules** (a prize needs a crew member sent across; scuttling pays salvage and blows her). The fleet entry becomes part of the voyage save. |
+| Missions | `data.mjs` `MISSIONS`; `game.mjs` `offers`, `accept`, `progress`, `checkMissions`, `turnIn` | **Rewrite as phase 14's mission system.** The old kinds are hard-wired to `world.corvette` and `world.freighter` and to global flags. Keep the offers as content. |
+| Orders and stances | `orders.mjs` (`MOVES`, `FIRE`, plans of chained steps, `prey`) | **Lift the model** (steps, stances, spared hulls). **Rewrite `drive()`**: every stop distance assumes arcade braking. It needs a flip-and-burn planner; `helmsight.mjs` already does the sums for the nav plot, and the bandits' pilot (`weapons/bandits.mjs`) is a working Newtonian AI to start from. |
+| The command map | `command.mjs` (`Command`: orbit camera, verbs per selection, Shift chains, pause) | **Lift.** It reads entities and writes orders; the pause is one flag in the frame. |
+| Crew who fly and shoot | `ai.mjs` `AI.crew`, `aimTurret`; `game.mjs` `crewEffect`; `data.mjs` `STATS`, `POSTS` | **Lift the stats-to-numbers idea**; the turret crews here already fire. The helm crew needs the same planner as the orders. |
+| Enemy pilots | `ai.mjs` `raider`, `corvette`, `freighter` | **Rewrite** on the bandits' pilot. |
+
+### To decide (the player's call)
+
+- The cutter's real name and class name (story bible, Gemini).
+- Whether the second berth holds a second cutter the NPCs fly (a wingman on sorties) from the start, or stands empty.
+- Whether the old page stays playable as "ThreadSpace classic" after phase 15, or goes.

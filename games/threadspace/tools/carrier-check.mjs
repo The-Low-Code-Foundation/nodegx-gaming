@@ -19,6 +19,7 @@
 //   carrier.html?at=bridge&voice=0&crew=0&dc=0&hold=1&seed=7     → run('float')
 //   carrier.html?at=bridge&voice=0&crew=0&dc=0&hold=1&seed=7     → run('brace')
 //   carrier.html?voice=0&crew=0&dc=0&hold=1&seed=7 (start page)  → run('career')
+//   carrier.html?ship=cutter&at=bridge&voice=0&crew=0&dc=0&hold=1&seed=7   → run('cutter')   (another ship: ships/cutter/)
 //
 // `?hold=1` keeps the page from running frames of its own and `?seed=` seeds every random number (carrier.html,
 // main.mjs), so the frame steps are the script's alone. `run` also stops rendering and mutes the sound, and returns a
@@ -74,7 +75,7 @@ function snap(c) {
     hull: r3(c.ship.sys('hull') ?? -1), heat: r3(c.plant.heat ?? -1), prop: r3(c.plant.prop ?? -1),
     pdcRounds: g.pdcs.reduce((a, p) => a + p.stock, 0), tubes: g.tubeStock,
     air: r3([...c.C.rooms.keys()].reduce((a, id) => a + (c.ship.airOf(id) ?? 0), 0)),
-    dcLog: c.dc.log.map((j) => `${j.kind}@${j.room}:${j.ok}`), fighter: c.fighter.phase
+    dcLog: c.dc.log.map((j) => `${j.kind}@${j.room}:${j.ok}`), fighter: c.fighter?.phase
   };
 }
 
@@ -98,6 +99,72 @@ function counters(c) {
 const findUse = (I, pre) => I.interactables.find((u) => u.id.startsWith(pre));
 
 const scenarios = {
+  /** The cutter (ships/cutter/, `?ship=cutter`): a ship with no drums, hangar, fighters, career or routine. Every
+   *  walkable room stood in, a push off down the passage into engineering, the helm taken at its couch, a burn, a half turn, all
+   *  stop, the turret manned, and a raid from port with her own crew at the guns. */
+  async cutter(c) {
+    c.career.free();
+    const w = c.walker, F = w.floater, K = c.input.keys, out = { has: c.HAS, rooms: {} };
+    const hold = (code, secs) => (K.add(code), run_(c, secs), K.delete(code));
+    for (const r of c.L.compartments.filter((r) => r.access === 'walk')) {
+      const ok = c.go(r.id);
+      run_(c, 0.5);
+      out.rooms[r.id] = { ok, in: c.G.walk.roomNow(), float: !!w.float, you: v3(w.pos), holds: w.interior.holds.filter((h) => h.room === r.id).length };
+    }
+    out.holds = w.interior.holds.length;
+    // At the passage's forward end, facing aft: a held push off the deck (W, let go), the drift down the passage and
+    // through the door into engineering control, and a hold taken there.
+    const p = c.C.rooms.get('passage');
+    F.reset(); // (standing in engineering's foot rail from the round of the rooms: let go, or `place` is undone)
+    c.place(p.deck, 0, p.z[0] + 1.5, Math.PI);
+    w.pitch = 0;
+    run_(c, 0.2);
+    F.reset();
+    hold('KeyW', 2);
+    run_(c, 3);
+    out.pushed = { you: v3(w.pos), vel: v3(w.vel), room: c.G.walk.roomNow() };
+    K.add('Space');
+    out.caught = { t: run_(c, 2, () => F.held), held: F.held?.h.kind ?? null, you: v3(w.pos) };
+    K.delete('Space');
+    // The helm: E at the pilot's couch, a 2 s burn, a half turn to port, all stop.
+    c.go('flight-deck');
+    findUse(w.interior, 'helm').use();
+    out.helm = c.mode();
+    hold('KeyW', 2);
+    out.burn = { vel: v3(c.body.vel), push: r3(c.C.push ?? 0), prop: r3(c.plant.prop) };
+    hold('ArrowLeft', 4.5);
+    out.turning = v3(c.body.ang);
+    run_(c, 8);
+    const bow = c.C.obj.getWorldDirection(new (c.body.vel.constructor)()).negate(); // she started with her bow along -z
+    out.turned = { bow: v3(bow), ang: v3(c.body.ang) };
+    K.add('KeyX');
+    out.stop = { t: run_(c, 60, () => c.body.vel.length() < 0.05), vel: v3(c.body.vel) };
+    K.delete('KeyX');
+    key('KeyV');
+    run_(c, 0.5);
+    out.outlook = c.seats.helm.outlook;
+    key('KeyV');
+    key('KeyE');
+    run_(c, 0.5);
+    out.stood = { mode: c.mode(), room: c.G.walk.roomNow() };
+    // The turret, manned and left; the cutaway and back.
+    c.seats.gun.man(c.guns.turrets[0]);
+    run_(c, 1);
+    out.gun = { mode: c.mode(), turrets: c.guns.turrets.length, pdcs: c.guns.pdcs.length };
+    c.seats.gun.leave();
+    run_(c, 0.5);
+    c.setMode('cutaway');
+    run_(c, 0.5);
+    out.cut = { mode: c.mode(), levels: c.cut.levels.length };
+    c.setMode('walk');
+    // A raid from port, nobody at the turret but her crew.
+    const n = counters(c);
+    c.ship.attack('port');
+    out.raid = { t: run_(c, 200, () => c.guns.raider?.gone), ...n, raiderDead: !!c.guns.raider?.dead, raiderHull: r3(c.guns.raider?.hull ?? 0) };
+    out.end = snap(c);
+    return out;
+  },
+
   /** A raid from port with nobody at the guns: the point defence, the CIC's broadside, the recoil. */
   async raid(c) {
     const n = counters(c);
@@ -702,7 +769,8 @@ export async function run(name) {
 }
 
 const PAGES = {
-  raid: 'at=bridge', hull: 'at=bridge', helm: 'at=helm', landing: 'at=fighter', repair: 'at=fighter', collide: 'at=fighter', bandits: 'at=fighter', missiles: 'at=fighter', walk: 'at=bridge', float: 'at=bridge', brace: 'at=bridge', career: ''
+  raid: 'at=bridge', hull: 'at=bridge', helm: 'at=helm', landing: 'at=fighter', repair: 'at=fighter', collide: 'at=fighter', bandits: 'at=fighter', missiles: 'at=fighter', walk: 'at=bridge', float: 'at=bridge', brace: 'at=bridge', career: '',
+  cutter: 'ship=cutter&at=bridge' // another ship's folder (ships/cutter/)
 };
 
 /** Every scenario, each in a fresh page of its own (an iframe), from any page of this site: `{ name: { hash, … } }`.

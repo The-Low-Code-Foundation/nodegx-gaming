@@ -1,0 +1,27 @@
+{
+ "plant": {
+  "about": "The ship's plant (src/carrier/plant.mjs): her heat and her reaction mass. Heat is how full her heat sinks are, 0 to 1 (`heat`): the reactor puts in `base` a second at idle and `drive` more at full main drive; weapons put in what their own `heat` says. The radiators (the layout's `radiator` mounts) take out up to `reject` a second when fully spread and the sinks full (less as the sinks cool), as much as they are spread and unhurt; folded they still shed `folded` of that. They fold and spread in `deploy` seconds, and the ship folds them herself at action stations (`foldAtStations`). The sinks hold less as the heat sink compartments are hurt. Above `warn` the ship calls a heat warning; at `limit` the point defence and the railgun hold their fire (the turrets' crews keep firing) and the main drive is held to `throttle`. `propellant`: `mass` kg of reaction mass at the start, in the `tanks` compartments (shared by volume), burned by the main drive at `isp` seconds; an open hole in a tank compartment loses `leak` of that tank's share a second.",
+  "heat": {
+   "base": 0.0018,
+   "drive": 0.006,
+   "reject": 0.014,
+   "folded": 0.12,
+   "deploy": 6,
+   "foldAtStations": true,
+   "warn": 0.8,
+   "limit": 1,
+   "throttle": 0.3
+  },
+  "propellant": {
+   "mass": 120000,
+   "isp": 20000,
+   "tanks": [
+    "tank-keel",
+    "tank-keel-aft",
+    "tank-port",
+    "tank-stbd"
+   ],
+   "leak": 0.0015
+  }
+ }
+}

@@ -1,0 +1,47 @@
+{
+ "about": "The cutter: the first medium ship. Her layout is split into the files named in `layout` (each holds the top-level entries listed), joined at load in this order (src/core/ship.mjs `loadLayout`). tools/cutter.mjs writes them and this file: do not edit them by hand. She has no career, watch bill or voices of her own (career.json, watches.json, voices.json are optional).",
+ "layout": {
+  "ship": [
+   "about",
+   "name",
+   "class",
+   "version",
+   "length",
+   "mass",
+   "com",
+   "envelope",
+   "sections",
+   "hull",
+   "helm",
+   "couches",
+   "dock",
+   "spawn",
+   "thrusters"
+  ],
+  "decks": [
+   "decks",
+   "compartments",
+   "doors",
+   "ladders"
+  ],
+  "mounts": [
+   "mounts"
+  ],
+  "stations": [
+   "stations",
+   "routes"
+  ],
+  "damage": [
+   "damage"
+  ],
+  "weapons": [
+   "weapons"
+  ],
+  "integrity": [
+   "integrity"
+  ],
+  "plant": [
+   "plant"
+  ]
+ }
+}
