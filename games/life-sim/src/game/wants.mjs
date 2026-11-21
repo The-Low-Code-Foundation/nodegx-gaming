@@ -49,6 +49,9 @@ export const WANTS = [
   { id: 'cuddleBaby', icon: '👶', did: 'cuddleBaby', points: 30, goals: { family: 3 }, when: (c) => c.babies > 0 },
   // Round 16, phase 3.4: the weather's (weather.mjs).
   { id: 'snowman', icon: '⛄', did: 'buildSnowman', points: 40, base: 4, when: (c) => c.weather === 'snow' },
+  // Round 16, phase 4: given by the news (someone new in the street, townlife.mjs), never rolled (`base` 0). Done by
+  // going round to the newcomer's house (the page counts 'welcome').
+  { id: 'welcome', icon: '👋', did: 'welcome', points: 40, base: 0 },
   { id: 'puddles', icon: '💦', did: 'splashPuddles', points: 25, base: 2, traits: { sporty: 1.5, neat: 0.4 }, when: (c) => c.weather === 'rain' }
 ];
 export const WANT_SLOTS = 3;

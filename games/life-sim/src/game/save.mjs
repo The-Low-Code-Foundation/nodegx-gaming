@@ -19,14 +19,17 @@ export function readSave() {
     // v5 (round 16, phase 3): the event deck (`deck`: when it was last looked at, what came up when, a party you said
     // yes to, a power cut) and the day's weather (`weather`). A v4 save or older loads with a fresh deck (the first event
     // an hour or more after loading) and the day's weather rolled.
-    return [1, 2, 3, 4, 5].includes(s?.v) && Array.isArray(s.lives) && s.lives.length ? s : null;
+    // v6 (round 16, phase 4): the town as it has changed (`town.houses`: lived in or for sale, the price and name;
+    // `town.homes`: who lives where; `town.dreams`: the newcomers' dreams; `town.life`: town life's state, its babies and
+    // the notice board's news). A v5 save or older loads with the town as made, and town life starts from that day.
+    return [1, 2, 3, 4, 5, 6].includes(s?.v) && Array.isArray(s.lives) && s.lives.length ? s : null;
   } catch {
     return null;
   }
 }
 export function writeSave(state) {
   try {
-    localStorage.setItem(KEY, JSON.stringify({ v: 5, savedAt: Date.now(), ...state }));
+    localStorage.setItem(KEY, JSON.stringify({ v: 6, savedAt: Date.now(), ...state }));
     return true;
   } catch {
     return false;

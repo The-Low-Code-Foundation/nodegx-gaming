@@ -108,6 +108,8 @@ export const MOODLETS = {
   birdsong: { emotion: 'happy', weight: 1, icon: '🐦', minutes: 120 },
   helpedOut: { emotion: 'happy', weight: 2, icon: '🤝', minutes: 360 },
   juicyNews: { emotion: 'happy', weight: 1, icon: '🗞️', minutes: 120 },
+  // Round 16, phase 4: good news about a friend (townlife.mjs, the notice board).
+  gladForThem: { emotion: 'happy', weight: 1, icon: '🥰', minutes: 360 },
   // Round 16, phase 3.4: the weather's.
   snowman: { emotion: 'happy', weight: 2, icon: '⛄', minutes: 300 },
   splashy: { emotion: 'happy', weight: 1, icon: '💦', minutes: 120 },

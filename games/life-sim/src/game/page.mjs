@@ -49,6 +49,7 @@ import { GOALS, goalById, openGoals, rollGoal, stepsDone, STEP_POINTS, GOAL_POIN
 import { WANTS, WANT_SLOTS, WANT_LASTS, rollWant, wantById } from './wants.mjs';
 import { DECK, EVENTS, POWER_CUT, eventById, pickEvent, pickWho, outcomeOf } from './events.mjs';
 import { WEATHER, rollWeather } from './weather.mjs';
+import { TOWNLIFE, dayOfTown, startTown, priceFor } from './townlife.mjs';
 
 const params = new URLSearchParams(location.search);
 const $ = (id) => document.getElementById(id);
@@ -189,6 +190,11 @@ const weatherOn = !quick || !!weatherForced;
 let weather = saved?.weather ?? null;
 // The event deck's state (round 16, phase 3; `eventsOn` above).
 const deck = { next: null, last: null, seen: {}, day: null, today: 0, party: null, ...(saved?.deck ?? {}) };
+// Round 16, phase 4: the town lives without you (townlife.mjs), not on a test URL unless `?townlife=1`. Its state: the
+// last day played out, the day someone last moved in (and when each newcomer did), the town's babies, the notice
+// board's news (and how many are new to the household), whether its bonds have been started.
+const townLifeOn = !quick || params.has('townlife');
+const townLife = { day: null, lastNew: null, arrived: {}, babies: [], news: [], unread: 0, started: false, ...(saved?.town?.life ?? {}) };
 const person = start?.kind === 'new' ? start.who : saved ? saved.lives[0].who : Number(params.get('person') ?? 0);
 // Not in a saved game: everyone is who they were.
 // Round 16: how this life begins (starts.mjs): chosen after making the Sim, or ?story= on a test's URL.
@@ -226,6 +232,16 @@ function storyCard() {
 // rolled here. A test's URL: the classic town, or ?town=N.
 const townSeed = saved ? Number(saved.town?.seed ?? 0) : params.has('town') ? Number(params.get('town')) : quick ? 0 : rollTown();
 makeTown(townSeed);
+// Round 16, phase 4: and the town as it has changed since (townlife.mjs): which houses are lived in, which for sale.
+for (const s of saved?.town?.houses ?? []) {
+  const h = houseById(s.id);
+  if (!h || !['lived', 'sale'].includes(s.kind)) continue;
+  h.kind = s.kind;
+  if (s.kind === 'sale') Object.assign(h, { price: Number(s.price) || priceFor(h.size, Math.random), name: Number(s.name) || 0 });
+  else delete h.price;
+}
+// Where someone lives, as saved (townlife.mjs moves people), or where they were put at the start.
+const homeOf = (who, start) => (houseById(saved?.town?.homes?.[who]) ? saved.town.homes[who] : start);
 const streetName = () => t(`town.street.${TOWN.street}`);
 const houseName = (h) => (h ? t(`house.name.${h.name}`) : '');
 street = places.street = await buildPlace('lifeStreet', { ...STREET_SIZE, fronts: streetLayout(), name: streetName() });
@@ -787,7 +803,7 @@ async function loadColleagues() {
     if (was?.job) c.job = { ...was.job, lastDay: -1 };
     giveDesk(c);
     // Round 14: where they live (town.mjs): you can go round, outside work.
-    c.house = COLLEAGUE_HOUSES[k] ?? 'h3';
+    c.house = homeOf(n, COLLEAGUE_HOUSES[k] ?? 'h3');
     colleagues.push(c);
     makeBubble(c);
   }
@@ -874,7 +890,9 @@ function loadNeighbours() {
     }
     for (const [k, n] of who.entries()) {
       const l = await makeSim(n, park, 30 + k, { household: { money: 0 } });
-      Object.assign(l, { homePlace: null, present: false, house: 'h4', freeWill: true, traits: npcTraits(n), likes: npcLikes(n) });
+      Object.assign(l, { homePlace: null, present: false, house: homeOf(n, 'h4'), freeWill: true, traits: npcTraits(n), likes: npcLikes(n) });
+      // Round 16, phase 4: someone who moved to town (townlife.mjs) has a dream, and the day they came.
+      Object.assign(l, { dream: saved?.town?.dreams?.[n] ?? null, newcomer: townLife.arrived[n] ?? null });
       l.sim.group.visible = false;
       makeBubble(l);
       neighbours.push(l);
@@ -956,7 +974,8 @@ function openDoorMenu(item, x, y) {
     rows.push(btn('visit', `👀 ${t('town.look')}`, who.place !== places[id]), btn('buy', `🏡 ${t('ui.sale.buy')}`, household.money >= cost, t('ui.cost', { cost: Math.max(0, cost) })));
   } else {
     const v = visitState(id), party = partyAt(id), living = residentsOf(id);
-    head = `${party ? '🎉' : '🏡'} ${houseTitle(id)}<small>${f.no} ${streetName()}${living.length ? ` · ${living.map((l) => l.name).join(', ')}` : ''}</small>`;
+    const tots = babiesAt(id).map((b) => b.name);
+    head = `${party ? '🎉' : '🏡'} ${houseTitle(id)}<small>${f.no} ${streetName()}${living.length ? ` · ${living.map((l) => l.name).join(', ')}` : ''}${tots.length ? ` 👶 ${tots.join(', ')}` : ''}</small>`;
     const label = party ? (invited(id) ? `🎉 ${t('street.party')}` : `🙊 ${t('street.crash')}`) : `🚪 ${t('street.knock')}`;
     const here = who.place === places[id];
     rows.push(btn('visit', label, v.ok && !here, here ? '' : v.ok ? '' : t(`town.why.${v.why}`)));
@@ -1037,6 +1056,8 @@ function arrived(l, p) {
   if (h.kind === 'sale') return toast(t('ui.sale.look', { name: l.name, house: houseTitle(id), price: h.price }));
   const host = residentsOf(id).find(homeNow) ?? residentsOf(id)[0];
   if (!host) return;
+  // Round 16, phase 4: saying hello to someone new in the street (a wish the news gives).
+  if (residentsOf(id).some((r) => r.newcomer != null && Math.floor(minutes / 1440) + 1 - r.newcomer <= 7)) l.count('welcome');
   if (partyAt(id)) {
     const asked = invited(id);
     bondOf(l, host).friendship += asked ? 3 : -3;
@@ -1077,9 +1098,98 @@ function townTick() {
     // Bedtime: the visitors go home (once each: you can send them back). The party's last evening says so.
     if (party) p.partyDay = Math.floor(minutes / 1440);
     if (!awake(minutes)) for (const l of visitors) if (!l.visitOver) (l.visitOver = true), sendHome(l, p.partyDay === Math.floor((minutes - 60) / 1440) ? 'ui.party.over' : 'ui.visit.late');
+    // A house the town changed while someone was in it (townlife.mjs): built again once they have gone.
+    if (p.stale && !inUse(p)) dropHouse(h.id);
   }
   guestsTick();
+  townLifeTick();
 }
+// ---- the town lives without you (round 16, phase 4; townlife.mjs) ----
+// Once a game day, at 03:00 (TOWNLIFE.at), the town's day is played out as data: nobody is drawn and no animation
+// runs (the people out of sight are Lives with no body updated, as the colleagues are off work). The first day starts
+// the bonds between the town's people; each day after that, `dayOfTown`. What changed is then made true here: a
+// house's inside is built again the next time someone goes (with the beds of whoever lives there now), the street's
+// boards follow the houses (streetTick), and a newcomer is made (a body, hidden until met, as the neighbours are).
+const arriving = new Map(); // who → { house, dream, traits, likes }: a newcomer whose body is still being made
+const inUse = (p) => view === p || everyone.some((l) => l.present && l.place === p);
+function dropHouse(id) {
+  const p = places[id];
+  if (!p || p === home) return;
+  if (inUse(p)) return void (p.stale = true);
+  scene.remove(p.group);
+  for (const l of everyone) if (l.home && p.items.includes(l.home)) l.home = null;
+  delete places[id];
+}
+// Who could move to town: the twelve people, less the household, the town, the nanny, and whoever is on the way (one
+// woman kept back for a nanny not yet needed, as loadNeighbours does).
+function townPool() {
+  const taken = new Set([...lives, ...npcs(), ...(nanny ? [nanny] : [])].map((l) => l.who));
+  for (const n of arriving.keys()) taken.add(n);
+  const free = [...Array(12).keys()].filter((n) => !taken.has(n));
+  const woman = (n) => /^Female/.test(folk.cast[n]?.name ?? '');
+  return { pool: free, keepWoman: !nanny && free.filter(woman).length === 1 ? free.find(woman) : null };
+}
+function townLifeTick() {
+  if (!townLifeOn || !neighboursIn || moving) return;
+  const today = Math.floor(minutes / 1440) + 1, target = (minutes % 1440) >= TOWNLIFE.at ? today : today - 1;
+  // A new game, or a save from before phase 4: the town starts living from today (no days played out behind you).
+  if (townLife.day == null) townLife.day = target;
+  while (townLife.day < target) playTownDay(++townLife.day);
+}
+function playTownDay(day) {
+  if (!townLife.started) {
+    startTown(npcs(), townDice(TOWN.seed, 6999));
+    townLife.started = true;
+  }
+  const { pool, keepWoman } = townPool();
+  // Never the household's home, a house one of them is in, or one a newcomer is moving into.
+  const mine = (id) => owned(id) || (places[id] && inUse(places[id])) || [...arriving.values()].some((a) => a.house === id);
+  const out = dayOfTown({ day, people: npcs(), household: lives, houses: HOUSES, mine, still: (l) => l.present, pool, keepWoman, babies: townLife.babies, lastNew: townLife.lastNew, nameOf: (n) => NAMES[n] }, townDice(TOWN.seed, 7000 + day));
+  for (const l of out.moved) l.home = null;
+  for (const id of out.houses) dropHouse(id);
+  if (out.newcomer) {
+    townLife.lastNew = day;
+    out.news.find((n) => n.key === 'news.welcome').vars.dream = out.newcomer.dream;
+    welcome(out.newcomer, day);
+  }
+  for (const n of out.news) tellNews(n, day);
+  save();
+  return out;
+}
+// Someone new in the street: one of the twelve, with their own traits, likes and dream; a body, hidden until met.
+async function welcome({ who, house, traits, likes, dream }, day) {
+  arriving.set(who, { house, dream, traits, likes });
+  townLife.arrived[who] = day;
+  const l = await makeSim(who, park, 40 + who, { household: { money: 0 } });
+  Object.assign(l, { homePlace: null, present: false, house, freeWill: true, traits, likes, dream, newcomer: day });
+  l.sim.group.visible = false;
+  makeBubble(l);
+  neighbours.push(l);
+  arriving.delete(who);
+  save();
+}
+// The notice board's news (4.2). Someone the household is Friends with: told, and glad for them (a moodlet). Someone
+// new: everyone hears, and a wish to go round and say hello (not for the shy).
+const GLAD = ['news.sweethearts', 'news.inLove', 'news.married', 'news.baby', 'news.bestFriends', 'news.newHome', 'news.bigger'];
+const newsText = (n) => t(n.key, { ...n.vars, dream: n.vars.dream ? t(`goal.${n.vars.dream}`) : '' });
+function tellNews(n, day) {
+  townLife.news.unshift({ day, icon: n.icon, key: n.key, vars: { ...n.vars }, who: [...n.who] });
+  townLife.news.length = Math.min(townLife.news.length, TOWNLIFE.news);
+  townLife.unread = Math.min(TOWNLIFE.news, townLife.unread + 1);
+  const known = npcs().filter((o) => n.who.includes(o.name));
+  const knows = lives.filter((h) => known.some((o) => (peekBond(h, o)?.friendship ?? 0) >= INVITED));
+  if (GLAD.includes(n.key)) for (const h of knows) h.addMoodlet('gladForThem');
+  if (knows.length || n.key === 'news.welcome') toast(`📰 ${newsText(townLife.news[0])}`);
+  if (n.key === 'news.welcome' && aimsOn) for (const h of lives) if (!h.traits?.includes('shy')) giveWant(h, 'welcome');
+}
+// A wish given (not rolled): in the place of the oldest, for two days.
+function giveWant(l, id) {
+  l.wants = (l.wants ?? []).filter((w) => w.id !== id);
+  if (l.wants.length >= WANT_SLOTS) l.wants.shift();
+  l.wants.push({ id, until: minutes + 2 * WANT_LASTS });
+}
+// The babies of the town who live in a house (with their parents).
+const babiesAt = (id) => townLife.babies.filter((b) => residentsOf(id).some((r) => b.parents.includes(r.name)));
 // Friends round to yours (the phone, "Who lives here"): at the door a little later, a while with you, then home.
 // A party at home: everyone the household is Friends with.
 function inviteOver(other, quiet = false, stay = GUEST.stays) {
@@ -2143,7 +2253,16 @@ function snapshot() {
     storage: [...storage],
     boxedBase: [...boxedBase],
     home: { ...homeState },
-    town: { seed: TOWN.seed, neighbours: neighbours.map((n) => n.who) },
+    // Round 16, phase 4 (v6): who lives where, which houses are for sale (and for how much), the newcomers' dreams,
+    // and town life's own state. Before the neighbours have loaded, the ones the save had (as for the colleagues).
+    town: {
+      seed: TOWN.seed,
+      neighbours: neighboursIn ? [...neighbours.map((n) => n.who), ...arriving.keys()] : saved?.town?.neighbours ?? [],
+      homes: neighboursIn ? Object.fromEntries([...npcs().map((l) => [l.who, l.house]), ...[...arriving].map(([n, a]) => [n, a.house])]) : saved?.town?.homes ?? {},
+      houses: HOUSES.map(({ id, kind, price, name }) => ({ id, kind, price, name })),
+      dreams: { ...(saved?.town?.dreams ?? {}), ...Object.fromEntries(npcs().filter((l) => l.dream).map((l) => [l.who, l.dream])), ...Object.fromEntries([...arriving].map(([n, a]) => [n, a.dream])) },
+      life: { ...townLife, arrived: { ...townLife.arrived }, babies: townLife.babies.map((b) => ({ ...b, parents: [...b.parents] })), news: townLife.news.map((n) => ({ ...n, vars: { ...n.vars }, who: [...n.who] })) }
+    },
     story: story?.id ?? saved?.story ?? null,
     // Round 16, phase 2: the life story.
     diary: diary.slice(),
@@ -2151,8 +2270,8 @@ function snapshot() {
     deck: { ...deck, seen: { ...deck.seen } },
     weather: weather && { ...weather },
     // Round 16: everyone else's traits, by person (the household's are in `lives`).
-    traits: { ...(saved?.traits ?? {}), ...Object.fromEntries(npcs().map((l) => [l.who, [...(l.traits ?? [])]])) },
-    likes: { ...(saved?.likes ?? {}), ...Object.fromEntries(npcs().filter((l) => l.likes).map((l) => [l.who, { ...l.likes }])) },
+    traits: { ...(saved?.traits ?? {}), ...Object.fromEntries(npcs().map((l) => [l.who, [...(l.traits ?? [])]])), ...Object.fromEntries([...arriving].map(([n, a]) => [n, [...a.traits]])) },
+    likes: { ...(saved?.likes ?? {}), ...Object.fromEntries(npcs().filter((l) => l.likes).map((l) => [l.who, { ...l.likes }])), ...Object.fromEntries([...arriving].map(([n, a]) => [n, { ...a.likes }])) },
     // Each baby, with the cot they lie in (its place in `furniture`).
     babies: babies.filter((b) => b.cot).map((b) => ({ ...b.saved(), cot: furniture.findIndex((e) => e.item === b.cot) }))
   };
@@ -2241,7 +2360,8 @@ function openTown() {
       continue;
     }
     const living = residentsOf(h.id);
-    const people = living.map((l) => `${l.name} <small>(${t(`friendship.${friendshipLevel(bondOf(who, l)).id}`)}${l.job ? ` · ${t('ui.friend.colleague')}` : ''})</small>`).join(', ');
+    const tots = babiesAt(h.id).map((b) => b.name);
+    const people = living.map((l) => `${l.name} <small>(${t(`friendship.${friendshipLevel(bondOf(who, l)).id}`)}${l.job ? ` · ${t('ui.friend.colleague')}` : ''})</small>`).join(', ') + (tots.length ? ` 👶 <small>${t('town.babies', { names: tots.join(', ') })}</small>` : '');
     const party = partyToday() === h.id && (minutes % 1440) < PARTY.to
       ? ` · 🎉 ${t(partyAt(h.id) ? 'town.partyNow' : 'town.partyTonight', { from: hhmm(PARTY.from) })} ${invited(h.id) ? `✉️ ${t('town.invited')}` : `🙊 ${t('town.notInvited')}`}` : '';
     rows.push(row(partyAt(h.id) ? '🎉' : '🏡', `${houseTitle(h.id)} <small>${addr}</small>`, `${people || t('town.nobody')}${party} · ${t(`town.why.${v.why}`)}`,
@@ -2647,6 +2767,8 @@ window.__life = {
   factsOf, checkGoals, openGoalPicker, aimsOn, wantsTick, wantCtx, wished, openRewards, buyReward, diary, openDiary, milestone,
   // Round 16, phase 3.
   eventsOn, deck, eventsTick, openEvent, eventCtx, eventPeople, EVENTS, eventById, lastEvent: null, openMenu, offerWhy,
+  // Round 16, phase 4.
+  townLifeOn, townLife, townLifeTick, playTownDay, TOWNLIFE, babiesAt, newsText, npcs,
   weatherNow, weatherTick, get weather() { return weather && { ...weather }; }, set weatherId(id) { weather = { day: Math.floor(minutes / 1440), id, told: true }; }, snowmen, weatherFx, ducks,
   folk, get extras() { return extras(); }, furniture, storage, save, snapshot, openShop, startPlacing, stopPlacing, turnPlacing, placeHere, hover, sell, beauty, openLook, get home() { return home; }, saving,
   get placing() { return placing; }, get start() { return start?.kind ?? null; },
