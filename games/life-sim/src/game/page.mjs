@@ -5,6 +5,7 @@
 //   ?needs=hunger:10,energy:80 (start values; ?needs2= for the flatmate)  ?freewill=0  ?start=07:30 (the clock)
 //   ?seed=1 (free will's dice, for tests)  ?year=CE2 (the school year the work questions are pitched at)
 //   ?colleagues=2,3,4,5 (who works at the office; default four others, at random) | none
+//   ?story=savings|friend|sweetheart|broke|inherit (round 16: how the life begins, starts.mjs; a test's URL: as before)
 //   ?town=N (round 16: the town's seed; a test's URL has the classic Sunny Lane, 0, and a new game a town of its own)
 // Round 10: a plain /life/ starts with "carry on, or a new game?" (a save in this browser) or the create-a-Sim screen,
 // and saves as it goes. A test's URL (?seed=, ?person= or ?flatmate=) starts straight in as before and saves nothing;
@@ -37,6 +38,7 @@ import { blankLook } from './looks.mjs';
 import { makeProp, wear } from './props.mjs';
 import { Baby, BABY_NEEDS, BABY_NAMES, BLANKETS, MAX_BABIES } from './baby.mjs';
 import { CHILDCARE, NURSERY_CARED, careNow, careCost, nurseryOpen } from './childcare.mjs';
+import { STARTS, startById, surprise } from './starts.mjs';
 
 const params = new URLSearchParams(location.search);
 const $ = (id) => document.getElementById(id);
@@ -165,7 +167,21 @@ if (!quick) start = await startScreen(readSave());
 const saved = start?.kind === 'continue' ? start.save : null;
 const person = start?.kind === 'new' ? start.who : saved ? saved.lives[0].who : Number(params.get('person') ?? 0);
 // Not in a saved game: everyone is who they were.
-const mate = saved ? null : params.get('flatmate') === 'none' ? null : Number(params.get('flatmate') ?? (person + 1 + Math.floor(Math.random() * 11)) % 12);
+// Round 16: how this life begins (starts.mjs): chosen after making the Sim, or ?story= on a test's URL.
+const story = saved ? null : startById(start?.story ?? params.get('story'));
+const mate = saved ? null : params.get('flatmate') === 'none' ? null : params.has('flatmate') ? Number(params.get('flatmate')) : story && !story.mate ? null : (person + 1 + Math.floor(Math.random() * 11)) % 12;
+// How does it begin? The game's starts, one card each, and "surprise me".
+function storyCard() {
+  return new Promise((resolve) => {
+    const row = (s) => `<div class="offer"><div class="big">${s.icon}</div><div><b>${t(`start.${s.id}`)}</b><div>${t(`start.${s.id}.does`, { coins: s.money })}</div></div><button class="go" data-story="${s.id}">${t('start.pick')}</button></div>`;
+    $('card').innerHTML = `<h2>${t('start.title')}</h2><p class="intro">${t('start.intro')}</p>${STARTS.map(row).join('')}
+      <div class="actions"><button class="go" id="story-surprise">🎲 ${t('start.surprise')}</button></div>`;
+    $('card').hidden = $('card-back').hidden = false;
+    const done = (s) => (($('card').hidden = $('card-back').hidden = true), resolve(s));
+    for (const b of $('card').querySelectorAll('[data-story]')) b.onclick = () => done(startById(b.dataset.story));
+    $('story-surprise').onclick = () => done(surprise());
+  });
+}
 // ---- the town (round 16, town.mjs makeTown) ----
 // A saved game: its town (a save from before round 16: the classic Sunny Lane, which it was). A new game: a new town,
 // rolled here. A test's URL: the classic town, or ?town=N.
@@ -215,9 +231,10 @@ async function startScreen(save) {
   const made = await createSim({ renderer, scene, camera, controls, folk, t, names: NAMES, years: YEARS, year: yearNow, person: Number(params.get('person') ?? Math.floor(Math.random() * 12)) });
   scene.fog = haze;
   skyDome.mesh.visible = true;
+  const story = await storyCard();
   view = null;
   setView(home);
-  return { kind: 'new', ...made };
+  return { kind: 'new', ...made, story: story.id };
 }
 
 // A bubble a Sim, a column to click them by, and their place in the game. `body`: one already made (the create-a-Sim
@@ -229,6 +246,11 @@ const everyone = []; // and the colleagues at the office
 // ---- the household's home (round 14): which one, and how big. The flat ('flat', size 0) to begin with; a house in the
 // town once bought (`paid`: what it cost, and its extensions: what it sells for when they move on). ----
 let homeState = { id: saved?.home?.id ?? 'flat', size: saved?.home?.size ?? 0, paid: saved?.home?.paid ?? 0 };
+// Round 16: an inherited house (starts.mjs 'inherit'): the biggest one for sale is theirs, and sells for its price.
+if (story?.home === 'inherit') {
+  const h = HOUSES.filter((x) => x.kind === 'sale').sort((a, b) => b.size - a.size || b.price - a.price)[0];
+  homeState = { id: h.id, size: h.size, paid: h.price };
+}
 // A house, empty but for its door, for the household to furnish: the flat as it was made, or any size (town.mjs SIZES).
 async function buildHomePlace(st) {
   const p = st.id === 'flat' && !st.size ? await buildPlace('lifeHome', { empty: true }) : await buildPlace('lifeHouse', { ...SIZES[st.size], look: st.id === 'flat' ? FLAT_LOOK : houseById(st.id).look });
@@ -246,7 +268,7 @@ if (homeState.id !== 'flat' || homeState.size) {
 }
 // The money is the household's: whoever earns it, anyone can spend it.
 // `childcare` (round 13): who looks after the babies while everyone is out, 'nanny' or 'nursery' (null: ask).
-const household = { money: saved?.money ?? START_MONEY, childcare: saved?.childcare ?? null };
+const household = { money: saved?.money ?? story?.money ?? START_MONEY, childcare: saved?.childcare ?? null };
 async function makeSim(who, at, i, { name = null, look = null, body = null, ...opts } = {}) {
   const sim = new Sim(body ?? (await folk.body(who, look)), at);
   scene.add(sim.group);
@@ -295,6 +317,9 @@ for (const [i, m] of members.entries()) {
   lives.push(life);
 }
 if (saved) setBonds(saved.bonds);
+// Round 16: how the household get on at the start, and a job from day one (starts.mjs).
+if (story?.bond && lives[1]) Object.assign(bondOf(lives[0], lives[1]), story.bond);
+if (story?.job) lives[0].job = { ...story.job, performance: 0, lastDay: -1 };
 // What stands in the household's home, in order: saved, and put back. Round 14: all of it, the flat's own things too
 // (shop.mjs FLAT_FURNITURE, `base`: they came with the flat, and make it no lovelier), so anything can be moved, sold
 // or put in the boxes. `extras` (round 10's name, the checks'): what was added, bought or a cot or a camp bed.
@@ -358,7 +383,16 @@ function shareBeds() {
 // A click on a double bed: the side that is theirs, or the one free.
 const sideFor = (l, item) => (!item?.twin || item.side ? item : item.twin.owner === l || (item.owner && item.owner !== l) || (item.user && item.user !== l.sim) ? item.twin : item);
 // A new game: the flat as it comes. A round-13 save (v1): the flat as it came, and what they had added to it.
-await placeFurniture(saved?.furniture ?? [...FLAT_FURNITURE.map((e) => ({ ...e, base: true })), ...(saved?.extras ?? [])]);
+// Round 16: an inherited house has only the basics in it (starts.mjs), spread out from where they stand in the flat
+// to the same walls of the bigger house, each where it fits.
+if (!saved && story?.home === 'inherit') {
+  const { w, d } = home.bounds, out = (v, half, next) => (Math.abs(v) >= half - 1.0 ? v + Math.sign(v) * (next - half) : v * (next / half));
+  const basics = FLAT_FURNITURE.filter((e) => story.basics.includes(e.id) && (e.id !== 'bed' || e.z < 0 || lives.length > 1));
+  for (const e of basics) {
+    const spot = await fitSpot(kindOf(e.id), { ...e, x: out(e.x, 3.5, w / 2), z: out(e.z, 3, d / 2) }, 6);
+    if (spot) await placeFurniture([{ ...e, ...spot, base: true }]);
+  }
+} else await placeFurniture(saved?.furniture ?? [...FLAT_FURNITURE.map((e) => ({ ...e, base: true })), ...(saved?.extras ?? [])]);
 
 // ---- a wedding (round 12, social.mjs `marry`) ----
 // Wedding clothes for as long as it lasts: a bride's outfit all white with a long skirt, a veil and flowers; a groom's
@@ -1634,6 +1668,7 @@ function snapshot() {
     boxedBase: [...boxedBase],
     home: { ...homeState },
     town: { seed: TOWN.seed, neighbours: neighbours.map((n) => n.who) },
+    story: story?.id ?? saved?.story ?? null,
     // Each baby, with the cot they lie in (its place in `furniture`).
     babies: babies.filter((b) => b.cot).map((b) => ({ ...b.saved(), cot: furniture.findIndex((e) => e.item === b.cot) }))
   };
@@ -2114,7 +2149,7 @@ window.__offerOfSocial = interactionById;
 window.__life = {
   life, sim, lives, everyone, colleagues, place, places, camera, controls, renderer, t, bondOf, select, beds, household, ask, closeCard, openStation, setView, desks, props,
   get card() { return card; }, get year() { return year; }, get speed() { return speed; }, get view() { return nameOf(view); },
-  get sel() { return sel; }, colleaguesLoaded, town: TOWN, HOUSES, streetName,
+  get sel() { return sel; }, colleaguesLoaded, town: TOWN, HOUSES, streetName, story,
   folk, get extras() { return extras(); }, furniture, storage, save, snapshot, openShop, startPlacing, stopPlacing, turnPlacing, placeHere, hover, sell, beauty, openLook, get home() { return home; }, saving,
   get placing() { return placing; }, get start() { return start?.kind ?? null; },
   setSpeed, advance, get minutes() { return minutes; }, set minutes(v) { minutes = v; },
@@ -2129,3 +2164,5 @@ window.__life = {
   ready: true
 };
 colleaguesLoaded.then(() => (window.__life.colleaguesReady = true));
+// Round 16: how this life began, said once (a new game, or a test's ?story=).
+if (story) toast(t(`start.${story.id}.toast`, { name: life.name, mate: lives[1]?.name ?? '', house: houseName(houseById(homeState.id)), coins: household.money }));
