@@ -347,7 +347,7 @@
         },
         {
           "do": "hold",
-          "secs": 3600
+          "until": "told"
         }
       ],
       "order": "Strap in at the pilot's couch: the commander launches her",

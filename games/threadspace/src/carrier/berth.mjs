@@ -22,7 +22,8 @@
 // ship's layout origin sits, in the host's frame), yaw, out (-1 port, +1 starboard), port, clear }. A host with a
 // hangar but no `berths` yet gets a stand-in from `standIn()`.
 //
-// `lastRecovery` is how she last came home, for a career to read: { manual: false } from flight control, or the grade
+// `lastRecovery` is how she last came home, for a career to read (with `crew: who` when the crew's pilot had her at
+// the time): { manual: false } from flight control, or the grade
 // of your own approach (recovery.mjs `grade`: closing speed, offset, alignment, seconds from the holding point).
 //
 // Not here yet (ROADMAP phase 12's second half): the cutter against the carrier's hull as solids, the host under way
@@ -57,8 +58,9 @@ export function standIn(HL, L) {
 export class Berth {
   /** `C`, `body`: the ship you are aboard and her Rigid. `H`: the host (a built ship), `hostDoors` her Doors.
    *  `spec`: the berth. `say(text, secs)`: a line on the helm's sight. `onChange(phase)`: told at each change. */
-  constructor({ C, body, H, hostDoors, spec, say = () => {}, onChange = () => {} }) {
-    Object.assign(this, { C, body, H, hostDoors, spec, say, onChange });
+  /** `held()`: why she may not launch (null when she may); `crew()`: who of the crew is flying her, if anyone. */
+  constructor({ C, body, H, hostDoors, spec, say = () => {}, onChange = () => {}, held = null, crew = null }) {
+    Object.assign(this, { C, body, H, hostDoors, spec, say, onChange, held, crew });
     this.hostVel = new THREE.Vector3(); // the host's velocity in the world (she stands still for now)
     this.hostAng = new THREE.Vector3(); // and her turn, in her own frame
     this.phase = 'berthed';
@@ -97,6 +99,8 @@ export class Berth {
   /** L at the helm: ask to launch, or ask flight control to bring her in. Returns what was said. */
   key() {
     if (this.phase === 'berthed') {
+      const held = this.held?.(); // why she may not launch yet (main.mjs: her upkeep, upkeep.mjs)
+      if (held) return this.tell(`Flight control: launch refused. ${held}`, 5);
       this.hostDoors.setBay(1);
       this.set('opening');
       return this.tell('Flight control: launch approved. Bay door opening.', 4);
@@ -135,9 +139,15 @@ export class Berth {
     this.v0 = this.body.vel.clone().sub(this.hostVel).applyQuaternion(hq); // against the host, in her frame
     // Long enough to slow her gently from the speed she has and to cover the way at about the arms' own speed.
     this.capT = clamp(Math.max(this.p0.distanceTo(this.home) / (PUSH * 0.6), this.v0.length() * 3), 6, 40);
-    this.lastRecovery = { manual: true, ...grade };
+    this.lastRecovery = { manual: true, ...grade, ...this.flownBy() };
     this.set('capture');
     return true;
+  }
+
+  /** `{ crew: who }` when the crew's pilot had her (the `crew` hook main.mjs gives), else nothing. */
+  flownBy() {
+    const who = this.crew?.();
+    return who ? { crew: who } : {};
   }
 
   tell(text, secs) {
@@ -171,7 +181,7 @@ export class Berth {
     this.path = new THREE.CatmullRomCurve3(pts, false, 'centripetal');
     this.pathT = clamp(this.path.getLength() / RECOVER.cruise, 12, 90);
     this.gateU = clamp(1 - (GATE + this.run) / this.path.getLength(), 0, 1); // how far along the path the gate is
-    this.lastRecovery = { manual: false };
+    this.lastRecovery = { manual: false, ...this.flownBy() };
     this.hostDoors.setBay(1);
     this.set('recover');
   }

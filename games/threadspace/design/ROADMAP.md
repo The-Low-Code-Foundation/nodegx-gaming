@@ -834,12 +834,25 @@ so it wants balancing with the crew in mind; the crew do not move about the ship
 they are going); the helm's orders are numbers on a card, not yet spoken by the commander; fire control is still not
 yours to order; and none of it has been played by hand.
 
-Left in phase 13: maintenance on your own cutter in the hangar (her damage carried between pages and shown on her
-in the berth, the phase 9 repair work on her); your watch aboard the carrier as more than the one muster; the three
-upper rungs of the ladder; general-quarters stations aboard the cutter; the sensors qualification; the story pass
-and the recording of 22 career lines and 13 pilot calls (`node tools/voices.mjs --list`; the three new people want
-`--design` first); the old carrier week's leftovers ("The new apprentice" in `watches.json`). From the pilot's side,
-wanted by the career: a "hold until told" leg, a mark on `berth.lastRecovery` when the crew flew it.
+**Her upkeep between sorties (22 November 2026).** What a sortie did to her now stays with her
+(`upkeep.mjs`, the voyage's `ships[key].hurt`): each hurt compartment's health, her reaction mass and her turret's
+rounds, written every few seconds and as her page goes, and put back on her when either page loads. On her cradle
+the carrier's hangar crew mend her (0.8 a second, working first in her `integrity.mend` order, then whole), refuel
+her (about three minutes from dry) and rearm her (0.8 rounds a second); flight control will not launch her, nor
+will the crew pilot, while her reactor, switchgear or drive is under working or her tanks are under a quarter. From
+the carrier, she shows it: a scorch on her skin over each hurt compartment, a welded plate once it works again (the
+plate stays), the welders' sparks on the job in hand, and an upkeep board on her platform by the port, red until
+she is cleared; hold E at the board with a tool kit and you work on her with them. A wreck comes back to her cradle
+as a rebuild: everything at 8, empty tanks and magazine, about three minutes to clearance and a long while to whole.
+The pilot also has a **hold until told** leg (`{ "do": "hold", "until": "told" }`, ended by `pilot.release()`, or by
+the next order, which takes the helm from it: the sortie's hold uses it) and `berth.lastRecovery.crew` names the hand who flew a recovery (the career's `land` step
+fails on it).
+
+Left in phase 13: the hangar crew drawn at work on her (today it is sparks and a board); your watch aboard the
+carrier as more than the one muster; the three upper rungs of the ladder; general-quarters stations aboard the
+cutter; the sensors qualification; the story pass and the recording of 22 career lines and 13 pilot calls (`node
+tools/voices.mjs --list`; the three new people want `--design` first); the old carrier week's leftovers ("The new
+apprentice" in `watches.json`).
 
 **Left in phase 12:**
 

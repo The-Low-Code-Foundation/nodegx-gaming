@@ -314,7 +314,20 @@ their names for now):
   set lays its passes in the attitude she had when it came (`raid.mjs` `wpWorld`). The helm's outside view
   (`seats/helm.mjs` `CHASE`, `orbit`): the right mouse button turns it (`Input` gives `odx`, `ody`, `owheel`), T
   keeps the contact in view.
-- **Not built yet**: maintenance on your own cutter in the hangar and her damage carried between pages; the host under
+- **Her upkeep** (`src/carrier/upkeep.mjs`): `Upkeep` keeps a carried ship's state in the voyage
+  (`ships[berthKey].hurt`: `{ nodes: { compartment: health }, prop, stock: [per turret], scars: [compartment…] }`,
+  `setHurt`; `setShip` keeps it). Aboard her (`G.upkeep`, made with her berth, `live: { ship, plant, guns }`) it is
+  put on her at load and saved every `UPKEEP.save` seconds and on `pagehide`; from the carrier (`berths.mjs`, one per
+  berthed ship) the record is her state. `frame(dt, { working, you })`: the hangar crew on `hurt()[0]` (working first
+  in `integrity.mend` `order`/`works`, then whole), refuelling and rearming, at `UPKEEP` rates. `held()` is why she
+  may not launch (reactor, power or drive under `works`, tanks under `UPKEEP.low`): `Berth` takes it as its `held`
+  hook (L refused) and `pilot.mjs` fails a `launch` leg on it. `UpkeepLook` (carrier side) puts a scorch on her skin
+  over each scar (raycast from her nearest side onto her drawn hull), a plate once it works, weld sparks on the job,
+  and a canvas board on her platform; `Berths.frame` runs them and the use at the board (hold E with the tool kit:
+  `UPKEEP.you` more). `hurtOf` turns a `rebuilt` wreck into a record at `UPKEEP.wreck`. The pilot's `hold` leg takes
+  `until: "told"` (ends on `pilot.release()`, or a new plan); `Berth` takes a `crew` hook and marks `lastRecovery.crew` with who
+  flew it.
+- **Not built yet**: the hangar crew drawn at work on her; the host under
   way and taking a push; the drums as solids; the cradle's arms drawn; a side-looking docking camera; recorded
   voices for her crew; the player giving fire-control orders (`firecontrol` is an unlock with nothing behind it).
 
@@ -329,7 +342,7 @@ their names for now):
 
 **The scripted checks' baselines** (seed 7, 22 November 2026, the 314 m carrier): raid ad2a8406, hull 20ef1760, helm
 4b766a23, landing 53faa5da, repair 5b8b23e6, collide 028d255d, bandits 6de728ae, missiles 39d01e76, walk 0bc2cf45,
-float 2eb50df7, brace b68467c9, career d747c09c, cutter 9756121a (22 November 2026, her crew fighting and mending; was 493f4ef5), berth 52032305, recover 306d2c1c, bump 5be73cad, pilot 58d76b28, service a140cbdf (three pages: carrier, cutter, carrier; `runAll` follows a scenario's `next` into a fresh page with the same voyage). The whole run takes about nine minutes. `runAll` starts every page from a fresh voyage (which berths are full is part of what is solid); `recover` flies the lane to a capture, a wave-off and flight control's recovery; `bump` plays scrapes, a holing, a swing, the bay door open and shut, and a wreck. A change that should not change how
+float 2eb50df7, brace b68467c9, career d747c09c, cutter 9756121a (22 November 2026, her crew fighting and mending; was 493f4ef5), berth 52032305, recover 306d2c1c, bump 5be73cad, pilot 89570b6f (22 November 2026, its recovery marked `crew`; was 58d76b28), service a140cbdf (three pages: carrier, cutter, carrier; `runAll` follows a scenario's `next` into a fresh page with the same voyage). The whole run takes about nine minutes. `runAll` starts every page from a fresh voyage (which berths are full is part of what is solid); `recover` flies the lane to a capture, a wave-off and flight control's recovery; `bump` plays scrapes, a holing, a swing, the bay door open and shut, and a wreck. A change that should not change how
 a ship behaves must leave every one as it is. `cutter` plays her rooms, the helm, a burn and a half turn, the turret,
 the cutaway and a raid; `berth` plays the launch from the carrier's hangar, a refusal when too fast, and the recovery.
 Run `walk` with nothing else loading the machine (it waits in real time); `brace` is pinned at z −50 in the spine. The

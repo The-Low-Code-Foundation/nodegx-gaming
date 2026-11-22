@@ -18,7 +18,8 @@
 //                                    `speed` m/s. A short hop is flown on the jets alone; a long one is turn, burn,
 //                                    coast, flip, burn, then the jets for the last metres. A straight line that would
 //                                    pass through the host's keep-out goes round by one or two waypoints (`route`).
-//   { do: 'hold', secs, at? }        keep station (where she is, or at `at`) for `secs`
+//   { do: 'hold', secs, at? }        keep station (where she is, or at `at`) for `secs`; with `until: 'told'`, until
+//                                    `pilot.release()` (the next order: a career's, the helm's)
 //   { do: 'turn', to }               `to`: 'prograde', 'retrograde', 'host-parallel', or an attitude in the frame
 //                                    ([x, y, z, w] or a Quaternion)
 //   { do: 'recover' }                to the lane's holding point, parallel to the host, request recovery (L), slide in
@@ -330,7 +331,7 @@ export class Pilot {
   /** The leg failed: the plan stops here. */
   fail(why) {
     if (this.leg) this.leg.note = { ...(this.leg.note ?? {}), failed: why };
-    this.G.helmSight.say(`${this.who}: ${why}. You have the helm.`, 6);
+    this.G.helmSight.say(`${this.who}: ${why.replace(/\.$/, '')}. You have the helm.`, 6);
     this.record();
     this.end(false, why);
   }
@@ -444,6 +445,7 @@ export class Pilot {
   fly_launch(L) {
     const b = this.berth, K = this.K, F = L.F;
     if (!b) return this.fail('she is not on a cradle');
+    if (L.ph === 'start' && b.phase === 'berthed' && b.held?.()) return this.fail(b.held()); // not cleared to launch (upkeep.mjs)
     if (L.ph === 'start') {
       if (b.phase === 'berthed') {
         this.C.bus?.emit('call', { id: 'pilot-standby' });
@@ -566,7 +568,12 @@ export class Pilot {
     return false;
   }
 
-  /** Keep station for `secs`: where she is and as she lies, or at `at`. */
+  /** A leg that waits to be told (`hold` with `until: 'told'`) ends now; the plan goes on to its next leg. */
+  release() {
+    if (this.busy && this.leg?.until === 'told') this.leg.told = true;
+  }
+
+  /** Keep station for `secs`: where she is and as she lies, or at `at`; or with `until: 'told'`, until `release()`. */
   fly_hold(L) {
     const F = L.F;
     if (L.ph === 'start') {
@@ -577,8 +584,9 @@ export class Pilot {
     const T = F.toWorld(_p.copy(L.pt));
     this.steer(_aim.copy(F.quat(_fq)).multiply(L.hold));
     this.goPoint(T, this.K.vJets);
-    this.phase = Number.isFinite(L.secs) ? `on station · ${Math.max(0, Math.ceil((L.secs ?? 0) - L.t))} s` : 'holding her here';
-    if (L.t >= (L.secs ?? 0)) (this.truth(L, T), this.next());
+    const told = L.until === 'told';
+    this.phase = told ? 'on station · holding until told' : Number.isFinite(L.secs) ? `on station · ${Math.max(0, Math.ceil((L.secs ?? 0) - L.t))} s` : 'holding her here';
+    if (told ? L.told : L.t >= (L.secs ?? 0)) (this.truth(L, T), this.next());
   }
 
   /** Turn her: `to` 'prograde', 'retrograde', 'host-parallel', or an attitude in the frame. */

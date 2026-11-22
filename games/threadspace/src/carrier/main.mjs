@@ -61,6 +61,7 @@ import { Pilot } from './pilot.mjs';
 import { Mend } from './mend.mjs';
 import { CrewOrders } from './crew-orders.mjs';
 import { Berths, berthKey } from './berths.mjs';
+import { Upkeep } from './upkeep.mjs';
 import { setShip, goAboard, arrived } from '../core/voyage.mjs';
 import { Collisions, ShipCollisions } from './collide.mjs';
 import { berthedOthers } from './berthed.mjs';
@@ -459,6 +460,7 @@ let host = null; // ?host=<id>: a second ship beside her, made at the end of thi
 let berth = null; // ?berth=<id>: she is carried in that berth of the host's hangar (berth.mjs), made with the host
 let pilot = null; // the crew at the helm (pilot.mjs): a carried ship's, made with her berth; a small ship's own, at the end
 let mend = null, orders = null; // a small ship's crew: mending her (mend.mjs) and who does what (crew-orders.mjs)
+let upkeep = null; // a carried ship's upkeep on her cradle, her damage kept between pages (upkeep.mjs)
 let hostDoors = null, hostHangar = null; // the host's bay doors, worked from here, and her hangar deck, drawn round you
 
 function frame() {
@@ -531,6 +533,8 @@ function tick(dt) {
   repairs?.frame(dt, f, walker, mode); // the repair crews on the damaged fighters' pads; holds the one you are in
   hullRepair?.frame(dt, f, walker, mode); // the drones and damage control parties mending her, by priority
   mend?.frame(dt, orders ? orders.crew.filter((c) => c.job === 'repair') : [], f, walker, mode); // her hands and you mending her systems
+  upkeep?.frame(dt, { working: berth?.phase === 'berthed' }); // a carried ship's hangar crew, while she is on her cradle
+  G.berths?.frame(dt, f, walker, mode); // the carried ships' upkeep, seen from the host
 
   // Which decks are drawn: the one you stand on; the bridge from the helm; none from the chase view; the hangar deck
   // from a fighter (you are in it, or you can see into it through the open bay); all in the cutaway.
@@ -824,6 +828,8 @@ if (HOST_ID) {
     berth = G.berth = new Berth({
       C, body, H, hostDoors, spec,
       say: (t, secs) => helmSight.say(t, secs),
+      held: () => upkeep?.held() ?? null, // not cleared to launch while the hangar crew have her vital systems down (upkeep.mjs)
+      crew: () => (pilot?.busy ? pilot.who : null), // a recovery the crew flew is marked so (`lastRecovery.crew`)
       // Where she is, for the next page: in her berth, or out.
       // Her radiators stay folded in the bay and on the way in and out; they spread once she is clear.
       onChange: (phase) => (carriedRads(phase), phase === 'berthed' ? setShip(berthKey(HOST_ID, spec.id), { ship: SHIP_ID }) : phase === 'out' ? setShip(berthKey(HOST_ID, spec.id), { ship: SHIP_ID, out: true }) : null)
@@ -854,6 +860,8 @@ if (HOST_ID) {
     }
     window.__carrier.berth = berth;
     window.__carrier.hostDoors = hostDoors;
+    // What her last sortie did to her, from the voyage, and the hangar crew on her while she is on her cradle.
+    upkeep = G.upkeep = window.__carrier.upkeep = new Upkeep({ L, key: berthKey(HOST_ID, spec.id), live: { ship, plant, guns }, say: (t) => helmSight.say(t, 4) });
   }
   // She is solid against her host (collide.mjs `ShipCollisions`): the host's outside, her hangar, cradles and parked
   // fighters, and the ships in her other berths (berthed.mjs: drawn here for that, nothing to use). A crash that

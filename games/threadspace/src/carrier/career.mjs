@@ -590,7 +590,7 @@ export class Career {
           if (this.pilot?.hasHelm && b.phase !== 'berthed') s.crew = true; // the crew's pilot flew some of it: not yours
           if (!l || l === s.seen || b.phase !== 'berthed') break;
           const launch = this.K.steps.findLastIndex((x, k) => k < this.i && x.do === 'launch');
-          if (!l.manual || s.crew) this.fail(launch);
+          if (!l.manual || s.crew || l.crew) this.fail(launch); // (`l.crew`: the crew's pilot had her at the capture)
           else if (GRADES.indexOf(l.grade) > GRADES.indexOf(st.grade ?? 'rough')) this.fail(launch, st.rough ?? st.fail);
           else this.complete();
           break;

@@ -3,8 +3,10 @@
 // ship loads the page again for her. What must survive that is here, in localStorage:
 //
 //   aboard   the ship you are in
-//   ships    per carried ship, keyed "<host id>/<berth id>" (berths.mjs `berthKey`): { ship, out }. `out: true` while
-//            she is away from her berth; no entry, or `out` unset, and she is on her cradle.
+//   ships    per carried ship, keyed "<host id>/<berth id>" (berths.mjs `berthKey`): { ship, out, rebuilt, hurt }.
+//            `out: true` while she is away from her berth; no entry, or `out` unset, and she is on her cradle.
+//            `rebuilt`: a wreck brought back to her cradle (collide.mjs). `hurt`: her damage, reaction mass and rounds
+//            as she was last seen (carrier/upkeep.mjs), which the hangar crew work on while she is on her cradle.
 //
 // The career's own save (career.mjs) is still its own key; it joins this one when the career is rewritten for the
 // cutter (ROADMAP phase 13).
@@ -32,10 +34,20 @@ export function saveVoyage(v) {
   }
 }
 
-/** Notes where the carried ship `key` ("<host>/<berth>") is: `{ ship }` on her cradle, `{ ship, out: true }` away. */
+/** Notes where the carried ship `key` ("<host>/<berth>") is: `{ ship }` on her cradle, `{ ship, out: true }` away.
+ *  Her `hurt` is kept unless `where` gives one. */
 export function setShip(id, where) {
   const v = loadVoyage();
-  v.ships[id] = where;
+  const hurt = v.ships[id]?.hurt;
+  v.ships[id] = hurt && !('hurt' in where) ? { ...where, hurt } : where;
+  saveVoyage(v);
+  return v;
+}
+
+/** Her damage, reaction mass and rounds (carrier/upkeep.mjs), for the next page that shows her. */
+export function setHurt(id, hurt, more = {}) {
+  const v = loadVoyage();
+  v.ships[id] = { ...(v.ships[id] ?? {}), ...more, hurt };
   saveVoyage(v);
   return v;
 }

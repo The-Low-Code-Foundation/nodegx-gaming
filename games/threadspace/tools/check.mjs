@@ -66,7 +66,7 @@ const SEATS = ['gun', 'fighter', 'helm'];
 const CAREERS = 'content/careers';
 const STEPS_SERVICE = [...STEPS, 'pilot', 'obey'];
 const UNLOCKS_SERVICE = ['guns', 'helm', 'launch', 'firecontrol', 'fighters', 'raids'];
-const LEGS = ['launch', 'goto', 'hold', 'turn', 'recover'];
+const LEGS = ['launch', 'goto', 'hold', 'turn', 'recover', 'fight'];
 const GRADES = ['clean', 'fair', 'rough'];
 const DEPTS = ['command', 'flight', 'engineering', 'crew'];
 const POSES = ['idle', 'walk', 'sitChair', 'workTable', 'talk', 'lookAround'];
@@ -347,7 +347,7 @@ export async function check({ root = ROOT, ship = 'carrier' } = {}) {
         for (const leg of st.plan ?? []) {
           if (!LEGS.includes(leg.do)) bad(`${at}: leg "${leg.do}" (${LEGS.join(', ')})`);
           if (leg.do === 'goto' && !(Array.isArray(leg.at) && leg.at.length === 3)) bad(`${at}: a goto leg needs at [x, y, z]`);
-          if (leg.do === 'hold' && !(leg.secs > 0)) bad(`${at}: a hold leg needs secs`);
+          if (leg.do === 'hold' && !(leg.secs > 0) && leg.until !== 'told') bad(`${at}: a hold leg needs secs, or until "told"`);
         }
         if (st.until && !(st.plan ?? []).some((leg) => leg.do === st.until)) bad(`${at}: until "${st.until}" is not a leg of its plan`);
         if (!st.self) bad(`${at}: no self (the card's line when there is no crew pilot and you fly it)`);

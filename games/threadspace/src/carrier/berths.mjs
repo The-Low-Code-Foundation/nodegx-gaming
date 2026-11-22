@@ -8,6 +8,11 @@
 // At her port, E takes you aboard: the voyage notes it and her page loads (src/core/voyage.mjs).
 //
 // A berth whose ship is out (the voyage says so, and that you are aboard her) stands empty.
+//
+// Each berthed ship has her upkeep (upkeep.mjs): what her last sortie did to her, read from the voyage, shown on her
+// skin (scorches, then welded plates), mended, refuelled and rearmed by the hangar crew while you are about the
+// carrier, with a board at her platform and a use there to work with them (hold E, with a tool kit). `frame()` each
+// tick (main.mjs).
 
 import * as THREE from 'three';
 import { buildCarrier, loadHull } from './layout.mjs';
@@ -15,6 +20,7 @@ import { buildThrusterMeshes, thrustersFromLayout } from './newton.mjs';
 import { loadLayout, fetchJson } from '../core/ship.mjs';
 import { loadVoyage, goAboard } from '../core/voyage.mjs';
 import { berthSpurs } from './sets/hangar.mjs';
+import { Upkeep, UpkeepLook } from './upkeep.mjs';
 
 /** The key a carried ship is noted under in the voyage: her host and her berth. */
 export const berthKey = (hostId, berthId) => `${hostId}/${berthId}`;
@@ -25,7 +31,7 @@ export class Berths {
     this.G = G;
     this.id = id;
     this.code = code;
-    this.ships = []; // { spec, P (the built ship), group }
+    this.ships = []; // { spec, P (the built ship), group, upkeep, look, use }
     const hangar = G.C.rooms.get('hangar');
     this.I = hangar && G.C.decks.get(hangar.deck);
   }
@@ -69,9 +75,36 @@ export class Berths {
       const inward = -Math.sign(port[0] || spec.out || 1); // toward the centreline, where you stand
       const name = SL.name?.toLowerCase() ?? spec.ship;
       this.I.use(`berth-${spec.id}`, `Go aboard the ${name}`, port[0] + inward * 1.2, port[2], () => (this.G.sfx?.cue('hiss', { vol: 0.4 }), goAboard(spec.ship, { host: this.id, berth: spec.id }, { line: 'Docking port shut behind you. Filling the lock.' })), { r: 3, y: port[1] });
-      this.ships.push({ spec, P, group });
+      // Her upkeep: the board on her platform, beside her port, facing the gangway; E there works with the crew.
+      const upkeep = new Upkeep({ L: SL, key: berthKey(this.id, spec.id), say: (t) => this.G.dc?.say(null, t, 0, 4) });
+      addEventListener('pagehide', () => upkeep.save());
+      const bx = port[0] + inward * 0.5, bz = port[2] - 2.6, by = port[1] + 0.5;
+      const look = new UpkeepLook({ G: this.G, P, I: this.I, upkeep, board: { at: [bx, by, bz], yaw: inward > 0 ? Math.PI / 2 : -Math.PI / 2 } });
+      const use = this.I.use(`upkeep-${spec.id}`, '', bx + inward * 1.2, bz, () => this.press(upkeep), { r: 1.8, y: port[1] });
+      this.ships.push({ spec, P, group, upkeep, look, use });
     }
     return this;
+  }
+
+  /** E at a ship's upkeep board: says what is missing (holding E does the work, `frame`). */
+  press(upkeep) {
+    const dc = this.G.dc;
+    if (!upkeep.hurt().length) return dc?.say(null, upkeep.held() ?? 'Nothing to mend on her: the hangar crew are seeing to her tanks and magazines.', 0, 4);
+    if (dc && !dc.carry.has('toolkit')) dc.say(null, `You need ${dc.D.kits.toolkit?.name ?? 'a tool kit'} to work on her. ${dc.whereKit('toolkit')}`);
+  }
+
+  /** Each frame: the hangar crew at every berthed ship, you with them if you hold E at her board with a tool kit. */
+  frame(dt, f, walker, mode) {
+    const kit = !this.G.dc || this.G.dc.carry.has('toolkit');
+    for (const s of this.ships) {
+      const here = mode === 'walk' && walker.nearestUse() === s.use;
+      const top = s.upkeep.hurt()[0];
+      const on = here && kit && !!top && f.keys.has('KeyE');
+      s.upkeep.frame(dt, { working: true, you: on });
+      s.look.frame(dt);
+      const name = s.P.L.name?.toLowerCase() ?? 'ship';
+      s.use.label = !top ? `The ${name}'s upkeep: ${s.upkeep.held() ? 'refuelling' : 'ready to fly'}` : !kit ? `The ${name}'s ${s.upkeep.nameOf(top.id)} needs mending (${Math.round(top.h)}%): you need a tool kit` : on ? `Working on her ${s.upkeep.nameOf(top.id)} with the hangar crew: ${Math.round(top.h)}%` : `Hold E: work on her ${s.upkeep.nameOf(top.id)} with the hangar crew (${Math.round(top.h)}%)`;
+    }
   }
 
   /** The way up to each berth's platform and back: E at the foot of its ramp hauls you up a guide line to the port, E
