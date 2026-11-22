@@ -39,6 +39,7 @@ is `localStorage['lumiere.save.v1']`; clear it (or "Start a new château…" in 
 | `src/friends.mjs` | The castle characters (chefs, Hoot, Fig, Madame Lune, Captain Buttons, the Diary, Basile the gnome, Étoile the pegasus), drawn in code. |
 | `src/exterior.mjs` | The château outside, on the title screen. |
 | `src/fx.mjs`, `src/look.mjs`, `src/face.mjs`, `src/audio.mjs` | Spell effects, post-processing and quality, the heroine's face, synthesised sound (no audio files). |
+| `src/tunes.mjs`, `src/music.mjs` | **The background music as data**: `TUNES` holds four short pieces (two `bright`, two `dark`) as chords and notes; `music.mjs` plays them with synthesised instruments, re-arranging each section every time it comes round (`ARRANGE`). |
 
 ## Readiness: B
 
@@ -118,6 +119,14 @@ items and asks the ones not yet answered right more often.
 (`answer` = index into `choices`, `explain` optional), so you can replace its body with anything.
 
 Hoot's books (`BOOKS` in `src/books.mjs`) carry one question each in `ask`; add a book by adding an entry.
+
+## How to change the music
+
+`playMusic('bright' | 'dark' | null)` in `src/audio.mjs` picks the mood: `bright` in a won room or a hub won back,
+`dark` in a cursed room and its fight. The pieces are in `src/tunes.mjs`; the comment at its top explains the format
+(`'F | Dm | Gm7 C7'` for chords, `'C5:1 F5:1 G5:1 | A5:2 F5:1'` for the tune). To add a piece, copy one, write its
+sections and `form`, and add it to `TUNES.bright` or `TUNES.dark`. Then `node src/music.mjs check` says whether every
+bar adds up. A new sound for the tune is an instrument in `INST` plus an entry in `ARRANGE` (`src/music.mjs`).
 
 ## Things to know
 

@@ -1,7 +1,9 @@
-// Sound, made in the browser (no files): chimes for spells, a thump for hits, a fanfare for a win, a low hum in a dark
-// room and a music-box tune in a won one. `?mute=1` or the setting turns it all off. Starts on the first tap (browsers
+// Sound, made in the browser (no files): chimes for spells, a thump for hits, a fanfare for a win, and the background music
+// (src/music.mjs). `?mute=1` or the setting turns it all off. Starts on the first tap (browsers
 // keep audio asleep until then).
-let ctx = null, master = null, musicGain = null, music = null;
+import { musicPlayer } from './music.mjs';
+
+let ctx = null, master = null, musicGain = null, player = null;
 let muted = false;
 
 export function setMuted(m) {
@@ -21,6 +23,7 @@ export function wake() {
   musicGain = ctx.createGain();
   musicGain.gain.value = 0.35;
   musicGain.connect(master);
+  player = musicPlayer(ctx, musicGain);
 }
 
 function tone(freq, { at = 0, dur = 0.3, type = 'sine', vol = 0.3, attack = 0.005, slide = 0, out = master } = {}) {
@@ -76,50 +79,10 @@ export function sfx(name) {
   }
 }
 
-// Background music: 'dark' (a slow low drone with drips) or 'bright' (a music-box tune), or null.
+// Background music: 'bright' (a won room, a hub won back), 'dark' (a cursed room, the fights), or null. The pieces
+// are in src/tunes.mjs; src/music.mjs plays them.
 export function playMusic(kind) {
-  if (!ctx) return;
-  if (music?.kind === kind) return;
-  music?.stop();
-  music = null;
-  if (!kind) return;
-  let timer = null, step = 0, stopped = false;
-  const voice = ctx.createGain();
-  voice.gain.value = 0;
-  voice.connect(musicGain);
-  voice.gain.linearRampToValueAtTime(1, ctx.currentTime + 1.5);
-  if (kind === 'dark') {
-    const oscs = [55, 55 * 1.5, 55 * 2.02].map((f) => {
-      const o = ctx.createOscillator(), g = ctx.createGain();
-      o.type = 'sine';
-      o.frequency.value = f;
-      g.gain.value = 0.12;
-      o.connect(g).connect(voice);
-      o.start();
-      return o;
-    });
-    const drip = () => {
-      if (stopped) return;
-      tone(N(84 + Math.floor(Math.random() * 6)), { dur: 0.25, type: 'sine', vol: 0.05, slide: 0.6, out: voice });
-      timer = setTimeout(drip, 1500 + Math.random() * 3000);
-    };
-    drip();
-    music = { kind, stop: () => ((stopped = true), clearTimeout(timer), voice.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.8), oscs.forEach((o) => o.stop(ctx.currentTime + 1))) };
-  } else {
-    // A little waltz in F major, round and round.
-    const tune = [65, 69, 72, 77, 76, 72, 74, 72, 69, 70, 72, 69, 65, 67, 69, 72, 70, 67, 65, 64, 65, 69, 72, 77];
-    const bass = [41, 48, 41, 48, 43, 50, 36, 43];
-    const tick = () => {
-      if (stopped) return;
-      tone(N(tune[step % tune.length] + 12), { dur: 0.9, type: 'sine', vol: 0.09, out: voice });
-      tone(N(tune[step % tune.length] + 24), { dur: 0.4, type: 'sine', vol: 0.025, out: voice });
-      if (step % 3 === 0) tone(N(bass[Math.floor(step / 3) % bass.length] + 12), { dur: 1.2, type: 'triangle', vol: 0.06, out: voice });
-      step++;
-      timer = setTimeout(tick, 330);
-    };
-    tick();
-    music = { kind, stop: () => ((stopped = true), clearTimeout(timer), voice.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.8)) };
-  }
+  player?.play(kind);
 }
 
 // A piano-ish note (MIDI number), for Maestro Fig's piano and the ball's tunes: a struck triangle with a soft octave
