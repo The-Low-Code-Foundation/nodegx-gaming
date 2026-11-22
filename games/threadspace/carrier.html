@@ -11,6 +11,27 @@
     </script>
   </head>
   <body>
+    <!-- Crossing between ships (src/core/voyage.mjs): the airlock's card, up from the first paint of the page you
+         arrive on until the ship is built (main.mjs takes it down), and on the page you leave while the lock cycles. -->
+    <div id="c-lock" hidden>
+      <div class="c-lock-box">
+        <div class="c-lock-title">AIRLOCK</div>
+        <div class="c-lock-line" id="c-lock-line">Cycling</div>
+        <div class="c-lock-bar"><i></i></div>
+      </div>
+    </div>
+    <script>
+      // Arriving through a docking port (?berth=… aboard the carried ship, ?at=berth:… back aboard her host).
+      if (/[?&]wreck=/.test(location.search)) {
+        document.getElementById('c-lock').hidden = false;
+        document.querySelector('.c-lock-title').textContent = 'CRASH AND RESCUE';
+        document.getElementById('c-lock-line').textContent = 'Coming round in the sick bay.';
+      } else if (/[?&](berth=|at=berth(:|%3A))/i.test(location.search)) {
+        const el = document.getElementById('c-lock');
+        el.hidden = false;
+        document.getElementById('c-lock-line').textContent = 'Equalising. Inner door opening.';
+      }
+    </script>
     <section id="c-stage">
       <canvas id="view"></canvas>
       <div id="c-labels" hidden></div>

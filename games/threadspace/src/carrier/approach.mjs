@@ -15,10 +15,41 @@ import * as THREE from 'three';
 import { clamp } from '../util.mjs';
 
 const STEP = 40; // metres between rings
-const COLOR = { idle: '#4fd0e0', good: '#40ff80', line: '#ffb030', slow: '#ffb030', fast: '#ff4030', lane: '#4fd0e0' };
+export const COLOR = { idle: '#4fd0e0', good: '#40ff80', line: '#ffb030', slow: '#ffb030', fast: '#ff4030', lane: '#4fd0e0' };
 const _v = new THREE.Vector3();
 const _q = new THREE.Quaternion();
 const _n = new THREE.Vector3();
+
+/** A gate's light: additive, never tone mapped, left whole by the cutaway. One per gate, so each takes its own call.
+ *  (recovery.mjs, the lane for a ship that berths sideways, draws its gates with it too.) */
+export function laneMat() {
+  const m = new THREE.MeshBasicMaterial({ color: COLOR.idle, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false });
+  m.userData.uncut = true; // the cutaway's planes leave it whole
+  return m;
+}
+
+/** Lights a lane's `gates` (each with `userData.along` and `userData.mat`, the far one last) for a craft `along`
+ *  metres out: the next gate ahead of her carries the call's colour (`tone`, a hex colour); the ones she has passed
+ *  fade; off the lane (`inLane` false) they are all idle and the far one pulses. */
+export function lightLane(gates, along, inLane, tone) {
+  let next = null;
+  for (const r of gates) if (r.userData.along < along - 2 && (!next || r.userData.along > next.userData.along)) next = r;
+  const pulse = 0.55 + 0.45 * Math.sin(performance.now() / 180);
+  for (const r of gates) {
+    const m = r.userData.mat;
+    if (!inLane) {
+      m.color.set(COLOR.idle);
+      m.opacity = r === gates[gates.length - 1] ? 0.4 + 0.5 * pulse : 0.35;
+    } else if (r === next) {
+      m.color.set(tone);
+      m.opacity = 0.95;
+    } else {
+      m.color.set(COLOR.idle);
+      m.opacity = r.userData.along > along ? 0.12 : 0.4;
+    }
+  }
+  return next;
+}
 
 /** The speed the lane wants `along` metres out: 4 m/s at the gate, rising to 40 m/s 400 m out. */
 export const wantAt = (along) => clamp(4 + along * 0.09, 4, 40);
@@ -34,8 +65,7 @@ export class Approach {
     this.rings = [];
     const R = this.S.ring ?? 7;
     for (let a = 0; a <= this.len + 0.1; a += STEP) {
-      const m = new THREE.MeshBasicMaterial({ color: COLOR.idle, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false });
-      m.userData.uncut = true; // the cutaway's planes leave it whole
+      const m = laneMat();
       const ring = new THREE.Group();
       // A ring of eight light bars, not a solid hoop: it reads as lights at a distance and does not hide the bay.
       for (let k = 0; k < 8; k++) {
@@ -99,22 +129,7 @@ export class Approach {
     else s.call = 'good';
     if (!show) return s;
     // The next ring ahead of her carries the call; the ones she has passed fade; the far one pulses when she is off the lane.
-    let next = null;
-    for (const r of this.rings) if (r.userData.along < s.along - 2 && (!next || r.userData.along > next.userData.along)) next = r;
-    const pulse = 0.55 + 0.45 * Math.sin(performance.now() / 180);
-    for (const r of this.rings) {
-      const m = r.userData.mat;
-      if (!s.inLane) {
-        m.color.set(COLOR.idle);
-        m.opacity = r === this.rings[this.rings.length - 1] ? 0.4 + 0.5 * pulse : 0.35;
-      } else if (r === next) {
-        m.color.set(COLOR[s.call] ?? COLOR.good);
-        m.opacity = 0.95;
-      } else {
-        m.color.set(COLOR.idle);
-        m.opacity = r.userData.along > s.along ? 0.12 : 0.4;
-      }
-    }
+    lightLane(this.rings, s.along, s.inLane, COLOR[s.call] ?? COLOR.good);
     return s;
   }
 }

@@ -53,28 +53,42 @@ export class Thrusters {
       if (t.c[k] > 0) this.norm.pos[k] = Math.max(this.norm.pos[k], t.c[k]);
       else this.norm.neg[k] = Math.max(this.norm.neg[k], -t.c[k]);
     }
+    // The same for the manoeuvring jets alone (docking mode never lights the main drive).
+    this.normJ = { pos: new Array(AXES).fill(0), neg: new Array(AXES).fill(0) };
+    for (const t of list) if (t.kind !== 'main') for (let k = 0; k < t.axes; k++) {
+      if (t.c[k] > 0) this.normJ.pos[k] = Math.max(this.normJ.pos[k], t.c[k]);
+      else this.normJ.neg[k] = Math.max(this.normJ.neg[k], -t.c[k]);
+    }
     // What the ship can really do on each axis each way (m/s² and rad/s²): asked for flat out, what comes out.
     this.cap = { pos: [], neg: [] };
+    this.capJ = { pos: [], neg: [] }; // and on her jets alone
     const u = new Array(AXES).fill(0);
-    for (let k = 0; k < AXES; k++) {
-      for (const s of [1, -1]) {
-        u.fill(0);
-        u[k] = s;
-        const out = this.allocate(u);
-        this.cap[s > 0 ? 'pos' : 'neg'][k] = Math.abs(out[k]);
+    for (const [cap, jets] of [[this.cap, false], [this.capJ, true]]) {
+      for (let k = 0; k < AXES; k++) {
+        for (const s of [1, -1]) {
+          u.fill(0);
+          u[k] = s;
+          const out = this.allocate(u, jets);
+          cap[s > 0 ? 'pos' : 'neg'][k] = Math.abs(out[k]);
+        }
       }
     }
     this.allocate(u.fill(0));
   }
 
-  /** Sets every thruster's throttle for command `u` and returns the six accelerations they make together. */
-  allocate(u) {
-    const out = new Array(AXES).fill(0);
+  /** Sets every thruster's throttle for command `u` and returns the six accelerations they make together. `jets`:
+   *  the manoeuvring jets only, the main drives shut (docking mode). */
+  allocate(u, jets = false) {
+    const out = new Array(AXES).fill(0), N = jets ? this.normJ : this.norm;
     for (const t of this.list) {
+      if (jets && t.kind === 'main') {
+        t.throttle = 0;
+        continue;
+      }
       let s = 0;
       for (let k = 0; k < t.axes; k++) {
         if (!u[k]) continue;
-        const n = u[k] > 0 ? this.norm.pos[k] : this.norm.neg[k];
+        const n = u[k] > 0 ? N.pos[k] : N.neg[k];
         if (n) s += (u[k] * t.c[k]) / n;
       }
       t.throttle = clamp(s, 0, t.health ?? 1); // a damaged thruster gives what it still can (integrity.mjs)
@@ -83,9 +97,10 @@ export class Thrusters {
     return out;
   }
 
-  /** The most the thrusters can give on axis `k` in the direction of `sign`. */
-  capOf(k, sign) {
-    return sign >= 0 ? this.cap.pos[k] : this.cap.neg[k];
+  /** The most the thrusters can give on axis `k` in the direction of `sign` (`jets`: on the manoeuvring jets alone). */
+  capOf(k, sign, jets = false) {
+    const c = jets ? this.capJ : this.cap;
+    return sign >= 0 ? c.pos[k] : c.neg[k];
   }
 }
 
@@ -129,10 +144,85 @@ export class Helm {
     this.cruise = null;
     this.set = 0;
     this.assistWas = this.assist;
+    // Docking mode (`dockMode()`), for slow, exact flying beside a mothership: see `dockFrame`.
+    this.dock = null;
+  }
+
+  /** Docking mode on or off. On, the keys no longer push: each tap of a slide key changes a set velocity (against
+   *  `ref`, in her own frame) by `step` m/s (held past `after` s it runs at `ramp` m/s²), and the jets fly her to it
+   *  and hold it; X sets it to zero. The main drive stays shut. The stick and the turn keys ask for a slow turn rate
+   *  (`rate`, rad/s, full over), and she stops turning when you let go. `aim` (a world attitude, or a function that
+   *  gives one) with `hold` true is held instead: the jets turn her to it and keep her there, until a turn key is
+   *  touched. It is the jets doing all of it: nothing here moves her but `allocate`. */
+  dockMode(on, opts = {}) {
+    if (!on) return (this.dock = null);
+    const v = this.localVel(new THREE.Vector3());
+    const r = (x) => Math.round(x * 10) / 10;
+    this.dock = { on: true, set: new THREE.Vector3(r(v.x), r(v.y), r(v.z)), was: [0, 0, 0], held: [0, 0, 0], step: 0.1, after: 0.4, ramp: 0.8, max: 8, tau: 0.7, rate: 0.07, tauW: 0.5, tauA: 2, aim: null, hold: false, ...opts };
+    return this.dock;
+  }
+
+  /** What the instruments call the assist while docking mode is on (hud.mjs reads `assistName`). */
+  get assistName() {
+    return this.dock?.on ? `DOCKING${this.dock.hold ? ' · HDG HOLD' : ''}` : undefined;
+  }
+
+  /** A frame in docking mode: velocities set and held on the jets, a slow turn rate or an attitude held. */
+  dockFrame(f, dt, hands) {
+    const D = this.dock, u = this.u.fill(0), k = f.keys, b = this.body, thr = this.thr;
+    const key = (c) => (hands && k.has(c) ? 1 : 0);
+    if (hands && (f.dx || f.dy)) {
+      this.stick.x = clamp(this.stick.x + f.dx * 0.004, -1, 1);
+      this.stick.y = clamp(this.stick.y - f.dy * 0.004, -1, 1);
+    }
+    const decay = Math.max(0, 1 - dt * 2.2);
+    this.stick.x *= decay;
+    this.stick.y *= decay;
+    this.spaceWas = !!key('Space'); // Space does nothing here: K leaves docking mode
+    // The set velocity: a tap is a step, a held key runs it.
+    const ax = [key('KeyD') - key('KeyA'), key('KeyR') - key('KeyF'), key('KeyS') - key('KeyW')];
+    for (let i = 0; i < 3; i++) {
+      let s = D.set.getComponent(i);
+      if (ax[i] && ax[i] !== D.was[i]) (s = Math.round((s + ax[i] * D.step) * 100) / 100), (D.held[i] = 0);
+      else if (ax[i] && (D.held[i] += dt) > D.after) s += ax[i] * D.ramp * dt;
+      D.was[i] = ax[i];
+      D.set.setComponent(i, clamp(s, -D.max, D.max));
+    }
+    if (key('KeyX')) D.set.set(0, 0, 0);
+    const v = this.localVel(_v);
+    for (let i = 0; i < 3; i++) {
+      const err = D.set.getComponent(i) - v.getComponent(i);
+      if (Math.abs(err) < 1e-4) continue;
+      u[i] = clamp(err / ((thr.capOf(i, err, true) || 1e-6) * D.tau), -1, 1);
+    }
+    // Turning: the keys (and, without a held heading, the stick) ask for a rate; a held heading asks for the rate
+    // that closes on it.
+    const turn = [key('ArrowUp') - key('ArrowDown'), key('ArrowLeft') - key('ArrowRight'), key('KeyZ') - key('KeyC')];
+    if (turn[0] || turn[1] || turn[2]) D.hold = false;
+    const aim = D.hold ? (typeof D.aim === 'function' ? D.aim() : D.aim) : null;
+    if (aim) {
+      // The turn from her attitude to the aim, as a vector in her own frame (its length the angle).
+      const e = _q.copy(this.obj.quaternion).invert().multiply(aim);
+      if (e.w < 0) e.set(-e.x, -e.y, -e.z, -e.w);
+      const sn = Math.hypot(e.x, e.y, e.z), ang = 2 * Math.atan2(sn, e.w);
+      _w.set(e.x, e.y, e.z).multiplyScalar(sn > 1e-9 ? ang / sn : 0);
+    } else {
+      if (!D.hold) (turn[0] = clamp(turn[0] + this.stick.y, -1, 1)), (turn[1] = clamp(turn[1] - this.stick.x, -1, 1));
+      for (let i = 0; i < 3; i++) if (Math.abs(turn[i]) < 0.04) turn[i] = 0;
+    }
+    for (let i = 0; i < 3; i++) {
+      const want = aim ? clamp(_w.getComponent(i) / D.tauA, -D.rate, D.rate) : turn[i] * D.rate;
+      const err = want - b.ang.getComponent(i);
+      if (Math.abs(err) < 1e-6) continue;
+      u[3 + i] = clamp(err / ((thr.capOf(3 + i, err, true) || 1e-6) * D.tauW), -1, 1);
+    }
+    this.out = thr.allocate(u, true);
+    step(this.obj, b, this.out, dt);
   }
 
   /** `f` is the input frame (input.mjs); `hands` false lets the ship fly on with nobody at the controls. */
   frame(f, dt, hands = true) {
+    if (this.dock?.on) return this.dockFrame(f, dt, hands);
     const u = this.u.fill(0);
     const k = f.keys;
     if (hands) {

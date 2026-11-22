@@ -1,0 +1,12 @@
+{
+  "id": "recover-approved",
+  "about": "Flight control approves a carried ship's request to fly herself home: the bay door goes up and the lane is lit (recovery.mjs `request`).",
+  "who": "flight",
+  "say": [
+    "Flight control. Recovery approved. Door opening. Call the line."
+  ],
+  "to": {
+    "bridge": "headset"
+  },
+  "priority": 2
+}

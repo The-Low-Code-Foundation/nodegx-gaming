@@ -36,6 +36,7 @@ export class HelmSight {
     this.onArrive = null; // the career's hook
     this.aim = {};
     this.lightDelay = null; // main.mjs: seconds before the main drive would light if asked now
+    this.dock = null; // main.mjs: the recovery lane of a ship out from a berth (recovery.mjs), which draws its display here
   }
 
   /** N at the helm: lay a waypoint (15 km out, 40° off the bow, at rest), or clear it. */
@@ -232,6 +233,13 @@ export class HelmSight {
         g.textAlign = 'left';
         g.font = '12px ui-monospace, Menlo, monospace';
       }
+    }
+    // Out from a berth: the docking display (recovery.mjs).
+    if (this.dock) {
+      this.dock.draw(g, w, h, project);
+      g.lineWidth = 1.5;
+      g.font = '12px ui-monospace, Menlo, monospace';
+      g.textAlign = 'left';
     }
     // The plant, and the panel.
     const P = this.plant;

@@ -252,8 +252,30 @@ their names for now):
   and each berth's platform. Kit racks in a room too small for them beside its door go on the wall facing it
   (`damage.mjs` `rack`).
 - **Keys**: a key handled through `input.onAction` must be in `ACTIONS` in `src/input.mjs`, or it never arrives.
-- **Not built yet** (ROADMAP phases 12 and 13): flying her in yourself; the cutter and the carrier as solids to each
-  other; the host under way; her own career, crew voices and Blender hull.
+- **Flying her home** (`src/carrier/recovery.mjs`, `berth.lane`, `helmSight.dock`): a lane in the host's frame, straight
+  out along her beam through the berth: gates in the shape of the carried ship's side profile from a holding point
+  260 m out to the hand-over point, each asking a closing speed (`wantAt`: 6 m/s out there, 0.5 at the last). Out and
+  in its catchment, **L** requests recovery (door up, lane lit); **L** again, or from outside it, is `berth.takeIn()`,
+  flight control flying her in. Through the last gate inside `LANE.catch` (speed, offset, alignment, drift) the cradle
+  takes her (`Berth.capture`, phase `capture`) with a grade kept in `berth.lastRecovery`; outside it is a wave-off and
+  she backs out past `LANE.arm`. `Recovery.draw` is the docking display at the helm. **K** is docking mode
+  (`Helm.dockMode`, `newton.mjs`: taps set small velocities against `helm.ref`, jets only, `Thrusters.allocate(u,
+  jets)`), **H** holds the berth's heading. Easier or harder is `LANE.catch`, `LANE.tol`, `LANE.want`. The fighter's
+  lane (`approach.mjs`) shares only `COLOR`, `laneMat()` and `lightLane()`.
+- **Solid to each other** (`src/carrier/collide.mjs`): `Solids` (what is solid about one built ship: outside meshes by
+  BVH, the hangar as a hollow box with door openings, cradles, parked fighters, and `addShip()` for a ship on a
+  cradle), `Collider` (the shared sweep and impulse), `Collisions` (the fighter against her own ship, as before) and
+  `ShipCollisions` (the ship you fly against her host, `__carrier.bump`). Her own shape is `shipBalls(L)`: about a
+  hundred balls from her hull sections, envelope, mounts and radiators. Contacts give a linear and angular impulse;
+  the host does not move (`pushBack` is the hook). By felt speed (`SHIP_COLLIDE`, or a layout's `collide`): a clang
+  under 4 m/s, a dent to 8, a compartment holed through her own `Integrity.arrive` above that, a wreck at 30 or with
+  her hull under 0.3. A wreck whites out and takes you to the carrier's sick bay (`?at=sickbay&wreck=<berth>&speed=`),
+  the voyage noting her `rebuilt`. Nothing runs while `berth.carried`. `src/carrier/berthed.mjs` builds the other
+  berths' ships on a host seen from the cutter's page. Bus: `ship-contact`, `ship-wrecked`; call `collision`.
+- **The crossing**: `goAboard(id, params, { line, secs })` puts up the airlock's card (`#c-lock` in `carrier.html`)
+  while the lock cycles and loads the other ship's page, which keeps it up until she is built (`arrived()`).
+- **Not built yet** (ROADMAP phases 12 and 13): the host under way and taking a push; the drums as solids; the
+  cradle's arms drawn; a side-looking docking camera; her own career and crew voices.
 
 - **The carrier's berths** (`berths` in her layout, written by `tools/carrier-v2.mjs` from the cutter's own folder and
   checked by `tools/check.mjs`: 3 m clear all round, a 44 × 11 m door): `{ id, ship, side, door, at, yaw, out, port,
@@ -265,8 +287,8 @@ their names for now):
   (`collide.mjs`), a berthed cutter is not yet.
 
 **The scripted checks' baselines** (seed 7, 22 November 2026, the 314 m carrier): raid ad2a8406, hull 20ef1760, helm
-4b766a23, landing 53faa5da, repair 5b8b23e6, collide 506e36d0, bandits 6de728ae, missiles 39d01e76, walk 0bc2cf45,
-float 2eb50df7, brace b68467c9, career d747c09c, cutter 493f4ef5, berth 52032305. A change that should not change how
+4b766a23, landing 53faa5da, repair 5b8b23e6, collide 028d255d, bandits 6de728ae, missiles 39d01e76, walk 0bc2cf45,
+float 2eb50df7, brace b68467c9, career d747c09c, cutter 493f4ef5, berth 52032305, recover 306d2c1c, bump 5be73cad. `runAll` starts every page from a fresh voyage (which berths are full is part of what is solid); `recover` flies the lane to a capture, a wave-off and flight control's recovery; `bump` plays scrapes, a holing, a swing, the bay door open and shut, and a wreck. A change that should not change how
 a ship behaves must leave every one as it is. `cutter` plays her rooms, the helm, a burn and a half turn, the turret,
 the cutaway and a raid; `berth` plays the launch from the carrier's hangar, a refusal when too fast, and the recovery.
 Run `walk` with nothing else loading the machine (it waits in real time); `brace` is pinned at z −50 in the spine. The

@@ -1,0 +1,12 @@
+{
+  "id": "recover-waveoff",
+  "about": "At the last gate outside what the cradle's arms will take: too fast, off the line, not square, or the door not up (recovery.mjs).",
+  "who": "flight",
+  "say": [
+    "Wave off, wave off. Back out and come again."
+  ],
+  "to": {
+    "bridge": "headset"
+  },
+  "priority": 4
+}

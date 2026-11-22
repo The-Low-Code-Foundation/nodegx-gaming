@@ -32,7 +32,7 @@ export class Berths {
 
   /** Builds every berthed ship. Async: each one's layout (and hull, if she has one) is fetched. */
   async build() {
-    const { L, fadeThen } = this.G;
+    const { L } = this.G;
     if (!this.I) return this;
     const voyage = loadVoyage();
     this.lines();
@@ -66,7 +66,7 @@ export class Berths {
       const port = spec.port ?? spec.at;
       const inward = -Math.sign(port[0] || spec.out || 1); // toward the centreline, where you stand
       const name = SL.name?.toLowerCase() ?? spec.ship;
-      this.I.use(`berth-${spec.id}`, `Go aboard the ${name}`, port[0] + inward * 1.2, port[2], () => fadeThen(() => goAboard(spec.ship, { host: this.id, berth: spec.id })), { r: 3, y: port[1] });
+      this.I.use(`berth-${spec.id}`, `Go aboard the ${name}`, port[0] + inward * 1.2, port[2], () => (this.G.sfx?.cue('hiss', { vol: 0.4 }), goAboard(spec.ship, { host: this.id, berth: spec.id }, { line: 'Docking port shut behind you. Filling the lock.' })), { r: 3, y: port[1] });
       this.ships.push({ spec, P, group });
     }
     return this;

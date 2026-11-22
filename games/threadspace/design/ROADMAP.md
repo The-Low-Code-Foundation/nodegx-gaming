@@ -782,6 +782,15 @@ Still to be judged by the player: the new jets and blasts in motion (they were t
 a real frame rate (a fast swing shows cab wall until the gunhouse comes round), the cutter's look from the beam
 (still a long box: her rooms fix a 34 × 10 × 5.8 m body), and whether sparse holds plus the jamb handles are enough.
 
+**Phase 12, second half (22 November 2026).** Flying her home (`recovery.mjs`: the sideways lane, the docking
+display, the capture and its grade, wave-offs, docking mode on K and heading hold on H); the cutter and the carrier
+solid to each other (`collide.mjs` `ShipCollisions`: scrapes, dents, holings, a wreck that ends in the carrier's sick
+bay), and berthed cutters solid to a flown fighter; the airlock's card over the change of ship. So of the list below,
+"Flying her in yourself", "Solids" and "The crossing" are built. What they left: the drums are not solid (a cutter
+can fly in at the sleeve's open ends), the host takes no push, a wrecked cutter is "rebuilt" in name only, the
+lane reads weakly from the flight-deck seat (the gates are abeam; a side-looking docking camera may be wanted), and
+none of it has been flown by hand.
+
 **Left in phase 12:**
 
 - **Flying her in yourself**: a lane to the gate and a capture, as `approach.mjs` and `Fighter.capture` do for a

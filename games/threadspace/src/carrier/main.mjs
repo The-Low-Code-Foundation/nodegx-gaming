@@ -56,9 +56,11 @@ import { View } from './render.mjs';
 import { Drive } from './drive.mjs';
 import { Doors } from './doors.mjs';
 import { Berth, standIn } from './berth.mjs';
+import { Recovery } from './recovery.mjs';
 import { Berths, berthKey } from './berths.mjs';
-import { setShip, goAboard } from '../core/voyage.mjs';
-import { Collisions } from './collide.mjs';
+import { setShip, goAboard, arrived } from '../core/voyage.mjs';
+import { Collisions, ShipCollisions } from './collide.mjs';
+import { berthedOthers } from './berthed.mjs';
 import { FighterDamage } from './fighter-damage.mjs';
 import { Repairs } from './fighter-repair.mjs';
 import { CarrierDamage } from './carrier-damage.mjs';
@@ -445,6 +447,7 @@ function fadeThen(fn) {
 const IDLE = { keys: new Set(), dx: 0, dy: 0, wheel: 0, clicked: false, trigger: false };
 let last = performance.now(), time = 0, avgDt = 1 / 60, saveT = 15;
 let collide = null; // made once the ship's outside is gathered, at the end of this file
+let bump = null; // the ship you fly against her host (collide.mjs `ShipCollisions`), made with the host
 let host = null; // ?host=<id>: a second ship beside her, made at the end of this file
 let berth = null; // ?berth=<id>: she is carried in that berth of the host's hangar (berth.mjs), made with the host
 let hostDoors = null, hostHangar = null; // the host's bay doors, worked from here, and her hangar deck, drawn round you
@@ -476,6 +479,7 @@ function tick(dt) {
     berth.frame(dt);
   } else helm.frame(mode === 'helm' ? f : IDLE, dt, mode === 'helm');
   hostDoors?.frame(dt);
+  berth?.lane?.frame(dt, mode === 'helm' && !fading); // the recovery lane: where she is on it, the capture or the wave-off (recovery.mjs)
   drive.standBy(dt, helm, mode === 'helm');
   if (fighter) {
     const padSide = L.fighters[fighter.index]?.side; // she goes out and comes in on her pad's side: that door
@@ -507,6 +511,8 @@ function tick(dt) {
   C.obj.updateMatrixWorld(true);
   collide?.tick(dt);
   collide?.frame(dt); // the fighter against the ship: after everything has moved, before her guns fire
+  bump?.tick(dt);
+  bump?.frame(dt); // the ship you fly against her host (not while her berth carries her)
   if (fighter) guns.fly(fighter, mode === 'fighter' && !fading && f.trigger); // her cannon: the mouse button, out in space
   guns.frame(dt, mode === 'gun' ? f : IDLE, mode, camera);
   guns.fdmg?.frame(dt, { cockpit: mode === 'fighter' && !fading }); // her damage seen and heard: looks only
@@ -647,6 +653,14 @@ if (q.get('at') === 'helm') {
   const t = guns.turrets[q.get('at') === 'gun' ? 0 : 1];
   walk.goDeck(t.spec.from.deck, t.spec.from.at[0], t.spec.from.at[1], t.spec.from.yaw);
   gunSeat.man(t);
+} else if (q.get('at') === 'sickbay') {
+  // Brought in from a wreck (the cutter broke up against this ship: collide.mjs `ShipCollisions.wreck`, the host block
+  // below): you come round in the sick bay, hurt, and are told what happened.
+  const sick = [...C.rooms.values()].find((r) => r.system === 'medical') ?? C.rooms.get(HELM_ROOM);
+  walk.goDeck(sick.deck, (sick.x[0] + sick.x[1]) / 2, (sick.z[0] + sick.z[1]) / 2, walker.yaw, sick.seg);
+  if (walker.floater) walker.floater.hurt = Math.max(walker.floater.hurt, 0.5);
+  const v = Math.round(+q.get('speed') || 0);
+  if (q.has('wreck')) dc.say(null, `You struck the ${L.name?.toLowerCase().includes('carrier') ? 'carrier' : 'ship'}${v ? ` at ${v} m/s` : ''} and the cutter broke up. The crash and rescue team cut you out of what was left: you are in the ${sick.name.toLowerCase()}, bruised. The cutter was recovered and is being rebuilt on her cradle.`, 0, 12);
 } else if (AT[q.get('at')]) {
   walk.goDeck(...AT[q.get('at')]);
   if (C.rooms.get('hangar')?.vacuum && q.get('at') === 'hangar') ship.don(); // the hangar is airless: start suited
@@ -745,6 +759,8 @@ window.__carrier.collide = collide;
 // `?at=berth:<id>` is how you arrive from one: by her port, on the platform at the end of her spur, suited.
 const berths = (G.berths = L.berths?.length ? await new Berths(G, SHIP_ID, { code: q.get('hull') === 'code' }).build() : null);
 window.__carrier.berths = berths;
+// A berthed ship is solid to the fighter you fly, as her cradle is.
+if (collide) for (const s of berths?.ships ?? []) collide.shape.addShip(s.P, s.P.L.name?.toLowerCase() ?? 'berthed ship');
 if (q.get('at')?.startsWith('berth:')) {
   const a = berths?.arrival(q.get('at').slice(6));
   if (a) {
@@ -799,13 +815,17 @@ if (HOST_ID) {
     });
     helm.ref = berth.hostVel; // speeds at the helm are against her mothership
     carriedRads('berthed', true);
-    KEYS.helm = KEYS.helm.replace(' · <b>view</b> V', ' · <b>launch / come aboard</b> L · <b>view</b> V');
+    // Flying her home yourself: the lane off her berth, flight control's calls and the docking display (recovery.mjs).
+    berth.lane = helmSight.dock = new Recovery({ C, body, helm, berth });
+    KEYS.helm = KEYS.helm.replace(' · <b>view</b> V', ' · <b>launch / request recovery</b> L (again: flight control flies her in) · <b>docking mode</b> K · <b>berth heading</b> H · <b>view</b> V');
+    if (mode === 'helm') hud.keysEl.innerHTML = KEYS.helm; // (already at the helm, `?at=helm`: the line was written before this)
     // Her docking port (the layout's `dock`): on the cradle, it is the way back aboard the host.
     const dk = L.dock, lock = dk && C.rooms.get(dk.room);
     if (lock) {
       const u = C.decks.get(lock.deck).use('dock', '', dk.at[0] - (dk.out?.[0] ?? 0) * 0.6, dk.at[2], () => {
         if (berth.phase !== 'berthed') return dc.say(null, 'The docking port stays shut: she is not on her cradle.', 0, 3);
-        fadeThen(() => goAboard(HOST_ID, { at: `berth:${spec.id}` }));
+        sfx.cue('hiss', { vol: 0.4 });
+        goAboard(HOST_ID, { at: `berth:${spec.id}` }, { line: 'Docking port shut behind you. Pumping the lock down.' });
       }, { r: 1.8 });
       Object.defineProperty(u, 'label', { get: () => (berth.phase === 'berthed' ? `Go aboard the ${HL.name?.toLowerCase().includes('carrier') ? 'carrier' : HL.name}` : 'Docking port: shut') });
     }
@@ -818,7 +838,26 @@ if (HOST_ID) {
     window.__carrier.berth = berth;
     window.__carrier.hostDoors = hostDoors;
   }
+  // She is solid against her host (collide.mjs `ShipCollisions`): the host's outside, her hangar, cradles and parked
+  // fighters, and the ships in her other berths (berthed.mjs: drawn here for that, nothing to use). A crash that
+  // finishes her: a white-out, the voyage notes her back on her cradle being rebuilt, and you come round in the host's
+  // sick bay (`?at=sickbay`, above).
+  const hostName = HL.name?.toLowerCase().includes('carrier') ? 'the carrier' : HL.name ?? 'the ship';
+  bump = new ShipCollisions({
+    C, body, host: H, hostDoors, berth, ship, guns, plant, feel, hostName,
+    say: (t, secs) => helmSight.say(t, secs),
+    onWreck: (hit) => {
+      fading = true;
+      fadeEl.style.background = '#fff';
+      fadeEl.classList.add('on');
+      if (spec) setShip(berthKey(HOST_ID, spec.id), { ship: SHIP_ID, rebuilt: true });
+      setTimeout(() => goAboard(HOST_ID, { at: 'sickbay', wreck: spec?.id ?? '1', speed: Math.round(hit.speed) }, { line: 'The crash and rescue team has you. Stand by.', secs: 1.2, title: 'CRASH AND RESCUE' }), 900);
+    }
+  });
+  if (hostHangar) for (const s of await berthedOthers(H, HOST_ID, spec?.id, { code: q.get('hull') === 'code', known: { [SHIP_ID]: L } })) bump.shape.addShip(s.P, s.P.L.name?.toLowerCase() ?? 'berthed ship');
+  window.__carrier.bump = bump;
 }
 
 // ?hold=1: no frames until a script steps them with `__carrier.tick()` (tools/carrier-check.mjs).
+arrived(); // came through a docking port: she is built, the airlock's card comes down (voyage.mjs)
 if (q.get('hold') !== '1') frame();

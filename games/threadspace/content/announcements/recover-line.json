@@ -1,0 +1,12 @@
+{
+  "id": "recover-line",
+  "about": "She is in the lane, parallel, on the line and on speed for the first time since the approval (recovery.mjs).",
+  "who": "flight",
+  "say": [
+    "Flight control. On the line. Bring her in."
+  ],
+  "to": {
+    "bridge": "headset"
+  },
+  "priority": 2
+}

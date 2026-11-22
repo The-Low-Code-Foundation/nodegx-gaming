@@ -20,6 +20,8 @@
 //   carrier.html?at=bridge&voice=0&crew=0&dc=0&hold=1&seed=7     → run('brace')
 //   carrier.html?voice=0&crew=0&dc=0&hold=1&seed=7 (start page)  → run('career')
 //   carrier.html?ship=cutter&host=carrier&berth=berth-port&at=helm&voice=0&crew=0&dc=0&hold=1&seed=7   → run('berth')
+//   carrier.html?ship=cutter&host=carrier&berth=berth-port&at=helm&voice=0&crew=0&dc=0&hold=1&seed=7   → run('recover')
+//   carrier.html?ship=cutter&host=carrier&berth=berth-port&at=helm&voice=0&crew=0&dc=0&hold=1&seed=7   → run('bump')
 //   carrier.html?ship=cutter&at=bridge&voice=0&crew=0&dc=0&hold=1&seed=7   → run('cutter')   (another ship: ships/cutter/)
 //
 // `?hold=1` keeps the page from running frames of its own and `?seed=` seeds every random number (carrier.html,
@@ -134,6 +136,142 @@ const scenarios = {
     out.recover = { secs: r3(run_(c, 200, () => b.phase === 'berthed')), phase: b.phase, at: local(), door: r3(c.hostDoors.kOf(b.spec.door)) };
     return out;
   },
+  /** Flying the cutter home yourself (recovery.mjs; the same page as `berth`). Everything goes in through the keys a
+   *  person has: L, K (docking mode), H (the berth's heading held), and taps of the slide keys, which a small pilot
+   *  here presses to set the speed it wants (`fly`). Launch; out to the holding point; request recovery; down the lane
+   *  on speed; the capture and its grade. Then again from 60 m out, arriving at the last gate at 2.5 m/s: a wave-off,
+   *  back out, and in properly. Then once more, where a second L hands her to flight control. */
+  async recover(c) {
+    for (let i = 0; i < 300 && !c.berth; i++) await wait(200);
+    const b = c.berth, R = b.lane, K = c.input.keys, out = {};
+    const DT = 1 / 30;
+    const st = () => { const s = R.state; return { along: r3(s.along), fore: r3(s.fore), up: r3(s.up), closing: r3(s.closing), align: r3(s.align), call: s.call }; };
+    const calls = () => c.announcer.log.filter((l) => l.id.startsWith('recover-')).map((l) => `${l.id}:${l.heard ?? '-'}`);
+    // One step with the slide keys tapped toward the set speed `want(s)` gives, [starboard, up, ahead] in m/s in her
+    // own frame: a key goes down for a step and up for the next (a tap is 0.1 m/s), until the set speed is the one wanted.
+    const AX = [['KeyD', 'KeyA'], ['KeyR', 'KeyF'], ['KeyW', 'KeyS']];
+    const fly = (secs, want, until) => {
+      let t = 0;
+      for (; t < secs && !until(R.state); t += DT) {
+        const D = c.helm.dock, w = want(R.state);
+        for (let i = 0; i < 3; i++) {
+          const set = D ? [D.set.x, D.set.y, -D.set.z][i] : 0, d = Math.round((w[i] - set) * 10);
+          const code = d > 0 ? AX[i][0] : d < 0 ? AX[i][1] : null;
+          for (const k of AX[i]) if (k !== code || K.has(k)) K.delete(k); else K.add(k);
+        }
+        c.tick(1, DT);
+      }
+      for (const a of AX) for (const k of a) K.delete(k);
+      return r3(t);
+    };
+    // Her own axes against the lane's, parallel to the host in the berth's heading: closing is to starboard for both
+    // berths (her docking port's side), an offset along the host is ahead or astern by which way her bow lies.
+    const to = (along, vmax) => (s) => { const g = 0.15, v = (e, m = vmax) => Math.max(-m, Math.min(m, e * g)); return [v(s.along - along), v(-s.up, 2), v(-s.fore * R.bow, 2)]; };
+    const slide = (k = 0.9, fixed = null) => (s) => [fixed ?? Math.min(s.want * k, Math.max(0.3, s.along * 0.15 + 0.3)), Math.max(-1, Math.min(1, -s.up * 0.2)), Math.max(-1, Math.min(1, -s.fore * R.bow * 0.2))];
+    const launch = () => (b.key(), r3(run_(c, 120, () => b.phase === 'out', DT)));
+    const home = () => r3(run_(c, 120, () => b.phase === 'berthed', DT));
+
+    // 1. Launch, docking mode, hold the heading, out to the holding point, ask, slide in, the capture.
+    out.launch = { secs: launch(), ...st() };
+    key('KeyK');
+    key('KeyH');
+    out.dock = { name: c.helm.assistName, hold: c.helm.dock?.hold, set: v3(c.helm.dock.set) };
+    out.toHold = { secs: fly(240, to(260, 6), (s) => s.dist < 2 && s.speed < 0.08), ...st(), dist: r3(R.state.dist) };
+    out.early = R.state.text; // what the display says before the call
+    key('KeyL');
+    out.asked = { approved: R.approved, text: c.helmSight.msg?.text };
+    out.slide = { secs: fly(400, slide(), () => b.phase !== 'out' || !!R.waved), phase: b.phase, waved: R.waved, door: r3(c.hostDoors.kOf(b.spec.door)) };
+    out.grade = { ...b.lastRecovery };
+    out.home = { secs: home(), phase: b.phase, door: r3(c.hostDoors.kOf(b.spec.door)), dock: !!c.helm.dock };
+
+    // 2. Out again, 60 m off the last gate; ask; in at 2.5 m/s all the way: waved off. Back out past 30 m, then in on speed.
+    out.launch2 = launch();
+    key('KeyH');
+    fly(120, to(60, 4), (s) => Math.abs(s.along - 60) < 1.5 && s.speed < 0.08);
+    key('KeyL');
+    fly(60, () => [0, 0, 0], (s) => s.doorOpen); // the door takes its time
+    out.fast = { secs: fly(120, slide(1, 2.5), () => !!R.waved || b.phase !== 'out'), phase: b.phase, waved: R.waved, ...st(), text: (R.talk(R.state), R.state.text), lane: R.gates.map((g) => g.userData.mat.color.getHexString()).join(' '), said: c.helmSight.msg?.text };
+    out.back = { secs: fly(120, to(45, 3), (s) => s.along > 40 && s.speed < 0.1), waved: R.waved, armed: R.armed, ...st() };
+    out.again = { secs: fly(400, slide(), () => b.phase !== 'out' || !!R.waved), phase: b.phase, waved: R.waved };
+    out.grade2 = { ...b.lastRecovery };
+    out.home2 = home();
+
+    // 3. Out once more; L asks; L again hands her to flight control.
+    out.launch3 = launch();
+    run_(c, 4, undefined, DT);
+    key('KeyL');
+    out.asked3 = R.approved;
+    key('KeyL');
+    out.auto = { phase: b.phase, said: c.helmSight.msg?.text, secs: home(), last: { ...b.lastRecovery } };
+    out.calls = calls();
+    return out;
+  },
+
+  /** The cutter against the carrier (collide.mjs `ShipCollisions`; the same page as `berth`): the launch (carried, and
+   *  then handed over, without a touch), a turn back at the helm, then set going at the carrier from a spot in the
+   *  carrier's frame each time: her bow on the carrier's side at 2 m/s (a clang) and at 10 m/s (holed), a glancing bow
+   *  strike that swings her, in through the open bay door without a touch, on across the hangar into the other
+   *  berth's cutter, the shut door, and 40 m/s (the wreck: `onWreck` is caught here, so the page stays). */
+  async bump(c) {
+    for (let i = 0; i < 300 && !c.bump; i++) await wait(200); // the host is fetched and built after the ship
+    const b = c.berth, B = c.bump, H = c.host, K = c.input.keys, THREE = await import('three');
+    const voyage = localStorage.getItem('threadspace.voyage'); // the launch notes her out: put back at the end
+    const local = () => v3(H.frame.worldToLocal(c.C.obj.position.clone()));
+    const hold = (code, secs) => (K.add(code), run_(c, secs), K.delete(code));
+    let wrecked = null;
+    B.onWreck = (h) => (wrecked = h.speed);
+    const kinds = {};
+    for (const s of B.solids) kinds[s.kind] = (kinds[s.kind] ?? 0) + 1;
+    const out = { solids: kinds, balls: B.balls.length };
+    b.key();
+    out.launch = { secs: r3(run_(c, 120, () => b.phase === 'out')), at: local(), contacts: B.stats.contacts };
+    run_(c, 12); // her radiators spread, the door shuts behind her
+    out.clear = { at: local(), contacts: B.stats.contacts, near: B.stats.near, rads: c.plant.radiators.map((r) => r3(r.k)) };
+    hold('ArrowLeft', 4); // turn back toward her
+    hold('KeyX', 20);
+    out.turned = { quat: [c.C.obj.quaternion.x, c.C.obj.quaternion.y, c.C.obj.quaternion.z].map((x) => Math.round(x * 1e4) / 1e4), speed: r3(c.body.vel.length()), contacts: B.stats.contacts };
+    c.helm.assist = 0; // hands off, no assist: what the touch does is all that moves her
+    const hq = new THREE.Quaternion();
+    const shoot = (p, d, speed, yaw, secs, until = () => false) => {
+      H.obj.updateMatrixWorld(true);
+      H.obj.getWorldQuaternion(hq);
+      c.C.obj.position.copy(H.frame.localToWorld(new THREE.Vector3(...p)));
+      c.C.obj.quaternion.copy(hq).multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), yaw));
+      c.body.vel.copy(new THREE.Vector3(...d).normalize().multiplyScalar(speed).applyQuaternion(hq));
+      c.body.ang.set(0, 0, 0);
+      B.prev = null;
+      B.dead = false;
+      const n0 = B.hits.length;
+      run_(c, secs, until);
+      return {
+        hits: B.hits.slice(n0, n0 + 4).map((h) => `${h.what}/${h.part}:${r3(h.speed)}:${r3(h.felt)}:${r3(h.damage)}${h.room ? `:${h.room}` : ''}${h.hole ? `:${h.hole.join('/')}` : ''}${h.wreck ? ':wreck' : ''}`),
+        n: B.hits.length - n0, at: local(), rel: v3(c.body.vel.clone().applyQuaternion(hq.clone().invert())), ang: v3(c.body.ang), health: r3(B.health())
+      };
+    };
+    // The carrier's port side, 47 m aft of her bow's tip; her berth's place off the door.
+    const bz = H.L.hull.main[0].z + 47, y = b.home.y, z = b.home.z, nose = -Math.PI / 2; // nose to starboard: bow on
+    out.clang = shoot([-48, 0, bz], [1, 0, 0], 2, nose, 8);
+    out.holed = shoot([-48, 0, bz], [1, 0, 0], 10, nose, 4);
+    // Along the carrier's side, her nose 0.6 rad in toward it: the bow touches and she swings.
+    const n0 = B.hits.length;
+    out.glance = shoot([-38, 0, 60], [0.565, 0, -0.825], 6, -0.6, 6, () => B.hits.length > n0);
+    out.swing = { ang: v3(c.body.ang), after: r3(run_(c, 3)), at: local() };
+    c.hostDoors.bayNow();
+    out.through = shoot([-50, y, z], [1, 0, 0], 3, 0, 10); // in through the open door, to just inside it
+    out.across = shoot([b.home.x, y, z], [1, 0, 0], 2, 0, 6); // from her own cradle across to the other berth's cutter
+    c.hostDoors.setBay(0);
+    c.hostDoors.k = 0;
+    c.hostDoors.place(); // shut at once
+    out.door = shoot([-42, y, z], [1, 0, 0], 3, 0, 6);
+    out.wreck = shoot([-70, 0, bz], [1, 0, 0], 40, nose, 2);
+    out.wrecked = wrecked && r3(wrecked);
+    out.rads = c.plant.radiators.map((r) => r3(r.health));
+    out.stats = { ...B.stats, ms: undefined, last: undefined };
+    if (voyage === null) localStorage.removeItem('threadspace.voyage');
+    else localStorage.setItem('threadspace.voyage', voyage);
+    return out;
+  },
+
   /** The cutter (ships/cutter/, `?ship=cutter`): a ship with no drums, hangar, fighters, career or routine. Every
    *  walkable room stood in, a push off down the passage into engineering, the helm taken at its couch, a burn, a half turn, all
    *  stop, the turret manned, and a raid from port with her own crew at the guns. */
@@ -814,14 +952,20 @@ export async function run(name) {
 const PAGES = {
   raid: 'at=bridge', hull: 'at=bridge', helm: 'at=helm', landing: 'at=fighter', repair: 'at=fighter', collide: 'at=fighter', bandits: 'at=fighter', missiles: 'at=fighter', walk: 'at=bridge', float: 'at=bridge', brace: 'at=bridge', career: '',
   cutter: 'ship=cutter&at=bridge', // another ship's folder (ships/cutter/)
-  berth: 'ship=cutter&host=carrier&berth=berth-port&at=helm' // the cutter carried in the carrier's hangar (berth.mjs)
+  berth: 'ship=cutter&host=carrier&berth=berth-port&at=helm', // the cutter carried in the carrier's hangar (berth.mjs)
+  recover: 'ship=cutter&host=carrier&berth=berth-port&at=helm', // flying her home yourself (recovery.mjs)
+  bump: 'ship=cutter&host=carrier&berth=berth-port&at=helm' // the cutter against the carrier (collide.mjs `ShipCollisions`)
 };
 
 /** Every scenario, each in a fresh page of its own (an iframe), from any page of this site: `{ name: { hash, … } }`.
  *  About two minutes. */
 export async function runAll(names = Object.keys(PAGES), seed = 7) {
   const res = {};
+  // Every page starts from a new voyage (both cutters on their cradles: which berths are full is part of what is solid
+  // in the hangar); the one in hand is put back at the end.
+  const VOYAGE = 'threadspace.voyage', voyage = localStorage.getItem(VOYAGE);
   for (const name of names) {
+    localStorage.removeItem(VOYAGE);
     const f = document.createElement('iframe');
     f.style.cssText = 'position:fixed;left:0;top:0;width:640px;height:360px;opacity:0;pointer-events:none';
     const base = new URL('../carrier.html', import.meta.url);
@@ -837,5 +981,7 @@ export async function runAll(names = Object.keys(PAGES), seed = 7) {
     }
     f.remove();
   }
+  if (voyage === null) localStorage.removeItem(VOYAGE);
+  else localStorage.setItem(VOYAGE, voyage);
   return res;
 }

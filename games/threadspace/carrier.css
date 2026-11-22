@@ -145,3 +145,15 @@
 #c-helmet[hidden] { display: none; }
 /* g-load: the view greys and closes in from the edges (fighter.mjs / cockpit.mjs). */
 #c-gveil { position: absolute; inset: 0; pointer-events: none; opacity: 0; background: radial-gradient(ellipse at center, rgba(40, 40, 40, 0) 20%, rgba(30, 30, 30, 0.75) 55%, #050505 85%); }
+
+/* The airlock's card while you cross between ships (carrier.html #c-lock, src/core/voyage.mjs). */
+#c-lock { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center; background: #05070a; transition: opacity 0.5s; }
+#c-lock[hidden] { display: none; }
+#c-lock.out { opacity: 0; pointer-events: none; }
+.c-lock-box { width: min(360px, calc(100% - 48px)); font-family: var(--mono); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 18px 20px; background: rgba(14, 18, 24, 0.9); }
+.c-lock-title { font-size: 12px; letter-spacing: 0.24em; color: #e0b030; }
+.c-lock-line { margin: 10px 0 14px; font-size: 14px; }
+.c-lock-bar { height: 4px; border-radius: 2px; background: rgba(255, 255, 255, 0.08); overflow: hidden; }
+.c-lock-bar i { display: block; height: 100%; width: 40%; border-radius: 2px; background: #e0b030; animation: c-lock-run 1.4s ease-in-out infinite alternate; }
+@keyframes c-lock-run { from { transform: translateX(-20%); } to { transform: translateX(170%); } }
+@media (prefers-reduced-motion: reduce) { .c-lock-bar i { animation: none; width: 100%; opacity: 0.5; } }

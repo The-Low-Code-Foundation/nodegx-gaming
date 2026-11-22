@@ -51,10 +51,28 @@ export function pageFor(id, params = {}, from = location) {
   return `${from.pathname}?${q}`;
 }
 
-/** Goes aboard ship `id`: notes it, and loads her page. */
-export function goAboard(id, params = {}) {
+/** Goes aboard ship `id`: notes it, puts up the airlock's card (carrier.html `#c-lock`) with `line` on it while the
+ *  lock cycles for `secs`, and loads her page, which keeps the card up until she is built (`arrived`). */
+export function goAboard(id, params = {}, { line = 'Outer door shut. Cycling.', secs = 1.6, title = null } = {}) {
   const v = loadVoyage();
   v.aboard = id;
   saveVoyage(v);
-  location.href = pageFor(id, params);
+  const el = document.getElementById('c-lock');
+  if (el) {
+    el.hidden = false;
+    el.classList.remove('out');
+    const t = document.getElementById('c-lock-line');
+    if (t) t.textContent = line;
+    const h = el.querySelector('.c-lock-title');
+    if (h && title) h.textContent = title; // not through an airlock (a crash's rescue)
+  }
+  setTimeout(() => (location.href = pageFor(id, params)), el ? secs * 1000 : 0);
+}
+
+/** The ship is built: the airlock's card comes down. */
+export function arrived() {
+  const el = document.getElementById('c-lock');
+  if (!el || el.hidden) return;
+  el.classList.add('out');
+  setTimeout(() => (el.hidden = true), 600);
 }

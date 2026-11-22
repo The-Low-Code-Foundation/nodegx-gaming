@@ -61,6 +61,11 @@
     "weapons-hold",
     "weapons-tight",
     "weapons-free",
-    "check-fire"
+    "check-fire",
+    "recover-approved",
+    "recover-line",
+    "recover-waveoff",
+    "recover-captured",
+    "collision"
   ]
 }

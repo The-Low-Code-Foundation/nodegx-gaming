@@ -1,0 +1,28 @@
+{
+  "id": "collision",
+  "about": "The ship you are flying struck another ship hard enough to hole her (collide.mjs ShipCollisions.contact).",
+  "who": "ai",
+  "say": [
+    "Collision. Collision.",
+    "{part}"
+  ],
+  "slots": {
+    "part": [
+      "Bow.",
+      "Stern.",
+      "Port side.",
+      "Starboard side.",
+      "Keel.",
+      "Upper hull.",
+      "Port radiator.",
+      "Starboard radiator."
+    ]
+  },
+  "to": {
+    "all": "tannoy",
+    "bridge": "headset",
+    "dc": "headset"
+  },
+  "priority": 4,
+  "delay": 0.2
+}
