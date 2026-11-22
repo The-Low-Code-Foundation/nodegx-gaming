@@ -227,76 +227,110 @@ export function step(obj, body, out, dt) {
 // --- plumes ----------------------------------------------------------------------------------------------------------
 
 const PLUME_MAIN = new THREE.MeshBasicMaterial({ color: '#9fd0ff', transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, toneMapped: false });
-const PLUME_RCS = new THREE.MeshBasicMaterial({ color: '#fff4dc', transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, toneMapped: false });
 const BELL = new THREE.MeshStandardMaterial({ color: '#2a2e35', roughness: 0.5, metalness: 0.7, flatShading: true });
 const THROAT = new THREE.MeshBasicMaterial({ color: '#7ab8ff', toneMapped: false });
 const BLOCK = new THREE.MeshStandardMaterial({ color: '#4a525c', roughness: 0.6, metalness: 0.4, flatShading: true });
+// A manoeuvring jet's nozzle: a short bell with a pale lip and a black throat, so you see where the gas will come from.
+const JET_BELL = new THREE.MeshStandardMaterial({ color: '#8d949c', roughness: 0.45, metalness: 0.3, side: THREE.DoubleSide });
+const JET_LIP = new THREE.MeshStandardMaterial({ color: '#d6dade', roughness: 0.4, metalness: 0.2 });
+const JET_THROAT = new THREE.MeshBasicMaterial({ color: '#030405' });
+/** The nozzle's size for a jet of scale 1 (metres): the mouth's radius, the throat's, the bell's length. The mouth is
+ *  at the thruster's `at`, where puff.mjs starts the gas (its `JET.mouth` is the gas's width there). */
+export const NOZZLE = { mouth: 0.46, throat: 0.2, len: 0.62, lip: 0.05 };
+let NOZZLE_GEO = null;
+function nozzleGeo() {
+  if (NOZZLE_GEO) return NOZZLE_GEO;
+  const N = NOZZLE;
+  const bell = new THREE.CylinderGeometry(N.mouth, N.throat, N.len, 16, 1, true).translate(0, -N.len / 2, 0); // mouth at y 0, body back along -y
+  const lip = new THREE.TorusGeometry(N.mouth, N.lip, 6, 20).rotateX(Math.PI / 2);
+  const throat = new THREE.CircleGeometry(N.mouth * 0.93, 16).rotateX(-Math.PI / 2).translate(0, -N.len * 0.2, 0); // the dark inside, a little down the bell
+  return (NOZZLE_GEO = { bell, lip, throat });
+}
 
-/** The bells, nozzles and plumes on the outside of `frame` (the layout's frame), one plume per thruster. `fittings`
- *  false makes only the manoeuvring plumes (a fighter brings its own engine and plume, ships.mjs). */
+/** The bells, nozzles and plumes on the outside of `frame` (the layout's frame). A main drive gets a bell and a plume
+ *  cone; a manoeuvring jet gets a nozzle (three instanced meshes for all of them, shown on a Blender hull too: they
+ *  mark the layout's own thruster positions, which is where the gas comes from) and `t.plume`, an empty at its mouth
+ *  pointing along the gas, which `updatePlumes` reads. `fittings` false makes only the manoeuvring ones (a fighter
+ *  brings its own engine and plume, ships.mjs). */
 export function buildThrusterMeshes(frame, list, { fittings = true } = {}) {
   const up = new THREE.Vector3(0, 1, 0);
   const clusters = new Set();
+  const jets = list.filter((t) => t.kind !== 'main');
+  if (jets.length) {
+    const G = nozzleGeo(), m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), sc = new THREE.Vector3();
+    const parts = [new THREE.InstancedMesh(G.bell, JET_BELL, jets.length), new THREE.InstancedMesh(G.lip, JET_LIP, jets.length), new THREE.InstancedMesh(G.throat, JET_THROAT, jets.length)];
+    jets.forEach((t, i) => {
+      m4.compose(t.at, q.setFromUnitVectors(up, t.dir), sc.setScalar(t.s ?? 1));
+      for (const p of parts) p.setMatrixAt(i, m4);
+    });
+    for (const p of parts) {
+      p.name = 'jet-nozzles';
+      p.computeBoundingSphere();
+      frame.add(p);
+    }
+  }
   for (const t of list) {
     if (!fittings && t.kind === 'main') continue;
-    // The cone is only the jet's hot core at the nozzle: what it throws out is gas (gas.mjs).
-    const len = t.kind === 'main' ? t.r * 8 : 2.4 * (t.s ?? 1);
-    const base = t.kind === 'main' ? t.r * 0.7 : 0.4 * (t.s ?? 1);
+    if (t.kind !== 'main') {
+      // What a jet throws out is drawn by puff.mjs: here only where from and which way.
+      const mouth = new THREE.Object3D();
+      mouth.quaternion.setFromUnitVectors(up, t.dir);
+      mouth.position.copy(t.at);
+      frame.add(mouth);
+      t.plume = mouth;
+      const key = t.pos.toArray().join(',');
+      if (fittings && !clusters.has(key)) {
+        clusters.add(key);
+        const s = t.s ?? 1, blk = new THREE.Mesh(new THREE.BoxGeometry(1.7 * s, 1.7 * s, 1.7 * s), BLOCK);
+        blk.position.copy(t.at).addScaledVector(t.dir, -1.2 * s);
+        blk.userData.fitting = true; // the Blender hull brings its own (layout.mjs loadHull)
+        frame.add(blk);
+      }
+      continue;
+    }
+    // The cone is only the drive's hot core at the bell: what it throws out is gas (gas.mjs).
+    const len = t.r * 8, base = t.r * 0.7;
     const geo = new THREE.ConeGeometry(base, len, 12, 1, true);
     geo.translate(0, len / 2, 0); // wide end at the nozzle, tip out along +y (then turned to the exhaust)
-    const plume = new THREE.Mesh(geo, t.kind === 'main' ? PLUME_MAIN : PLUME_RCS);
+    const plume = new THREE.Mesh(geo, PLUME_MAIN);
     plume.quaternion.setFromUnitVectors(up, t.dir);
     plume.position.copy(t.at);
-    if (t.kind === 'main') plume.position.z += t.r * 1.8; // from the bell's mouth
+    plume.position.z += t.r * 1.8; // from the bell's mouth
     plume.visible = false;
     frame.add(plume);
     t.plume = plume;
     if (!fittings) continue;
-    if (t.kind === 'main') {
-      const bell = new THREE.Mesh(new THREE.CylinderGeometry(t.r * 0.55, t.r, t.r * 1.8, 18, 1, true), BELL);
-      bell.material.side = THREE.DoubleSide;
-      bell.rotation.x = -Math.PI / 2; // narrow end forward at the hull, mouth aft
-      bell.position.copy(t.at).add(new THREE.Vector3(0, 0, t.r * 0.9));
-      bell.userData.fitting = true; // the Blender hull brings its own (layout.mjs loadHull)
-      frame.add(bell);
-      const throat = new THREE.Mesh(new THREE.CircleGeometry(t.r * 0.5, 18), THROAT);
-      throat.position.copy(t.at).add(new THREE.Vector3(0, 0, 0.3));
-      throat.userData.fitting = true;
-      frame.add(throat);
-    } else {
-      const key = t.pos.toArray().join(',');
-      if (!clusters.has(key)) {
-        clusters.add(key);
-        const blk = new THREE.Mesh(new THREE.BoxGeometry(2.2, 2.2, 2.2), BLOCK);
-        blk.position.copy(t.at).addScaledVector(t.dir, -1.2);
-        blk.userData.fitting = true;
-        frame.add(blk);
-      }
-      const nz = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.55, 0.6, 8), BELL);
-      nz.quaternion.setFromUnitVectors(up, t.dir);
-      nz.position.copy(t.at);
-      nz.userData.fitting = true;
-      frame.add(nz);
-    }
+    const bell = new THREE.Mesh(new THREE.CylinderGeometry(t.r * 0.55, t.r, t.r * 1.8, 18, 1, true), BELL);
+    bell.material.side = THREE.DoubleSide;
+    bell.rotation.x = -Math.PI / 2; // narrow end forward at the hull, mouth aft
+    bell.position.copy(t.at).add(new THREE.Vector3(0, 0, t.r * 0.9));
+    bell.userData.fitting = true;
+    frame.add(bell);
+    const throat = new THREE.Mesh(new THREE.CircleGeometry(t.r * 0.5, 18), THROAT);
+    throat.position.copy(t.at).add(new THREE.Vector3(0, 0, 0.3));
+    throat.userData.fitting = true;
+    frame.add(throat);
   }
 }
 
-/** Each plume as long and as bright as its thruster's throttle, with a flicker. With `fx` (a Gas, gas.mjs), each firing
- *  thruster also throws its gas out into the world. */
-export function updatePlumes(list, time, fx = null, dt = 0) {
+/** Every frame. A main drive's plume cone as long and as bright as its throttle, with a flicker, and with `fx` (a
+ *  Gas, gas.mjs) its exhaust thrown out into the world. A manoeuvring jet's puff, with `puffs` (puff.mjs): told every
+ *  frame, firing or not, so it knows the nozzle's own velocity and the moment the valve opens. */
+export function updatePlumes(list, time, fx = null, dt = 0, puffs = null) {
   for (const t of list) {
     if (!t.plume) continue;
-    const k = t.throttle;
-    t.plume.visible = k > 0.02;
-    if (fx) {
+    const k = t.throttle, main = t.kind === 'main';
+    if (main) t.plume.visible = k > 0.02;
+    if (main ? fx : puffs) {
       t.plume.updateWorldMatrix(true, false);
       const m = t.plume.matrixWorld;
       _v.setFromMatrixPosition(m);
       _w.setFromMatrixColumn(m, 1).normalize();
-      // A fighter's thrusters are the scale the exhaust is tuned at (s 0.2, r 0.75); the carrier's are bigger.
-      fx.nozzle(t.plume, _v, _w, k, dt, t.kind === 'main' ? { kind: 'main', s: t.r / 0.75 } : { s: (t.s ?? 1) / 0.2 });
+      // A fighter's drive is the scale the exhaust is tuned at (r 0.75); the carrier's are bigger.
+      if (main) fx.nozzle(t.plume, _v, _w, k, dt, { kind: 'main', s: t.r / 0.75 });
+      else puffs.jet(t, _v, _w, k, dt, t.s ?? 1);
     }
-    if (!t.plume.visible) continue;
+    if (!main || !t.plume.visible) continue;
     const flick = 0.9 + 0.1 * Math.sin(time * 40 + t.pos.x);
     t.plume.scale.set(0.6 + 0.4 * k, (0.25 + 0.75 * k) * flick, 0.6 + 0.4 * k);
   }

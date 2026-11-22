@@ -41,6 +41,7 @@ const MASS = 420e3; // kg, loaded (see the top of this file)
 const PROP = 120e3; // kg of it reaction mass
 const SKIN = 0.3; // the hull's own frames and plating, in from the skin
 const Z0 = -17, Z1 = 17;
+const MAST_TOP = 4.55; // m above her axis: the masthead light
 
 // ---- the hull ----
 // One loft of chamfered sections (`c` defaults to 0.32 of the smaller half-size). No island.
@@ -148,9 +149,11 @@ const thrusters = {
 
 // ---- mounts ----
 // The carrier's turret and point defence guns are drawn from one model each; `scale` draws them at a cutter's size
-// (a turret a quarter the size: a twin gun with 5 m barrels; point defence guns at 0.28).
+// (the turret at 0.15: a low twin mount, 1.2 m across with 3.2 m barrels, the size of a patrol boat's remote weapon
+// station; point defence guns at 0.28). Her Blender hull (tools/blender/cutter_build.py) builds its turret in the same
+// units and scales it by the same number, so the game's points on a turret (muzzles, the sight) land on either.
 const mounts = [
-  { id: 'turret-dorsal', kind: 'turret', at: [0, 2.9, -4.45], up: [0, 1, 0], scale: 0.25 },
+  { id: 'turret-dorsal', kind: 'turret', at: [0, 2.9, -4.45], up: [0, 1, 0], scale: 0.15 },
   // The two close-in guns on the lower shoulders, each covering its own beam and everything below her; the turret has
   // what is above.
   { id: 'pdc-port', kind: 'pdc', gun: 'close', at: [-4.5, -2.45, 3], up: [-0.7071, -0.7071, 0], magazine: 'pdc-mag', scale: 0.28 },
@@ -172,7 +175,7 @@ weapons.turrets = [
 ];
 // The gun: a twin where the carrier's turrets are triples; a 5 kg round where hers is a tonne (so a shot kicks her
 // 1.7 cm/s, about what the carrier's kick her); a smaller ready rack and magazine. Its rates, speeds and damage stay.
-weapons.gun = { ...weapons.gun, barrels: 2, shellMass: 5, rack: 16, stock: 160, calibreNote: '5 m barrels, a twin mount.' };
+weapons.gun = { ...weapons.gun, barrels: 2, shellMass: 5, rack: 16, stock: 160, calibreNote: '3.2 m barrels, a low twin mount.' };
 // Point defence: two guns for the carrier's six; each mount's magazine a little over a third of hers.
 weapons.pdc = { ...weapons.pdc, stock: 1200 };
 // Torpedoes: she carries eight for her four tubes (the carrier 24 for six), fired in pairs. A torpedo's reach into a
@@ -240,7 +243,10 @@ const L = {
 
 // Her outside, radiators folded: the hull, the drive's bell, the turret (its model is 6.6 m tall and 32 m long over the
 // barrels trained forward, at `scale`), the point defence guns (3.9 m off their mount at `scale`, along `up`), the
-// manoeuvring clusters (a block 1.6 m across at `rcsScale`) and the folded radiators (0.25 m proud of the skin).
+// manoeuvring clusters (a block 1.6 m across at `rcsScale`), the folded radiators (0.25 m proud of the skin) and the
+// mast on her back (`MAST_TOP`: the tallest thing on her; tools/blender/cutter_build.py keeps everything it adds, the
+// mast, antennas, sponsons and collar, inside this envelope and fails if it does not). The carrier's berths are cut to
+// these numbers (tools/carrier-v2.mjs), so a change here means regenerating her too.
 {
   const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
   const grow = (p) => p.forEach((v, i) => ((lo[i] = Math.min(lo[i], v)), (hi[i] = Math.max(hi[i], v))));
@@ -252,6 +258,7 @@ const L = {
     if (m.kind === 'pdc') grow(m.at.map((v, i) => v + m.up[i] * 3.9 * k)), grow([m.at[0], m.at[1], m.at[2] - 3.9 * k]);
     if (m.kind === 'radiator') grow([Math.sign(m.x[0]) * (Math.min(...m.x.map(Math.abs)) + 0.25), m.y, m.z[0]]);
   }
+  grow([0, MAST_TOP, 6]);
   for (const c of thrusters.rcs) grow(c.at.map((v, i) => v + Math.sign(v - com[i]) * 0.8 * thrusters.rcsScale * (i < 2 ? 1 : 0)));
   L.envelope = { about: 'Her outside with the radiators folded and the guns trained fore and aft, in the ship\'s frame: `min` and `max` corners, and `size` [beam, height, length].', min: lo.map(r1), max: hi.map(r1), size: hi.map((v, i) => r1(v - lo[i])) };
 }

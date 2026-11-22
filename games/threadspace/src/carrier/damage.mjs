@@ -114,12 +114,21 @@ function rack(C, I, c, k, kit, i) {
   const p = doorOf(C, c);
   if (!p) return;
   const alongZ = p.side === 'e' || p.side === 'w';
-  const inward = { e: [-1, 0], w: [1, 0], n: [0, 1], s: [0, -1] }[p.side];
+  let inward = { e: [-1, 0], w: [1, 0], n: [0, 1], s: [0, -1] }[p.side];
   const [lo, hi] = alongZ ? c.z : c.x;
   const at0 = alongZ ? p.z : p.x;
-  const off = 1.7 + i * 1.4;
-  const u = at0 + off + 0.6 < hi ? at0 + off : at0 - off;
-  const wallX = alongZ ? p.x : u, wallZ = alongZ ? u : p.z;
+  const beside = (j) => { const off = 1.7 + j * 1.4; return at0 + off + 0.6 < hi ? at0 + off : at0 - off; };
+  let u = beside(i), wall = alongZ ? p.x : p.z;
+  // A small room (the cutter's locker) has no run of wall beside its door for every rack: they would stand through the
+  // end wall into the next room. There they go side by side along the wall facing the door.
+  const n = Object.values(C.L.damage.kits).filter((kt) => kt.rooms?.includes(c.id)).length;
+  if (Array.from({ length: n }, (_, j) => beside(j)).some((v) => v - 0.6 < lo || v + 0.6 > hi)) {
+    const [a, b2] = alongZ ? c.x : c.z;
+    wall = Math.abs(a - wall) > Math.abs(b2 - wall) ? a : b2;
+    inward = [-inward[0], -inward[1]];
+    u = lo + ((hi - lo) * (i + 0.5)) / n;
+  }
+  const wallX = alongZ ? wall : u, wallZ = alongZ ? u : wall;
   const pos = (inset) => [wallX + inward[0] * inset, wallZ + inward[1] * inset];
   const face = Math.atan2(inward[0], inward[1]);
   const g = new THREE.Group();

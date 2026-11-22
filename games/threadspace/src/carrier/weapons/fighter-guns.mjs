@@ -56,14 +56,12 @@ export const fighterGunParts = {
     else this.sfx?.play('hit', 30);
   },
 
-  /** The cannon's muzzle at `p` along `d` (world, unit): a flash, a white star a little ahead, a ring of gas off the
-   *  muzzle brake, burning grains thrown ahead, a puff of hot gas, and a spent case kicked out of her belly, tumbling
-   *  away (unseeded: looks only). */
+  /** The cannon's muzzle at `p` along `d` (world, unit): a small quick blast (puff.mjs `muzzle`: a star, a short cone
+   *  ahead, the brake's lobes), burning grains thrown ahead, and a spent case kicked out of her belly, tumbling away
+   *  (unseeded: looks only). */
   cannonBlast(p, d) {
     const fi = this.fighter, v0 = fi.body.vel;
-    this.flash(p, 1.6, '#ffd9a0', 0.06);
-    this.flash(_v.copy(p).addScaledVector(d, 1.2), 0.8, '#ffffff', 0.035);
-    if (Math.random() < 0.5) this.ring(_v.copy(p).addScaledVector(d, 0.3), d, 2.2, '#ffd0a0', 0.1);
+    this.puffs?.muzzle(p, d, 0.17, { color: '#ffc070', v0, lite: true });
     this.sparkBurst(p, 2, { dir: d, spread: 0.15, speed: 140, v0, life: 0.2, color: '#ffd080', w: 0.06 });
     if (this.cannonCount % 2 === 0) {
       BRASS ??= metal('#c9a04a', { plated: false, rough: 0.35, metalness: 0.7 });
@@ -74,14 +72,6 @@ export const fighterGunParts = {
       this.scene.add(c);
       const out = _v.set((Math.random() - 0.5) * 3, -4 - 3 * Math.random(), 1 + Math.random() * 2).transformDirection(fi.obj.matrixWorld).multiplyScalar(4 + 3 * Math.random());
       this.fx.push({ kind: 'debris', mesh: c, t: 0, life: 1.6, vel: out.add(v0).clone(), spin: new THREE.Vector3(Math.random() * 30, Math.random() * 30, Math.random() * 10) });
-    }
-    const G = this.gas;
-    for (let i = 0; G && i < 3; i++) {
-      const v = _c.copy(d).multiplyScalar(15 + 25 * Math.random()).add(v0);
-      v.x += (Math.random() - 0.5) * 12;
-      v.y += (Math.random() - 0.5) * 12;
-      v.z += (Math.random() - 0.5) * 12;
-      G.emit(p, v, 0.25 + 0.3 * Math.random(), 0.2, 1 + Math.random(), 0.3, 0.8, 0);
     }
   },
 

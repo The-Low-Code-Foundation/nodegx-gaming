@@ -1,0 +1,13 @@
+{
+  "id": "check-fire",
+  "about": "You fired against orders: on weapons hold, or on weapons tight at something that is not the designated target (src/carrier/firecontrol.mjs `fired`).",
+  "who": "ship",
+  "say": [
+    "Check fire, check fire."
+  ],
+  "to": {
+    "gunners": "headset"
+  },
+  "priority": 4,
+  "again": 4
+}

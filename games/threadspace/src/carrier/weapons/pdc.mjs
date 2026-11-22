@@ -153,8 +153,8 @@ export const pdcParts = {
     // The muzzle's flicker while it hoses (a flash every few rounds, not every one: they are hundreds a second).
     if ((g.flashT = (g.flashT ?? 0) - dt) <= 0) {
       g.flashT = 0.06 + 0.03 * Math.random();
-      const m = _d.copy(pivot).addScaledVector(want, 3.8);
-      this.flash(m, 1.4 + Math.random(), '#ffe0a0', 0.045);
+      const sc = g.m.scale ?? 1, m = _d.copy(pivot).addScaledVector(want, 3.8 * sc);
+      this.puffs?.muzzle(m, want, 0.24 * sc, { color: '#ffc880', v0: this.body?.vel, lite: true });
       if (Math.random() < 0.4) this.sparkBurst(m, 2, { dir: want, spread: 0.2, speed: 90, v0: this.body?.vel, life: 0.25, color: '#ffd080', w: 0.1 });
     }
     if ((g.soundT = (g.soundT ?? 0) - dt) <= 0) {
@@ -183,9 +183,7 @@ export const pdcParts = {
       const rd = this.round(muzzle, _e.copy(d).multiplyScalar(P.speed).add(this.body.vel), 'ours', fuse);
       if (rd) rd.flak = true;
       this.plant?.addHeat(P.heat);
-      this.flash(muzzle, 3.2, '#ffd090', 0.08);
-      this.flash(_g.copy(muzzle).addScaledVector(d, 2.5), 1.6, '#ffffff', 0.04);
-      this.ring(muzzle, d, 6, '#ffc890', 0.2);
+      this.puffs?.muzzle(muzzle, d, 0.45 * (g.m.scale ?? 1), { color: '#ffb870', v0: this.body?.vel });
       this.sparkBurst(muzzle, 5, { dir: d, spread: 0.25, speed: 110, v0: this.body?.vel, life: 0.35, color: '#ffb060', w: 0.14 });
       if (P.shellMass) this.recoil(muzzle, _e.copy(d).multiplyScalar(-P.speed * P.shellMass), 'flak');
       if ((g.soundT = (g.soundT ?? 0) - 1 / P.rate) <= 0) {

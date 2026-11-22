@@ -1,0 +1,13 @@
+{
+  "id": "weapons-hold",
+  "about": "Fire control's weapons state goes to hold: do not fire (src/carrier/firecontrol.mjs `set`; said only while you are at a gun).",
+  "who": "ship",
+  "say": [
+    "All turrets, weapons hold. Hold your fire."
+  ],
+  "to": {
+    "gunners": "headset"
+  },
+  "priority": 3,
+  "again": 6
+}

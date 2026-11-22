@@ -4,11 +4,11 @@
 // overlapping particles make filaments and veils for a moment. Additive, no drag.
 //
 //   Gas        one particle pool, one Points draw. `emit()` one wisp; `nozzle()` feeds it from a thruster (the
-//              carrier's drives and jets, via newton.mjs `updatePlumes`).
+//              main drives, via newton.mjs `updatePlumes`; the manoeuvring jets are puff.mjs's).
 //   DriveFx    a fighter's drive and jets, seen: the flame at the nozzle (a short pale cone that lengthens with power),
 //              the core and halo sprites, the gas poured out of the flame and spread over each frame's path (so the
-//              plume never detaches or beads), a glint at each jet valve and a frosty burst of cold gas that is gone
-//              in under 0.7 s. Moved onto whichever fighter you are in (fighter.mjs).
+//              plume never detaches or beads), a glint at each jet valve, and each jet's puff (puff.mjs `jet`, through
+//              `gas.puffs`, which main.mjs sets). Moved onto whichever fighter you are in (fighter.mjs).
 //
 // Rendering rule: one NaN or Inf pixel, smeared by the bloom, blacks out the frame (main.mjs scrubs them before the
 // bloom as a last net). So: every (1 - u) is clamped to [0, 1] before a pow, no pow of a negative base in GLSL, and no
@@ -250,6 +250,8 @@ const FLAME_FRAG = /* glsl */ `
 
 const _a = new THREE.Vector3(), _b = new THREE.Vector3(), _c = new THREE.Vector3(), _d = new THREE.Vector3(), _q = new THREE.Quaternion();
 
+const JET_SCALE = 0.2; // a fighter's jets against the carrier's (puff.mjs `jet`)
+
 export class DriveFx {
   /** `gas` the Gas the plume pours into; `flight` her Flight (the nozzles and their valves). */
   constructor(gas, flight) {
@@ -356,13 +358,9 @@ export class DriveFx {
         gl.material.opacity = n.flash * 0.6;
         gl.scale.setScalar(0.15 + 0.35 * n.flash);
       }
-      n.puffT -= dt;
-      if (n.open && (!n.was || n.puffT <= 0)) {
-        n.puffT = 0.03;
-        const at = obj.localToWorld(_c.copy(n.at)), dir = _b.copy(n.dir).applyQuaternion(q);
-        const count = n.was ? 4 : 18;
-        for (let j = 0; j < count; j++) burst(this.gas, at, dir, vel, 1, n.was ? 0.3 : 0.55);
-      }
+      // The puff itself (puff.mjs, through `gas.puffs`): told every frame, so it has the pop when the valve opens.
+      const P = this.gas.puffs;
+      if (P) P.jet(n, obj.localToWorld(_c.copy(n.at)), _b.copy(n.dir).applyQuaternion(q), n.open ? 1 : 0, dt, JET_SCALE);
     });
   }
 }

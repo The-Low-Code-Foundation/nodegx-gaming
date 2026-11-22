@@ -57,6 +57,10 @@
     "turret-back",
     "bay-jammed",
     "bay-clear",
-    "bearing-damaged"
+    "bearing-damaged",
+    "weapons-hold",
+    "weapons-tight",
+    "weapons-free",
+    "check-fire"
   ]
 }

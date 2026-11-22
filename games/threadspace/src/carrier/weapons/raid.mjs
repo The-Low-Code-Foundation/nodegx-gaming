@@ -204,8 +204,7 @@ export const raidParts = {
     dir.z += (r() - 0.5) * 2 * K.spread;
     const s = this.fire(muzzle, dir.normalize().multiplyScalar(K.shell).add(own), false, K.range / K.shell + 1, K.damage[0] + r() * (K.damage[1] - K.damage[0]));
     s.flak = true;
-    this.flash(muzzle, 2.4, '#ff9a60', 0.1);
-    this.ring(muzzle, dir, 4, '#ff9a60', 0.15);
+    this.puffs?.muzzle(muzzle, _d.copy(dir).sub(own).normalize(), 0.3, { color: '#ff9a60', v0: own });
     this.sfx?.play('turbolaser', this.ear ? this.ear.distanceTo(muzzle) * 0.8 : 900);
   },
 

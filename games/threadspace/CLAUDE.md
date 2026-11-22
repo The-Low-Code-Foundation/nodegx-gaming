@@ -222,6 +222,36 @@ their names for now):
 - **The voyage** (`src/core/voyage.mjs`, localStorage `threadspace.voyage`): what survives a change of ship: which ship
   you are aboard and where each carried ship is. `goAboard(id, params)` loads the other ship's page; the cutter's
   docking port (E, on the cradle) uses it to go back aboard the carrier. The career's save is still its own key.
+- **The cutter's hull** is `assets/cutter/hull.glb`, from `blender -b --factory-startup --python
+  tools/blender/cutter_build.py` (`-- --where` prints which part reaches furthest each way; the script asserts she is
+  inside `L.envelope`). Nodes: `hull` (opened by the cutaway), `fittings`, `turret-dorsal`, `turret-dorsal-guns`,
+  `radiator-port`, `radiator-stbd`. The turret's gunhouse and guns are modelled in the code turret's units and carry
+  the mount's `scale` (0.15) on the node, so the game's local points land on either hull. Radiators are exported run
+  in, so a berthed cutter (no plant) lies folded; a carried ship's plant keeps them folded until the hand-over
+  (`carriedRads` in `main.mjs`). Emissive strengths stay at 2 to 4 (bloom). `NUMBER` at the top is her hull number.
+- **Turrets from inside** (`src/carrier/turret-cab.mjs`, `seats/gun.mjs`): `man(t)` plays a climb up the trunk into a
+  cab built in code and sized by the mount's world scale (cramped under 0.25, a full armoured cab at 1); it trains
+  with the gunhouse, its hoist and breech follow the guns, and `guns.gunner` feeds the sight (`turrets.mjs` `hud()`).
+  E leaves by `startExit()` (0.8 s, wall clock); `leave()` is the immediate one for scripts. Zoomed, the cab is hidden
+  and the view masked to the eyepiece.
+- **Fire control** (`src/carrier/firecontrol.mjs`, `guns.fireControl`, also `C.fireControl`): the weapons state (HOLD,
+  TIGHT, FREE) and the designated target. By default it follows the raid (hold until a contact is identified and in
+  range, tight on the raider, free while torpedoes or bandits are up). `order(state, { by, target })`,
+  `designate(ref, …)` and `auto()` are how a captain or a mission drives it; it says `weapons-state` and `designate`
+  on the bus. The turret crews obey it only once something has given an order (`ordered`), so the default raid fights
+  as it did. Your own rounds against orders count (`violations`, `roundsOff`) and draw the `check-fire` call. Numbers:
+  `FIRE_CONTROL` in the module, or a layout's `weapons.fireControl`.
+- **Jets and muzzle blasts** (`src/carrier/puff.mjs`, `__carrier.puffs`): one instanced, shader-run particle system, no
+  library. `jet(key, p, dir, k, dt, s)` every frame per nozzle, `muzzle(p, d, size, opts)` per shot; in `tick` all the
+  jets, then `puffs.frame(dt)`, the guns, then `puffs.flush()` before the draw. Tune `JET` and `MUZZLE` at the top of
+  the module and `NOZZLE` in `newton.mjs`; per-gun sizes are at the call sites. It uses its own random numbers, never
+  the seeded ones.
+- **Getting about weightless**: door handles are on the jambs, in the doorway, as free bars (`weightless.mjs`
+  `dressHolds`); coming off a fixed-hull ladder you swing to its side nearest the way out and face it (`seats/walk.mjs`
+  `wayOut`); `walk.startLine(to, yaw)` is a drawn haul along a guide line, used by `berths.mjs` between the gangway
+  and each berth's platform. Kit racks in a room too small for them beside its door go on the wall facing it
+  (`damage.mjs` `rack`).
+- **Keys**: a key handled through `input.onAction` must be in `ACTIONS` in `src/input.mjs`, or it never arrives.
 - **Not built yet** (ROADMAP phases 12 and 13): flying her in yourself; the cutter and the carrier as solids to each
   other; the host under way; her own career, crew voices and Blender hull.
 
@@ -234,9 +264,9 @@ their names for now):
   (`cradle()`, `cradleBox()`) and the ramps and platforms (`berthSpurs()`); a cradle is solid to a flown fighter
   (`collide.mjs`), a berthed cutter is not yet.
 
-**The scripted checks' baselines** (seed 7, 21 November 2026, the 314 m carrier): raid ad2a8406, hull 20ef1760, helm
-4b766a23, landing 53faa5da, repair 5b8b23e6, collide 506e36d0, bandits 6de728ae, missiles 39d01e76, walk 574e4238,
-float 2eb50df7, brace b68467c9, career d747c09c, cutter d9a0b315, berth 52032305. A change that should not change how
+**The scripted checks' baselines** (seed 7, 22 November 2026, the 314 m carrier): raid ad2a8406, hull 20ef1760, helm
+4b766a23, landing 53faa5da, repair 5b8b23e6, collide 506e36d0, bandits 6de728ae, missiles 39d01e76, walk 0bc2cf45,
+float 2eb50df7, brace b68467c9, career d747c09c, cutter 493f4ef5, berth 52032305. A change that should not change how
 a ship behaves must leave every one as it is. `cutter` plays her rooms, the helm, a burn and a half turn, the turret,
 the cutaway and a raid; `berth` plays the launch from the carrier's hangar, a refusal when too fast, and the recovery.
 Run `walk` with nothing else loading the machine (it waits in real time); `brace` is pinned at z −50 in the spine. The

@@ -17,6 +17,8 @@
 //   fire       weapons.mjs    a gun big enough to push her fired        { at, impulse }   (world position, N·s)
 //   jolt       integrity.mjs  a hit kicked her structure                { at, dir, kind }  (ship frame; 'kick', 'shell', 'glance')
 //   brace      weapons.mjs    a torpedo is seconds out, or no longer    { on }
+//   weapons-state firecontrol.mjs the gunners' weapons state changed       { state, was, by, target }  ('hold', 'tight', 'free'; by 'auto' or who ordered it)
+//   designate  firecontrol.mjs fire control's designated target changed  { target, kind, ref, was, by }  (target: its label, or null)
 //   fighter-down weapons.mjs  your fighter is shot dead in space        {}
 //   fighter-contact collide.mjs your fighter touched the ship (a scrape or a crash) { what, kind, speed, damage, hole }
 //   launch     fighter.mjs    a fighter starts her launch run           { pad }

@@ -160,40 +160,16 @@ export const projectileParts = {
     return { pen: pick(T.pen), damage: pick(T.damage), hole: pick(T.hole), torpedo: true };
   },
 
-  /** A big gun's muzzle blast at `p` (world) along `d` (world, unit). Everything a heavy gun throws out of its muzzle
-   *  in vacuum, where nothing slows it: the flash, a white-hot core, a long tongue of burning propellant ahead, the
-   *  muzzle brake's ring of gas thrown out flat round the barrel (`ring`), burning grains flung ahead in a cone
-   *  (`sparkBurst`), and the cloud of propellant gas that cools and spreads (gas.mjs; `this.gas`, set by main.mjs).
-   *  `size` 1 is a turret's round; `v0` what it is carried along with (the carrier). Unseeded randoms: what you see,
-   *  never what happens. */
-  blast(p, d, size, color = '#ffd090', v0 = this.body?.vel) {
-    d = _bd.copy(d); // callers hand in shared scratch vectors, which the gas below borrows
+  /** A big gun's muzzle blast at `p` (world) along `d` (world, unit): what a heavy gun throws out of its muzzle in
+   *  vacuum, where nothing slows it and nothing hangs. The gas is puff.mjs `muzzle` (`this.puffs`, set by main.mjs): a
+   *  white star at the muzzle, a cone thrown ahead, the muzzle brake's lobes thrown out flat round the barrel, gone in a
+   *  fraction of a second; and burning grains flung ahead in a cone (`sparkBurst`). `size` 1 is a turret's round; `v0`
+   *  what it is carried along with (the carrier). Unseeded randoms: what you see, never what happens. */
+  blast(p, d, size, color = '#ffb060', v0 = this.body?.vel) {
+    d = _bd.copy(d); // callers hand in shared scratch vectors
     v0 = v0 && _bv.copy(v0);
-    this.flash(p, 6 * size, color, 0.16 + 0.08 * size);
-    this.flash(_c.copy(p).addScaledVector(d, 3 * size), 3.2 * size, '#ffffff', 0.07);
-    for (let i = 1; i <= 3; i++) this.flash(_c.copy(p).addScaledVector(d, (4 + 5 * i) * size), (3.4 - 0.7 * i) * size, color, 0.1 + 0.04 * i); // the tongue
-    this.ring(_c.copy(p).addScaledVector(d, -0.4 * size), d, 14 * size, color, 0.32 + 0.1 * size);
-    this.ring(_c.copy(p).addScaledVector(d, 1.5 * size), d, 7 * size, '#ffffff', 0.16);
-    this.sparkBurst(p, Math.round(14 + 16 * size), { dir: d, spread: 0.28, speed: 160 * size, v0, life: 0.6, color: '#ffb050', w: 0.22 * size });
-    const G = this.gas;
-    if (!G) return;
-    const n = Math.round(14 + 20 * size);
-    // The muzzle brake throws half of it out sideways, flat round the barrel.
-    for (let i = 0; i < n / 2; i++) {
-      const v = _d.set(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5);
-      v.addScaledVector(d, -v.dot(d)).normalize().multiplyScalar((40 + 40 * Math.random()) * size).addScaledVector(d, 10 * size);
-      if (v0) v.add(v0);
-      G.emit(p, v, 0.6 + Math.random(), 0.8 * size, (5 + 6 * Math.random()) * size, 0.3, 0.8, 0);
-    }
-    for (let i = 0; i < n; i++) {
-      const fwd = Math.random(), sp = (1 - fwd) * 0.9 + 0.15;
-      const v = _d.copy(d).multiplyScalar((20 + 60 * fwd) * size);
-      v.x += (Math.random() - 0.5) * 2 * sp * 40 * size;
-      v.y += (Math.random() - 0.5) * 2 * sp * 40 * size;
-      v.z += (Math.random() - 0.5) * 2 * sp * 40 * size;
-      if (v0) v.add(v0);
-      G.emit(p, v, 0.5 + 1.2 * Math.random(), 0.8 * size, (4 + 6 * Math.random()) * size, 0.25 + 0.2 * Math.random(), 0.6 + 0.4 * Math.random() * (1 - fwd), 0);
-    }
+    this.puffs?.muzzle(p, d, size, { color, v0 });
+    this.sparkBurst(p, Math.round(8 + 10 * size), { dir: d, spread: 0.28, speed: 160 * size, v0, life: 0.5, color: '#ffb050', w: 0.22 * size });
   },
 
   flash(p, size, color, life) {

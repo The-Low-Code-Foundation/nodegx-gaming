@@ -1,0 +1,13 @@
+{
+  "id": "weapons-tight",
+  "about": "Fire control's weapons state goes to tight: fire only at the designated target (src/carrier/firecontrol.mjs `set`; said only while you are at a gun).",
+  "who": "ship",
+  "say": [
+    "All turrets, weapons tight. Engage the designated target only."
+  ],
+  "to": {
+    "gunners": "headset"
+  },
+  "priority": 3,
+  "again": 6
+}

@@ -58,6 +58,20 @@ boardings. The first pieces are in:
   inside 900 m of the bay and slower than 20 m/s against the carrier hands her back to flight control, who fly her
   home and shut the door. **E** at her docking port, on the cradle, takes you back aboard the carrier.
 
+- **Her look.** A faceted hull built in Blender: a raked prow with the flight deck's canopy between two torpedo
+  cheeks, a stepped stern with tanks, a heat shield and verniers round the main bell, radiator sails, a low twin
+  turret, an orange stripe, a hull number and a shark's mouth.
+- **In a turret.** E at a turret's hatch takes you up the trunk into its cab: the sight, the hand grips, the hoist
+  and breech working beside you, a live round counter. The sight shows the target fire control has **designated** for
+  you and your weapons state, big: **HOLD** (do not fire), **TIGHT** (the designated target only) or **FREE**. Fire
+  against orders and you hear "Check fire". **Z** or the wheel looks through the sight at magnification. The same on
+  the carrier's ten turrets.
+- **Jets and guns you can see.** Every manoeuvring jet has a nozzle and fires a sharp cone of gas that stops when the
+  valve shuts; muzzle blasts are a flash, a cone ahead and brake lobes to the sides, gone in a blink.
+- **Getting about.** A grab handle on each jamb of every door, in the doorway, to push off either way; coming off a
+  ladder you swing round to face the way out; and from the hangar's gangway **E** hauls you up a guide line to a
+  cutter's docking port.
+
 Not built yet: her crew's voices and orders, a career aboard her, sorties, flying her in yourself, and her hull as
 solid to the carrier's.
 

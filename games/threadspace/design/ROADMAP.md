@@ -760,6 +760,28 @@ carried ship's side: cradle, door, launch, hand-over, recovery by flight control
 port to go aboard, `?at=berth:<id>` to arrive from her). A `berth` scenario in `tools/carrier-check.mjs` plays the
 launch and the recovery.
 
+**After the first play (22 November 2026).** Seven points from the player, all acted on:
+
+- L did nothing at the cutter's helm: the input layer passes only a list of keys as actions, and L was not on it.
+- Kit racks stood in the cutter's airlock doorway: in a room too small for them beside its door they now go on the
+  wall facing it.
+- Coming off a ladder you faced the wall: you now swing to its side nearest the way out and face it.
+- Door handholds were on the room's inside wall, good only for pushing back into the room: they are on the door's
+  jambs now, free bars you push off either way.
+- The ramp up to a cutter's port was awkward: E at its foot hauls you up a guide line, E on the platform takes you
+  down. The ramp is still there.
+- "A big grey bread bin": the cutter has a Blender hull with some attitude (`tools/blender/cutter_build.py`), and a
+  low twin mount for a turret (scale 0.15, was 0.25).
+- Turrets from inside (`turret-cab.mjs`), a gunner's sight, and **fire control** (`firecontrol.mjs`): weapons hold,
+  tight and free, a designated target, "check fire" when you break it. This is the hook phase 14's captain gives
+  orders through.
+- Manoeuvring jets and muzzle blasts redrawn as one shader particle system (`puff.mjs`); no library fitted the
+  no-build rule well enough to be worth vendoring.
+
+Still to be judged by the player: the new jets and blasts in motion (they were tuned from stills), the turret cab at
+a real frame rate (a fast swing shows cab wall until the gunhouse comes round), the cutter's look from the beam
+(still a long box: her rooms fix a 34 × 10 × 5.8 m body), and whether sparse holds plus the jamb handles are enough.
+
 **Left in phase 12:**
 
 - **Flying her in yourself**: a lane to the gate and a capture, as `approach.mjs` and `Fighter.capture` do for a

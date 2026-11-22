@@ -28,6 +28,7 @@ import { drumsFrame } from './drum.mjs';
 import { setsFrame, lookOf } from './sets.mjs';
 import { Ambience } from './ambience.mjs';
 import { Rigid, Thrusters, Helm, thrustersFromLayout, buildThrusterMeshes, updatePlumes } from './newton.mjs';
+import { Puffs } from './puff.mjs';
 import { Cutaway } from './cutaway.mjs';
 import { CarrierHud, KEYS } from './hud.mjs';
 import { tickCrew } from './crew.mjs';
@@ -197,6 +198,9 @@ const doors = new Doors(C); // the bay doors, the hatch lids
 // Gas in vacuum (gas.mjs): what the fighter's drive and jets throw out, and the carrier's own, each in its own pool.
 const gas = new Gas(world, 2600);
 const carrierGas = new Gas(world, 4000);
+// The manoeuvring jets' puffs and the guns' muzzle blasts (puff.mjs): one pool, one draw. The fighter's jets reach it
+// through her gas (gas.mjs `DriveFx`).
+const puffs = (gas.puffs = new Puffs(world));
 // Fire, smoke, sparks and spray (blaze.mjs): damage's particles, one pool per frame they are drawn in (hitfx.mjs).
 const blazes = (C.blazes = new Blazes(C));
 // The fighter's sound: live DSP worklets fed from her flight (flight-audio.mjs), on the page's AudioContext.
@@ -245,6 +249,7 @@ const guns = new Weapons(C, world, {
 const feel = new Feel(sfx);
 guns.feel = ship.feel = feel;
 guns.gas = carrierGas;
+guns.puffs = puffs;
 // Where a hit on your fighter lands and what it does (fighter-damage.mjs): her parts, the damage drawn on her, the
 // cockpit's damage page and tones. `guns.fhull` is what is left of them all.
 guns.fdmg = fighter && L.fighter.damage ? new FighterDamage(C, fighter, { gas, blazes, sfx, hull: L.weapons.fighter?.hull ?? 100, say: (t) => dc.say(null, t, 0, 4) }) : null;
@@ -480,10 +485,11 @@ function tick(dt) {
     const lane = approach.frame(dt, fighter, body, mode !== 'walk' && (fighter.flying || fighter.phase === 'landing'));
     if (mode === 'fighter' && fighter.flying && lane.call === 'catch' && doors.openOn(padSide)) fighter.capture(lane);
   }
-  updatePlumes(thrusterList, time, carrierGas, dt);
+  updatePlumes(thrusterList, time, carrierGas, dt, puffs);
   carrierGas.stepTick();
   gas.frame(dt, time);
   carrierGas.frame(dt, time);
+  puffs.frame(dt);
   blazes.frame(dt);
   if (fighter) {
     flightAudio.setActive(mode === 'fighter' && fighter.aboard);
@@ -619,6 +625,7 @@ function tick(dt) {
   gas.setView(camera, renderer.domElement.height);
   carrierGas.setView(camera, renderer.domElement.height);
   blazes.setView(camera, renderer.domElement.height);
+  puffs.flush();
   view.draw({ mode, inside });
 }
 
@@ -684,7 +691,7 @@ window.addEventListener('keydown', wake, { once: true });
 
 window.__carrier = {
   ship_id: SHIP_ID, HAS, world, C, L, K, W, crew, routine, hands, body, helm, thrusters, walker, renderer, camera, cut, fighter, dc, ship, guns, plant, helmSight, sfx, approach, cockpit, career, voices, announcer,
-  gas, carrierGas, blazes, feel, flightAudio, composer, bloom, ABOARD, ambience, input, G, seats, drive, doors, rescue, repairs, parts, hullRepair,
+  gas, carrierGas, puffs, blazes, feel, flightAudio, composer, bloom, ABOARD, ambience, input, G, seats, drive, doors, rescue, repairs, parts, hullRepair,
   mode: () => mode,
   tick: (n = 1, dt = 1 / 60) => {
     for (let i = 0; i < n; i++) tick(dt);
@@ -749,6 +756,13 @@ if (q.get('at')?.startsWith('berth:')) {
   }
 }
 
+/** A carried ship's radiators: folded in the bay and while flight control has her (`now`: at once, for the start),
+ *  spread when she is handed over. */
+function carriedRads(phase, now = false) {
+  plant.want = phase === 'out' ? 1 : 0;
+  if (now) for (const r of plant.radiators ?? []) r.k = 0;
+}
+
 // ?host=<id>: a second ship beside her (a debug flag: the proof that `buildCarrier` builds two layouts in one page).
 // Built with no hooks and no systems, standing in the world 400 m off the port beam where she starts, and drawn from
 // outside only: her hull and outside fittings, her drums as seen through the sleeve's ends (turning), her decks,
@@ -780,9 +794,11 @@ if (HOST_ID) {
       C, body, H, hostDoors, spec,
       say: (t, secs) => helmSight.say(t, secs),
       // Where she is, for the next page: in her berth, or out.
-      onChange: (phase) => (phase === 'berthed' ? setShip(berthKey(HOST_ID, spec.id), { ship: SHIP_ID }) : phase === 'out' ? setShip(berthKey(HOST_ID, spec.id), { ship: SHIP_ID, out: true }) : null)
+      // Her radiators stay folded in the bay and on the way in and out; they spread once she is clear.
+      onChange: (phase) => (carriedRads(phase), phase === 'berthed' ? setShip(berthKey(HOST_ID, spec.id), { ship: SHIP_ID }) : phase === 'out' ? setShip(berthKey(HOST_ID, spec.id), { ship: SHIP_ID, out: true }) : null)
     });
     helm.ref = berth.hostVel; // speeds at the helm are against her mothership
+    carriedRads('berthed', true);
     KEYS.helm = KEYS.helm.replace(' · <b>view</b> V', ' · <b>launch / come aboard</b> L · <b>view</b> V');
     // Her docking port (the layout's `dock`): on the cradle, it is the way back aboard the host.
     const dk = L.dock, lock = dk && C.rooms.get(dk.room);

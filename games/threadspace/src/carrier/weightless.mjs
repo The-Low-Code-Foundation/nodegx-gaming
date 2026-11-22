@@ -288,9 +288,13 @@ export function dressHolds(C, I, c, open) {
         hold(I, c, pt(mid - seg / 2, y + hy), pt(mid + seg / 2, y + hy), n, 'rail');
       }
     }
-    // Upright grab handles either side of each door, on the room's side.
-    for (const o of open[side]) if (o.kind === 'door') for (const u of [o.a - 0.2, o.b + 0.2]) {
-      if (u > a0 + 0.2 && u < b0 - 0.2) hold(I, c, pt(u, y + 0.7), pt(u, y + 2.1), n, 'door');
+    // An upright grab handle on each jamb of a door, in the doorway itself: from there you can push off either way,
+    // into the room or out through the door. (Beside the door on the room's wall, all you could do was push back into
+    // the room.) Bars on their own, so a push goes wherever you look.
+    for (const o of open[side]) if (o.kind === 'door') for (const [u, into] of [[o.a + 0.07, 1], [o.b - 0.07, -1]]) {
+      const jamb = alongX ? V(into, 0, 0) : V(0, 0, into);
+      hold(I, c, at3(u, y + 0.7, 0), at3(u, y + 2.1, 0), jamb, 'door');
+      I.holds.at(-1).free = true;
     }
     // A puffer refill point beside a door (past its grab handle), so there is one in every room and every few metres
     // of passage: none within 9 m of another in the same room.

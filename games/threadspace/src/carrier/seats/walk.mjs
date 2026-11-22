@@ -6,7 +6,7 @@
 // `fadeThen` and `fading`.
 
 import * as THREE from 'three';
-import { roomAt } from '../layout.mjs';
+import { roomAt, facing } from '../layout.mjs';
 import { drumWindow, drumDeck, drumSpots, drumRoomAt, placeInDrum, drumCamera, liftCar, liftShaft, parseKey } from '../drum.mjs';
 import { hubRing, hubPlace, hubBelow, wrap } from '../hub.mjs';
 import { frameOf, sideOf } from '../wayfinding.mjs';
@@ -16,6 +16,29 @@ const _tgt = { position: new THREE.Vector3(), quaternion: new THREE.Quaternion()
 const _v = new THREE.Vector3();
 const _q = new THREE.Quaternion(), _q2 = new THREE.Quaternion();
 const glow3 = (c) => new THREE.MeshBasicMaterial({ color: c, toneMapped: false });
+
+/** The yaw to face coming off a ladder at `end` ({ deck, at }): along a passage toward its longer run, or in a room
+ *  toward its nearest door. Yaw 0 looks toward the bow (-z). Null when the room has no way out to face. */
+function wayOut(C, end) {
+  const r = roomAt(C, end.deck, end.at[0], end.at[1]);
+  if (!r) return null;
+  const [x, z] = end.at, toward = (px, pz) => Math.atan2(-(px - x), -(pz - z));
+  const lx = r.x[1] - r.x[0], lz = r.z[1] - r.z[0];
+  if (Math.max(lx, lz) > 8 && Math.max(lx, lz) > 2.5 * Math.min(lx, lz)) {
+    // A passage: the way with more of it ahead.
+    return lz > lx ? toward(x, z - r.z[0] > r.z[1] - z ? r.z[0] : r.z[1]) : toward(x - r.x[0] > r.x[1] - x ? r.x[0] : r.x[1], z);
+  }
+  let best = null;
+  for (const d of C.L.doors) {
+    if (!d.between.includes(r.id)) continue;
+    const o = C.rooms.get(d.between.find((id) => id !== r.id)), rel = o && facing(r, o);
+    if (!rel) continue;
+    const p = rel.a === 'n' ? [d.at, r.z[0]] : rel.a === 's' ? [d.at, r.z[1]] : rel.a === 'w' ? [r.x[0], d.at] : [r.x[1], d.at];
+    const dist = Math.hypot(p[0] - x, p[1] - z);
+    if (dist > 0.3 && (!best || dist < best.dist)) best = { dist, p };
+  }
+  return best ? toward(...best.p) : null;
+}
 
 export class WalkSeat {
   constructor(G) {
@@ -290,6 +313,10 @@ export class WalkSeat {
       y0, y1, x0: walker.pos.x, z0: walker.pos.z, x: x + Math.sin(yaw) * 0.7, z: z + Math.cos(yaw) * 0.7, yaw, trunk, anchor, lit: { lights: [lamp] }, I1, lids: C.hatchLids?.get(l.id) ?? [] };
     if (walker.float) this.climb.y0 = walker.pos.y; // weightless, from wherever you were floating by it
     this.climb.float = !!roomAt(C, to.deck, to.at[0], to.at[1])?.float; // where you come out is weightless
+    this.climb.out = wayOut(C, to) ?? yaw + Math.PI; // which way you face coming off it: toward the way out of the room
+    // Weightless, you swing round the ladder as you come off it, to its side nearest the way out: the ladder is then
+    // behind you and nothing stands between you and the door.
+    if (this.climb.float) (this.climb.xo = to.at[0] - Math.sin(this.climb.out) * 0.9), (this.climb.zo = to.at[1] - Math.cos(this.climb.out) * 0.9);
     for (const lid of this.climb.lids) lid.want = 1; // the hatches open (layout.mjs `hatches`), and shut behind you
     sfx.cue('clunk', { vol: 0.3 });
   }
@@ -343,8 +370,39 @@ export class WalkSeat {
     sfx.cue('clunk', { vol: 0.3 });
   }
 
+  /** Along a guide line to `to` ({ x, y, z } on this deck), hand over hand, facing `yaw` at the end: the way up from the
+   *  hangar's gangway to a berthed ship's port and back (berths.mjs). Drawn, not a fade; nothing else moves you meanwhile. */
+  startLine(to, yaw) {
+    const { walker, sfx } = this.G;
+    walker.floater?.reset?.();
+    const from = walker.pos.clone(), end = new THREE.Vector3(to.x, to.y, to.z);
+    this.climb = { kind: 'line', t: 0, dur: Math.min(5, Math.max(1.4, from.distanceTo(end) / 2.4)), from, end, yaw };
+    sfx.cue('clunk', { vol: 0.25 });
+  }
+
+  lineFrame(c, dt) {
+    const walker = this.G.walker;
+    c.t += dt;
+    const u = Math.min(1, c.t / c.dur), pulls = Math.max(1, Math.round(c.from.distanceTo(c.end) / 1.2));
+    const e = u - Math.sin(u * pulls * 2 * Math.PI) / (pulls * 2 * Math.PI); // each pull quick, then a pause
+    walker.pos.lerpVectors(c.from, c.end, Math.min(1, Math.max(0, e)));
+    walker.vel?.set(0, 0, 0);
+    // Look along the line while you go, and where you are going to stand at the end.
+    const along = Math.atan2(-(c.end.x - c.from.x), -(c.end.z - c.from.z));
+    let d = (u > 0.7 ? c.yaw : along) - walker.yaw;
+    d = Math.atan2(Math.sin(d), Math.cos(d));
+    walker.yaw += d * Math.min(1, dt * 4);
+    const look = u > 0.7 ? 0 : Math.atan2(c.end.y - c.from.y, Math.hypot(c.end.x - c.from.x, c.end.z - c.from.z)) * 0.6;
+    walker.pitch += (look - walker.pitch) * Math.min(1, dt * 4);
+    walker.bob = 0;
+    if (u < 1) return;
+    this.climb = null;
+    walker.floater?.arrive?.(); // a hand on the nearest hold
+  }
+
   climbFrame(dt) {
     const c = this.climb, { C, walker } = this.G;
+    if (c.kind === 'line') return this.lineFrame(c, dt);
     c.t += dt;
     const u = Math.min(1, c.t / c.dur);
     // Onto the ladder in the first 0.4 s, then up or down it, a pull at a time.
@@ -357,9 +415,14 @@ export class WalkSeat {
     // Facing the ladder on it; weightless, turning round to face the room over the last of the climb, so you come out
     // of the trunk looking where you are going.
     const turnRound = c.kind === 'fixed' && c.float && u > 0.6;
-    let d = c.yaw + (turnRound ? Math.PI : 0) - walker.yaw;
+    let d = (turnRound ? c.out : c.yaw) - walker.yaw;
     d = Math.atan2(Math.sin(d), Math.cos(d));
     walker.yaw += d * Math.min(1, dt * (turnRound ? 4 : 6));
+    if (turnRound && c.xo !== undefined) {
+      const sw = (u - 0.6) / 0.4, e2 = sw * sw * (3 - 2 * sw);
+      walker.pos.x = c.x + (c.xo - c.x) * e2;
+      walker.pos.z = c.z + (c.zo - c.z) * e2;
+    }
     // Look the way you climb, up or down the ladder, and level again as you step off.
     const look = (c.y1 > c.y0 ? 0.55 : -0.55) * Math.sin(Math.PI * Math.min(1, u * 1.1));
     walker.pitch += (look - walker.pitch) * Math.min(1, dt * 4);
@@ -377,7 +440,8 @@ export class WalkSeat {
       c.anchor.removeFromParent();
       for (const lid of c.lids) lid.want = 0;
       const off = c.to.at;
-      this.goDeck(c.to.deck, off[0] + Math.sin(c.yaw) * 0.9, off[1] + Math.cos(c.yaw) * 0.9, walker.yaw);
+      if (c.xo !== undefined) this.goDeck(c.to.deck, c.xo, c.zo, c.out);
+      else this.goDeck(c.to.deck, off[0] + Math.sin(c.yaw) * 0.9, off[1] + Math.cos(c.yaw) * 0.9, walker.yaw);
       if (c.float) walker.floater?.arrive(); // a hand on the nearest hold as you come out
     } else {
       c.trunk.removeFromParent();
