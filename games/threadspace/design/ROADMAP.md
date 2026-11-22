@@ -791,6 +791,24 @@ can fly in at the sleeve's open ends), the host takes no push, a wrecked cutter 
 lane reads weakly from the flight-deck seat (the gates are abeam; a side-looking docking camera may be wanted), and
 none of it has been flown by hand.
 
+**Phase 13, first session (22 November 2026).** The career is the player's and spans both ships
+(`content/careers/service.json`, saved in the voyage): a ladder of ranks (hand, hand first class, then three
+placeholders up to sortie captain) and separate qualifications (damage control, turret, sensors, helm) that open the
+cutter's seats. Chapter one is 21 orders, all playable: wake aboard the carrier, report to the cutter's commander,
+draw a suit, go aboard, learn her rooms, two damage-control drills, a first sortie as a passenger with the commander
+flying, gunnery on a towed sled under weapons hold and tight, the flight home, then qualify at the helm (launch, a
+waypoint, a graded capture you flew), and back aboard the carrier for your watch and your bunk, with a promotion.
+The cutter has three named crew at her stations (placeholder names) and a **crew pilot** (`pilot.mjs`) that flies
+her through the real thrusters: launch, flip-and-burn to a point, hold, round the carrier's hull, home down the lane.
+Every line is a plain working draft for the story pass; none is recorded.
+
+Left in phase 13: maintenance on your own cutter in the hangar (her damage carried between pages and shown on her
+in the berth, the phase 9 repair work on her); your watch aboard the carrier as more than the one muster; the three
+upper rungs of the ladder; general-quarters stations aboard the cutter; the sensors qualification; the story pass
+and the recording of 22 career lines and 13 pilot calls (`node tools/voices.mjs --list`; the three new people want
+`--design` first); the old carrier week's leftovers ("The new apprentice" in `watches.json`). From the pilot's side,
+wanted by the career: a "hold until told" leg, a mark on `berth.lastRecovery` when the crew flew it.
+
 **Left in phase 12:**
 
 - **Flying her in yourself**: a lane to the gate and a capture, as `approach.mjs` and `Fighter.capture` do for a

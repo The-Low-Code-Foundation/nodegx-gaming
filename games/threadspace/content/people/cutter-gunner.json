@@ -1,0 +1,15 @@
+{
+  "id": "cutter-gunner",
+  "name": "Petty Officer Cole",
+  "dept": "crew",
+  "body": "Male_Adult_04",
+  "placeholder": "The name, the rank and the casting are working placeholders: the story bible settles them.",
+  "cast": {
+    "voiceId": null,
+    "design": "A dry, steady man in his thirties with a South Wales accent, a light baritone.",
+    "gender": "male",
+    "language": "en-GB",
+    "style": "A gunner on a fire control net: clipped, flat, exact.",
+    "sample": "Weapons hold. Track the target. Do not fire."
+  }
+}

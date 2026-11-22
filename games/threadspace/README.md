@@ -82,7 +82,17 @@ boardings. The first pieces are in:
   one dents, harder still holes the compartment behind it, and at 30 m/s she is wrecked and you come round in the
   carrier's sick bay.
 
-Not built yet: her crew's voices and orders, a career aboard her, sorties, and the carrier under way.
+- **Serving aboard her.** **Join as a new hand** starts you in your bunk on the carrier, assigned to the cutter as her
+  fourth hand. Chapter one: report to her commander, draw a suit, cross the hangar and go aboard; learn her rooms; a
+  fire drill and an electrical fault; a first sortie as a passenger while the commander flies; gunnery on a towed
+  sled, holding your fire until you are told; then qualify at the helm by launching her, flying to a waypoint and
+  bringing her home down the lane yourself; and back aboard the carrier for your watch. Each qualification opens a
+  seat. The orders' wording is a working draft and is shown as subtitles: nothing of her crew's is recorded yet.
+- **A commander who can fly.** **J** at her helm hands her to the commander for a circuit: launch, a burn out two
+  kilometres, the flip, a hold, and home down the lane. J again and she is yours.
+
+Not built yet: maintenance on your own cutter between sorties, missions beyond the first chapter, and the carrier
+under way.
 
 - **Your first week aboard.** **Join as a new hand** and you come aboard as the most junior apprentice on the ship. Five officers stand at their posts and give you orders: report to the coxswain, read the watch bill, find your bunk and turn in until you are called for your watch, muster with your watch section, put out the damage control chief's drill fire and mend a drill electrical fault, do rounds of the repair lockers, score three hits on a target sled a tug tows past the dorsal turret, draw a vac suit, then hit a raider three times from the turret, fly a fighter home down the lane yourself, turn the ship 90° at the helm, and fly her to a waypoint 15 km off and stop on it. Each order you finish can promote you (apprentice, crewman, gunner, flight cadet, helmsman) and open up more of the ship: the turrets, the fighters, the helm, and raids that come on their own. A duty card shows your rank, your order and where to go, a gold chevron hangs over the officer you are looking for, and the cutaway marks the place in gold. Your progress is saved in the browser: **Carry on** wakes you in your bunk. **Free roam** opens the whole ship from the start.
 - **Spin drums round a weightless spine.** Amidships, inside one armoured sleeve, two drums turn opposite ways at 3.7 turns a minute, so their rooms feel nearly 1 g. Each has two decks of forty rooms round a ring corridor: quarters, messes, the galley, the sick bay, the gym, workshops, the ship's office, and spares used as stores. To get into one, drop through a hatch in the spine's floor and catch a handhold on the hub ring turning past underneath. That puts you in a slow ring at a tenth of a g. Walk round it to a lift. A lift down a spoke takes nine seconds and you feel the weight come on as it goes. Coming back, the lift lets you out in the hub ring, and from anywhere in it you push off up into the spine. Ladders are climbed, not faded through. Walk the ring corridor and the floor rises ahead of you, all the way round. The rest of the ship is weightless: the bridge tower and engineering aft (grip shoes), the spine and the crew tunnel that you float along hand over hand, and the airless hangar, which you cross through its airlock and along a gangway to your fighter, clipped on to its safety wire.

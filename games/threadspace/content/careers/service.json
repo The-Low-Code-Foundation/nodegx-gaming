@@ -1,0 +1,502 @@
+{
+  "about": {
+    "what": "The player's career: one file that spans the ships you serve on. Chapter one: you join the cutter as her fourth hand, learn her stations, ride a sortie, shoot under fire control's orders, qualify at the helm, and stand a watch aboard the carrier. career.mjs runs it, one step at a time, in order; the page for either ship loads this same file and the same save (the voyage: src/core/voyage.mjs, `voyage.career`).",
+    "draft": "WORKING DRAFT. Every line here (orders, what people say, hints, promotions) is plain and functional on purpose, in the wording of content/glossary.json. The story pass (written with Gemini, with the story bible) replaces the words, the people's names and the rank titles. It should keep the steps' mechanics.",
+    "ships": "Each ship the career happens on, by her folder's id: `go` is the duty card's line when the order in hand is aboard her and you are not; `page` is how her page is reached when the career is carried on from the start screen (src/core/voyage.mjs `pageFor`): a carried ship's `host` and `berth`, or where you arrive aboard the carrier (`at`); `crossing` is the airlock card's line on the way; `aboard` is said when you arrive.",
+    "ranks": "The ladder, lowest first: `name` (the title on the duty card), `grade` (the pay grade), `nets` (the headset nets that rank is on: src/core/announcer.mjs `DEPTS`), `needs` (the qualifications the rank asks for, for a later chapter to check). A step's `rank` promotes you to one of these. `placeholder: true`: the rung is here as data, with no steps that reach it yet.",
+    "quals": "Qualifications, apart from rank: a rank is a title and a pay grade, a qualification opens a seat. Each has a `name`, a `short` code for the duty card, the `ship` it is held on and the seats it opens there (`unlock`). A step's `qual` awards one.",
+    "unlocks": "What the game keeps shut until it is earned, per ship (the save holds `cutter:helm`): each key is a name `career.allows()` is asked for. A step's `unlock` opens it on that step's ship (under instruction, before the qualification); `refuse.<ship>.<unlock>` says why not until then.",
+    "start": "Where a new hand begins: `ship`, `room`, `at` [x, z] in that room's frame, `yaw`, the `rank`, and the first thing you are told. `resume.<ship>` is where a career picked up from the start screen puts you aboard that ship.",
+    "people": "Who gives the orders, by `id` (content/people/<id>.json: name, dept, cast, and `body`, the model that plays them on every ship), each with the `ship` they stand on. With a `room`, `at`, `yaw` and `pose` they stand there; without, they are at the layout station that names them (`stations[].person`, written by the ship's generator). A person may stand on two ships (two entries): the page boards only its own ship's.",
+    "steps": "`ship` is where the step happens; aboard another ship the card shows `ships.<ship>.go` and nothing completes. `do` is what it waits for: talk (use `who`), go (stand in `room`), rounds (stand in each of `rooms`; `each` is said at each), drill (a damage control job of `kind` in `room`), suit (fresh bottles at a SUIT AIR locker; `room` is where the card points), shoot (a tug tows a target sled down the side `from`; `hits` hits of your own), muster and sleep (the carrier's routine: your watch's roll, your bunk), and the kinds added for this career: pilot (the crew pilot flies `plan`, a list of legs for `G.pilot.fly`: launch, goto `at` [x, y, z] in the host's frame, hold `secs`, recover; you strapped in at the pilot's couch first; done when the plan ends, or when a leg of kind `until` begins; with no pilot in the build the card shows `self` and you fly it: L is yours for the step), obey (fire control: a sled runs past under WEAPONS HOLD for `hold` seconds, then WEAPONS TIGHT on it and `hits` hits; a round against orders goes on report, says `fail`, and the step starts again; `short` if the tug finishes first), launch (out of the berth by your own hand: L at the helm), transit with `at` (a point in the host's frame; arriving is the helm sight's rule: inside 2 km and under 20 m/s) and land (a capture you flew yourself, graded `grade` or better of clean, fair, rough; `fail` if flight control brought her in, `rough` if the grade was worse; either way back to the launch).",
+    "fields": "`order` is the card's line. `say` is said when the step is done (for talk: what the person tells you, in their voice). `start`, `tight`: said as a step's phases begin. `rank`, `qual`, `unlock`, `flag` take effect when the step is done. `run`: steps with the same `run` need her out of her berth or you in a seat; a career picked up again starts the run from its first step. `skipTo` moves the carrier's clock once when the step begins aboard her: `{ before: m }` to m minutes before your next watch, `{ relieved: m }` to m minutes after the watch you are on ends."
+  },
+  "id": "service",
+  "title": "Chapter one: the fourth hand",
+  "ships": {
+    "carrier": {
+      "name": "the carrier",
+      "go": "Go back aboard the carrier: the docking port, in the airlock",
+      "page": {
+        "at": "berth:berth-port"
+      },
+      "crossing": "Docking port shut behind you. Pumping the lock down.",
+      "aboard": "Aboard the carrier."
+    },
+    "cutter": {
+      "name": "the cutter",
+      "go": "Go aboard the cutter: port berth, hangar",
+      "page": {
+        "host": "carrier",
+        "berth": "berth-port"
+      },
+      "crossing": "Docking port shut behind you. Filling the lock.",
+      "aboard": "Aboard the cutter."
+    }
+  },
+  "ranks": [
+    {
+      "name": "Hand",
+      "grade": 1,
+      "nets": [
+        "dc"
+      ]
+    },
+    {
+      "name": "Hand first class",
+      "grade": 2,
+      "nets": [
+        "dc",
+        "gunners",
+        "bridge"
+      ]
+    },
+    {
+      "name": "Qualified hand",
+      "grade": 3,
+      "nets": [
+        "dc",
+        "gunners",
+        "bridge",
+        "engineering"
+      ],
+      "needs": [
+        "dc",
+        "turret",
+        "sensors",
+        "helm"
+      ],
+      "placeholder": true
+    },
+    {
+      "name": "Second in command",
+      "grade": 4,
+      "nets": [
+        "dc",
+        "gunners",
+        "bridge",
+        "engineering",
+        "flight"
+      ],
+      "placeholder": true
+    },
+    {
+      "name": "Sortie captain",
+      "grade": 5,
+      "nets": [
+        "dc",
+        "gunners",
+        "bridge",
+        "engineering",
+        "flight"
+      ],
+      "placeholder": true
+    }
+  ],
+  "quals": {
+    "dc": {
+      "name": "Damage control",
+      "short": "DC",
+      "ship": "cutter",
+      "unlock": []
+    },
+    "turret": {
+      "name": "Turret",
+      "short": "GUN",
+      "ship": "cutter",
+      "unlock": [
+        "guns"
+      ]
+    },
+    "sensors": {
+      "name": "Sensors and fire control",
+      "short": "FC",
+      "ship": "cutter",
+      "unlock": [
+        "firecontrol"
+      ],
+      "placeholder": true
+    },
+    "helm": {
+      "name": "Helm",
+      "short": "HELM",
+      "ship": "cutter",
+      "unlock": [
+        "helm",
+        "launch"
+      ]
+    }
+  },
+  "unlocks": {
+    "guns": "The turret hatches.",
+    "helm": "The helm (aboard the cutter, the pilot's couch).",
+    "launch": "Launch and recovery by your own hand: L at the helm of a carried ship.",
+    "firecontrol": "Giving fire control orders (the weapons state, the designated target). Nothing in the game asks for it yet.",
+    "fighters": "Climbing into a fighter.",
+    "raids": "Raiders come by themselves."
+  },
+  "start": {
+    "ship": "carrier",
+    "rank": "Hand",
+    "room": "quarters-c",
+    "at": [
+      1.2,
+      -82.2
+    ],
+    "yaw": 0,
+    "say": "You wake in your bunk in quarters C, in the forward drum. You are assigned to a cutter as her fourth hand. Change into your duty suit at the lockers by the lift. Then report to the cutter's commander in the boat crews' ready room, on the tunnel deck over the berths."
+  },
+  "resume": {
+    "carrier": {
+      "room": "quarters-c",
+      "at": [
+        1.2,
+        -82.2
+      ],
+      "yaw": 0,
+      "say": "You wake in your bunk in quarters C. Your orders stand."
+    },
+    "cutter": {
+      "room": "crew-space",
+      "yaw": 0,
+      "say": "You wake in your bunk in the crew space. Your orders stand."
+    }
+  },
+  "people": [
+    {
+      "id": "cox",
+      "ship": "carrier",
+      "room": "ship-office",
+      "at": [
+        1.3,
+        -55.1
+      ],
+      "yaw": 3.1416,
+      "pose": "idle"
+    },
+    {
+      "id": "dc",
+      "ship": "carrier",
+      "room": "damage-control",
+      "at": [
+        -4.5,
+        127.5
+      ],
+      "yaw": 3.1416,
+      "pose": "lookAround"
+    },
+    {
+      "id": "guns",
+      "ship": "carrier",
+      "room": "dorsal-access",
+      "at": [
+        6,
+        -107
+      ],
+      "yaw": 1.5708,
+      "pose": "idle"
+    },
+    {
+      "id": "flight",
+      "ship": "carrier",
+      "room": "pilots-ready",
+      "at": [
+        8.5,
+        -31
+      ],
+      "yaw": 1.5708,
+      "pose": "idle"
+    },
+    {
+      "id": "ootw",
+      "ship": "carrier",
+      "room": "bridge",
+      "at": [
+        2.6,
+        127.5
+      ],
+      "yaw": 0,
+      "pose": "lookAround"
+    },
+    {
+      "id": "cutter-cdr",
+      "ship": "carrier",
+      "room": "boat-crews",
+      "at": [
+        -4.6,
+        43.4
+      ],
+      "yaw": -1.5708,
+      "pose": "idle"
+    },
+    {
+      "id": "cutter-cdr",
+      "ship": "cutter"
+    },
+    {
+      "id": "cutter-gunner",
+      "ship": "cutter"
+    },
+    {
+      "id": "cutter-eng",
+      "ship": "cutter"
+    }
+  ],
+  "refuse": {
+    "carrier": {
+      "helm": "You are a cutter's hand. The carrier's helm is not yours.",
+      "fighters": "You are not on the flying list.",
+      "guns": "The turret is locked. You are not on the carrier's gun crews."
+    },
+    "cutter": {
+      "helm": "Not yet. The commander has not put you in the pilot's couch.",
+      "guns": "Not yet. The gunner has not passed you for the turret.",
+      "launch": "Hands off. You are not cleared to launch or recover her.",
+      "firecontrol": "Not yet. You are not qualified at fire control."
+    }
+  },
+  "steps": [
+    {
+      "ship": "carrier",
+      "do": "talk",
+      "who": "cutter-cdr",
+      "order": "Report to the cutter's commander in the boat crews' ready room",
+      "say": "You are assigned to my cutter as her fourth hand. Draw fresh suit bottles in the flight gear room. Then cross the hangar to the port berth and come aboard. Report to me on the flight deck."
+    },
+    {
+      "ship": "carrier",
+      "do": "suit",
+      "room": "flight-gear",
+      "order": "Draw fresh bottles and check your seals: a SUIT AIR locker, flight gear room",
+      "say": "Suit checked. The hangar has no air. Go through the hangar airlock and along the gangway to the port berth."
+    },
+    {
+      "ship": "cutter",
+      "do": "talk",
+      "who": "cutter-cdr",
+      "order": "Report to the commander on the flight deck",
+      "say": "Welcome aboard. Learn the ship first. Find the flight deck, your bunk in the crew space, the damage control locker, engineering control and the airlock. Then report to the engineer."
+    },
+    {
+      "ship": "cutter",
+      "do": "rounds",
+      "rooms": [
+        "flight-deck",
+        "crew-space",
+        "ops-locker",
+        "eng-room",
+        "airlock"
+      ],
+      "order": "Find each station: flight deck, crew space, damage control locker, engineering control, airlock",
+      "each": "{room}: found. {n} to go.",
+      "say": "All stations found. Report to the engineer in engineering control."
+    },
+    {
+      "ship": "cutter",
+      "do": "talk",
+      "who": "cutter-eng",
+      "order": "Report to the engineer in engineering control",
+      "say": "Damage control drill. There is a drill fire in the galley and mess. Take an extinguisher from a red cabinet. Put it out."
+    },
+    {
+      "ship": "cutter",
+      "do": "drill",
+      "kind": "fire",
+      "room": "mess-nook",
+      "order": "Put out the drill fire in the galley and mess",
+      "say": "Fire out. Next: a drill fault on the flight deck. Take a tool kit from the damage control locker. Isolate the supply in engineering control first.",
+      "fail": "Drill lost. It runs again."
+    },
+    {
+      "ship": "cutter",
+      "do": "drill",
+      "kind": "electrical",
+      "room": "flight-deck",
+      "order": "Mend the drill fault on the flight deck",
+      "say": "Fault mended. Report to the commander.",
+      "fail": "Drill lost. It runs again."
+    },
+    {
+      "ship": "cutter",
+      "do": "talk",
+      "who": "cutter-cdr",
+      "order": "Report to the commander on the flight deck",
+      "qual": "dc",
+      "unlock": [
+        "helm"
+      ],
+      "say": "The engineer passes you for damage control. First sortie: you ride as a passenger. Strap in at the pilot's couch. Hands off the controls. I have the helm."
+    },
+    {
+      "ship": "cutter",
+      "do": "pilot",
+      "run": "sortie",
+      "who": "cutter-cdr",
+      "until": "hold",
+      "plan": [
+        {
+          "do": "launch"
+        },
+        {
+          "do": "goto",
+          "at": [
+            -700,
+            -5.8,
+            40.85
+          ]
+        },
+        {
+          "do": "hold",
+          "secs": 3600
+        }
+      ],
+      "order": "Strap in at the pilot's couch: the commander launches her",
+      "self": "No crew pilot in this build: take the helm, launch with L, fly clear of the bay and stop",
+      "start": "Launching.",
+      "say": "On station. Unstrap. Rounds in flight: engineering control, the damage control locker, the crew space."
+    },
+    {
+      "ship": "cutter",
+      "do": "rounds",
+      "run": "sortie",
+      "rooms": [
+        "eng-room",
+        "ops-locker",
+        "crew-space"
+      ],
+      "order": "Rounds in flight: engineering control, damage control locker, crew space",
+      "say": "Rounds complete. Report to the gunner on the flight deck."
+    },
+    {
+      "ship": "cutter",
+      "do": "talk",
+      "run": "sortie",
+      "who": "cutter-gunner",
+      "order": "Report to the gunner on the flight deck",
+      "unlock": [
+        "guns"
+      ],
+      "say": "Gunnery drill. A tug tows a target sled past us. Climb into the dorsal turret from the hatch in the passage. Lay the sight on the amber diamond. Three hits."
+    },
+    {
+      "ship": "cutter",
+      "do": "shoot",
+      "run": "sortie",
+      "from": "port",
+      "hits": 3,
+      "order": "Gunnery drill: hit the towed target three times",
+      "start": "Turret, fire control. Target tug running in to port. The range is clear. Commence.",
+      "say": "Three hits. Check fire. Stay in the turret.",
+      "fail": "The tug has finished its runs. It is coming round again."
+    },
+    {
+      "ship": "cutter",
+      "do": "obey",
+      "run": "sortie",
+      "who": "cutter-gunner",
+      "from": "port",
+      "hold": 12,
+      "hits": 2,
+      "order": "Obey fire control: hold your fire until weapons tight, then two hits",
+      "start": "Weapons hold. Track the target. Do not fire.",
+      "tight": "Weapons tight. Target designated. Engage.",
+      "say": "Two hits under orders. Check fire. Leave the turret and strap in for recovery.",
+      "fail": "Check fire. You fired against orders. You are on report. The drill runs again.",
+      "short": "The tug has finished its runs. It is coming round again."
+    },
+    {
+      "ship": "cutter",
+      "do": "pilot",
+      "run": "sortie",
+      "who": "cutter-cdr",
+      "plan": [
+        {
+          "do": "recover"
+        }
+      ],
+      "flag": "sortie-1",
+      "order": "Strap in at the pilot's couch: the commander brings her home",
+      "self": "No crew pilot in this build: take the helm and bring her home (L requests recovery; L again hands her to flight control)",
+      "start": "Recovering.",
+      "say": "On the cradle. Report to the commander."
+    },
+    {
+      "ship": "cutter",
+      "do": "talk",
+      "who": "cutter-cdr",
+      "order": "Report to the commander on the flight deck",
+      "qual": "turret",
+      "unlock": [
+        "launch"
+      ],
+      "say": "The gunner passes you for the turret. Now the helm. Launch her yourself: L at the helm. Fly to the waypoint and stop on it. Then bring her home down the lane yourself. Do not hand her to flight control."
+    },
+    {
+      "ship": "cutter",
+      "do": "launch",
+      "run": "helm-qual",
+      "order": "Take the helm and launch her: L"
+    },
+    {
+      "ship": "cutter",
+      "do": "transit",
+      "run": "helm-qual",
+      "at": [
+        -4000,
+        150,
+        -300
+      ],
+      "name": "TANGO",
+      "order": "Fly to waypoint Tango and stop on it",
+      "say": "On the waypoint. Bring her home: L requests recovery. Fly the lane yourself."
+    },
+    {
+      "ship": "cutter",
+      "do": "land",
+      "run": "helm-qual",
+      "grade": "fair",
+      "order": "Fly her home down the lane: a capture graded fair or better",
+      "say": "Captured. Report to the commander.",
+      "fail": "Flight control brought her in. Launch and fly the recovery yourself.",
+      "rough": "A rough capture. Launch and fly it again."
+    },
+    {
+      "ship": "cutter",
+      "do": "talk",
+      "who": "cutter-cdr",
+      "order": "Report to the commander on the flight deck",
+      "qual": "helm",
+      "say": "You are qualified at the helm. Your section has the next watch aboard the carrier. Go back aboard and muster with your watch."
+    },
+    {
+      "ship": "carrier",
+      "do": "muster",
+      "skipTo": {
+        "before": 50,
+        "say": "The time is {time}. Your watch musters in 50 minutes."
+      },
+      "order": "Stand your watch: muster with Blue watch at the midships repair locker",
+      "say": "Hand: on watch.",
+      "adrift": {
+        "call": "Hand. Report here, now.",
+        "order": "You missed muster: report to your leading hand at the midships repair locker",
+        "say": "Late for muster. You are on report."
+      }
+    },
+    {
+      "ship": "carrier",
+      "do": "sleep",
+      "skipTo": {
+        "relieved": 5,
+        "say": "The watch was relieved. The time is {time}."
+      },
+      "rank": "Hand first class",
+      "order": "Watch relieved: turn in at your bunk",
+      "say": "Chapter one is complete. You are promoted to hand first class."
+    }
+  ],
+  "end": {
+    "order": "Chapter one is complete. Further orders will follow.",
+    "tag": "chapter one"
+  }
+}

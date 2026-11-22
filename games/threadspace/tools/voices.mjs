@@ -52,7 +52,9 @@ const V = json('ships/carrier/voices.json');
 // ship's automated voice and the bridge's talker). `V.speakers` here is all of them; each is written back where it lives.
 const calls = await loadCalls(async (p) => json(p));
 const callers = [...new Set([...calls.values()].map((a) => a.who))].filter((id) => !V.speakers[id]);
-const people = await loadPeople([...new Set([...peopleNamed(json('ships/carrier/career.json'), json('ships/carrier/watches.json')), ...callers])], async (p) => json(p));
+// The player's career (content/careers/service.json) spans ships: its people speak too, whichever ship they stand on.
+const SVC = json('content/careers/service.json');
+const people = await loadPeople([...new Set([...peopleNamed(json('ships/carrier/career.json'), json('ships/carrier/watches.json')), ...SVC.people.map((p) => p.id), ...callers])], async (p) => json(p));
 V.speakers = { ...Object.fromEntries([...people.values()].map((p) => [p.id, p.cast])), ...V.speakers };
 const OUT = here('assets/voice/');
 const INDEX = here('assets/voice/index.json');
@@ -106,6 +108,22 @@ for (const st of K.steps) add('ship', st.start);
 add('ship', W.pipes.down);
 add('ship', W.pipes.call);
 for (const s of W.sections) for (const w of W.watches) add('ship', fill(W.pipes.change, s, w));
+}
+
+// The player's career: what each person says when you report (and when you come back too soon), what a person says
+// as a pilot's or a fire control order begins, the leading hand at its muster, and the gunnery drill's call.
+{
+  const leader = today.W.sections.find((x) => x.id === today.W.you.section).leader.id;
+  for (const st of SVC.steps) {
+    if (st.do === 'talk') add(st.who, st.say);
+    if (st.do === 'pilot') add(st.who, st.start);
+    if (st.do === 'obey') add(st.who, st.start), add(st.who, st.tight);
+    if (st.do === 'shoot') add('ship', st.start);
+    if (st.do === 'muster') {
+      add(leader, st.say), add(leader, st.adrift?.call), add(leader, st.adrift?.say);
+    }
+  }
+  for (const id of new Set(SVC.people.map((p) => p.id))) add(id, 'You have your orders.'), add(id, 'Carry on.');
 }
 
 // The ship's calls (content/announcements/), today's ship only: their words, and the ship's words for every place.

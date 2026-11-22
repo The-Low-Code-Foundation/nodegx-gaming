@@ -272,7 +272,8 @@ function vacParts(outer, dept) {
  *  crew with it). Loads in the background: the ship is walkable before anyone is aboard. Returns the list as it fills. */
 export function boardCrew(C) {
   const crew = [];
-  C.L.stations.forEach((s, k) => placeCrew(C, s, k).then((m) => crew.push(m), () => {}));
+  // A station that names a person the career has brought aboard (`C.named`, career.mjs `place`) is theirs.
+  C.L.stations.forEach((s, k) => C.named?.has(s.person) || placeCrew(C, s, k).then((m) => crew.push(m), () => {}));
   return crew;
 }
 

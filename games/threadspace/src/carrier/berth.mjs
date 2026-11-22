@@ -146,9 +146,11 @@ export class Berth {
   }
 
   set(phase) {
+    const was = this.phase;
     this.phase = phase;
     this.t = 0;
     this.onChange(phase);
+    this.C.bus?.emit('berth-phase', { phase, was }); // every change, for whoever follows her (pilot.mjs, a career)
   }
 
   startRecover() {

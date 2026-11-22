@@ -37,6 +37,14 @@ export class HelmSight {
     this.aim = {};
     this.lightDelay = null; // main.mjs: seconds before the main drive would light if asked now
     this.dock = null; // main.mjs: the recovery lane of a ship out from a berth (recovery.mjs), which draws its display here
+    this.pilot = null; // pilot.mjs: the crew's pilot, when the ship has one (the sight says who has the helm)
+  }
+
+  /** Lays the waypoint in at the world point `at` (a career's or a mission's own point, not the navigator's pick). */
+  layNav(at, name = 'TANGO') {
+    this.nav = { at: at.clone(), name, t: 0, flipCalled: false };
+    this.say(`Waypoint ${name} laid in: ${km(at.distanceTo(this.C.obj.position))}. Burn, flip, and burn to stop on it.`);
+    this.C.bus?.emit('call', { id: 'nav-waypoint', name: cap(name) });
   }
 
   /** N at the helm: lay a waypoint (15 km out, 40° off the bow, at rest), or clear it. */
@@ -238,6 +246,19 @@ export class HelmSight {
     if (this.dock) {
       this.dock.draw(g, w, h, project);
       g.lineWidth = 1.5;
+      g.font = '12px ui-monospace, Menlo, monospace';
+      g.textAlign = 'left';
+    }
+    // The crew's pilot has her (pilot.mjs): who, and what they are doing.
+    if (this.pilot?.hasHelm) {
+      const text = this.pilot.status().toUpperCase();
+      g.font = '600 14px ui-monospace, Menlo, monospace';
+      g.textAlign = 'center';
+      const tw = g.measureText(text).width;
+      g.fillStyle = 'rgba(0,0,0,0.55)';
+      g.fillRect(w / 2 - tw / 2 - 10, h * 0.1 - 16, tw + 20, 23);
+      g.fillStyle = AMBER;
+      g.fillText(text, w / 2, h * 0.1);
       g.font = '12px ui-monospace, Menlo, monospace';
       g.textAlign = 'left';
     }

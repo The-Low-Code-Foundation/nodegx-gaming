@@ -1,0 +1,13 @@
+{
+  "id": "pilot-home",
+  "about": "The crew's pilot starts for the recovery lane (pilot.mjs, the recover leg).",
+  "who": "cutter-cdr",
+  "say": [
+    "Coming home."
+  ],
+  "to": {
+    "all": "tannoy",
+    "bridge": "headset"
+  },
+  "priority": 2
+}

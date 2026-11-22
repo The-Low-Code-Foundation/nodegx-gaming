@@ -1,0 +1,19 @@
+{
+  "id": "pilot-burn",
+  "about": "The crew's pilot lights the main drive: the burn out, or the braking burn after the flip (pilot.mjs `stretch`).",
+  "who": "cutter-cdr",
+  "say": [
+    "{what}"
+  ],
+  "slots": {
+    "what": [
+      "Burning.",
+      "Braking."
+    ]
+  },
+  "to": {
+    "all": "tannoy",
+    "bridge": "headset"
+  },
+  "priority": 2
+}

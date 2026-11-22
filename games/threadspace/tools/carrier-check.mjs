@@ -18,11 +18,13 @@
 //   carrier.html?at=bridge&voice=0&crew=0&dc=0&hold=1&seed=7     → run('walk')
 //   carrier.html?at=bridge&voice=0&crew=0&dc=0&hold=1&seed=7     → run('float')
 //   carrier.html?at=bridge&voice=0&crew=0&dc=0&hold=1&seed=7     → run('brace')
-//   carrier.html?voice=0&crew=0&dc=0&hold=1&seed=7 (start page)  → run('career')
+//   carrier.html?career=ship&voice=0&crew=0&dc=0&hold=1&seed=7 (start page)  → run('career')   (the carrier's own first week)
+//   carrier.html?voice=0&crew=0&dc=0&hold=1&seed=7 (start page)  → run('service')   (the player's career: three pages, see `runAll`)
 //   carrier.html?ship=cutter&host=carrier&berth=berth-port&at=helm&voice=0&crew=0&dc=0&hold=1&seed=7   → run('berth')
 //   carrier.html?ship=cutter&host=carrier&berth=berth-port&at=helm&voice=0&crew=0&dc=0&hold=1&seed=7   → run('recover')
 //   carrier.html?ship=cutter&host=carrier&berth=berth-port&at=helm&voice=0&crew=0&dc=0&hold=1&seed=7   → run('bump')
-//   carrier.html?ship=cutter&at=bridge&voice=0&crew=0&dc=0&hold=1&seed=7   → run('cutter')   (another ship: ships/cutter/)
+//   carrier.html?ship=cutter&host=carrier&berth=berth-port&at=helm&voice=0&crew=0&dc=0&hold=1&seed=7   → run('pilot')
+//   carrier.html?ship=cutter&at=bridge&career=ship&voice=0&crew=0&dc=0&hold=1&seed=7   → run('cutter')   (another ship: ships/cutter/)
 //
 // `?hold=1` keeps the page from running frames of its own and `?seed=` seeds every random number (carrier.html,
 // main.mjs), so the frame steps are the script's alone. `run` also stops rendering and mutes the sound, and returns a
@@ -204,6 +206,48 @@ const scenarios = {
     key('KeyL');
     out.auto = { phase: b.phase, said: c.helmSight.msg?.text, secs: home(), last: { ...b.lastRecovery } };
     out.calls = calls();
+    return out;
+  },
+
+  /** The crew's pilot (pilot.mjs; the same page as `berth`): the commander flies a whole sortie through the real helm,
+   *  with W held down at the helm all the while (your hands do nothing while the pilot has her). Launch; out to a point
+   *  2 km off the port beam and 500 m forward, to rest; hold 10 s; to a point on the starboard side (the straight line
+   *  goes through the carrier, so it routes round her); home down the lane to the cradle's arms. Per leg (`legs`, the
+   *  pilot's own log): seconds, how far from the point and how fast at its end, reaction mass burned, waypoints, and the
+   *  recovery's grade. `clear` is the nearest her centre came to the pilot's keep-out boxes on the two goto legs;
+   *  `contacts` must be 0. `?skill=` on the page flies it worse (0.25 is a hand's first week). */
+  async pilot(c) {
+    for (let i = 0; i < 300 && !c.pilot; i++) await wait(200); // the host is fetched and built after the ship
+    const b = c.berth, P = c.pilot, B = c.bump, H = c.host, THREE = await import('three');
+    const voyage = localStorage.getItem('threadspace.voyage'); // the launch notes her out: put back at the end
+    const local = () => v3(H.frame.worldToLocal(c.C.obj.position.clone()));
+    const out = { skill: P.skill, events: [] }, ev = out.events;
+    c.C.bus.on('pilot-leg', (e) => ev.push(`leg ${e.i + 1}/${e.n} ${e.leg.do}`));
+    c.C.bus.on('pilot-done', (e) => (out.done = { ok: e.ok, why: e.why }));
+    c.C.bus.on('berth-phase', (e) => ev.push(`berth ${e.was}>${e.phase}`));
+    c.C.bus.on('call', (e) => e.id.startsWith('pilot-') && ev.push(e.id));
+    P.fly([{ do: 'launch' }, { do: 'goto', at: [-2000, 0, -500] }, { do: 'hold', secs: 10 }, { do: 'goto', at: [1500, 100, 300] }, { do: 'recover' }]);
+    out.started = { busy: P.busy, hasHelm: P.hasHelm, assist: c.helm.assist };
+    c.input.keys.add('KeyW');
+    const p = new THREE.Vector3(), q = new THREE.Vector3();
+    let t = 0, clear = Infinity, fastest = 0, burn = 0, jets = 0;
+    for (; t < 1500 && P.busy; t += 1 / 30) {
+      c.tick(1, 1 / 30);
+      if (b.phase !== 'out') continue;
+      fastest = Math.max(fastest, c.body.vel.length());
+      if (c.drive.push > 0.3) burn += 1 / 30;
+      else if (c.thrusters.list.some((x) => x.kind !== 'main' && x.throttle > 0.02)) jets += 1 / 30;
+      if (P.leg?.do !== 'goto') continue;
+      H.frame.worldToLocal(p.copy(c.C.obj.position));
+      for (const k of P.keep.boxes) clear = Math.min(clear, q.set(Math.max(k.min[0] - p.x, 0, p.x - k.max[0]), Math.max(k.min[1] - p.y, 0, p.y - k.max[1]), Math.max(k.min[2] - p.z, 0, p.z - k.max[2])).length());
+    }
+    c.input.keys.delete('KeyW');
+    out.secs = r3(t);
+    out.legs = P.log;
+    out.flown = { clear: r3(clear), fastest: r3(fastest), burnSecs: r3(burn), jetSecs: r3(jets), contacts: B.stats.contacts, scrapes: B.stats.scrapes, crashes: B.stats.crashes, hits: B.hits.length };
+    out.end = { busy: P.busy, phase: b.phase, at: local(), door: r3(c.hostDoors.kOf(b.spec.door)), prop: r3(c.plant.prop), assist: c.helm.assist, last: { ...b.lastRecovery } };
+    if (voyage === null) localStorage.removeItem('threadspace.voyage');
+    else localStorage.setItem('threadspace.voyage', voyage);
     return out;
   },
 
@@ -835,6 +879,138 @@ const scenarios = {
     return out;
   },
 
+  /** The player's career (content/careers/service.json), chapter one, end to end across both ships: a part per page.
+   *  Part one is the carrier's start page ("Join as a new hand"); each part plays the orders for its ship until the
+   *  order in hand is aboard the other, notes what the duty card says then, and returns `next`: the other ship's page,
+   *  as `goAboard` would load it. `runAll` loads that in a fresh page with the same voyage (the save is the voyage's
+   *  own: nothing is seeded) and calls this again: carrier, cutter, carrier. The drills are done by hand; the crew's
+   *  pilot flies the sortie, the transit and the recovery (which the helm order refuses, as flown by the crew); nobody
+   *  aims the turret, so the gunnery orders run their course and are then taken as done; one round is fired on HOLD. */
+  async service(c) {
+    const { loadVoyage, saveVoyage, pageFor } = await import('../src/core/voyage.mjs');
+    const K = c.career, q = new URLSearchParams(location.search), log = [];
+    if (q.has('host')) for (let i = 0; i < 300 && !c.berth; i++) await wait(200); // the host is built after the ship
+    if (q.has('at') || q.has('berth')) for (let i = 0; i < 100 && !K.on; i++) await wait(200); // came through an airlock: the career is picked up
+    else document.getElementById('c-board').click();
+    if (!K.on) return { error: 'the career did not begin', ship: c.ship_id };
+    const first = K.i, where = (i) => K.i === i;
+    const seat = async () => {
+      if (c.mode() === 'gun') (key('KeyE'), await wait(1100));
+      if (c.mode() !== 'helm') (c.go(c.L.helm.room ?? 'bridge'), c.setMode('helm'));
+    };
+    const turret = async () => {
+      if (c.mode() === 'gun') return;
+      if (c.mode() !== 'walk') c.setMode('walk');
+      const t = c.guns.turrets[0], fr = t.spec.from;
+      c.place(fr.deck, fr.at[0], fr.at[1], fr.yaw ?? 0);
+      findUse(c.walker.interior, 'man-')?.use();
+      await wait(1100);
+    };
+    const step = async (i) => {
+      const st = K.step;
+      switch (st.do) {
+        case 'talk': if (c.mode() !== 'walk') c.setMode('walk'); K.talked(st.who); break;
+        case 'suit': c.ship.don(); break;
+        case 'rounds': if (c.mode() !== 'walk') c.setMode('walk'); for (const r of st.rooms) { c.go(r); run_(c, 0.2); } break;
+        case 'drill': {
+          run_(c, 3, () => !!c.dc.job);
+          const job = c.dc.job;
+          if (!job) return 'no job';
+          c.dc.take(job.K.kit);
+          if (job.K.isolate) c.dc.isolate();
+          c.go(job.room.id);
+          c.walker.pos.set(job.spot.ux ?? job.spot.x, c.walker.pos.y, job.spot.uz ?? job.spot.z); // (a job on a wall: where you stand to reach it)
+          c.input.keys.add('KeyE');
+          run_(c, 120, () => !where(i));
+          c.input.keys.delete('KeyE');
+          break;
+        }
+        case 'pilot': {
+          // Refused first: L at the helm is not a passenger's (career.mjs `blocks`).
+          await seat();
+          if (c.berth.phase === 'berthed' && c.pilot) { key('KeyL'); log.push(`${i} L as a passenger: ${c.berth.phase}${K.allows('launch') ? '' : ', refused'}`); }
+          run_(c, 1200, () => !where(i));
+          log.push(`${i} pilot: ${c.pilot ? c.pilot.log.map((l) => l.do).join(' ') + (c.pilot.busy ? ' …' : '') : 'no pilot'} · ${c.berth.phase}`);
+          break;
+        }
+        case 'shoot': {
+          // Nobody aims: the drill runs past and fails.
+          await turret();
+          run_(c, 240, () => !where(i) || (K.s.phase === 'on' && K.s.R?.gone));
+          run_(c, 1);
+          if (where(i)) { log.push(`${i} shoot: stayed (${K.s.phase})`); c.guns.dismiss(); K.complete(); }
+          return 'ok';
+        }
+        case 'obey': {
+          await turret();
+          const fc = c.guns.fireControl;
+          run_(c, 240, () => K.s.phase === 'hold');
+          log.push(`${i} obey: ${fc.state}, ordered ${fc.ordered}`);
+          run_(c, 2);
+          fc.fired(null, null); // a round on HOLD: on report, and the drill starts again
+          run_(c, 0.2);
+          log.push(`${i} obey: fired on hold · check fires ${K.checkFire} · ${K.s.phase} · ordered ${fc.ordered}`);
+          run_(c, 400, () => K.s.phase === 'tight');
+          log.push(`${i} obey: ${fc.state} on ${fc.designated?.label}`);
+          run_(c, 240, () => !where(i) || K.s.phase === 'wait'); // nobody aims: the tug finishes its runs
+          if (where(i)) { log.push(`${i} obey: stayed (${K.s.phase})`); c.guns.dismiss(); fc.auto(); K.complete(); }
+          return 'ok';
+        }
+        case 'launch': await seat(); key('KeyL'); run_(c, 120, () => !where(i)); break;
+        case 'transit': {
+          // The crew's pilot flies it (nothing here can), which the order allows; without one it is taken as done.
+          run_(c, 4, () => !!c.helmSight.nav);
+          if (!c.pilot || !c.helmSight.nav) { log.push(`${i} transit: skipped`); K.complete(); return 'ok'; }
+          c.pilot.fly([{ do: 'goto', at: st.at }]);
+          run_(c, 600, () => !where(i));
+          break;
+        }
+        case 'land': {
+          // The crew's pilot brings her home: the order wants your own hand, so it is refused and the script takes it.
+          if (c.pilot) c.pilot.fly([{ do: 'recover' }]);
+          else c.berth.takeIn();
+          run_(c, 900, () => !where(i));
+          log.push(`${i} land: ${JSON.stringify(c.berth.lastRecovery?.grade ?? c.berth.lastRecovery)} by the crew · ${c.berth.phase} · back to order ${K.i}`);
+          if (K.i < i) { K.i = i; K.enter(); }
+          if (where(i)) K.complete();
+          return 'ok';
+        }
+        case 'muster': c.go(c.routine.you.muster); run_(c, 400, () => !where(i)); await wait(1500); run_(c, 1); break; // the roll is called at the bell; then the watch goes by behind a fade
+        case 'sleep': {
+          const b = c.routine.bunkAt;
+          c.place(b.deck, b.x, b.z, 0, b.seg);
+          findUse(c.walker.interior, 'bunk')?.use();
+          await wait(3600);
+          break;
+        }
+        default: log.push(`${i} ${st.do}: skipped`); K.complete(); return 'ok';
+      }
+      run_(c, 2, () => !where(i));
+      return 'ok';
+    };
+    run_(c, 0.5);
+    for (let n = 0; n < 40 && !K.done && !K.away; n++) {
+      const i = K.i, st = K.step;
+      const how = await step(i);
+      log.push(`${i} ${st.do}${st.who ? ' ' + st.who : ''}: ${how}${K.i === i ? ' (not done)' : ''} · ${K.rank} · ${[...K.quals].join(' ')}`);
+      if (how !== 'ok' || K.i === i) break;
+    }
+    run_(c, 0.5);
+    const out = { ship: c.ship_id, from: first, i: K.i, rank: K.rank, quals: [...K.quals], unlocked: [...K.unlocked].sort(), book: K.book, checkFire: K.checkFire, flags: Object.keys(K.flags), done: K.done, log };
+    out.card = document.getElementById('c-duty').querySelector('.d-order')?.textContent ?? null;
+    if (K.away) {
+      // The order in hand is aboard the other ship: where the card sends you, and her page (what `goAboard` loads).
+      const t = K.target(), to = K.step.ship;
+      out.cross = { to, at: t && [t.deck, r3(t.x), r3(t.z)], complete: (K.complete(), K.i) };
+      const v = loadVoyage();
+      v.aboard = to;
+      saveVoyage(v);
+      out.next = pageFor(to, c.K.ships[to].page, { pathname: '', search: '' }).slice(1);
+    }
+    out.saved = (({ i, rank, quals, book }) => ({ i, rank, quals, book }))(loadVoyage().career ?? {});
+    return out;
+  },
+
   /** The career from the start screen: the first orders done by hand, then the gunnery and flying orders. */
   async career(c) {
     const KEY = c.career.constructor.key, before = localStorage.getItem(KEY);
@@ -950,15 +1126,21 @@ export async function run(name) {
 }
 
 const PAGES = {
-  raid: 'at=bridge', hull: 'at=bridge', helm: 'at=helm', landing: 'at=fighter', repair: 'at=fighter', collide: 'at=fighter', bandits: 'at=fighter', missiles: 'at=fighter', walk: 'at=bridge', float: 'at=bridge', brace: 'at=bridge', career: '',
-  cutter: 'ship=cutter&at=bridge', // another ship's folder (ships/cutter/)
+  raid: 'at=bridge', hull: 'at=bridge', helm: 'at=helm', landing: 'at=fighter', repair: 'at=fighter', collide: 'at=fighter', bandits: 'at=fighter', missiles: 'at=fighter', walk: 'at=bridge', float: 'at=bridge', brace: 'at=bridge',
+  career: 'career=ship', // the carrier's own first week (ships/carrier/career.json), not the player's career
+  service: '', // the player's career (content/careers/service.json): the start page, then a page per crossing
+  // Another ship's folder (ships/cutter/). `career=ship`: as she was baselined, with no career aboard (she has no
+  // career.json). Without it the player's career brings her three named crew aboard and the scenario's `has.career`
+  // reads true; nothing else in its result changes.
+  cutter: 'ship=cutter&at=bridge&career=ship',
   berth: 'ship=cutter&host=carrier&berth=berth-port&at=helm', // the cutter carried in the carrier's hangar (berth.mjs)
   recover: 'ship=cutter&host=carrier&berth=berth-port&at=helm', // flying her home yourself (recovery.mjs)
-  bump: 'ship=cutter&host=carrier&berth=berth-port&at=helm' // the cutter against the carrier (collide.mjs `ShipCollisions`)
+  bump: 'ship=cutter&host=carrier&berth=berth-port&at=helm', // the cutter against the carrier (collide.mjs `ShipCollisions`)
+  pilot: 'ship=cutter&host=carrier&berth=berth-port&at=helm' // the crew's pilot flies a sortie (pilot.mjs)
 };
 
 /** Every scenario, each in a fresh page of its own (an iframe), from any page of this site: `{ name: { hash, … } }`.
- *  About two minutes. */
+ *  About three minutes. */
 export async function runAll(names = Object.keys(PAGES), seed = 7) {
   const res = {};
   // Every page starts from a new voyage (both cutters on their cradles: which berths are full is part of what is solid
@@ -966,20 +1148,26 @@ export async function runAll(names = Object.keys(PAGES), seed = 7) {
   const VOYAGE = 'threadspace.voyage', voyage = localStorage.getItem(VOYAGE);
   for (const name of names) {
     localStorage.removeItem(VOYAGE);
-    const f = document.createElement('iframe');
-    f.style.cssText = 'position:fixed;left:0;top:0;width:640px;height:360px;opacity:0;pointer-events:none';
-    const base = new URL('../carrier.html', import.meta.url);
-    f.src = `${base}?${PAGES[name]}&voice=0&crew=0&dc=0&hold=1&seed=${seed}`;
-    const loaded = new Promise((r) => f.addEventListener('load', r, { once: true }));
-    document.body.append(f);
-    await loaded;
-    try {
-      const mod = await f.contentWindow.eval(`import(${JSON.stringify(new URL(`carrier-check.mjs?${Date.now()}`, import.meta.url).href)})`);
-      res[name] = await mod.run(name);
-    } catch (e) {
-      res[name] = { error: String(e?.stack ?? e) };
+    // A scenario that crosses from one ship to another returns `next`, the other ship's page: it is loaded in a fresh
+    // page with the voyage as the last part left it, and the scenario goes on there (`service`). Its hash is the parts'.
+    const parts = [];
+    for (let page = PAGES[name]; page != null && parts.length < 6; page = parts.at(-1).next) {
+      const f = document.createElement('iframe');
+      f.style.cssText = 'position:fixed;left:0;top:0;width:640px;height:360px;opacity:0;pointer-events:none';
+      const base = new URL('../carrier.html', import.meta.url);
+      f.src = `${base}?${page}&voice=0&crew=0&dc=0&hold=1&seed=${seed}`;
+      const loaded = new Promise((r) => f.addEventListener('load', r, { once: true }));
+      document.body.append(f);
+      await loaded;
+      try {
+        const mod = await f.contentWindow.eval(`import(${JSON.stringify(new URL(`carrier-check.mjs?${Date.now()}`, import.meta.url).href)})`);
+        parts.push(await mod.run(name));
+      } catch (e) {
+        parts.push({ error: String(e?.stack ?? e) });
+      }
+      f.remove();
     }
-    f.remove();
+    res[name] = parts.length === 1 ? parts[0] : { hash: hash(parts.map((p) => p.hash)), parts };
   }
   if (voyage === null) localStorage.removeItem(VOYAGE);
   else localStorage.setItem(VOYAGE, voyage);

@@ -1,0 +1,15 @@
+{
+  "id": "cutter-eng",
+  "name": "Petty Officer Voss",
+  "dept": "engineering",
+  "body": "Female_Adult_01",
+  "placeholder": "The name, the rank and the casting are working placeholders: the story bible settles them.",
+  "cast": {
+    "voiceId": null,
+    "design": "A low-voiced woman in her forties with a Polish accent, patient and precise.",
+    "gender": "female",
+    "language": "en-PL",
+    "style": "An engineer running a drill: plain instructions, one at a time.",
+    "sample": "Damage control drill. There is a drill fire in the galley and mess. Put it out."
+  }
+}

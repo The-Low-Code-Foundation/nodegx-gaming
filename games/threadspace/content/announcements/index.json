@@ -66,6 +66,15 @@
     "recover-line",
     "recover-waveoff",
     "recover-captured",
-    "collision"
+    "collision",
+    "pilot-standby",
+    "pilot-clear",
+    "pilot-burn",
+    "pilot-turnover",
+    "pilot-station",
+    "pilot-home",
+    "pilot-line",
+    "pilot-waveoff",
+    "pilot-captured"
   ]
 }

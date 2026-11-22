@@ -1,0 +1,40 @@
+{
+  "about": "Who speaks for the cutter, in the format of ships/carrier/voices.json. `ai` is the same automated system voice the carrier has (the same saved voice). `ship` is the flight deck's talker: aboard a crew of four that is her commander, so this entry is a stand-in (the carrier's bridge talker's cast) until the calls a small ship makes are given to a person. Her crew are people (content/people/cutter-*.json), each with their own cast. `nets` are the rooms where a department's net is heard without a headset.",
+  "model": "gemini-3.8-flash-tts",
+  "speakers": {
+    "ship": {
+      "voiceId": "voice_av0j47o3r5ps",
+      "label": "Flight deck",
+      "design": "A clear, even-voiced woman in her thirties with a neutral Canadian accent, the trained cadence of a broadcast announcer.",
+      "gender": "female",
+      "language": "en-CA",
+      "style": "Urgent without panic; every word carries down a steel passage.",
+      "tannoy": true,
+      "sample": "Now relieve the watch. Blue watch has the first watch."
+    },
+    "ai": {
+      "voiceId": "voice_86u1detsknuf",
+      "label": "Ship",
+      "design": "A smooth, level, ageless woman's voice with no regional accent, perfectly even in pitch and pace, without warmth or hurry, like a well-made automated system.",
+      "gender": "female",
+      "language": "en-US",
+      "style": "A ship's announcer: clear and composed at a natural, brisk speaking pace, human and attentive, never sing-song or robotic.",
+      "tannoy": true,
+      "sample": "Fire, fire, fire. Gym and rec. Forward drum, outer deck. Away the damage control party."
+    }
+  },
+  "nets": {
+    "bridge": [
+      "flight-deck"
+    ],
+    "gunners": [
+      "flight-deck"
+    ],
+    "dc": [
+      "ops-locker"
+    ],
+    "engineering": [
+      "eng-room"
+    ]
+  }
+}

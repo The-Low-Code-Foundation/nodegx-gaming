@@ -1,0 +1,14 @@
+{
+  "id": "pilot-captured",
+  "about": "The cradle's arms have her after the crew's pilot flew her in (pilot.mjs, the recover leg).",
+  "who": "cutter-cdr",
+  "say": [
+    "Captured.",
+    "Hands off."
+  ],
+  "to": {
+    "all": "tannoy",
+    "bridge": "headset"
+  },
+  "priority": 2
+}

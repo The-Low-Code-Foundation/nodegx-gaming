@@ -1,0 +1,13 @@
+{
+  "id": "pilot-clear",
+  "about": "The cradle has handed her over outside the bay and the crew's pilot has her (pilot.mjs, the launch leg).",
+  "who": "cutter-cdr",
+  "say": [
+    "Clear of the bay."
+  ],
+  "to": {
+    "all": "tannoy",
+    "bridge": "headset"
+  },
+  "priority": 2
+}

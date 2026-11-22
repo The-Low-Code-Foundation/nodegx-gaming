@@ -1,0 +1,13 @@
+{
+  "id": "pilot-standby",
+  "about": "The crew's pilot, on the cradle, has asked flight control to launch (pilot.mjs, the launch leg).",
+  "who": "cutter-cdr",
+  "say": [
+    "Stand by to launch."
+  ],
+  "to": {
+    "all": "tannoy",
+    "bridge": "headset"
+  },
+  "priority": 2
+}

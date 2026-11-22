@@ -10,6 +10,7 @@
    "pose": "sitChair",
    "dept": "command",
    "post": "Commander",
+   "person": "cutter-cdr",
    "watch": "on"
   },
   {
@@ -22,6 +23,7 @@
    "pose": "sitChair",
    "dept": "crew",
    "post": "Gunner",
+   "person": "cutter-gunner",
    "watch": "on"
   },
   {
@@ -34,6 +36,7 @@
    "pose": "workTable",
    "dept": "engineering",
    "post": "Engineer",
+   "person": "cutter-eng",
    "watch": "on"
   }
  ],

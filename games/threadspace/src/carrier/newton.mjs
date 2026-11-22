@@ -220,12 +220,17 @@ export class Helm {
     step(this.obj, b, this.out, dt);
   }
 
-  /** `f` is the input frame (input.mjs); `hands` false lets the ship fly on with nobody at the controls. */
+  /** `f` is the input frame (input.mjs); `hands` false lets the ship fly on with nobody at the controls. A frame with
+   *  `u` (six numbers, -1 to 1) is a command given whole instead of keys and a stick, and `jets` true with it keeps the
+   *  main drive shut: how the crew's pilot flies her (pilot.mjs). The assist and the thrusters treat it as yours. */
   frame(f, dt, hands = true) {
-    if (this.dock?.on) return this.dockFrame(f, dt, hands);
+    if (this.dock?.on && !f.u) return this.dockFrame(f, dt, hands);
     const u = this.u.fill(0);
     const k = f.keys;
-    if (hands) {
+    if (hands && f.u) {
+      // The command given whole: the six numbers the keys and the stick would have made (the crew's pilot, pilot.mjs).
+      for (let i = 0; i < AXES; i++) u[i] = clamp(f.u[i] || 0, -1, 1);
+    } else if (hands) {
       if (f.dx || f.dy) {
         this.stick.x = clamp(this.stick.x + f.dx * 0.004, -1, 1);
         this.stick.y = clamp(this.stick.y - f.dy * 0.004, -1, 1);
@@ -291,7 +296,7 @@ export class Helm {
         u[i] = clamp(-vi / (cap * this.tau.drift), -1, 1);
       }
     }
-    this.out = this.thr.allocate(u);
+    this.out = this.thr.allocate(u, !!f.jets); // `f.jets`: the main drive shut, as in docking mode (pilot.mjs)
     step(this.obj, b, this.out, dt);
   }
 

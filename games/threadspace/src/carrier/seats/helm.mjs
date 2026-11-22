@@ -22,7 +22,9 @@ export class HelmSeat {
   }
 
   key(code) {
-    const { guns, plant, helmSight } = this.G;
+    const { guns, plant, helmSight, pilot } = this.G;
+    // The crew's pilot has her (pilot.mjs): the keys that fly her and talk to flight control are not yours.
+    if (pilot?.hasHelm && (code === 'KeyL' || code === 'KeyK' || code === 'KeyH')) return helmSight.say(`${pilot.who} has the helm. J takes her back.`, 2.5);
     if (code === 'KeyE') this.leave();
     else if (code === 'KeyV') this.outlook = this.outlook === 'bridge' ? 'chase' : 'bridge';
     else if (code === 'KeyG') helmSight.say(plant.toggleRadiators());
@@ -30,6 +32,7 @@ export class HelmSeat {
     else if (code === 'KeyL') this.G.berth?.key(); // carried in a berth, or out from one (berth.mjs)
     else if (code === 'KeyK') this.G.berth?.lane?.toggleDock(); // docking mode, out from a berth (recovery.mjs)
     else if (code === 'KeyH') this.G.berth?.lane?.toggleHold(); // and its hold on the berth's heading
+    else if (code === 'KeyJ') pilot?.key(); // the crew's pilot flies a circuit, or gives her back (pilot.mjs)
     else if (code === 'KeyQ' && guns.railSides && !this.G.fading) {
       // The broadside railgun on the side facing the raider (weapons.mjs `railFire`).
       const why = guns.railFire();
@@ -54,7 +57,7 @@ export class HelmSeat {
   frame(dt, drive) {
     const { L, C, camera, hud, helm, ship, plant } = this.G;
     const hurt = (ship.power ? '' : ' · emergency power') + (ship.driveFactor < 0.99 ? ` · main drive ${Math.round(ship.driveFactor * 100)}%` : '') + (plant.hot ? ' · HEAT: drive held back' : plant.prop <= 0 ? ' · no reaction mass' : '');
-    hud.where(`At the helm · ${this.outlook === 'bridge' ? (L.helm.room ? 'view from the seat' : 'bridge view') : 'outside view'}${this.G.berth?.status() ? ` · ${this.G.berth.status()}` : ''}${hurt}`);
+    hud.where(`At the helm · ${this.outlook === 'bridge' ? (L.helm.room ? 'view from the seat' : 'bridge view') : 'outside view'}${this.G.pilot?.hasHelm ? ` · ${this.G.pilot.who} has the helm` : ''}${this.G.berth?.status() ? ` · ${this.G.berth.status()}` : ''}${hurt}`);
     hud.use(null);
     hud.helm(helm);
     if (this.outlook === 'bridge') {

@@ -1,0 +1,15 @@
+{
+  "id": "cutter-cdr",
+  "name": "Lieutenant Hart",
+  "dept": "command",
+  "body": "Female_Adult_12",
+  "placeholder": "The name, the rank and the casting are working placeholders: the story bible settles them.",
+  "cast": {
+    "voiceId": null,
+    "design": "A calm, clear-voiced woman in her late thirties with a New Zealand accent, unhurried and exact.",
+    "gender": "female",
+    "language": "en-NZ",
+    "style": "A small ship's commander and pilot: short orders, level, never raised.",
+    "sample": "First sortie: you ride as a passenger. Strap in. Hands off the controls. I have the helm."
+  }
+}

@@ -7,7 +7,7 @@
 // systems, her decks and machinery hidden, and stood in the hangar's group, so she is drawn whenever the hangar is.
 // At her port, E takes you aboard: the voyage notes it and her page loads (src/core/voyage.mjs).
 //
-// A berth whose ship is out (the voyage says so) stands empty.
+// A berth whose ship is out (the voyage says so, and that you are aboard her) stands empty.
 
 import * as THREE from 'three';
 import { buildCarrier, loadHull } from './layout.mjs';
@@ -38,7 +38,9 @@ export class Berths {
     this.lines();
     const layouts = new Map();
     for (const spec of L.berths ?? []) {
-      if (!spec.ship || voyage.ships[berthKey(this.id, spec.id)]?.out) continue;
+      // Out: only while you are aboard her (nothing else flies her). A voyage left saying "out" by a page shut in
+      // flight, with you aboard this ship, has her back on her cradle.
+      if (!spec.ship || (voyage.ships[berthKey(this.id, spec.id)]?.out && voyage.aboard === spec.ship)) continue;
       if (!layouts.has(spec.ship)) layouts.set(spec.ship, await loadLayout(`ships/${spec.ship}`, fetchJson));
       const SL = layouts.get(spec.ship);
       const P = buildCarrier(SL);

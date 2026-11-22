@@ -274,8 +274,35 @@ their names for now):
   berths' ships on a host seen from the cutter's page. Bus: `ship-contact`, `ship-wrecked`; call `collision`.
 - **The crossing**: `goAboard(id, params, { line, secs })` puts up the airlock's card (`#c-lock` in `carrier.html`)
   while the lock cycles and loads the other ship's page, which keeps it up until she is built (`arrived()`).
-- **Not built yet** (ROADMAP phases 12 and 13): the host under way and taking a push; the drums as solids; the
-  cradle's arms drawn; a side-looking docking camera; her own career and crew voices.
+- **The career is the player's** (`content/careers/service.json`, the default on either ship's page; `career.mjs`
+  `loadCareer`): each step names its `ship`, and a step for the other ship shows on the duty card as where to go and
+  completes nothing here. `?career=ship` runs the ship's own `career.json` instead (the carrier's old first week,
+  under its own save key: the `career` and `cutter` checks use it), `?career=<id>` another file in `content/careers/`.
+  The save is `voyage.career` (step, rank, quals, per-ship unlocks such as `cutter:helm`, flags, the book, the clock);
+  `voyage.roam` marks free roam so a crossing stays free roam. Ranks (`ranks`) are titles; qualifications (`quals`:
+  `dc`, `turret`, `sensors`, `helm`) open seats through `unlocks`. People carry a `ship`; one with no `room` stands at
+  the layout station that names them (`stations[].person`; `crew.mjs` `boardCrew` then leaves that station to them).
+  Step kinds added for a carried ship: `pilot` (the crew pilot flies `plan`; done on `pilot-done` or when leg `until`
+  begins; with no pilot the order becomes yours), `obey` (the sled under weapons hold, then tight: a round against
+  orders goes in the book and restarts the step), and `launch`, `transit` (with `at`, a point in the host's frame) and
+  `land` (a capture you flew, graded `grade` or better). `run` restarts a tagged run of steps from its first on
+  resume; `skipTo` moves the carrier's clock. To add an order: the step in `service.json` with its `ship`; a new kind
+  is a `case` in `check()`, a place in `target()`, an entry in `STEPS_SERVICE` in `tools/check.mjs`, and a case in the
+  `service` script. All its text is a working draft for the story pass (plain, glossary wording). The cutter's crew
+  are `content/people/cutter-cdr.json`, `cutter-gunner.json`, `cutter-eng.json` (placeholder names) and her speakers
+  `ships/cutter/voices.json` (hand-kept beside the generated files); nothing of theirs is recorded yet.
+- **The crew's pilot** (`src/carrier/pilot.mjs`, `G.pilot`, `__carrier.pilot`, on a carried ship's page): flies the real
+  helm (`Helm.frame` takes `f.u`, six commands, and `f.jets`), so the jets and drive that fire are hers.
+  `pilot.fly(plan, { who, skill })` with legs `launch`, `goto` (`at` in the host's frame, `speed`, `stop`), `hold`,
+  `turn`, `recover`; `busy`, `hasHelm`, `abort()`, `log`. Long legs are turn, burn, coast, flip, brake; short ones
+  jets only; routes keep `margin` clear of keep-out boxes made from the host's hull sections (`keepOut`, `route`).
+  Recovery flies the lane by the player's rules, backs out of a wave-off and after two hands her to flight control.
+  `skill` (0..1, or 1..10; `?skill=`) changes its inputs, never the physics. Bus: `pilot-leg`, `pilot-done`, and
+  `berth-phase` from every `Berth.set`. **J** at the helm has the commander fly a circuit; J again gives her back.
+  It assumes a host that holds still, avoids no other ship, and has no combat flying.
+- **Not built yet**: maintenance on your own cutter in the hangar and her damage carried between pages; the host under
+  way and taking a push; the drums as solids; the cradle's arms drawn; a side-looking docking camera; recorded
+  voices for her crew; the player giving fire-control orders (`firecontrol` is an unlock with nothing behind it).
 
 - **The carrier's berths** (`berths` in her layout, written by `tools/carrier-v2.mjs` from the cutter's own folder and
   checked by `tools/check.mjs`: 3 m clear all round, a 44 × 11 m door): `{ id, ship, side, door, at, yaw, out, port,
@@ -288,7 +315,7 @@ their names for now):
 
 **The scripted checks' baselines** (seed 7, 22 November 2026, the 314 m carrier): raid ad2a8406, hull 20ef1760, helm
 4b766a23, landing 53faa5da, repair 5b8b23e6, collide 028d255d, bandits 6de728ae, missiles 39d01e76, walk 0bc2cf45,
-float 2eb50df7, brace b68467c9, career d747c09c, cutter 493f4ef5, berth 52032305, recover 306d2c1c, bump 5be73cad. `runAll` starts every page from a fresh voyage (which berths are full is part of what is solid); `recover` flies the lane to a capture, a wave-off and flight control's recovery; `bump` plays scrapes, a holing, a swing, the bay door open and shut, and a wreck. A change that should not change how
+float 2eb50df7, brace b68467c9, career d747c09c, cutter 493f4ef5, berth 52032305, recover 306d2c1c, bump 5be73cad, pilot 58d76b28, service a140cbdf (three pages: carrier, cutter, carrier; `runAll` follows a scenario's `next` into a fresh page with the same voyage). The whole run takes about nine minutes. `runAll` starts every page from a fresh voyage (which berths are full is part of what is solid); `recover` flies the lane to a capture, a wave-off and flight control's recovery; `bump` plays scrapes, a holing, a swing, the bay door open and shut, and a wreck. A change that should not change how
 a ship behaves must leave every one as it is. `cutter` plays her rooms, the helm, a burn and a half turn, the turret,
 the cutaway and a raid; `berth` plays the launch from the carrier's hangar, a refusal when too fast, and the recovery.
 Run `walk` with nothing else loading the machine (it waits in real time); `brace` is pinned at z −50 in the spine. The

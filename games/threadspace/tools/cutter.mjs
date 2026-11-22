@@ -7,7 +7,9 @@
 // There is no designer file: she is written out below. The parts of the layout that are not about where things are
 // (the weapons' numbers, integrity, the plant, damage control) start from the carrier's (ships/carrier/, read with
 // `loadLayout`) and are scaled to her size, each with a line saying how. She has no drums, no hangar, no fighters, no
-// broadside, railguns or flak, and no career, watch bill or voices of her own: the engine runs what a layout has.
+// broadside, railguns or flak, and no career or watch bill of her own: the engine runs what a layout has. (The
+// player's career, content/careers/, has steps aboard her; her speakers and nets are ships/cutter/voices.json, kept by
+// hand beside the files this tool writes.)
 //
 // Frame: metres, x starboard, y up, -z the bow, as every ship here. Her axis is x = 0, y = 0; the hull runs from
 // z = -17 (bow) to z = +17 (the drive's bulkhead), and the drive's bell stands 2.3 m aft of that.
@@ -218,13 +220,15 @@ damage.kinds.leak.rooms = ['passage', 'eng-room'];
 
 // ---- crew ----
 // Three couches on the flight deck: the pilot's (yours: `helm`), the gunner's to starboard of it, the commander's
-// behind. The posts below are the other three of her four: the commander, the gunner, the engineer.
+// behind. The posts below are the other three of her four: the commander (who is also her pilot), the gunner, the
+// engineer. `person` names who holds the post (content/people/<id>.json): the player's career (content/careers/)
+// brings them aboard there, by name, to give you your orders; with no career in the page a nameless hand has it.
 const helm = { room: 'flight-deck', at: [0, -10.6], eye: [0, FLOOR + 1.3, -10.75] };
 const couches = { pilot: [0, -10.6], gunner: [1.5, -10.2], commander: [-1.4, -9.2] };
 const stations = [
-  { room: 'flight-deck', at: couches.commander, yaw: 0, pose: 'sitChair', dept: 'command', post: 'Commander', watch: 'on' },
-  { room: 'flight-deck', at: couches.gunner, yaw: 0, pose: 'sitChair', dept: 'crew', post: 'Gunner', watch: 'on' },
-  { room: 'eng-room', at: [0, 7.1], yaw: 3.14159, pose: 'workTable', dept: 'engineering', post: 'Engineer', watch: 'on' },
+  { room: 'flight-deck', at: couches.commander, yaw: 0, pose: 'sitChair', dept: 'command', post: 'Commander', person: 'cutter-cdr', watch: 'on' },
+  { room: 'flight-deck', at: couches.gunner, yaw: 0, pose: 'sitChair', dept: 'crew', post: 'Gunner', person: 'cutter-gunner', watch: 'on' },
+  { room: 'eng-room', at: [0, 7.1], yaw: 3.14159, pose: 'workTable', dept: 'engineering', post: 'Engineer', person: 'cutter-eng', watch: 'on' },
 ];
 const routes = { about: carrier.routes.about, lines: [{ name: 'Flight deck', to: 'flight-deck', color: '#58b0ff' }, { name: 'Engineering', to: 'eng-room', color: '#ff9a30' }, { name: 'Airlock', to: 'airlock', color: '#e8d84a' }] };
 

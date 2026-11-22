@@ -10,6 +10,26 @@
 // again starts in your bunk, at the order you were on (an order that needs a seat backs up to the one that sits you in it).
 //
 // Free roam (`free()`) is everything open from the start, as the prototype was before.
+//
+// Two kinds of career file:
+//
+// - **The player's career** (`content/careers/<id>.json`, the default: `service`). It spans ships: every step names the
+//   `ship` it happens on, every person the ship they stand on. `loadCareer` gives it to a page as seen from the ship
+//   that page runs (`K.here`): only her people come aboard. A step for another ship shows on the card as where to go
+//   (`ships.<id>.go`) with the marker on the way across (the berth's port, or her own docking port), and completes
+//   nothing here. Its save is part of the voyage (src/core/voyage.mjs, `voyage.career`: rank, step, qualifications,
+//   unlocks, flags, the book, the clock), written by both pages. Unlocks are per ship (`cutter:helm`): a seat earned
+//   on the cutter opens nothing on the carrier. A qualification (`qual` on a step, `quals` in the file) is its own
+//   flag, apart from rank, and opens the seats it lists. `arrive()` picks the career up on the far side of an airlock.
+// - **A ship's own career** (`ships/<id>/career.json`, with `?career=ship`): the carrier's first week, one ship, saved
+//   under its own key (`Career.key`). The scripted `career` check plays it; nothing about it has changed.
+//
+// Step kinds added for the player's career (the others are in the file's `about`): `pilot` (the crew pilot,
+// `G.pilot`, flies `plan`; done when the plan ends, or when a leg of kind `until` begins; with no pilot in the build the card asks
+// you to fly it yourself: `self`), `obey` (fire control: a target sled under WEAPONS HOLD for `hold` seconds, then
+// TIGHT and `hits` hits; a round against orders goes in the book and the step starts again), and on a carried ship
+// `launch` (out of her berth by your own hand), `transit` with `at` (a point in the host's frame) and `land` (a
+// capture you flew, graded `grade` or better: `berth.lastRecovery`).
 
 import * as THREE from 'three';
 import { crewMember, outfitFor } from './crew.mjs';
@@ -17,6 +37,7 @@ import { floatIn, floatStep } from './floating.mjs';
 import { frameOf, sideOf } from './wayfinding.mjs';
 import { fmt as fmtTime } from './watch.mjs';
 import { drumToShip } from './drum.mjs';
+import { loadVoyage, saveVoyage, setShip } from '../core/voyage.mjs';
 
 const KEY = 'threadspace.carrier.career'; // the spin-drum carrier's; another ship's career saves under its own (`Career.key`)
 const ALL = ['guns', 'raids', 'fighters', 'helm'];
@@ -26,18 +47,49 @@ const BACK = { launch: 'board', land: 'board', turn: 'helm', transit: 'helm', mu
 const GOLD = new THREE.MeshBasicMaterial({ color: '#ffc850', transparent: true, opacity: 0.85, toneMapped: false, depthTest: false });
 const CHEVRON = new THREE.MeshBasicMaterial({ color: '#ffc850', toneMapped: false });
 const _v = new THREE.Vector3();
+export const CAREERS = 'content/careers';
+export const SERVICE = 'service'; // the career a page loads unless told otherwise
+export const GRADES = ['clean', 'fair', 'rough']; // a capture's grade, best first (recovery.mjs `grade`)
+
+/** The career for the page that runs ship `ship` (her folder `dir`, her layout `L`): with `?career=ship`, her own
+ *  `career.json` (or null); otherwise the player's career `?career=<id>` (default `service`) as seen from her, or null
+ *  if it does not know her. `read` reads a JSON file. */
+export async function loadCareer({ q, ship, dir, L, read }) {
+  const want = q.get('career');
+  if (want === 'ship') return read(`${dir}/career.json`).catch(() => null);
+  const K = await read(`${CAREERS}/${/^[a-z0-9-]+$/.test(want ?? '') ? want : SERVICE}.json`).catch(() => null);
+  return K?.ships?.[ship] ? careerFor(K, ship, L) : null;
+}
+
+/** The player's career `K` as seen from ship `ship`: `here` set, and only the people who stand aboard her, each at
+ *  their spot (their own `room` and `at`, or the layout station that names them: `stations[].person`). */
+export function careerFor(K, ship, L) {
+  const post = (p) => {
+    if (p.room) return p;
+    const s = (L.stations ?? []).find((x) => x.person === p.id);
+    return s ? { room: s.room, at: s.at, yaw: s.yaw, pose: s.pose, ...p } : p;
+  };
+  return { ...K, here: ship, people: (K.people ?? []).filter((p) => p.ship === ship).map(post) };
+}
 
 export class Career {
   /** `K` the career file. `ctx`: `dc` (damage control: the drills, the speakers), `ship` (integrity: a raid),
    *  `guns` (the raider, and your hits on it), `fighter`, `obj` (the carrier's Object3D, for her heading), `body`
    *  (her rigid body, for her turn rate), `sfx`, `voices` (voice.mjs: who says what aloud). */
-  constructor(C, K, { dc, ship, guns, fighter, obj, body, sfx, voices = null }) {
-    Object.assign(this, { C, L: C.L, K, dc, ship, guns, fighter, obj, body, sfx, voices });
+  constructor(C, K, { dc, ship, guns, fighter, obj, body, sfx, voices = null, G = null }) {
+    Object.assign(this, { C, L: C.L, K, dc, ship, guns, fighter, obj, body, sfx, voices, G });
+    this.here = K.here ?? null; // the ship this page runs, when the career is the player's (it spans ships)
+    this.voy = !!K.here; // saved in the voyage, unlocks per ship
+    this.ALL = this.voy ? Object.keys(K.ships).flatMap((s) => Object.keys(K.unlocks ?? {}).map((u) => `${s}:${u}`)) : ALL;
+    this.quals = new Set();
+    this.flags = {};
+    this.checkFire = 0; // rounds against fire control's orders, as incidents: the other page of the book
+    this.skipped = -1; // the step whose `skipTo` has been done
     this.routine = null; // the ship's routine (watch.mjs): the clock, your watch, the muster
     this.on = false;
     this.i = 0;
     this.rank = K.start.rank;
-    this.unlocked = new Set(ALL);
+    this.unlocked = new Set(this.ALL);
     this.s = null; // the step in hand's own state
     this.msg = null; // { who, text, t }
     this.el = document.getElementById('c-duty');
@@ -45,6 +97,9 @@ export class Career {
     this.marker = marker();
     C.overlay.add(this.marker);
     C.bus?.on('job-end', ({ job, ok }) => this.jobEnded(job, ok));
+    // The crew pilot (pilot.mjs): which leg she is on, and the end of her plan.
+    C.bus?.on('pilot-leg', (e) => this.on && this.step?.do === 'pilot' && this.s?.phase === 'on' && (this.s.leg = e));
+    C.bus?.on('pilot-done', (e) => this.on && this.step?.do === 'pilot' && this.s?.phase === 'on' && (e.ok || this.s.onT > 0.5) && (this.s.over = e));
     this.people = new Map();
     this.place();
   }
@@ -53,6 +108,8 @@ export class Career {
 
   place() {
     const crewCount = this.L.stations.length;
+    // A layout station that names a person (`stations[].person`) is theirs: the nameless crew leave it (crew.mjs `boardCrew`).
+    this.C.named = new Set(this.K.people.map((p) => p.id));
     this.K.people.forEach((p, k) => {
       const room = this.C.rooms.get(p.room);
       const seg = p.seg ?? room.seg; // a drum room: its segment's Interior, in that segment's frame (drum.mjs)
@@ -67,7 +124,7 @@ export class Career {
       who.chevron.position.set(p.at[0], I.floorY + 2.2, p.at[1]);
       who.chevron.visible = false;
       I.group.add(who.chevron);
-      crewMember(crewCount + k, p.dept, { outfit: outfitFor(room) }) // the duty suit, or in a drum the uniform
+      crewMember(p.body ?? crewCount + k, p.dept, { outfit: outfitFor(room) }) // the duty suit, or in a drum the uniform; `body`: the same model on every ship
         .then((m) => {
           m.root.position.set(p.at[0], I.floorY, p.at[1]);
           m.root.rotation.y = p.yaw ?? 0;
@@ -98,6 +155,11 @@ export class Career {
   static none = { start: { rank: '' }, people: [], steps: [], refuse: {} };
 
   static saved(K) {
+    if (K?.here) {
+      // The player's career: part of the voyage.
+      const s = loadVoyage().career;
+      return s && s.id === K.id && s.n === K.steps.length ? s : null;
+    }
     try {
       const s = JSON.parse(localStorage.getItem(Career.key));
       return s && (!K || s.n === K.steps.length) ? s : null;
@@ -114,6 +176,7 @@ export class Career {
 
   /** Into the career, fresh or where it was left. Returns where you start: { deck, x, z, yaw }. */
   begin(fresh = false) {
+    if (this.voy) return this.beginVoyage(fresh);
     const s = fresh ? null : Career.saved(this.K);
     this.on = true;
     this.i = Math.min(s?.i ?? 0, this.K.steps.length);
@@ -135,14 +198,92 @@ export class Career {
     return { deck: r.deck, x: at ? at[0] : (r.x[0] + r.x[1]) / 2, z: at ? at[1] : (r.z[0] + r.z[1]) / 2, yaw: this.K.resume.yaw ?? 0, seg: r.seg };
   }
 
-  /** Free roam: no orders, the whole ship open. */
-  free() {
+  /** The player's career, from the start screen. Fresh, it starts on `start.ship`; carried on, on the ship the voyage
+   *  says you are aboard. If that is not this page's ship, returns { aboard, params, line } for `goAboard` and begins
+   *  nothing here. Otherwise as `begin`: where you start. */
+  beginVoyage(fresh) {
+    const K = this.K, v = loadVoyage();
+    const s = fresh ? null : Career.saved(K);
+    const where = s?.i ? v.aboard : K.start.ship;
+    if (where !== this.here && K.ships[where]) {
+      if (!s) delete v.career; // a fresh start begins on the other page
+      delete v.roam;
+      saveVoyage(v);
+      // (carried on: aboard her, as her page takes you; fresh: her start screen)
+      return { aboard: where, params: s ? K.ships[where].page ?? {} : {}, line: s ? K.ships[where].crossing : undefined };
+    }
+    this.take(s);
+    if (!s || !this.i) {
+      this.tell(null, K.start.say, 14);
+      const S = K.start, sr = this.C.rooms.get(S.room);
+      if (this.ship && sr?.drum) (this.ship.suit = false), (this.ship.helmet = false); // you wake in your bunk, out of your suit
+      return { deck: sr.deck, x: S.at[0], z: S.at[1], yaw: S.yaw ?? 0, seg: S.seg ?? sr.seg };
+    }
+    const R = K.resume[this.here], r = this.C.rooms.get(R.room), at = R.at;
+    this.tell(null, R.say, 8);
+    if (this.ship && r?.drum) (this.ship.suit = false), (this.ship.helmet = false);
+    return { deck: r.deck, x: at ? at[0] : (r.x[0] + r.x[1]) / 2, z: at ? at[1] : (r.z[0] + r.z[1]) / 2, yaw: R.yaw ?? 0, seg: r.seg };
+  }
+
+  /** Takes up the player's career from its save `s` (null: from the start) on this ship, where you stand. */
+  take(s) {
+    const K = this.K;
+    this.on = true;
+    this.i = Math.min(s?.i ?? 0, K.steps.length);
+    this.rank = s?.rank ?? K.start.rank;
+    this.book = s?.book?.late ?? 0;
+    this.checkFire = s?.book?.checkFire ?? 0;
+    this.quals = new Set(s?.quals ?? []);
+    this.flags = { ...(s?.flags ?? {}) };
+    this.unlocked = new Set(s?.unlocked ?? []);
+    this.skipped = s?.skip ?? -1;
+    // A run of steps that needs her out of her berth, or you in a seat (`run`), starts again from its first step.
+    const run = this.step?.run;
+    if (run && this.step.ship === this.here) while (this.i > 0 && K.steps[this.i - 1].run === run) this.i--;
+    if (s?.clock != null) this.routine?.setTime(s.clock);
+    const v = loadVoyage();
+    v.aboard = this.here;
+    delete v.roam;
+    saveVoyage(v);
+    // She is on her cradle whenever her page loads: the voyage may still say she was out when the page was shut.
+    const P = K.ships[this.here]?.page;
+    if (P?.berth && this.berth?.phase === 'berthed') setShip(`${P.host}/${P.berth}`, { ship: this.here });
+    this.enter();
+    this.save();
+  }
+
+  /** You came aboard through an airlock (main.mjs: the docking port, `?at=berth:<id>`, the sick bay after a wreck):
+   *  the player's career goes on where you stand, if the voyage has one in hand; otherwise free roam. */
+  arrive() {
+    if (!this.voy) return this.free();
+    const s = Career.saved(this.K);
+    if (!s || loadVoyage().roam) return this.free(false);
+    this.take(s);
+    const line = this.K.ships[this.here]?.aboard;
+    if (line && !this.msg) this.tell(null, line, 6); // (unless the order in hand had something to say: a clock skip)
+  }
+
+  /** Free roam: no orders, the whole ship open. (`note`: the voyage remembers it, so the next ship is free roam too.) */
+  free(note = true) {
     this.on = false;
-    this.unlocked = new Set(ALL);
+    this.unlocked = new Set(this.ALL);
     if (this.el) this.el.hidden = true;
+    if (this.voy && note) {
+      const v = loadVoyage();
+      v.roam = true;
+      saveVoyage(v);
+    }
   }
 
   save() {
+    if (this.voy) {
+      const v = loadVoyage();
+      v.career = {
+        id: this.K.id, n: this.K.steps.length, i: this.i, rank: this.rank, quals: [...this.quals], unlocked: [...this.unlocked], flags: this.flags,
+        book: { late: this.book ?? 0, checkFire: this.checkFire }, clock: this.routine?.t, skip: this.skipped
+      };
+      return saveVoyage(v);
+    }
     try {
       localStorage.setItem(Career.key, JSON.stringify({ i: this.i, n: this.K.steps.length, rank: this.rank, unlocked: [...this.unlocked], clock: this.routine?.t, book: this.book ?? 0 }));
     } catch {}
@@ -156,13 +297,48 @@ export class Career {
     return this.on && this.i >= this.K.steps.length;
   }
 
+  /** The step in hand is for another ship: the card says where to go, and nothing completes here. */
+  get away() {
+    return this.voy && !!this.step && this.step.ship !== this.here;
+  }
+
+  /** The berth this ship is carried in (berth.mjs), and her crew pilot (pilot.mjs): made after the career, so read late. */
+  get berth() {
+    return this.G?.berth ?? null;
+  }
+
+  get pilot() {
+    return this.G?.pilot ?? null;
+  }
+
+  /** The nets your rank is on (src/core/announcer.mjs): which of the ship's calls reach you over your headset. */
+  get nets() {
+    return this.K.stations?.ranks?.[this.rank]?.depts ?? this.K.ranks?.find((r) => r.name === this.rank)?.nets ?? [];
+  }
+
+  /** An unlock's name in `unlocked`: the player's career keeps them per ship (`cutter:helm`). */
+  uk(what, ship = this.here) {
+    return this.voy ? `${ship}:${what}` : what;
+  }
+
   allows(what) {
-    return this.unlocked.has(what);
+    return this.unlocked.has(this.uk(what));
   }
 
   refuse(what) {
-    this.tell(null, this.K.refuse[what] ?? 'Not yet.', 6);
+    this.tell(null, (this.voy ? this.K.refuse?.[this.here] : this.K.refuse)?.[what] ?? 'Not yet.', 6);
     this.sfx?.cue('clunk', { vol: 0.3 });
+  }
+
+  /** A key the career keeps from the seat (main.mjs `onAction`): L at the helm of a carried ship, launch and recovery
+   *  by your own hand, until you have `launch` (or the order in hand has you fly: a `pilot` step with no pilot). */
+  blocks(code, mode) {
+    // J (the crew's pilot takes her for a circuit, or gives her back) is not yours either while an order has her flying.
+    if (this.on && mode === 'helm' && code === 'KeyJ' && this.pilot && !this.away && this.step?.do === 'pilot') return this.refuse('launch'), true;
+    if (!this.on || mode !== 'helm' || code !== 'KeyL' || !this.berth || this.allows('launch')) return false;
+    if (!this.away && this.step?.do === 'pilot' && !this.pilot) return false;
+    this.refuse('launch');
+    return true;
   }
 
   // --- the steps ---
@@ -171,31 +347,57 @@ export class Career {
   enter() {
     const st = this.step;
     this.s = { t: 0, phase: 'wait' };
-    if (!st) return;
-    if (st.do === 'land') this.s.seen = this.fighter.lastLanding;
+    if (!st || this.away) return;
+    if (st.skipTo) this.skip(st.skipTo);
+    if (st.do === 'land') this.s.seen = this.berth ? this.berth.lastRecovery ?? null : this.fighter.lastLanding;
     if (st.do === 'rounds') this.s.seen = new Set();
     if (st.do === 'suit') this.s.donned = this.ship?.donned ?? 0;
+  }
+
+  /** A step's `skipTo`: the ship's clock goes on, once, when the step begins aboard the ship that keeps a routine.
+   *  `{ before: m }`: to `m` minutes before your section's next watch. `{ relieved: m }`: on watch, to `m` minutes
+   *  after it ends. `say` is told. With the game running it happens behind a fade (`G.fadeThen`). */
+  skip(k) {
+    const R = this.routine;
+    if (!R?.nextOwn || this.skipped === this.i) return;
+    this.skipped = this.i;
+    const t = k.before != null ? R.nextOwn().start - k.before * 60 : k.relieved != null && R.onWatch ? R.watchAt().end + k.relieved * 60 : null;
+    if (t == null || t <= R.t) return;
+    const go = () => {
+      R.setTime(t);
+      if (k.say) this.tell(null, k.say.replaceAll('{time}', fmtTime(t)), 8);
+    };
+    if (this.live && this.G?.fadeThen) this.G.fadeThen(go);
+    else go();
   }
 
   /** The step in hand is done: its words, its rank and its unlocks, then the next. */
   complete() {
     const st = this.step;
+    if (this.away) return; // an order for another ship is not done from here
     if (st.rank) this.rank = st.rank;
-    for (const u of st.unlock ?? []) this.unlocked.add(u);
+    for (const u of st.unlock ?? []) this.unlocked.add(this.uk(u, st.ship));
+    if (st.qual) {
+      // A qualification: its own flag, and the seats it opens aboard the ship it is for.
+      const Q = this.K.quals?.[st.qual];
+      this.quals.add(st.qual);
+      for (const u of Q?.unlock ?? []) this.unlocked.add(this.uk(u, Q.ship ?? st.ship));
+    }
+    if (st.flag) this.flags[st.flag] = true;
     if (st.say && st.do !== 'talk') this.tell(null, st.say, 8);
-    if (st.rank) {
+    if (st.rank || st.qual) {
       this.sfx?.cue('chime');
       setTimeout(() => this.sfx?.cue('chime'), 300);
     }
     this.i++;
-    if (this.done) this.unlocked = new Set(ALL);
+    if (this.done && !this.voy) this.unlocked = new Set(ALL); // (the player's career has more chapters to come: its seats stay as earned)
     this.save();
     this.enter();
   }
 
   /** The step went wrong: say so, and back up to step `to` (default: this one again). */
-  fail(to = this.i) {
-    if (this.step.fail) this.tell(null, this.step.fail, 8);
+  fail(to = this.i, text = this.step.fail) {
+    if (text) this.tell(null, text, 8);
     this.sfx?.cue('klaxon', { n: 1 });
     this.i = to;
     this.enter();
@@ -206,13 +408,13 @@ export class Career {
   talked(id) {
     const p = this.people.get(id), st = this.step;
     this.C.bus?.emit('talk', { who: id });
-    if (st?.do === 'talk' && st.who === id) {
+    if (!this.away && st?.do === 'talk' && st.who === id) {
       this.tell(p, st.say, 6 + st.say.split(' ').length / 3.2);
       this.complete();
       return;
     }
     if (this.done) return this.tell(p, 'Carry on.', 4);
-    this.tell(p, st ? `You have your orders: ${lower(st.order)}.` : 'Carry on.', 5, st ? 'You have your orders.' : undefined);
+    this.tell(p, st ? `You have your orders: ${lower(this.away ? this.K.ships[st.ship].go : st.order)}.` : 'Carry on.', 5, st ? 'You have your orders.' : undefined);
   }
 
   /** You turned in and were shaken for your watch. */
@@ -294,16 +496,17 @@ export class Career {
     if (!this.on) return;
     this.deckNow = where.deck;
     this.segNow = where.seg;
+    this.live = true; // frames are running: a clock skip from here on is behind a fade
     const st = this.step, s = this.s;
     s && (s.t += dt);
     if (this.msg) this.msg.t -= dt;
-    if (st && s.t >= 0) this.check(st, s, where, dt);
+    if (st && s.t >= 0 && !this.away) this.check(st, s, where, dt);
     this.closeUp(dt, where);
     this.mark(where);
     this.card(where.mode);
   }
 
-  check(st, s, { mode, room }) {
+  check(st, s, { mode, room }, dt = 0) {
     switch (st.do) {
       case 'go':
         if (mode === 'walk' && room === st.room) this.complete();
@@ -326,7 +529,7 @@ export class Career {
           s.seen.add(room);
           this.sfx?.cue('chime', { vol: 0.4 });
           if (s.seen.size === st.rooms.length) this.complete();
-          else this.tell(null, `${this.C.rooms.get(room).name}: all correct. ${st.rooms.length - s.seen.size} to go.`, 4);
+          else this.tell(null, (st.each ?? '{room}: all correct. {n} to go.').replaceAll('{room}', this.C.rooms.get(room).name).replaceAll('{n}', st.rooms.length - s.seen.size), 4);
         }
         break;
       case 'drill':
@@ -377,9 +580,21 @@ export class Career {
         if (mode === 'fighter') this.complete();
         break;
       case 'launch':
-        if (this.fighter.flying) this.complete();
+        // A carried ship: out of her berth by your own hand (L at the helm), not the pilot's.
+        if (this.berth ? this.berth.phase === 'out' && !this.pilot?.busy : this.fighter.flying) this.complete();
         break;
       case 'land': {
+        if (this.berth) {
+          // A carried ship: back on her cradle from a capture you flew, graded `grade` or better.
+          const b = this.berth, l = b.lastRecovery;
+          if (this.pilot?.hasHelm && b.phase !== 'berthed') s.crew = true; // the crew's pilot flew some of it: not yours
+          if (!l || l === s.seen || b.phase !== 'berthed') break;
+          const launch = this.K.steps.findLastIndex((x, k) => k < this.i && x.do === 'launch');
+          if (!l.manual || s.crew) this.fail(launch);
+          else if (GRADES.indexOf(l.grade) > GRADES.indexOf(st.grade ?? 'rough')) this.fail(launch, st.rough ?? st.fail);
+          else this.complete();
+          break;
+        }
         const l = this.fighter.lastLanding;
         if (!l || l === s.seen || this.fighter.phase === 'landing') break;
         if (l.manual || !st.manual) this.complete();
@@ -403,9 +618,87 @@ export class Career {
         if (!N) break;
         s.arr0 ??= N.arrivals;
         if (N.arrivals > s.arr0) this.complete();
-        else if (!N.nav && mode === 'helm' && s.t > 2 && !s.laid) {
+        else if (st.at) {
+          // A point of the career's own, in the host's frame (a carried ship, once she is out): laid in again if cleared.
+          const b = this.berth;
+          if (!N.nav && mode === 'helm' && s.t > 2 && (!b || b.phase === 'out')) N.layNav(b ? b.H.frame.localToWorld(_v.set(...st.at)) : _v.set(...st.at), st.name);
+        } else if (!N.nav && mode === 'helm' && s.t > 2 && !s.laid) {
           s.laid = true;
           N.toggleNav(st.dist ?? 15000, st.off ?? 40);
+        }
+        break;
+      }
+      case 'pilot': {
+        // The crew pilot flies `plan` (pilot.mjs: `G.pilot.fly`), you strapped in at the helm couch unless `seat: false`.
+        // Done when the plan ends well, or when a leg of kind `until` begins (she holds, and the next orders are yours).
+        const P = this.pilot, b = this.berth;
+        if (!P) {
+          // No pilot in this build: the card asks you to fly it (`self`), and L is yours for the step (`blocks`).
+          // Out and clear of the bay at rest for a plan that leaves; back on the cradle for one that ends in a recovery.
+          if (!b) return void this.complete();
+          const home = st.plan.at(-1).do === 'recover';
+          if (home ? b.phase === 'berthed' && (s.out || st.plan[0].do !== 'launch') : b.phase === 'out' && this.clearOfBay()) this.complete();
+          else if (b.phase === 'out') s.out = true;
+          break;
+        }
+        if (s.phase === 'wait') {
+          if (st.seat !== false && mode !== 'helm') s.t = 0;
+          else if (s.t > (st.wait ?? 2)) {
+            if (st.plan[0].do === 'recover' && b?.phase === 'berthed') return void this.complete(); // she is home already
+            if (P.busy) P.abort(); // she was holding for this
+            // (picked up with her already out: no launch to fly)
+            const who = this.people.get(st.who)?.name;
+            s.phase = 'on'; // (before `fly`, which says its first leg at once)
+            s.onT = 0;
+            P.fly(st.plan.filter((leg, k) => !(k === 0 && leg.do === 'launch' && b?.phase !== 'berthed')).map((leg) => ({ ...leg })), who ? { who } : {});
+            if (st.start) this.tell(this.people.get(st.who) ?? null, st.start, 7);
+          }
+          break;
+        }
+        s.onT += dt;
+        if (s.over) s.over.ok ? this.complete() : this.fail();
+        else if (st.until && s.leg?.leg?.do === st.until) this.complete();
+        else if (!P.busy && s.onT > 1) this.complete(); // the plan is over and nothing said so
+        break;
+      }
+      case 'obey': {
+        // Fire control's orders, on a target sled: HOLD for `hold` seconds with the sled running past, then TIGHT on
+        // it and `hits` hits of your own. A round against orders (`fireControl.violations`) goes in the book and the
+        // step starts again: nothing else is lost.
+        const fc = this.guns.fireControl, T = this.guns.raider, by = st.who ?? 'fire control';
+        const who = this.people.get(st.who) ?? null;
+        if (s.phase === 'wait') {
+          if (mode !== 'gun' || (T && !T.gone)) s.t = 0;
+          else if (s.t > 3) {
+            s.v0 = fc.violations;
+            fc.order('hold', { by, target: null });
+            s.R = this.guns.drill(st.from);
+            s.h = 0;
+            s.phase = 'hold';
+            if (st.start) this.tell(who, st.start, 7);
+          }
+          break;
+        }
+        if (fc.violations > s.v0) {
+          this.checkFire++;
+          this.guns.dismiss();
+          fc.auto();
+          this.fail();
+          this.save();
+        } else if (s.R.gone) {
+          fc.auto();
+          this.fail(this.i, st.short ?? st.fail);
+        } else if (s.phase === 'hold') {
+          if ((s.h += dt) >= (st.hold ?? 10)) {
+            s.hits0 = s.R.byYou ?? 0;
+            fc.order('tight', { by, target: s.R });
+            s.phase = 'tight';
+            if (st.tight) this.tell(who, st.tight, 7);
+          }
+        } else if ((s.R.byYou ?? 0) - s.hits0 >= st.hits) {
+          this.guns.dismiss();
+          fc.auto();
+          this.complete();
         }
         break;
       }
@@ -415,10 +708,30 @@ export class Career {
   // --- where the order sends you ---
 
   /** Where the step in hand sends you: { deck, x, z, room } or null. */
+  /** A carried ship is out, clear of the bay and near enough at rest against her host (a `pilot` step you fly yourself). */
+  clearOfBay() {
+    const b = this.berth;
+    return b.C.obj.position.distanceTo(b.gateWorld(_v)) > 150 && _v.copy(this.body.vel).sub(b.hostVel).length() < 1.5;
+  }
+
+  /** Where the way to ship `id` is, from here: the berth she lies in (her docking port, on its platform in the
+   *  hangar), or this ship's own docking port (the way back aboard her host). */
+  crossing(id) {
+    const P = this.K.ships[id]?.page ?? {}, room = (r) => this.C.rooms.get(r);
+    const b = (this.L.berths ?? []).find((x) => x.id === P.berth);
+    if (b) {
+      const port = b.port ?? b.at, h = room('hangar');
+      return h && { deck: h.deck, x: port[0] - Math.sign(port[0] || b.out || 1) * 1.2, z: port[2], room: null }; // (no room: the side is the berth's, not the hangar's)
+    }
+    const dk = this.L.dock, lock = dk && room(dk.room);
+    return lock ? { deck: lock.deck, x: dk.at[0] - (dk.out?.[0] ?? 0) * 0.6, z: dk.at[2], room: lock } : null;
+  }
+
   target() {
     if (this.as && !this.as.closed) return this.stationTarget();
     const st = this.step;
     if (!st) return null;
+    if (this.away) return this.crossing(st.ship);
     const room = (id) => {
       const r = this.C.rooms.get(id);
       return r && { deck: r.deck, seg: r.seg, x: (r.x[0] + r.x[1]) / 2, z: (r.z[0] + r.z[1]) / 2, room: r };
@@ -448,9 +761,10 @@ export class Career {
       case 'drill':
         return this.s?.job ? null : room(st.room); // once it is called, damage control's own red marker has it
       case 'suit':
-        return room('damage-control');
+        return room(st.room ?? 'damage-control');
       case 'man':
       case 'shoot':
+      case 'obey':
       case 'raid': {
         const f = this.L.weapons.turrets[0].from;
         return { deck: f.deck, x: f.at[0], z: f.at[1], room: null };
@@ -459,11 +773,13 @@ export class Career {
         return this.boardTarget();
       case 'launch':
       case 'land':
-        return room('hangar');
+        if (this.fighter) return room('hangar');
+      // (a carried ship is launched and brought home from her own helm)
+      case 'pilot':
       case 'helm':
       case 'turn':
       case 'transit': {
-        const br = this.C.rooms.get('bridge');
+        const br = this.C.rooms.get(this.L.helm.room ?? 'bridge');
         return { deck: br.deck, x: this.L.helm.at[0], z: this.L.helm.at[1], room: br };
       }
     }
@@ -526,14 +842,20 @@ export class Career {
     if (st?.do === 'shoot') prog = mode !== 'gun' ? 'Climb back into the dorsal turret' : s.phase === 'wait' ? 'Waiting for the target tug…' : `Your hits on the sled: ${Math.min(st.hits, s.R?.byYou ?? 0)} of ${st.hits} · lay the sight on the amber diamond`;
     if (st?.do === 'turn' && s.h0) prog = `Turned ${Math.round(s.deg)}° of ${st.deg}° · turning ${s.rate.toFixed(2)}°/s`;
     if (st?.do === 'drill' && s.job) prog = 'The drill is on: see the job card';
-    const R = this.routine;
+    const away = this.away, b = this.berth;
+    if (st?.do === 'obey') prog = mode !== 'gun' ? 'Climb back into the dorsal turret' : s.phase === 'wait' ? 'Waiting for the target tug…' : s.phase === 'hold' ? `WEAPONS HOLD: do not fire · ${Math.max(0, Math.ceil((st.hold ?? 10) - s.h))} s` : `WEAPONS TIGHT on the sled · your hits: ${Math.min(st.hits, (s.R?.byYou ?? 0) - s.hits0)} of ${st.hits}`;
+    if (st?.do === 'pilot' && !away) prog = !this.pilot ? b?.status() ?? '' : s.phase === 'wait' ? (st.seat !== false && mode !== 'helm' ? 'Strap in at the pilot\'s couch' : 'Stand by…') : `The commander has the helm${s.leg ? ` · leg ${s.leg.i + 1} of ${s.leg.n}: ${s.leg.leg?.do ?? ''}` : ''}`;
+    if ((st?.do === 'launch' || st?.do === 'land') && b && !away) prog = mode === 'helm' ? b.status() ?? '' : 'Take the helm';
+    if (this.checkFire && (st?.do === 'obey' || st?.do === 'shoot')) prog += ` · check fires on report: ${this.checkFire}`;
+    const R = this.routine?.yourLine ? this.routine : null; // a ship with only a clock (`NoRoutine`) has no watch line
     if (st?.do === 'muster' && R && !s.adrift) {
       const x = R.nextOwn(R.t - R.W.muster.late * 60);
       prog = `Muster at ${fmtTime(x.start)} · now ${fmtTime(R.t)}`;
     }
     if (st?.do === 'sleep' && R) prog = R.cantSleep() ?? `Use your bunk: you are called at ${fmtTime(R.nextOwn().start - R.you.shake * 60)}`;
     if (st?.do === 'rounds') prog = `Rounds: ${s.seen.size} of ${st.rooms.length} checked · ${st.rooms.filter((r) => !s.seen.has(r)).map((r) => this.C.rooms.get(r)?.name.toLowerCase()).join(', ')}`;
-    let order = this.done ? 'Your first week is done. Answer the klaxon, man a turret, fly.' : s?.adrift ? st.adrift?.order ?? st.order : st.order;
+    let order = this.done ? this.K.end?.order ?? 'Your first week is done. Answer the klaxon, man a turret, fly.' : away ? this.K.ships[st.ship].go : s?.adrift ? st.adrift?.order ?? st.order : st.do === 'pilot' && !this.pilot ? st.self ?? st.order : st.order;
+    if (away) prog = '';
     if (this.as) {
       // Action stations comes before the order in hand.
       const S = this.K.stations, at = this.as.line.at;
@@ -541,7 +863,9 @@ export class Career {
       prog = this.as.closed ? 'Your order resumes at the stand down' : this.as.adrift ? `Adrift: your name is in the book (${this.book})` : `Close up in ${Math.max(0, Math.ceil(S.close - this.as.t))} s`;
     }
     const msg = this.msg && this.msg.t > 0 ? `<div class="d-msg">${this.msg.who ? `<b>${this.msg.who}:</b> ` : ''}${this.msg.text}</div>` : '';
-    const html = `<div class="d-rank">${this.rank}<span>${this.done ? 'first week' : `order ${this.i + 1} of ${this.K.steps.length}`}</span></div>
+    // Your qualifications, after your rank (the player's career): a rank is a title, a qualification opens a seat.
+    const quals = this.voy && this.quals.size ? ` · ${[...this.quals].map((q) => this.K.quals?.[q]?.short ?? q).join(' ')}` : '';
+    const html = `<div class="d-rank">${this.rank}<span>${this.done ? this.K.end?.tag ?? 'first week' : `order ${this.i + 1} of ${this.K.steps.length}`}${quals}</span></div>
       ${R ? `<div class="d-watch" style="--c:${R.mine.color}">${R.yourLine()}</div>` : ''}
       <div class="d-order">${order}</div>
       ${mode === 'walk' || mode === 'cutaway' ? `<div class="d-where">${this.hint(this.target(), this.deckNow)}</div>` : ''}

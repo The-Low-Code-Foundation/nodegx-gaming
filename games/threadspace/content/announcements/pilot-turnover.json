@@ -1,0 +1,13 @@
+{
+  "id": "pilot-turnover",
+  "about": "The crew's pilot turns her end for end to brake (pilot.mjs `stretch`).",
+  "who": "cutter-cdr",
+  "say": [
+    "Turning over."
+  ],
+  "to": {
+    "all": "tannoy",
+    "bridge": "headset"
+  },
+  "priority": 2
+}

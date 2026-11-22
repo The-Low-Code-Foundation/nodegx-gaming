@@ -1,0 +1,13 @@
+{
+  "id": "pilot-station",
+  "about": "The crew's pilot has brought her to rest at the point ordered (pilot.mjs, the goto leg).",
+  "who": "cutter-cdr",
+  "say": [
+    "On station."
+  ],
+  "to": {
+    "all": "tannoy",
+    "bridge": "headset"
+  },
+  "priority": 2
+}

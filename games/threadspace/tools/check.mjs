@@ -20,6 +20,14 @@
 // - the career (career.json): each step's `do` is a kind career.mjs runs, its `who` is an officer, its rooms exist,
 //   a drill's `kind` is a damage control job, `unlock` and `refuse` name things the game unlocks, each rank's action
 //   station names a room or a seat and an officer;
+// - the player's career (content/careers/<id>.json, which spans ships; checked whichever ship is asked for): every
+//   ship it names has a folder, and a carried one's `page` names a berth of its host that holds her; ranks, quals and
+//   unlocks name each other properly and the code knows every unlock; each person has a file, a `ship`, and a spot
+//   inside a room of that ship (their own, or the layout station that names them: `stations[].person`); each step
+//   names a ship, a kind career.mjs runs and that ship can play (a muster needs her watches.json, a gunnery step a
+//   turret and a target sled, a drill one of her own kinds in a room she lists for it, a launch or a pilot's plan a
+//   berth), a person who stands aboard that ship, rooms she has, and an order; a `run` is unbroken and on one ship;
+//   every line is checked against the glossary;
 // - the routine (watches.json): its rooms exist, `first` and `you.section` are sections;
 // - spots: an officer's post, the start, the resume and your bunk stand inside the room they name;
 // - people (content/people/): everyone the career, the routine and the announcements name has a file, its `id` is
@@ -43,7 +51,7 @@ import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { loadLayout } from '../src/core/ship.mjs';
 import { PEOPLE, peopleNamed } from '../src/core/people.mjs';
-import { CALLS, AUDIENCES, CHANNELS, SHIP_SLOTS, callLines, expand } from '../src/core/announcer.mjs';
+import { CALLS, AUDIENCES, CHANNELS, SHIP_SLOTS, DEPTS as NETS, callLines, expand } from '../src/core/announcer.mjs';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url)).replace(/\/$/, '');
 
@@ -53,6 +61,13 @@ const ROOT = fileURLToPath(new URL('..', import.meta.url)).replace(/\/$/, '');
 const STEPS = ['talk', 'go', 'read', 'sleep', 'muster', 'rounds', 'drill', 'suit', 'man', 'shoot', 'raid', 'board', 'launch', 'land', 'helm', 'turn', 'transit'];
 const UNLOCKS = ['guns', 'raids', 'fighters', 'helm'];
 const SEATS = ['gun', 'fighter', 'helm'];
+// The player's career (content/careers/): the kinds it adds, what it may unlock (`career.allows()` is asked for each
+// somewhere, or will be: see the file's `unlocks`), a pilot's legs (pilot.mjs) and a capture's grades (recovery.mjs).
+const CAREERS = 'content/careers';
+const STEPS_SERVICE = [...STEPS, 'pilot', 'obey'];
+const UNLOCKS_SERVICE = ['guns', 'helm', 'launch', 'firecontrol', 'fighters', 'raids'];
+const LEGS = ['launch', 'goto', 'hold', 'turn', 'recover'];
+const GRADES = ['clean', 'fair', 'rough'];
 const DEPTS = ['command', 'flight', 'engineering', 'crew'];
 const POSES = ['idle', 'walk', 'sitChair', 'workTable', 'talk', 'lookAround'];
 // A berthed ship's room: metres clear all round her, the bay door's clear opening in front of her [long, high], and the
@@ -209,6 +224,148 @@ export async function check({ root = ROOT, ship = 'carrier' } = {}) {
     if (s.who && !officers.has(s.who)) problems.push(`${at}: who "${s.who}" is not an officer`);
   }
 
+  // ---- the player's career (it spans ships) ----
+  const glossary = existsSync(path('content/glossary.json')) ? json('content/glossary.json') : null;
+  const careerPeople = new Set(); // everyone a career or a layout station names, for the people section below
+  for (const s of L.stations ?? []) if (s.person) careerPeople.add(s.person);
+  for (const f of existsSync(path(CAREERS)) ? readdirSync(path(CAREERS)).filter((f) => f.endsWith('.json')) : []) {
+    const P = json(`${CAREERS}/${f}`), at0 = `${CAREERS}/${f}`;
+    const bad = (m) => problems.push(`${at0}: ${m}`);
+    if (P.id !== f.slice(0, -5)) bad(`its id is "${P.id}"`);
+    if (!P.about?.draft) notes.push(`${at0}: no about.draft (say whether the words are final)`);
+    // its ships: a layout each, with her rooms, and what she can play
+    const ships = new Map();
+    for (const [id, S] of Object.entries(P.ships ?? {})) {
+      if (!existsSync(path(`ships/${id}/index.json`))) { bad(`ships.${id}: no folder ships/${id}/`); continue; }
+      const SL = id === ship ? L : await loadLayout(path(`ships/${id}`), read);
+      const rs = new Map();
+      for (const c of SL.compartments) rs.set(c.id, c);
+      for (const r of SL.drum?.rooms ?? []) rs.set(r.id, r);
+      ships.set(id, { L: SL, rooms: rs, routine: existsSync(path(`ships/${id}/watches.json`)) ? json(`ships/${id}/watches.json`) : null, carried: !!S.page?.berth });
+      if (!S.go) bad(`ships.${id}: no go (the card's line when the order is aboard her)`);
+      if (S.page?.berth) {
+        const hostDir = `ships/${S.page.host}`;
+        const HL = existsSync(path(`${hostDir}/index.json`)) ? (S.page.host === ship ? L : await loadLayout(path(hostDir), read)) : null;
+        const b = HL?.berths?.find((x) => x.id === S.page.berth);
+        if (!b) bad(`ships.${id}.page: host "${S.page.host}" has no berth "${S.page.berth}"`);
+        else if (b.ship !== id) bad(`ships.${id}.page: berth ${b.id} holds "${b.ship}"`);
+      }
+      const m = /^berth:(.+)$/.exec(S.page?.at ?? '');
+      if (m && !SL.berths?.some((x) => x.id === m[1])) bad(`ships.${id}.page.at: she has no berth "${m[1]}"`);
+    }
+    const inRoom = (where, sid, id, at) => {
+      const r = ships.get(sid)?.rooms.get(id);
+      if (!r) return bad(`${where} names room "${id}", which ships/${sid} does not have`), null;
+      if (at && r.x && (at[0] < r.x[0] - 0.05 || at[0] > r.x[1] + 0.05 || at[1] < r.z[0] - 0.05 || at[1] > r.z[1] + 0.05)) bad(`${where} stands at [${at}], outside ${id} (x ${r.x}, z ${r.z})`);
+      return r;
+    };
+    // ranks, quals, unlocks
+    const ranks = (P.ranks ?? []).map((r) => r.name), quals = Object.keys(P.quals ?? {}), unlocks = Object.keys(P.unlocks ?? {});
+    if (new Set(ranks).size !== ranks.length) bad('ranks: a name twice');
+    for (const r of P.ranks ?? []) {
+      for (const n of r.nets ?? []) if (!NETS.includes(n)) bad(`rank "${r.name}": net "${n}" (one of ${NETS.join(', ')})`);
+      for (const q of r.needs ?? []) if (!quals.includes(q)) bad(`rank "${r.name}" needs "${q}", which is not in quals`);
+    }
+    for (const u of unlocks) if (!UNLOCKS_SERVICE.includes(u)) bad(`unlocks.${u}: not something the game keeps shut (${UNLOCKS_SERVICE.join(', ')})`);
+    for (const [q, Q] of Object.entries(P.quals ?? {})) {
+      if (!ships.has(Q.ship)) bad(`quals.${q}: ship "${Q.ship}"`);
+      for (const u of Q.unlock ?? []) if (!unlocks.includes(u)) bad(`quals.${q} unlocks "${u}", which is not in unlocks`);
+    }
+    for (const [sid, R] of Object.entries(P.refuse ?? {})) {
+      if (!ships.has(sid)) bad(`refuse.${sid}: not one of its ships`);
+      for (const k of Object.keys(R)) if (!unlocks.includes(k)) bad(`refuse.${sid}.${k}: not in unlocks`);
+    }
+    // people: a file, a ship, a spot aboard her
+    const aboard = new Map(); // ship → the ids who stand on her
+    for (const p of P.people ?? []) {
+      const at = `person ${p.id} (${p.ship})`;
+      careerPeople.add(p.id);
+      const S = ships.get(p.ship);
+      if (!S) { bad(`${at}: ship "${p.ship}" is not one of its ships`); continue; }
+      if (aboard.get(p.ship)?.has(p.id)) bad(`${at}: aboard her twice`);
+      aboard.set(p.ship, (aboard.get(p.ship) ?? new Set()).add(p.id));
+      const st = p.room ? p : (S.L.stations ?? []).find((x) => x.person === p.id);
+      if (!st) bad(`${at}: no room of their own and no station of ships/${p.ship} names them (stations[].person)`);
+      else inRoom(at, p.ship, st.room, st.at);
+      if (st?.pose && !POSES.includes(st.pose)) bad(`${at}: pose "${st.pose}"`);
+      const pf = `${PEOPLE}/${p.id}.json`;
+      if (!existsSync(path(pf))) { bad(`${pf} is missing`); continue; }
+      const who = json(pf);
+      if (who.id !== p.id || !who.name || !DEPTS.includes(who.dept)) bad(`${pf}: needs its id, a name and a dept (${DEPTS.join(', ')})`);
+      for (const k of ['design', 'gender', 'language', 'style']) if (!who.cast?.[k]) bad(`${pf}: no cast.${k}`);
+      if (who.body && existsSync(path('assets/people/index.json')) && !json('assets/people/index.json').people.some((m) => m.name === who.body)) bad(`${pf}: body "${who.body}" is not a model in assets/people/index.json`);
+    }
+    // where it starts, and where it is picked up
+    if (!ranks.includes(P.start?.rank)) bad(`start.rank "${P.start?.rank}" is not in ranks`);
+    if (!ships.has(P.start?.ship)) bad(`start.ship "${P.start?.ship}"`);
+    else inRoom('start', P.start.ship, P.start.room, P.start.at);
+    for (const sid of ships.keys()) {
+      if (!P.resume?.[sid]) bad(`resume.${sid}: none (where a career picked up aboard her starts)`);
+      else inRoom(`resume.${sid}`, sid, P.resume[sid].room, P.resume[sid].at);
+    }
+    // the steps
+    const spokenK = [['start.say', P.start?.say], ...Object.entries(P.resume ?? {}).map(([k, v]) => [`resume.${k}.say`, v.say]), ...Object.entries(P.ships ?? {}).flatMap(([k, v]) => [[`ships.${k}.go`, v.go], [`ships.${k}.aboard`, v.aboard]]), ['end.order', P.end?.order]];
+    for (const [sid, R] of Object.entries(P.refuse ?? {})) for (const [k, v] of Object.entries(R)) spokenK.push([`refuse.${sid}.${k}`, v]);
+    (P.steps ?? []).forEach((st, i) => {
+      const at = `step ${i + 1} (${st.do}, ${st.ship})`, S = ships.get(st.ship), SL = S?.L;
+      if (!S) return bad(`${at}: ship "${st.ship}" is not one of its ships`);
+      if (!STEPS_SERVICE.includes(st.do)) bad(`${at}: "${st.do}" is not a step career.mjs runs`);
+      if (!st.order) bad(`${at}: no order (the duty card's line)`);
+      if (st.who !== undefined && !aboard.get(st.ship)?.has(st.who)) bad(`${at}: who "${st.who}" does not stand aboard ${st.ship} (people)`);
+      if (st.do === 'talk' && st.who === undefined) bad(`${at}: a talk step needs a who`);
+      if (st.room !== undefined) inRoom(at, st.ship, st.room);
+      for (const r of st.rooms ?? []) inRoom(at, st.ship, r);
+      if (['go'].includes(st.do) && !st.room) bad(`${at}: no room`);
+      if (st.do === 'rounds' && !st.rooms?.length) bad(`${at}: no rooms`);
+      if (st.do === 'drill') {
+        const kind = SL.damage?.kinds?.[st.kind];
+        if (!kind) bad(`${at}: drill kind "${st.kind}" is not in ships/${st.ship}'s damage.kinds`);
+        else if (Array.isArray(kind.rooms) && !kind.rooms.includes(st.room)) bad(`${at}: ${st.room} is not a room ships/${st.ship} lists for a ${st.kind} job (${kind.rooms.join(', ')})`);
+      }
+      if (['muster', 'sleep', 'read'].includes(st.do) && !S.routine) bad(`${at}: ships/${st.ship} has no watches.json (the routine: the muster, your bunk, the watch bill)`);
+      if (st.skipTo && !S.routine) bad(`${at}: skipTo needs a ship with a routine`);
+      if (st.skipTo && st.skipTo.before == null && st.skipTo.relieved == null) bad(`${at}: skipTo needs before or relieved (minutes)`);
+      if (['man', 'shoot', 'obey', 'raid'].includes(st.do) && !SL.weapons?.turrets?.length) bad(`${at}: ships/${st.ship} has no turret`);
+      if (['shoot', 'obey'].includes(st.do)) {
+        if (!SL.weapons?.target) bad(`${at}: ships/${st.ship} has no weapons.target (the towed sled)`);
+        if (!(st.hits > 0)) bad(`${at}: no hits`);
+        if (st.from && !['port', 'starboard', 'above', 'below'].includes(st.from)) bad(`${at}: from "${st.from}"`);
+      }
+      if (st.do === 'obey' && !(st.hold > 0)) bad(`${at}: no hold (seconds under WEAPONS HOLD)`);
+      if (st.do === 'obey' && !st.fail) bad(`${at}: no fail (said when you fire against orders)`);
+      if (['board'].includes(st.do) && !SL.fighters?.length) bad(`${at}: ships/${st.ship} has no fighters`);
+      if (['launch', 'land'].includes(st.do) && !S.carried && !SL.fighters?.length) bad(`${at}: ships/${st.ship} is not carried in a berth and has no fighters`);
+      if (st.do === 'land' && st.grade && !GRADES.includes(st.grade)) bad(`${at}: grade "${st.grade}" (${GRADES.join(', ')})`);
+      if (st.do === 'transit' && st.at && !(Array.isArray(st.at) && st.at.length === 3)) bad(`${at}: at is [x, y, z]`);
+      if (st.do === 'pilot') {
+        if (!S.carried) bad(`${at}: ships/${st.ship} is not carried in a berth (the crew pilot flies a carried ship)`);
+        if (!Array.isArray(st.plan) || !st.plan.length) bad(`${at}: no plan`);
+        for (const leg of st.plan ?? []) {
+          if (!LEGS.includes(leg.do)) bad(`${at}: leg "${leg.do}" (${LEGS.join(', ')})`);
+          if (leg.do === 'goto' && !(Array.isArray(leg.at) && leg.at.length === 3)) bad(`${at}: a goto leg needs at [x, y, z]`);
+          if (leg.do === 'hold' && !(leg.secs > 0)) bad(`${at}: a hold leg needs secs`);
+        }
+        if (st.until && !(st.plan ?? []).some((leg) => leg.do === st.until)) bad(`${at}: until "${st.until}" is not a leg of its plan`);
+        if (!st.self) bad(`${at}: no self (the card's line when there is no crew pilot and you fly it)`);
+      }
+      if (st.rank && !ranks.includes(st.rank)) bad(`${at}: rank "${st.rank}" is not in ranks`);
+      if (st.qual && !quals.includes(st.qual)) bad(`${at}: qual "${st.qual}" is not in quals`);
+      for (const u of st.unlock ?? []) if (!unlocks.includes(u)) bad(`${at}: unlock "${u}" is not in unlocks`);
+      if (st.run) {
+        const first = P.steps.findIndex((x) => x.run === st.run), last = P.steps.findLastIndex((x) => x.run === st.run);
+        if (P.steps.slice(first, last + 1).some((x) => x.run !== st.run || x.ship !== st.ship)) bad(`${at}: run "${st.run}" is broken up, or crosses ships`);
+      }
+      for (const k of ['say', 'start', 'fail', 'tight', 'short', 'rough', 'self', 'order', 'each']) if (st[k]) spokenK.push([`${at} ${k}`, st[k]]);
+      for (const [k, v] of Object.entries(st.adrift ?? {})) spokenK.push([`${at} adrift.${k}`, v]);
+      if (st.skipTo?.say) spokenK.push([`${at} skipTo.say`, st.skipTo.say]);
+    });
+    for (const [where, t] of spokenK) for (const a of (t && glossary?.avoid) || []) if (new RegExp(`\\b${a.not.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i').test(t)) bad(`${where} says "${a.not}" (the glossary says "${a.say}"): ${t}`);
+    counts.careers = (counts.careers ?? 0) + 1;
+    counts.careerSteps = (counts.careerSteps ?? 0) + (P.steps?.length ?? 0);
+  }
+  // A layout station that names a person: they have a file.
+  for (const [i, s] of (L.stations ?? []).entries()) if (s.person && !existsSync(path(`${PEOPLE}/${s.person}.json`))) problems.push(`stations[${i}] names person "${s.person}", who has no ${PEOPLE}/${s.person}.json`);
+
   // ---- the routine ----
   if (W.first && !sections.has(W.first)) problems.push(`watches.first "${W.first}" is not a section`);
   if (W.you) {
@@ -296,7 +453,7 @@ export async function check({ root = ROOT, ship = 'carrier' } = {}) {
     if (!p.cast) problems.push(`${f}: no cast (the recorded voice: tools/voices.mjs)`);
   }
   const files = existsSync(path(PEOPLE)) ? readdirSync(path(PEOPLE)).filter((f) => f.endsWith('.json')) : [];
-  for (const f of files) if (!ids.includes(f.slice(0, -5))) notes.push(`${PEOPLE}/${f}: nobody aboard names this person`);
+  for (const f of files) if (!ids.includes(f.slice(0, -5)) && !careerPeople.has(f.slice(0, -5))) notes.push(`${PEOPLE}/${f}: nobody aboard names this person`);
   counts.people = people.size;
 
   // ---- the cast ----
@@ -328,7 +485,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   const ship = process.argv.slice(2).find((a) => !a.startsWith('--')) ?? 'carrier';
   const { problems, notes, counts } = await check({ ship });
   if (!quiet) {
-    console.log(`Checked ships/${ship}: ${counts.rooms} rooms, ${counts.berths ? `${counts.berths} berths, ` : ''}${counts.steps} career steps, ${counts.people} people, ${counts.calls ?? 0} announcements, ${counts.clips ?? 0} recorded clips.`);
+    console.log(`Checked ships/${ship}: ${counts.rooms} rooms, ${counts.berths ? `${counts.berths} berths, ` : ''}${counts.steps} career steps${counts.careers ? ` (and the player's career: ${counts.careerSteps} steps across ships)` : ''}, ${counts.people} people, ${counts.calls ?? 0} announcements, ${counts.clips ?? 0} recorded clips.`);
     for (const n of notes) console.log(`  note: ${n}`);
   }
   if (problems.length) {

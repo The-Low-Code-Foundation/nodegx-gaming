@@ -48,7 +48,7 @@ import { Feel } from './gunfeel.mjs';
 import { Gas } from './gas.mjs';
 import { Blazes } from './blaze.mjs';
 import { FlightAudio } from './flight-audio.mjs';
-import { Career } from './career.mjs';
+import { Career, loadCareer } from './career.mjs';
 import { Routine, NoRoutine, fmt } from './watch.mjs';
 import { Voices } from './voice.mjs';
 import { Bus } from '../core/events.mjs';
@@ -57,6 +57,7 @@ import { Drive } from './drive.mjs';
 import { Doors } from './doors.mjs';
 import { Berth, standIn } from './berth.mjs';
 import { Recovery } from './recovery.mjs';
+import { Pilot } from './pilot.mjs';
 import { Berths, berthKey } from './berths.mjs';
 import { setShip, goAboard, arrived } from '../core/voyage.mjs';
 import { Collisions, ShipCollisions } from './collide.mjs';
@@ -88,7 +89,9 @@ const SHIP = `ships/${SHIP_ID}`;
 const L = await loadLayout(SHIP, fetchJson);
 // A ship may have none of these three (the cutter has none): `null`, and what reads them is made without them, below.
 const optional = (f) => fetchJson(`${SHIP}/${f}`).catch(() => null);
-const K = await optional('career.json'); // your first week aboard (career.mjs); without it she is free roam only
+// The career (career.mjs): the player's, which spans ships (content/careers/, seen from this ship), or with
+// `?career=ship` this ship's own career.json (the carrier's first week). Without one she is free roam only.
+const K = await loadCareer({ q, ship: SHIP_ID, dir: SHIP, L, read: fetchJson });
 const W = await optional('watches.json'); // the ship's routine: clock, watches, muster (watch.mjs)
 // The officers and leading hands are people (content/people/): the ship's files say where they stand, and their own
 // files who they are.
@@ -324,7 +327,7 @@ const helmSight = new HelmSight(C, { body, helm, thrusters: thrusterList, rcs: t
 // `?at=` or `?view=`, or the start screen's button) has everything open.
 // A ship with no career.json gets an empty one (`Career.none`): no officers, no orders, everything open.
 if (SHIP_ID !== 'carrier') Career.key = `threadspace.${SHIP_ID}.career`; // each ship's career saves under its own key
-const career = new Career(C, K ?? Career.none, { dc, ship, guns, fighter, obj: C.obj, body, sfx, voices });
+const career = new Career(C, K ?? Career.none, { dc, ship, guns, fighter, obj: C.obj, body, sfx, voices, G });
 
 // The ship's routine (watch.mjs): the clock and the bells, the watches, the crew at their posts by watch, the watch
 // bill, your bunk and your section's muster. ?crew=0 leaves the crew ashore (the officers still come aboard).
@@ -367,7 +370,7 @@ const announcer = new Announcer(C, CALLS, {
 });
 const SEAT_NET = { helm: 'bridge', gun: 'gunners', fighter: 'flight' };
 announcer.you = () => {
-  const depts = new Set(career.on ? K?.stations?.ranks?.[career.rank]?.depts ?? [] : DEPTS);
+  const depts = new Set(career.on ? career.nets : DEPTS);
   if (SEAT_NET[mode]) depts.add(SEAT_NET[mode]);
   const room = mode === 'walk' ? walk.roomNow() : mode === 'helm' ? HELM_ROOM : null;
   return { mode, room, sealed: !!ship.helmet, depts };
@@ -411,6 +414,7 @@ input.onAction = (code) => {
     if (code === 'KeyE' || code === 'KeyB') routine.closeBill();
     return;
   }
+  if (career.blocks(code, mode)) return; // a key the career keeps from you yet (L: launch and recovery by your own hand)
   seats[mode].key(code);
 };
 
@@ -450,6 +454,7 @@ let collide = null; // made once the ship's outside is gathered, at the end of t
 let bump = null; // the ship you fly against her host (collide.mjs `ShipCollisions`), made with the host
 let host = null; // ?host=<id>: a second ship beside her, made at the end of this file
 let berth = null; // ?berth=<id>: she is carried in that berth of the host's hangar (berth.mjs), made with the host
+let pilot = null; // the crew at the helm of a carried ship (pilot.mjs), made with her berth
 let hostDoors = null, hostHangar = null; // the host's bay doors, worked from here, and her hangar deck, drawn round you
 
 function frame() {
@@ -474,10 +479,12 @@ function tick(dt) {
   walk.move(f, dt);
   drive.hold();
   // Carried in a berth, her place is her host's to give (berth.mjs): the helm's hands do nothing until the hand-over.
+  // The crew's pilot (pilot.mjs), flying a plan, gives the helm its command in place of your hands.
+  const crewCmd = pilot?.frame(dt) ?? null;
   if (berth?.carried) {
     thrusters.allocate(new Array(6).fill(0));
     berth.frame(dt);
-  } else helm.frame(mode === 'helm' ? f : IDLE, dt, mode === 'helm');
+  } else helm.frame(crewCmd ?? (mode === 'helm' ? f : IDLE), dt, !!crewCmd || mode === 'helm');
   hostDoors?.frame(dt);
   berth?.lane?.frame(dt, mode === 'helm' && !fading); // the recovery lane: where she is on it, the capture or the wave-off (recovery.mjs)
   drive.standBy(dt, helm, mode === 'helm');
@@ -660,6 +667,7 @@ if (q.get('at') === 'helm') {
   walk.goDeck(sick.deck, (sick.x[0] + sick.x[1]) / 2, (sick.z[0] + sick.z[1]) / 2, walker.yaw, sick.seg);
   if (walker.floater) walker.floater.hurt = Math.max(walker.floater.hurt, 0.5);
   const v = Math.round(+q.get('speed') || 0);
+  career.arrive();
   if (q.has('wreck')) dc.say(null, `You struck the ${L.name?.toLowerCase().includes('carrier') ? 'carrier' : 'ship'}${v ? ` at ${v} m/s` : ''} and the cutter broke up. The crash and rescue team cut you out of what was left: you are in the ${sick.name.toLowerCase()}, bruised. The cutter was recovered and is being rebuilt on her cradle.`, 0, 12);
 } else if (AT[q.get('at')]) {
   walk.goDeck(...AT[q.get('at')]);
@@ -686,6 +694,7 @@ function go(how) {
   if (how === 'free') career.free();
   else {
     const at = career.begin(how === 'fresh');
+    if (at.aboard) return goAboard(at.aboard, at.params, at.line ? { line: at.line } : {}); // the career is in hand aboard another ship
     walk.goDeck(at.deck, at.x, at.z, at.yaw, at.seg);
   }
   if (mode !== 'cutaway') input.lock();
@@ -768,7 +777,7 @@ if (q.get('at')?.startsWith('berth:')) {
     if (a.y !== undefined) walker.pos.y = a.y;
     walker.floater?.reset?.();
     ship.don();
-    career.free();
+    career.arrive(); // the career goes on aboard this ship, or free roam (career.mjs)
   }
 }
 
@@ -817,6 +826,8 @@ if (HOST_ID) {
     carriedRads('berthed', true);
     // Flying her home yourself: the lane off her berth, flight control's calls and the docking display (recovery.mjs).
     berth.lane = helmSight.dock = new Recovery({ C, body, helm, berth });
+    // The crew at her helm (pilot.mjs): flies a plan of legs through the same helm. `?skill=` 0 to 1 (or 1 to 10).
+    pilot = G.pilot = window.__carrier.pilot = new Pilot(G, { skill: q.get('skill') ?? undefined, seed: seed ?? 1 });
     KEYS.helm = KEYS.helm.replace(' · <b>view</b> V', ' · <b>launch / request recovery</b> L (again: flight control flies her in) · <b>docking mode</b> K · <b>berth heading</b> H · <b>view</b> V');
     if (mode === 'helm') hud.keysEl.innerHTML = KEYS.helm; // (already at the helm, `?at=helm`: the line was written before this)
     // Her docking port (the layout's `dock`): on the cradle, it is the way back aboard the host.
@@ -833,7 +844,7 @@ if (HOST_ID) {
     if (lock && !q.has('at')) {
       walk.goDeck(lock.deck, (lock.x[0] + lock.x[1]) / 2, (lock.z[0] + lock.z[1]) / 2, Math.PI / 2);
       walker.floater?.reset?.();
-      career.free();
+      career.arrive();
     }
     window.__carrier.berth = berth;
     window.__carrier.hostDoors = hostDoors;

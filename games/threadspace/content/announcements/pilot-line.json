@@ -1,0 +1,14 @@
+{
+  "id": "pilot-line",
+  "about": "The crew's pilot is parallel at the holding point, recovery is approved, and the slide in begins (pilot.mjs, the recover leg).",
+  "who": "cutter-cdr",
+  "say": [
+    "On the line.",
+    "Sliding in."
+  ],
+  "to": {
+    "all": "tannoy",
+    "bridge": "headset"
+  },
+  "priority": 2
+}

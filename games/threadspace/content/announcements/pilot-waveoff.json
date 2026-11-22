@@ -1,0 +1,14 @@
+{
+  "id": "pilot-waveoff",
+  "about": "Flight control waved the crew's pilot off at the last gate (pilot.mjs, the recover leg).",
+  "who": "cutter-cdr",
+  "say": [
+    "Waving off.",
+    "Backing out to come again."
+  ],
+  "to": {
+    "all": "tannoy",
+    "bridge": "headset"
+  },
+  "priority": 2
+}
