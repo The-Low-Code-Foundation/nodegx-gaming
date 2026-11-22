@@ -802,6 +802,38 @@ The cutter has three named crew at her stations (placeholder names) and a **crew
 her through the real thrusters: launch, flip-and-burn to a point, hold, round the carrier's hull, home down the lane.
 Every line is a plain working draft for the story pass; none is recorded.
 
+**After the second play (22 November 2026): "fucked after two minutes of leaving the carrier".** Out on her own,
+the first raid comes at 90 s and the cutter was finished by it: a hit that took her drive compartment below a fifth
+of its health stopped the drive for good (nothing aboard her ever put compartment health back: on the carrier, damage
+control jobs do it, and she had no parties); a raider that came from below stayed below, because its passes were laid
+in her own frame and turned with her, so rolling her never brought it over her one dorsal turret; in the turret you
+could not have anyone fly her; and her outside view was 73 m behind a 10 m beam. What was done:
+
+- **Her crew work** (`crew-orders.mjs`, `G.orders`): the three people at her stations each have a job (helm, gun,
+  repairs, standing by), given from any seat with **O** (1 to 3 change a hand's job; helm and gun swap). Where you sit is
+  your job. The crew's line on the left says what each is doing. On the helm, the hand flies the helm's order while you
+  are not at the helm: **4** fight (bring the contact onto the turret, hold her steady), **5** evade (the same, and
+  slide about so its rounds miss), **6** hold, **7** home (to her berth), **8** as needed (the default: fight a raider
+  when one comes, else leave her be). A plan the career or J gave the pilot is left alone.
+- **The fight leg** (`pilot.mjs` `fly_fight`, `fightAim`): she rolls so the contact is 49° over her deck on whichever
+  beam is the shorter turn, and holds her place. Tried: a raid from below, rolled onto the turret in 8 s, and the crew
+  shot it down in about 25 s. The pilot now works on a ship with no host (`worldFrame()`).
+- **Mending** (`mend.mjs`, the layout's `integrity.mend`): the hand on repairs, and you with the tool kit (a use in the
+  room each wrecked compartment is worked from: the engine room for the drive, reactor and tanks), put health back,
+  first everything up to working (`works`: reactor and switchgear 45, drive 70), in `order`, then everything whole.
+  A hand also works the damage control job in hand (`dc.help`). Tried: reactor at 20 and drive at 5, power back in
+  25 s and full push 50 s after. When nobody is on repairs the crew's line says what needs it and where.
+- **The raider's passes** keep the attitude she had when the raid began and follow only her place, on a ship whose
+  layout says `weapons.raider.fixed` (the cutter's does; the carrier's raider turns with her as before).
+- **The outside view** (V at the helm) of a ship under 100 m is 1.3 lengths off; the right mouse button turns it round
+  her, the right button with the wheel brings it nearer, and **T** keeps the contact in view, from behind her on its
+  line.
+
+What this leaves: the raid on the cutter is now short (120 hull, four hits: about 25 s once it is over the turret),
+so it wants balancing with the crew in mind; the crew do not move about the ship to their work (the line says where
+they are going); the helm's orders are numbers on a card, not yet spoken by the commander; fire control is still not
+yours to order; and none of it has been played by hand.
+
 Left in phase 13: maintenance on your own cutter in the hangar (her damage carried between pages and shown on her
 in the berth, the phase 9 repair work on her); your watch aboard the carrier as more than the one muster; the three
 upper rungs of the ladder; general-quarters stations aboard the cutter; the sensors qualification; the story pass

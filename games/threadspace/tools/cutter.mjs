@@ -186,7 +186,10 @@ weapons.tubes = { ...weapons.tubes, magazine: 'tubes-port', stock: 8, salvo: 2, 
 weapons.torpedo = { ...weapons.torpedo, pen: [7, 13] };
 // The raider: the same corvette, a ship of about her own size. One turret meets it where the carrier has ten, so its
 // hull is the carrier's raider's (940) over eight.
-weapons.raider = { ...weapons.raider, hull: 120 };
+// `fixed`: her passes are laid in a frame that follows the cutter's place but keeps the attitude she had when the raid
+// began. The carrier barely turns in a fight, so for her the raider's passes can turn with her; the cutter rolls to
+// bring her one turret to bear, and passes that rolled with her would keep a raider from below under her for good.
+weapons.raider = { ...weapons.raider, hull: 120, fixed: true };
 
 // ---- integrity ----
 const integrity = structuredClone(carrier.integrity);
@@ -200,6 +203,20 @@ delete integrity.condition.drums;
 // compartments and hurts the systems in them, and the drones still seal the holes.
 integrity.drones = { ...integrity.drones, from: 'drone-rack', count: 2, speed: 6 };
 delete integrity.parts;
+// Her crew mend what a hit wrecked (src/carrier/mend.mjs): without it a drive compartment shot below a fifth of its
+// health leaves her adrift for good. A hand puts back `rate` health a second (a drive shot to nothing is back to full
+// push, 70, in about a minute), you `you` with the tool kit, after `travel` seconds getting there; at a damage control
+// job a hand works at `dc` of your pace. `order` is which systems come first: the reactor and the switchgear before the
+// drive, which has no power without them.
+integrity.mend = {
+  about: 'Mending her systems (src/carrier/mend.mjs): hands on repairs (crew-orders.mjs) and you put back the health hits took from the compartments of each system in `order` (most urgent first, the worst first within one), working a sealed one from the nearest walkable room (`at` overrides by compartment id). `rate`: health a second per hand; `you`: yours, holding E with `kit`; `travel`: seconds for a hand to get to the work; `dc`: a hand\'s pace at a damage control job, of yours; `below`: health under which a compartment needs mending; `works`: by system, the health at which it works again (60 for one not named): every compartment is brought up to that, in `order`, before any is made whole.',
+  rate: 1.2, you: 1.4, travel: 10, dc: 0.8, below: 99.5, kit: 'toolkit',
+  // The health at which each system works again (integrity.mjs `systems`): the reactor and switchgear carry power from
+  // 35 (`power.below`), the drive gives full push from 70. Everything is brought up to that before anything is whole.
+  works: { reactor: 45, power: 45, drive: 70 },
+  order: ['reactor', 'power', 'drive', 'life-support', 'turret', 'magazine', 'pdc', 'heat', 'sensors', 'repair', 'tanks'],
+  at: {}
+};
 
 // ---- the plant ----
 const plant = structuredClone(carrier.plant);

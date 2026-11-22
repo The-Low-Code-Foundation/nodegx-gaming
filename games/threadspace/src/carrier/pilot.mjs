@@ -56,6 +56,7 @@ const _p = new THREE.Vector3(), _r = new THREE.Vector3(), _d = new THREE.Vector3
 const _a = new THREE.Vector3(), _b = new THREE.Vector3(), _up = new THREE.Vector3();
 const _q = new THREE.Quaternion(), _qi = new THREE.Quaternion(), _aim = new THREE.Quaternion(), _fq = new THREE.Quaternion();
 const _m = new THREE.Matrix4();
+const _fx = new THREE.Vector3(), _fy = new THREE.Vector3(), _fz = new THREE.Vector3(), _fq1 = new THREE.Quaternion(), _fq2 = new THREE.Quaternion();
 const km = (d) => (d >= 1000 ? `${(d / 1000).toFixed(1)} km` : `${Math.round(d)} m`);
 
 /** A reference frame a leg is flown in: here the host's (her layout's frame). `toWorld` and `toLocal` change the vector
@@ -69,6 +70,11 @@ export function hostFrame(berth) {
     quat: (out) => H.obj.getWorldQuaternion(out),
     vel: berth.hostVel
   };
+}
+
+/** The world as a frame: a ship on her own (no host) flies in it. */
+export function worldFrame() {
+  return { name: 'world', toWorld: (v) => v, toLocal: (v) => v, quat: (out) => out.identity(), vel: new THREE.Vector3() };
 }
 
 /** What a flown ship keeps out of round `HL` (a layout): boxes in her layout's frame, from her hull's sections (so
@@ -164,10 +170,11 @@ export class Pilot {
     this.body = G.body;
     this.helm = G.helm;
     this.thr = G.helm.thr;
-    this.berth = G.berth;
-    this.lane = G.berth.lane;
-    this.frame0 = hostFrame(G.berth);
-    this.keep = keepOut(G.berth.H.L);
+    // A carried ship's pilot flies in her host's frame and keeps out of her; a ship on her own, in the world's.
+    this.berth = G.berth ?? null;
+    this.lane = this.berth?.lane ?? null;
+    this.frame0 = this.berth ? hostFrame(this.berth) : worldFrame();
+    this.keep = this.berth ? keepOut(this.berth.H.L) : { boxes: [], all: { min: [0, 0, 0], max: [0, 0, 0] } };
     this.who = who;
     this.seed = seed;
     this.rand = mulberry(seed);
@@ -190,7 +197,7 @@ export class Pilot {
     this.bias = { p: new THREE.Vector3(), v: new THREE.Vector3(), a: new THREE.Vector3(), tp: new THREE.Vector3(), tv: new THREE.Vector3(), ta: new THREE.Vector3(), t: 0 };
     G.helmSight.pilot = this; // the helm's sight says who has her (helmsight.mjs)
     // The key that hands her to the pilot for a circuit, at the helm (seats/helm.mjs).
-    if (!KEYS.helm.includes('circuit')) KEYS.helm = KEYS.helm.replace(' · <b>view</b> V', ` · <b>${who.toLowerCase()} flies a circuit</b> J (again: you have her) · <b>view</b> V`);
+    if (this.berth && !KEYS.helm.includes('circuit')) KEYS.helm = KEYS.helm.replace(' · <b>view</b> V', ` · <b>${who.toLowerCase()} flies a circuit</b> J (again: you have her) · <b>view</b> V`);
     if (G.mode() === 'helm') G.hud.keysEl.innerHTML = KEYS.helm;
   }
 
@@ -272,7 +279,11 @@ export class Pilot {
     const say = (t, s = 4) => (this.G.helmSight.say(t, s), t);
     if (this.busy) {
       this.abort('the helm was taken back');
-      return say(this.berth.carried ? `${this.who} stands down.` : 'You have the helm.');
+      return say(this.berth?.carried ? `${this.who} stands down.` : 'You have the helm.');
+    }
+    if (!this.berth) {
+      this.fly({ do: 'hold', secs: Infinity, max: Infinity });
+      return say(`${this.who} has the helm: holding her here. J takes her back.`, 5);
     }
     if (['recover', 'capture', 'closing'].includes(this.berth.phase)) return say('Flight control has her.', 2);
     this.fly(this.circuit());
@@ -349,7 +360,7 @@ export class Pilot {
     this[`fly_${L.do}`](L, dt);
     if (!this.busy) return null;
     if (this.leg === leg && L.t > (L.max ?? 1500)) return this.fail(`${L.do} took too long`), null;
-    if (this.berth.carried) return (this.since = Infinity), this.u.fill(0), null;
+    if (this.berth?.carried) return (this.since = Infinity), this.u.fill(0), null;
     // Its hands: what it decided, held until it decides again.
     if ((this.since += dt) >= K.react) {
       this.since = 0;
@@ -432,6 +443,7 @@ export class Pilot {
   /** On the cradle: ask, ride it out, then to rest abeam the berth. */
   fly_launch(L) {
     const b = this.berth, K = this.K, F = L.F;
+    if (!b) return this.fail('she is not on a cradle');
     if (L.ph === 'start') {
       if (b.phase === 'berthed') {
         this.C.bus?.emit('call', { id: 'pilot-standby' });
@@ -565,7 +577,7 @@ export class Pilot {
     const T = F.toWorld(_p.copy(L.pt));
     this.steer(_aim.copy(F.quat(_fq)).multiply(L.hold));
     this.goPoint(T, this.K.vJets);
-    this.phase = `on station · ${Math.max(0, Math.ceil((L.secs ?? 0) - L.t))} s`;
+    this.phase = Number.isFinite(L.secs) ? `on station · ${Math.max(0, Math.ceil((L.secs ?? 0) - L.t))} s` : 'holding her here';
     if (L.t >= (L.secs ?? 0)) (this.truth(L, T), this.next());
   }
 
@@ -576,7 +588,7 @@ export class Pilot {
     if (to === 'prograde' || to === 'retrograde') {
       if (this.v.length() < 0.5) return this.next(); // no way on her to turn along
       aim = this.nose(_b.copy(this.v).multiplyScalar(to === 'prograde' ? 1 : -1), F);
-    } else if (to === 'host-parallel' || to == null) aim = F === this.frame0 ? this.lane.aim() : F.quat(_aim);
+    } else if (to === 'host-parallel' || to == null) aim = F === this.frame0 && this.lane ? this.lane.aim() : F.quat(_aim);
     else aim = _aim.copy(F.quat(_fq)).multiply(to.isQuaternion ? to : _q.set(...to).normalize());
     const ang = this.steer(_aim.copy(aim));
     this.phase = `turning · ${Math.round((ang * 180) / Math.PI)}° to go`;
@@ -586,9 +598,81 @@ export class Pilot {
     }
   }
 
+  /** In a fight: keep the contact (`guns.raider`: the raider, or the drill's sled) where her turret bears best, `el`
+   *  (radians, 0.85 by default) above her deck on whichever beam is the shorter turn, and hold her place against the
+   *  frame. With `evade`, slide her about on the jets as well, a new way every few seconds, so a gun that leads her
+   *  steady course misses. The raider's passes follow her place, so closing or opening the range by flying does not
+   *  change it; rolling to bring her one gun to bear does. Runs until `secs` (default for ever), or with `until:
+   *  'clear'` until the contact has been gone for 5 s. */
+  fly_fight(L, dt) {
+    const R = this.G.guns?.raider, K = this.K;
+    const live = R && !R.gone && !R.dead;
+    if (L.ph === 'start') {
+      L.ph = 'fight';
+      L.gone = 0;
+      L.slip = new THREE.Vector3();
+      L.slipT = 0;
+    }
+    if (!live) {
+      // Nothing to fight: as she lies, where she is.
+      L.gone += dt;
+      L.hold ??= this.C.obj.quaternion.clone();
+      this.steer(_aim.copy(L.hold));
+      this.push(_t.set(0, 0, 0));
+      this.phase = 'no contact · holding';
+      if ((L.until === 'clear' && L.gone > 5) || L.t >= (L.secs ?? Infinity)) this.next();
+      return;
+    }
+    L.gone = 0;
+    L.hold = null;
+    // Where it is, as the pilot reads it: off her centre, and its direction.
+    const d = _r.copy(R.obj.position).sub(this.p), range = d.length();
+    _n.copy(d).multiplyScalar(1 / Math.max(range, 1e-6));
+    const aim = this.fightAim(_n, L.el ?? 0.85);
+    const off = this.steer(aim);
+    // Her place: held against the frame, or slid about.
+    if (L.evade) {
+      if ((L.slipT -= dt) <= 0) {
+        L.slipT = 2 + this.rand() * 2.5;
+        L.slip.set(this.rand() - 0.5, this.rand() - 0.5, this.rand() - 0.5);
+        L.slip.addScaledVector(_n, -L.slip.dot(_n)).setLength(K.vJets * 0.6); // across its line of sight
+      }
+      this.push(L.slip);
+    } else this.push(_t.set(0, 0, 0));
+    const el = Math.round((Math.asin(clamp(_e.copy(_n).applyQuaternion(_qi.copy(this.C.obj.quaternion).invert()).y, -1, 1)) * 180) / Math.PI);
+    this.phase = `${L.evade ? 'evading · ' : ''}${R.target ? 'the target' : 'the raider'} ${km(range)} · ${el}° over the deck${off > 0.35 ? ' · rolling onto it' : ''}`;
+    if (L.t >= (L.secs ?? Infinity)) this.next();
+  }
+
+  /** The attitude that puts the direction `n` (world, a unit vector) `el` radians above her deck, square on whichever
+   *  beam is the shorter turn from how she lies, her nose kept as near where it is as that allows. */
+  fightAim(n, el) {
+    const q = this.C.obj.quaternion;
+    // Her nose, square to the line of sight (or her deck's way, looking straight along it).
+    const f = _a.set(0, 0, -1).applyQuaternion(q);
+    f.addScaledVector(n, -f.dot(n));
+    if (f.lengthSq() < 1e-6) f.set(0, 1, 0).applyQuaternion(q).addScaledVector(n, -n.dot(_b.set(0, 1, 0).applyQuaternion(q)));
+    f.normalize();
+    const w = _b.crossVectors(n, f); // with `n`, the plane square to the nose; n × w is her stern (+z)
+    let best = null, bestAng = Infinity;
+    for (const s of [1, -1]) {
+      // Her x and y in that plane, turned so that n = s·cos(el)·x + sin(el)·y.
+      const phi = Math.atan2(-Math.sin(el), s * Math.cos(el)), c = Math.cos(phi), sn = Math.sin(phi);
+      _fx.copy(n).multiplyScalar(c).addScaledVector(w, sn);
+      _fy.copy(n).multiplyScalar(-sn).addScaledVector(w, c);
+      _fz.copy(f).negate();
+      _m.makeBasis(_fx, _fy, _fz);
+      const cand = (s > 0 ? _fq1 : _fq2).setFromRotationMatrix(_m);
+      const ang = 2 * Math.acos(Math.min(1, Math.abs(cand.dot(q))));
+      if (ang < bestAng) (bestAng = ang), (best = cand);
+    }
+    return _aim.copy(best);
+  }
+
   /** Home: the holding point, parallel, the request, the slide, the cradle's arms. */
   fly_recover(L, dt) {
     const b = this.berth, R = this.lane, K = this.K, F = this.frame0;
+    if (!b) return this.fail('she has no berth to go home to');
     L.F = F; // the lane is the host's
     if (L.ph === 'start') {
       if (b.phase !== 'out') return b.carried && b.phase !== 'berthed' ? (L.ph = 'aboard') : this.fail('she is not out');

@@ -157,3 +157,23 @@
 .c-lock-bar i { display: block; height: 100%; width: 40%; border-radius: 2px; background: #e0b030; animation: c-lock-run 1.4s ease-in-out infinite alternate; }
 @keyframes c-lock-run { from { transform: translateX(-20%); } to { transform: translateX(170%); } }
 @media (prefers-reduced-motion: reduce) { .c-lock-bar i { animation: none; width: 100%; opacity: 0.5; } }
+
+/* A small ship's crew (crew-orders.mjs): what each hand is doing, and the orders card (O). */
+#c-crew { position: absolute; left: 16px; top: 38%; width: 300px; background: rgba(10, 12, 16, 0.72); border: 1px solid var(--line); border-left: 3px solid #7dffb0; border-radius: 8px; padding: 7px 10px; font-size: 11px; line-height: 1.5; color: var(--muted); pointer-events: none; }
+#c-crew[hidden], #c-orders[hidden] { display: none; }
+#c-crew .o-head, #c-orders .o-head { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: #7dffb0; margin-bottom: 2px; }
+#c-crew .o-head span, #c-orders .o-head span { color: var(--muted); letter-spacing: 0.04em; text-transform: none; }
+#c-crew b { color: var(--text); font-weight: 600; }
+#c-crew i { font-style: normal; font-family: var(--mono); color: #ffc850; margin: 0 4px; }
+#c-orders { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(520px, calc(100% - 32px)); background: rgba(10, 14, 12, 0.92); border: 1px solid var(--line); border-left: 3px solid #7dffb0; border-radius: 8px; padding: 12px 16px; font-size: 13px; color: var(--text); pointer-events: none; }
+#c-orders .o-row { display: flex; gap: 8px; align-items: baseline; padding: 3px 0; }
+#c-orders .o-row.on { color: #7dffb0; }
+#c-orders .o-row span { color: var(--muted); font-size: 12px; }
+#c-orders .o-row .o-post { min-width: 90px; }
+#c-orders .o-row i { font-style: normal; font-family: var(--mono); color: #ffc850; margin-left: auto; }
+#c-orders code { font-family: var(--mono); background: var(--panel-3); border-radius: 3px; padding: 0 6px; color: var(--text); }
+#c-orders .o-sub { margin: 10px 0 4px; padding-top: 8px; border-top: 1px solid var(--line); color: var(--muted); }
+#c-orders .o-sub b { color: #7dffb0; }
+#c-orders .o-note { margin-top: 10px; font-size: 11px; color: var(--muted); }
+#c-orders .o-said { margin-top: 8px; padding-top: 6px; border-top: 1px solid var(--line); color: #ffe2a8; }
+#c-crew .o-need { margin-top: 5px; padding-top: 4px; border-top: 1px solid var(--line); color: #ff9a6a; }

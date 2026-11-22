@@ -67,7 +67,7 @@ export const turretParts = {
         if (f.keys.has('ArrowUp')) t.wantElev = Math.min(G.elevation[1] * DEG, t.wantElev + dt * 0.3);
         if (f.keys.has('ArrowDown')) t.wantElev = Math.max(G.elevation[0] * DEG, t.wantElev - dt * 0.3);
         t.wantTrain = Math.atan2(Math.sin(t.wantTrain), Math.cos(t.wantTrain));
-      } else if (target) this.crewLay(t, target);
+      } else if (target && !t.unmanned) this.crewLay(t, target); // `unmanned`: nobody on the gun (crew-orders.mjs)
       else t.layed = false;
       // Slew toward the order.
       const dT = turn(t.train, t.wantTrain), dE = t.wantElev - t.elev;

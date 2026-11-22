@@ -3,6 +3,8 @@
 
 import { THREE, corvette, setThrust, metal, at, box, clamp, _a, _b, _c, _d, _q, _m, intercept, sled } from './shared.mjs';
 
+const _wpo = new THREE.Vector3(); // her frame's place, for `wpWorld` (its own: callers hand it the shared ones)
+
 /** Mixed into `Weapons` (weapons.mjs). */
 export const raidParts = {
   // --- the raid ------------------------------------------------------------------------------------------------------
@@ -29,15 +31,24 @@ export const raidParts = {
    *  its size, what it carries); `more` is what makes it a raider or a target. */
   contact(obj, K, from, wps, more) {
     obj.traverse((o) => o.isMesh && (o.frustumCulled = false));
-    const start = this.C.frame.localToWorld(wps[0].p.clone());
+    // `K.fixed` (a small ship that rolls to fight): the passes keep the attitude she has now, and follow only her place.
+    const fixedQ = K.fixed ? this.C.frame.getWorldQuaternion(new THREE.Quaternion()) : null;
+    const start = this.wpWorld({ fixedQ }, wps[0].p, new THREE.Vector3());
     obj.position.copy(start);
     this.scene.add(obj);
-    const fwd = this.C.frame.localToWorld(wps[1].p.clone()).sub(start).normalize();
+    const fwd = this.wpWorld({ fixedQ }, wps[1].p, new THREE.Vector3()).sub(start).normalize();
     this.raider = {
-      obj, K, from, sinceHit: 99, rel: fwd.multiplyScalar(K.speed), wps, wi: 0, gunT: 2 + this.rand() * 2,
+      obj, K, from, fixedQ, sinceHit: 99, rel: fwd.multiplyScalar(K.speed), wps, wi: 0, gunT: 2 + this.rand() * 2,
       jink: new THREE.Vector3(), jinkT: 0, weave: new THREE.Vector3(), v: fwd.clone(), gone: false, dead: false, smokeT: 0, ...more
     };
     return this.raider;
+  },
+
+  /** A waypoint `p` (the ship's frame) in the world, into `out`: turning with her, or with `R.fixedQ` held at the
+   *  attitude she had when the contact began and only following her place. */
+  wpWorld(R, p, out) {
+    if (!R.fixedQ) return this.C.frame.localToWorld(out.copy(p));
+    return out.copy(p).applyQuaternion(R.fixedQ).add(this.C.frame.getWorldPosition(_wpo));
   },
 
   /** A raider comes in from `from` (port, starboard, above, below) for `passes` firing passes, with `escorts` bandits
@@ -84,9 +95,9 @@ export const raidParts = {
     if (!R || R.gone) return;
     const K = R.K;
     if (R.dead) return;
-    // Steer for the next waypoint, which is in the carrier's frame (it moves and turns with her).
+    // Steer for the next waypoint, which is in the carrier's frame (it moves and turns with her; `fixedQ`: it only moves).
     const wp = R.wps[R.wi];
-    const target = this.C.frame.localToWorld(_a.copy(wp.p));
+    const target = this.wpWorld(R, wp.p, _a);
     const to = _b.subVectors(target, R.obj.position);
     if (to.length() < 160 && R.wi < R.wps.length - 1) R.wi++;
     const want = _c.copy(to).normalize().multiplyScalar(K.speed * (wp.leave ? 1.6 : 1));

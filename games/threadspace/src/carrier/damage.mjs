@@ -521,6 +521,22 @@ export class DamageControl {
     this.card(mode);
   }
 
+  /** A hand of the crew works the job in hand for `dt` at `rate` of your pace (mend.mjs, on a ship whose crew you
+   *  give jobs): they bring their own kit, isolate a fault first, and a fire they are fighting does not grow. Ends the
+   *  job when it is done. `who` is said on the card. */
+  help(dt, rate, who) {
+    const job = this.job;
+    if (!job) return;
+    if (job.K.isolate && !job.isolated) {
+      job.isolated = true;
+      this.say(null, `${who} has isolated the supply.`);
+    }
+    job.by = who;
+    job.idle = 0;
+    job.progress += dt * rate;
+    if (job.progress >= this.need(job)) this.end(true, '', false, `${OUT[job.kind]} in the ${job.room.name.toLowerCase()}: ${who}.`);
+  }
+
   end(ok, why = '', quiet = false, note = null) {
     const job = this.job;
     if (!job) return;

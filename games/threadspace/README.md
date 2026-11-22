@@ -90,6 +90,14 @@ boardings. The first pieces are in:
   seat. The orders' wording is a working draft and is shown as subtitles: nothing of her crew's is recorded yet.
 - **A commander who can fly.** **J** at her helm hands her to the commander for a circuit: launch, a burn out two
   kilometres, the flip, a hold, and home down the lane. J again and she is yours.
+- **A crew that works.** Her commander, gunner and engineer each have a job, shown on the left: helm, gun, repairs or
+  standing by. **O** from anywhere brings up the orders card: **1** to **3** change a hand's job, **4** to **8** tell
+  whoever has the helm what to fly (fight: roll her so the raider is over the turret and hold her steady; evade: the
+  same, sliding about so its rounds miss; hold; home to her berth; as needed). Climb into the turret and the commander
+  flies her onto the target for you; sit at the helm and the gunner fires. A hit that wrecks her reactor or drive is
+  mended by the hand on repairs, power first, then the drive; you can help in the engine room with a tool kit.
+- **Seeing her from outside.** **V** at the helm: the right mouse button turns the view round her, with the wheel it
+  comes nearer or goes further, and **T** keeps the contact in view from behind her.
 
 Not built yet: maintenance on your own cutter between sorties, missions beyond the first chapter, and the carrier
 under way.

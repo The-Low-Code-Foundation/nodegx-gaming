@@ -58,6 +58,8 @@ import { Doors } from './doors.mjs';
 import { Berth, standIn } from './berth.mjs';
 import { Recovery } from './recovery.mjs';
 import { Pilot } from './pilot.mjs';
+import { Mend } from './mend.mjs';
+import { CrewOrders } from './crew-orders.mjs';
 import { Berths, berthKey } from './berths.mjs';
 import { setShip, goAboard, arrived } from '../core/voyage.mjs';
 import { Collisions, ShipCollisions } from './collide.mjs';
@@ -409,6 +411,7 @@ input.onAction = (code) => {
   if (fading) return;
   if (code === 'Tab') return setMode(mode === 'cutaway' ? modeBefore : 'cutaway');
   if (mode === 'cutaway') return cutSeat.key(code);
+  if (orders?.key(code, mode)) return; // a small ship's crew: O, and with the card up its keys (crew-orders.mjs)
   if (routine.billOpen) {
     // The watch bill is up: E or B puts it away.
     if (code === 'KeyE' || code === 'KeyB') routine.closeBill();
@@ -454,7 +457,8 @@ let collide = null; // made once the ship's outside is gathered, at the end of t
 let bump = null; // the ship you fly against her host (collide.mjs `ShipCollisions`), made with the host
 let host = null; // ?host=<id>: a second ship beside her, made at the end of this file
 let berth = null; // ?berth=<id>: she is carried in that berth of the host's hangar (berth.mjs), made with the host
-let pilot = null; // the crew at the helm of a carried ship (pilot.mjs), made with her berth
+let pilot = null; // the crew at the helm (pilot.mjs): a carried ship's, made with her berth; a small ship's own, at the end
+let mend = null, orders = null; // a small ship's crew: mending her (mend.mjs) and who does what (crew-orders.mjs)
 let hostDoors = null, hostHangar = null; // the host's bay doors, worked from here, and her hangar deck, drawn round you
 
 function frame() {
@@ -480,6 +484,7 @@ function tick(dt) {
   drive.hold();
   // Carried in a berth, her place is her host's to give (berth.mjs): the helm's hands do nothing until the hand-over.
   // The crew's pilot (pilot.mjs), flying a plan, gives the helm its command in place of your hands.
+  orders?.frame(dt, mode); // the crew's jobs: starts or stops the pilot's plan for the helm's order
   const crewCmd = pilot?.frame(dt) ?? null;
   if (berth?.carried) {
     thrusters.allocate(new Array(6).fill(0));
@@ -525,6 +530,7 @@ function tick(dt) {
   guns.fdmg?.frame(dt, { cockpit: mode === 'fighter' && !fading }); // her damage seen and heard: looks only
   repairs?.frame(dt, f, walker, mode); // the repair crews on the damaged fighters' pads; holds the one you are in
   hullRepair?.frame(dt, f, walker, mode); // the drones and damage control parties mending her, by priority
+  mend?.frame(dt, orders ? orders.crew.filter((c) => c.job === 'repair') : [], f, walker, mode); // her hands and you mending her systems
 
   // Which decks are drawn: the one you stand on; the bridge from the helm; none from the chase view; the hangar deck
   // from a fighter (you are in it, or you can see into it through the open bay); all in the cutaway.
@@ -566,7 +572,7 @@ function tick(dt) {
   const push = drive.frame(dt);
   C.push = push; // the gimballed couches swing round for a burn (floating.mjs `gimbal`)
   walk.feel(push, dt);
-  seats[mode].frame(dt, drive);
+  seats[mode].frame(dt, drive, f); // (`f`: the helm's outside view orbits on the right button)
   walker.floater.tick(dt, mode); // an injury healing, and the brace countdown (weightless.mjs)
   // A hit shakes you, the harder the nearer it struck (aboard only: from outside you see it instead).
   if (ship.shake > 0.01 && (mode === 'walk' || mode === 'gun' || bridgeView)) {
@@ -867,6 +873,16 @@ if (HOST_ID) {
   });
   if (hostHangar) for (const s of await berthedOthers(H, HOST_ID, spec?.id, { code: q.get('hull') === 'code', known: { [SHIP_ID]: L } })) bump.shape.addShip(s.P, s.P.L.name?.toLowerCase() ?? 'berthed ship');
   window.__carrier.bump = bump;
+}
+
+// A small ship (no fighters: the cutter) has her crew at work: a pilot at her helm whether or not she is carried, the
+// hands mending what hits wreck (the layout's `integrity.mend`), and their jobs given from any seat (O).
+if (!HAS.fighters) {
+  pilot ??= G.pilot = window.__carrier.pilot = new Pilot(G, { skill: q.get('skill') ?? undefined, seed: seed ?? 1 });
+  if (L.integrity.mend) mend = G.mend = window.__carrier.mend = new Mend(G);
+  orders = G.orders = window.__carrier.orders = new CrewOrders(G);
+  for (const k of Object.keys(KEYS)) if (k !== 'cutaway') KEYS[k] += ' · <b>crew orders</b> O';
+  hud.keysEl.innerHTML = KEYS[mode] ?? hud.keysEl.innerHTML;
 }
 
 // ?hold=1: no frames until a script steps them with `__carrier.tick()` (tools/carrier-check.mjs).

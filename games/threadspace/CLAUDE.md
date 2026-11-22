@@ -300,6 +300,20 @@ their names for now):
   `skill` (0..1, or 1..10; `?skill=`) changes its inputs, never the physics. Bus: `pilot-leg`, `pilot-done`, and
   `berth-phase` from every `Berth.set`. **J** at the helm has the commander fly a circuit; J again gives her back.
   It assumes a host that holds still, avoids no other ship, and has no combat flying.
+- **A small ship's crew at work** (made in `main.mjs` when she has no fighters): `pilot` on any such ship (with no
+  host it flies in the world, `worldFrame()`), `mend` (`src/carrier/mend.mjs`, when the layout has `integrity.mend`)
+  and `orders` (`src/carrier/crew-orders.mjs`). The crew are the stations naming a `person` and a `post`; their jobs
+  `helm`, `gun`, `repair`, `standby`, given with **O** (the card `#c-orders`; the line `#c-crew`). The hand on the
+  helm flies `orders.helmOrder` while you are not at the helm and her berth is not carrying her: `fight` / `evade`
+  are the pilot's `fight` leg (`fightAim`: the contact `el` above her deck on the shorter beam; `evade` slides her
+  across its line), `hold`, `home` (`recover`), `auto` (fight a live raider, else nothing). `orders.frame` runs just
+  before `pilot.frame` in `tick`; a plan it did not start is never touched. Nobody on the gun sets the turret's
+  `unmanned` (no crew laying). `mend.jobs()` is the work, most urgent first (the damage control job, then each
+  compartment under `works` for its system in `order`, then the rest to whole); hands go to it after `travel` and put
+  back `rate` a second; `dc.help()` is a hand working a damage control job. A raider whose `weapons.raider.fixed` is
+  set lays its passes in the attitude she had when it came (`raid.mjs` `wpWorld`). The helm's outside view
+  (`seats/helm.mjs` `CHASE`, `orbit`): the right mouse button turns it (`Input` gives `odx`, `ody`, `owheel`), T
+  keeps the contact in view.
 - **Not built yet**: maintenance on your own cutter in the hangar and her damage carried between pages; the host under
   way and taking a push; the drums as solids; the cradle's arms drawn; a side-looking docking camera; recorded
   voices for her crew; the player giving fire-control orders (`firecontrol` is an unlock with nothing behind it).
@@ -315,7 +329,7 @@ their names for now):
 
 **The scripted checks' baselines** (seed 7, 22 November 2026, the 314 m carrier): raid ad2a8406, hull 20ef1760, helm
 4b766a23, landing 53faa5da, repair 5b8b23e6, collide 028d255d, bandits 6de728ae, missiles 39d01e76, walk 0bc2cf45,
-float 2eb50df7, brace b68467c9, career d747c09c, cutter 493f4ef5, berth 52032305, recover 306d2c1c, bump 5be73cad, pilot 58d76b28, service a140cbdf (three pages: carrier, cutter, carrier; `runAll` follows a scenario's `next` into a fresh page with the same voyage). The whole run takes about nine minutes. `runAll` starts every page from a fresh voyage (which berths are full is part of what is solid); `recover` flies the lane to a capture, a wave-off and flight control's recovery; `bump` plays scrapes, a holing, a swing, the bay door open and shut, and a wreck. A change that should not change how
+float 2eb50df7, brace b68467c9, career d747c09c, cutter 9756121a (22 November 2026, her crew fighting and mending; was 493f4ef5), berth 52032305, recover 306d2c1c, bump 5be73cad, pilot 58d76b28, service a140cbdf (three pages: carrier, cutter, carrier; `runAll` follows a scenario's `next` into a fresh page with the same voyage). The whole run takes about nine minutes. `runAll` starts every page from a fresh voyage (which berths are full is part of what is solid); `recover` flies the lane to a capture, a wave-off and flight control's recovery; `bump` plays scrapes, a holing, a swing, the bay door open and shut, and a wreck. A change that should not change how
 a ship behaves must leave every one as it is. `cutter` plays her rooms, the helm, a burn and a half turn, the turret,
 the cutaway and a raid; `berth` plays the launch from the carrier's hangar, a refusal when too fast, and the recovery.
 Run `walk` with nothing else loading the machine (it waits in real time); `brace` is pinned at z −50 in the spine. The

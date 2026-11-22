@@ -76,6 +76,34 @@
    "air": 1800,
    "low": 240,
    "don": 4
+  },
+  "mend": {
+   "about": "Mending her systems (src/carrier/mend.mjs): hands on repairs (crew-orders.mjs) and you put back the health hits took from the compartments of each system in `order` (most urgent first, the worst first within one), working a sealed one from the nearest walkable room (`at` overrides by compartment id). `rate`: health a second per hand; `you`: yours, holding E with `kit`; `travel`: seconds for a hand to get to the work; `dc`: a hand's pace at a damage control job, of yours; `below`: health under which a compartment needs mending; `works`: by system, the health at which it works again (60 for one not named): every compartment is brought up to that, in `order`, before any is made whole.",
+   "rate": 1.2,
+   "you": 1.4,
+   "travel": 10,
+   "dc": 0.8,
+   "below": 99.5,
+   "kit": "toolkit",
+   "works": {
+    "reactor": 45,
+    "power": 45,
+    "drive": 70
+   },
+   "order": [
+    "reactor",
+    "power",
+    "drive",
+    "life-support",
+    "turret",
+    "magazine",
+    "pdc",
+    "heat",
+    "sensors",
+    "repair",
+    "tanks"
+   ],
+   "at": {}
   }
  }
 }

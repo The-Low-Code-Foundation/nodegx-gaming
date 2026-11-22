@@ -177,7 +177,8 @@
      22
     ],
     "radius": 4
-   }
+   },
+   "fixed": true
   },
   "target": {
    "speed": 90,

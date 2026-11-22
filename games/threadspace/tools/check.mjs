@@ -137,7 +137,11 @@ export async function check({ root = ROOT, ship = 'carrier' } = {}) {
     ...['port', 'starboard'].filter((k) => W8.railgun?.[k]?.room).map((k) => [`weapons.railgun.${k}.room`, W8.railgun[k].room]),
     ...(L.plant?.propellant?.tanks ?? []).map((t) => ['plant.propellant.tanks', t]),
     ...(L.integrity?.drones?.from ? [['integrity.drones.from', L.integrity.drones.from]] : []),
+    ...Object.entries(L.integrity?.mend?.at ?? {}).flatMap(([c, r]) => [['integrity.mend.at (key)', c], [`integrity.mend.at.${c}`, r]]),
   ];
+  const mend = L.integrity?.mend;
+  if (mend?.kit && !L.damage?.kits?.[mend.kit]) problems.push(`integrity.mend.kit "${mend.kit}" is not a key of damage.kits`);
+  for (const sys of mend?.order ?? []) if (!L.compartments.some((c) => c.system === sys)) problems.push(`integrity.mend.order names "${sys}", which no compartment's system is`);
   for (const [where, id] of named) room(where, id);
   for (const [i, s] of (L.stations ?? []).entries()) {
     spot(`stations[${i}] (${s.post ?? s.room})`, s.room, s.at);

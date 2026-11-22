@@ -2,7 +2,7 @@
 // tap counts on a slow frame). The mouse is a stick while the pointer is locked: clicking the view takes it.
 
 const HELD = new Set(['KeyE', 'KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyR', 'KeyF', 'KeyQ', 'KeyZ', 'KeyX', 'KeyC', 'ShiftLeft', 'ShiftRight', 'Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']);
-const ACTIONS = new Set(['KeyE', 'KeyB', 'KeyJ', 'Tab', 'KeyT', 'KeyV', 'KeyM', 'KeyG', 'KeyN', 'KeyQ', 'KeyL', 'KeyK', 'KeyH', 'Digit1', 'Digit2', 'Digit3', 'Digit4']);
+const ACTIONS = new Set(['KeyE', 'KeyB', 'KeyJ', 'Tab', 'KeyT', 'KeyV', 'KeyM', 'KeyG', 'KeyN', 'KeyQ', 'KeyL', 'KeyK', 'KeyH', 'Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6', 'Digit7', 'Digit8', 'KeyO']);
 
 export class Input {
   constructor(canvas) {
@@ -11,6 +11,8 @@ export class Input {
     this.taps = new Set();
     this.dx = 0;
     this.dy = 0;
+    this.odx = 0; // the mouse moved with the right button held: an outside view's orbit (seats/helm.mjs)
+    this.ody = 0;
     this.locked = false;
     this.wantLock = false;
     this.trigger = false;
@@ -56,13 +58,20 @@ export class Input {
     });
     canvas.addEventListener('pointermove', (e) => {
       // Locked, the mouse is a stick; free, a held button drags (the captain's chair orbits that way).
+      if (e.buttons & 2) {
+        this.odx += e.movementX;
+        this.ody += e.movementY;
+        return;
+      }
       if (!this.locked && !this.dragging) return;
       this.dx += e.movementX;
       this.dy += e.movementY;
     });
+    canvas.addEventListener('contextmenu', (e) => e.preventDefault());
     canvas.addEventListener('wheel', (e) => {
       e.preventDefault();
-      this.wheel = (this.wheel ?? 0) + Math.sign(e.deltaY);
+      if (e.buttons & 2) this.owheel = (this.owheel ?? 0) + Math.sign(e.deltaY); // with the right button: an outside view's zoom
+      else this.wheel = (this.wheel ?? 0) + Math.sign(e.deltaY);
     }, { passive: false });
     document.addEventListener('pointerlockchange', () => {
       this.locked = document.pointerLockElement === canvas;
@@ -101,6 +110,8 @@ export class Input {
     this.clicked = false;
     const wheel = this.wheel ?? 0;
     this.wheel = 0;
-    return { keys: k, clicked, wheel, trigger: this.trigger, ...this.mouse() };
+    const orbit = { odx: this.odx, ody: this.ody, owheel: this.owheel ?? 0 };
+    this.odx = this.ody = this.owheel = 0;
+    return { keys: k, clicked, wheel, trigger: this.trigger, ...orbit, ...this.mouse() };
   }
 }
