@@ -438,6 +438,20 @@ export async function check({ root = ROOT, ship = 'carrier' } = {}) {
   for (const k of ['say', 'closed', 'adrift']) if (K.stations?.[k]) spoken.push([`career.stations.${k}`, K.stations[k]]);
   for (const [k, v] of Object.entries(W.pipes ?? {})) spoken.push([`watches.pipes.${k}`, v]);
   for (const [id, A] of calls) for (const piece of A.say ?? []) for (const t of expand(piece, A.slots)) spoken.push([`${CALLS}/${id}.json`, t]);
+  // The crew's talk out in the deep (src/carrier/deep.mjs): each speaker a person with a file, each line checked.
+  const DEEP = 'content/deep/talk.json';
+  if (existsSync(path(DEEP))) {
+    const D = json(DEEP), seen = new Set(), WHEN = ['quiet', 'far', 'deep', 'home', 'debris', 'drive', 'drive-out', 'ghost', 'ghost-gone', 'ping', 'radio'];
+    for (const e of D.lines ?? []) {
+      if (seen.has(e.id)) problems.push(`${DEEP}: two entries are "${e.id}"`);
+      seen.add(e.id);
+      if (!WHEN.includes(e.when)) problems.push(`${DEEP} ${e.id}: when "${e.when}" is none of ${WHEN.join(', ')}`);
+      for (const [who, t] of e.say ?? []) {
+        if (!existsSync(path(`${PEOPLE}/${who}.json`))) problems.push(`${DEEP} ${e.id}: no ${PEOPLE}/${who}.json`);
+        spoken.push([`${DEEP} ${e.id}`, t]);
+      }
+    }
+  }
   if (G) {
     for (const [where, t] of spoken) for (const a of G.avoid ?? []) if (new RegExp(`\\b${a.not.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i').test(t)) problems.push(`${where} says "${a.not}" (the glossary says "${a.say}"): ${t}`);
   } else problems.push('content/glossary.json is missing');

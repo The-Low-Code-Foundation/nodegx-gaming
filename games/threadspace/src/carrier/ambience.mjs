@@ -18,6 +18,11 @@
 //
 // With your helmet closed (the airless hangar, condition one) the room tone is your suit: its fans, your own breathing
 // in the helmet, and your boots through the deck as you walk (`suit`).
+//
+// Out in the deep (deep.mjs sets `deep`, 0 to 1) the crew's murmur drops away: people go quiet out there. The deep and
+// the ship's own life (aboard.mjs) play a few sounds through here too: grit striking the hull (`ping`), the plating
+// ticking as the sun's heat moves over it (`tick`), the frames groaning as the drive takes up the load (`groan`), and
+// flight control's voice coming through static at long range (`radioStatic`).
 
 import { lookKey } from './sets.mjs';
 import { Spool, SPOOL, SHIP_BURN, loadDsp } from './spool.mjs';
@@ -74,6 +79,7 @@ export class Ambience {
     this.buffers = new Map(); // file → decoded AudioBuffer
     this.loading = false;
     this.levels = {};
+    this.deep = 0;
   }
 
   /** Builds the bed once the page's AudioContext is running (after the first click). */
@@ -246,7 +252,7 @@ export class Ambience {
       this.alert = !!ship && (!!ship.stations || !ship.power || sys < 0.6) || air < 0.8;
     }
     // The crew talking, beyond the bulkheads: none without air or with your helmet closed.
-    const talk = inside && !suit ? p.crew * k : 0;
+    const talk = inside && !suit ? p.crew * k * (1 - 0.7 * this.deep) : 0;
     set(this.chat, talk * MIX.chatter, 0.4);
     if (talk > 0.03 && (this.chatT -= dt) <= 0) this.chatter(p.crew);
     // The consoles: soft chirps, or harder lower tones when something is wrong.
@@ -373,37 +379,100 @@ export class Ambience {
 
   /** The hull working: a low groan that bends in pitch, or a single tick of metal. */
   creak(level) {
-    const C = this.C, t = C.currentTime;
-    const g = C.createGain();
+    if (Math.random() < 0.55) this.groan(level);
+    else this.tick(level);
+  }
+
+  /** The frames taking up a load: a low groan that bends in pitch, about a second and a half. */
+  groan(level, { f = 40 + Math.random() * 50, len = 1.4 } = {}) {
+    if (!this.on) return;
+    const C = this.C, t = C.currentTime, g = C.createGain();
     g.connect(this.out);
-    if (Math.random() < 0.55) {
-      const o = C.createOscillator();
-      o.type = 'sawtooth';
-      const f = 40 + Math.random() * 50;
-      o.frequency.setValueAtTime(f, t);
-      o.frequency.linearRampToValueAtTime(f * (0.7 + Math.random() * 0.6), t + 1.4);
-      const lp = C.createBiquadFilter();
-      lp.type = 'lowpass';
-      lp.frequency.value = 260;
-      lp.Q.value = 6;
+    const o = C.createOscillator();
+    o.type = 'sawtooth';
+    o.frequency.setValueAtTime(f, t);
+    o.frequency.linearRampToValueAtTime(f * (0.7 + Math.random() * 0.6), t + len);
+    const lp = C.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.value = 260;
+    lp.Q.value = 6;
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(0.05 * level, t + 0.4);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + len + 0.2);
+    o.connect(lp).connect(g);
+    o.start(t);
+    o.stop(t + len + 0.3);
+  }
+
+  /** One tick of metal: the plating moving a hair as it heats or cools. `hz`: how high (smaller plates ring higher). */
+  tick(level, { hz = 1400 + Math.random() * 1800, at = 0 } = {}) {
+    if (!this.on) return;
+    const C = this.C, t = C.currentTime + at, g = C.createGain();
+    const s = C.createBufferSource();
+    s.buffer = this.sfx.noise;
+    const bp = C.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.frequency.value = hz;
+    bp.Q.value = 12;
+    const p = C.createStereoPanner();
+    p.pan.value = Math.random() * 1.6 - 0.8;
+    g.gain.setValueAtTime(0, C.currentTime);
+    g.gain.setValueAtTime(0.18 * level, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.25);
+    s.connect(bp).connect(g).connect(p).connect(this.out);
+    s.start(t, Math.random() * 0.5, 0.3);
+  }
+
+  /** A grain of grit striking the hull at orbital speed: a hard, bright crack through the whole structure, ringing
+   *  for a moment, from one side. Loud for what it is: it is the only thing out here that touches her. */
+  ping() {
+    if (!this.on) return;
+    const C = this.C, t = C.currentTime, pan = C.createStereoPanner();
+    pan.pan.value = Math.random() * 1.4 - 0.7;
+    pan.connect(this.sfx.out);
+    // The crack: a click of noise, wide open.
+    const s = C.createBufferSource(), gs = C.createGain(), hp = C.createBiquadFilter();
+    s.buffer = this.sfx.noise;
+    hp.type = 'highpass';
+    hp.frequency.value = 900;
+    gs.gain.setValueAtTime(0.5, t);
+    gs.gain.exponentialRampToValueAtTime(0.0001, t + 0.05);
+    s.connect(hp).connect(gs).connect(pan);
+    s.start(t, Math.random(), 0.08);
+    // The ring of the plate: two inharmonic partials dying away.
+    for (const [hz, v, len] of [[2350 + Math.random() * 400, 0.09, 0.9], [3710 + Math.random() * 500, 0.05, 0.6], [910 + Math.random() * 120, 0.06, 1.4]]) {
+      const o = C.createOscillator(), g = C.createGain();
+      o.frequency.value = hz;
       g.gain.setValueAtTime(0, t);
-      g.gain.linearRampToValueAtTime(0.05 * level, t + 0.4);
-      g.gain.exponentialRampToValueAtTime(0.0001, t + 1.6);
-      o.connect(lp).connect(g);
+      g.gain.linearRampToValueAtTime(v, t + 0.004);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + len);
+      o.connect(g).connect(pan);
       o.start(t);
-      o.stop(t + 1.7);
-    } else {
-      const s = C.createBufferSource();
-      s.buffer = this.sfx.noise;
-      const bp = C.createBiquadFilter();
-      bp.type = 'bandpass';
-      bp.frequency.value = 1400 + Math.random() * 1800;
-      bp.Q.value = 12;
-      g.gain.setValueAtTime(0.18 * level, t);
-      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.25);
-      s.connect(bp).connect(g);
-      s.start(t, Math.random() * 0.5, 0.3);
+      o.stop(t + len + 0.05);
     }
+  }
+
+  /** A voice from home at long range: a squelch as the carrier keys up, `secs` of hiss and crackle under the words,
+   *  and a squelch as it drops. `k`: how far out, 0 to 1 (louder static, more crackle). */
+  radioStatic(secs, k) {
+    if (!this.on) return;
+    const C = this.C, t = C.currentTime, v = 0.025 + 0.09 * k;
+    const s = C.createBufferSource(), bp = C.createBiquadFilter(), g = C.createGain();
+    s.buffer = this.sfx.noise;
+    s.loop = true;
+    bp.type = 'bandpass';
+    bp.frequency.value = 1900;
+    bp.Q.value = 0.5;
+    s.connect(bp).connect(g).connect(this.sfx.out);
+    g.gain.setValueAtTime(0, t);
+    // The squelch opening: a burst, then the hiss under the voice, crackling: the deeper, the more it drops out.
+    g.gain.linearRampToValueAtTime(v * 3, t + 0.01);
+    g.gain.setValueAtTime(v, t + 0.14);
+    for (let a = 0.2; a < secs; a += 0.04 + Math.random() * 0.08) g.gain.setValueAtTime(Math.random() < 0.15 + 0.35 * k ? v * (1.5 + Math.random() * 2) : v * (0.6 + Math.random() * 0.5), t + a);
+    g.gain.setValueAtTime(v * 3, t + secs);
+    g.gain.linearRampToValueAtTime(0, t + secs + 0.16);
+    s.start(t, Math.random());
+    s.stop(t + secs + 0.2);
   }
 
   /** What is playing, for tests and the console: each layer's gain, the room's levels, the turbopumps. */

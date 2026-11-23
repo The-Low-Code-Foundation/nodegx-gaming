@@ -929,6 +929,48 @@ Left over:
   before it means anything again. `raid`, `walk`, `float` and `cutter` have new baselines (CLAUDE.md); the rest
   held.
 
+### The deep (23 November 2026)
+
+The ask: more atmosphere, the carrier and the cutter more alive, and space, which was starting to feel terrifying,
+empty and infinite, more so. What was done:
+
+1. **A darker sky.** The carrier engine's sky is `deep` (space.mjs `SKIES.deep`): fainter clouds, a small hard
+   sun, the forest moon a far world. `?sky=haven` brings the near moon back. The windows' panes were washing the
+   view to dusk under the tone mapping; they are now near clear (interiors.mjs `glass`, set in main.mjs).
+2. **The deep factor** (`deep.mjs`, `?deep=0` off): 0 within 800 m of home, 1 past 6 km. Going out:
+   - the carrier's dust halo thins away;
+   - the light on metal goes to the sun alone, so a hull's shaded side goes black (render.mjs `OUTSIDE`);
+   - the crew's murmur aboard drops away.
+3. **Home is a light.** Ships carry running lights placed on their real hulls (`beacons.mjs`): red and green, a stern
+   light, white double strobes and a red beacon. From kilometres out the carrier is a strobe, and her glint in the
+   sun, in an empty sky. Seen at 25 km.
+4. **What the deep throws at you** (out, past 1.4 km, no raid, every minute or two):
+   - a dark tumbling wreck fragment passing a few hundred metres off the bow;
+   - a far drive flare crawling across the sky, then cut;
+   - a ghost return on the plot that comes to nothing;
+   - grit pinging off the hull.
+   The plot marks them amber as UNK.
+5. **The crew talk** (`content/deep/talk.json`, 25 short exchanges): Hart, Cole and Voss on the quiet, the
+   distance, home in sight, and each event. Flight control breaks up in static past 1.2 km and loses words.
+6. **The ship working** (`aboard.mjs`):
+   - the plating ticks as she turns in the sun;
+   - the frames groan as the drive lights and tick as it stops;
+   - the lamps dip and flicker when the drive lights or a gun fires (less on the carrier).
+
+Left over:
+
+- The deep's lines have no clips (`node tools/voices.mjs --list`); they are subtitles with name labels.
+- The new sounds' levels have not been listened to: the ping, ticks, groan and radio static.
+- The career's transit is only 4 km, so the deep reaches about 0.6 there. A sortie that goes further out would let
+  it reach 1. This is a story call.
+- The crew do not move while they talk; there is no one to look at.
+- A berthed ship shows no lamps, by design. The station is still about 1.5 km off and lit like a city: the deep
+  needs to be somewhere the station is not.
+- Ideas for the next round:
+  - a derelict to go out to and board;
+  - the strobe as the way home when the plot is down;
+  - a fault far out with no tug in range.
+
 ### What comes over from the first ThreadSpace (for phases 15 and 16)
 
 Read from the first game's code on 21 November 2026. "Lift" means the logic can move nearly as it is; "rewrite" means

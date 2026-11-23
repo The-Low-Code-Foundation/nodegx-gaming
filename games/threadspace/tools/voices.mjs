@@ -129,6 +129,9 @@ for (const s of W.sections) for (const w of W.watches) add('ship', fill(W.pipes.
 // The ship's calls (content/announcements/), today's ship only: their words, and the ship's words for every place.
 for (const l of callLines(calls, today.L)) add(l.speaker, l.text);
 
+// The crew's talk out in the deep (content/deep/talk.json, src/carrier/deep.mjs).
+if (existsSync(here('content/deep/talk.json'))) for (const e of json('content/deep/talk.json').lines ?? []) for (const [who, t] of e.say ?? []) add(who, t);
+
 // --- how a line is said ---
 
 /** The words as the model should say them: "0400" as "oh four hundred", "(amidships)" as ", amidships". */

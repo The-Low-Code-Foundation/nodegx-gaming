@@ -47,7 +47,15 @@ export class View {
     this.bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.85, 0.55, 0.72);
     composer.addPass(this.bloom);
     composer.addPass(new OutputPass());
-    this.space = new Space(scene, renderer, this.sun);
+    // The deep's sky (space.mjs `deep`); `?sky=haven` brings back the near forest moon and the bright clouds.
+    this.space = new Space(scene, renderer, this.sun, q.get('sky') ?? 'deep');
+    /** Outside, how dark the side away from the sun is: the fill near home and out in the deep (deep.mjs sets `deep`,
+     *  0 at home to 1 far out). There is no air to scatter light: what the sun does not touch is black but for the
+     *  nebula's faint glow and the ship's own lamps. */
+    this.OUTSIDE = { fill: 0.55, fillDeep: 0.2, env: 0.65, envDeep: 0.3, sun: 1.8 };
+    this.deep = 0;
+    /** The ship's lamps dipping for a moment (aboard.mjs: the drive lighting, a gun firing): 0 to 1. */
+    this.sag = 0;
     this.resize = this.resize.bind(this);
     window.addEventListener('resize', this.resize);
     new ResizeObserver(this.resize).observe(canvas);
@@ -70,8 +78,11 @@ export class View {
    *  out, so rooms fall off into their corners instead of all being the same flat grey. `look`: the room's own wish
    *  (sets.mjs `lookOf`: some rooms want more fill, the hangar). */
   light({ mode, dark, inside, look }) {
-    this.hemi.intensity = mode === 'cutaway' ? 1.8 : dark ? 0.12 : inside ? look?.fill ?? this.ABOARD.fill : 0.9;
-    this.sun.intensity = dark ? 0.15 : inside ? look?.sun ?? this.ABOARD.sun : 1.6;
+    const O = this.OUTSIDE, k = Math.max(0, Math.min(1, this.deep)), sag = 1 - 0.6 * Math.max(0, Math.min(1, this.sag));
+    const out = mode !== 'cutaway' && !inside;
+    this.hemi.intensity = mode === 'cutaway' ? 1.8 : dark ? 0.12 : inside ? (look?.fill ?? this.ABOARD.fill) * sag : O.fill + (O.fillDeep - O.fill) * k;
+    this.sun.intensity = dark ? 0.15 : inside ? (look?.sun ?? this.ABOARD.sun) * sag : O.sun;
+    this.scene.environmentIntensity = out ? O.env + (O.envDeep - O.env) * k : 0.9;
   }
 
   /** The render. Out in a fighter, the lab's look: ACES tone mapping (applied by the composer's output pass only) and

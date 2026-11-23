@@ -18,7 +18,7 @@ import { defaultsOf } from './models/model.mjs';
 
 const CONSOLE = '#1e2a3a';
 const H = 3; // rooms are 3 m high unless they say otherwise
-const glass = new THREE.MeshBasicMaterial({ color: '#7fb0e0', transparent: true, opacity: 0.07, depthWrite: false, side: THREE.DoubleSide });
+export const glass = new THREE.MeshBasicMaterial({ color: '#7fb0e0', transparent: true, opacity: 0.07, depthWrite: false, side: THREE.DoubleSide });
 const KESTREL = { wall: '#8d96a3', floor: '#5f666f', ceil: '#7a818b', trim: '#2b3038' };
 
 export class Interior {

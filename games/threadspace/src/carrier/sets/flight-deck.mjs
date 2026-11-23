@@ -624,6 +624,7 @@ class Screens {
     for (const B of G.guns?.bandits ?? []) if (!B.gone && !B.dead) add(B.obj?.position, 'bandit', '');
     for (const tp of G.guns?.torps ?? []) if (!tp.dead) add(tp.pos, tp.side === 'theirs' ? 'torp' : 'ours', '');
     if (N) add(N.at, 'wpt', N.name);
+    for (const c of G.deep?.contacts() ?? []) add(c.pos, 'unknown', c.label); // what the deep shows (deep.mjs)
     const far = Math.max(400, ...dots.map((d) => Math.hypot(d.l.x, d.l.z)));
     const scale = [500, 1000, 2000, 5000, 10000, 20000, 50000, 100000].find((s) => s >= far * 1.05) ?? far * 1.1;
     const R0 = 118, cx = 20 + R0, cy = 40 + R0 + 4;
@@ -646,11 +647,12 @@ class Screens {
     g.fill();
     for (const d of dots) {
       const k = R0 / scale, x = cx + d.l.x * k, y = cy + d.l.z * k;
-      const col = { host: BLUE, hostile: RED, bandit: RED, torp: RED, ours: GREEN, wpt: GREEN }[d.kind];
+      const col = { host: BLUE, hostile: RED, bandit: RED, torp: RED, ours: GREEN, wpt: GREEN, unknown: AMBER }[d.kind];
       g.fillStyle = g.strokeStyle = col;
       g.lineWidth = 2;
       if (d.kind === 'host') g.strokeRect(x - 6, y - 6, 12, 12);
       else if (d.kind === 'hostile') (g.beginPath(), g.moveTo(x, y - 8), g.lineTo(x + 8, y), g.lineTo(x, y + 8), g.lineTo(x - 8, y), g.closePath(), g.stroke());
+      else if (d.kind === 'unknown') (g.beginPath(), g.arc(x, y, 6, 0, Math.PI * 2), g.stroke())
       else if (d.kind === 'wpt') (g.beginPath(), g.arc(x, y, 7, 0, Math.PI * 2), g.stroke(), g.beginPath(), g.arc(x, y, 2, 0, Math.PI * 2), g.fill());
       else g.fillRect(x - 3, y - 3, 6, 6);
       if (d.label) text(g, d.label, x + 11, y, MONO(14, 700), col);

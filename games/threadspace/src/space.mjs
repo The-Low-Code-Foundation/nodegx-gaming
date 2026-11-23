@@ -15,11 +15,16 @@ const DUST_BOX = 700;
 const SKIES = {
   haven: { a: '#3b2a8f', b: '#1e5bb5', c: '#c4508e', glow: '#3a3550', band: [0.25, 1, 0.2], seed: 3.1, gain: 1.6, sun: '#fff1dc', sunDir: [0.6, 0.8, 0.3], moon: true, cinder: false },
   drift: { a: '#145e66', b: '#6a4a1c', c: '#3aa37a', glow: '#2f3a38', band: [-0.4, 1, 0.5], seed: 7.7, gain: 1.7, sun: '#ffe6c0', sunDir: [-0.5, 0.6, -0.6], moon: true, cinder: false },
-  cinder: { a: '#7a1e10', b: '#b8541a', c: '#5a1438', glow: '#3a2420', band: [0.1, 1, -0.3], seed: 12.4, gain: 1.7, sun: '#ff9a70', sunDir: [0.37, 0.25, -0.89], moon: false, cinder: true }
+  cinder: { a: '#7a1e10', b: '#b8541a', c: '#5a1438', glow: '#3a2420', band: [0.1, 1, -0.3], seed: 12.4, gain: 1.7, sun: '#ff9a70', sunDir: [0.37, 0.25, -0.89], moon: false, cinder: true },
+  // The carrier's sky (src/carrier/): Haven's, a long way further out. The clouds are faint, the black is most of it,
+  // the sun is a hard small light, and the forest moon is a far world a few widths of the sun across (`moonScale`),
+  // not a wall beside you: nothing out here is near.
+  deep: { a: '#251f5e', b: '#16406f', c: '#6a2c58', glow: '#2a2838', band: [0.25, 1, 0.2], seed: 3.1, gain: 0.7, sun: '#fff6ea', sunDir: [0.6, 0.8, 0.3], sunSize: 820, moon: true, moonScale: 0.075, cinder: false }
 };
 
 export class Space {
-  constructor(scene, renderer, sun = null) {
+  /** `sector`: the sky to start with (SKIES), baked once. */
+  constructor(scene, renderer, sun = null, sector = 'haven') {
     this.scene = scene;
     this.renderer = renderer;
     this.sun = sun;
@@ -48,7 +53,10 @@ export class Space {
     this.nebula = new THREE.Mesh(new THREE.SphereGeometry(100, 32, 16), nebulaMaterial());
     this.bakeScene.add(this.nebula);
     this.pmrem = new THREE.PMREMGenerator(renderer);
-    this.setSector('haven');
+    /** How much of the dust shows, 0 to 1 (the carrier's engine sets it: dust is the halo round a ship, and out in
+     *  the deep there is none). */
+    this.dustLevel = 1;
+    this.setSector(sector);
   }
 
   /** Bakes the sector's sky into the cube map, points the sun, and puts up its planet or its dead star. */
@@ -79,12 +87,18 @@ export class Space {
       this.sun.position.copy(dir);
       this.sun.color.set(S.sun);
     }
+    this.sunDisc.scale.setScalar(S.sunSize ?? 1400);
     this.moon.visible = S.moon;
+    this.moon.scale.setScalar(S.moonScale ?? 1);
     this.cinder.visible = S.cinder;
   }
 
   frame(camera, dt) {
     this.follow(camera);
+    const dl = Math.max(0, Math.min(1, this.dustLevel));
+    this.dust.visible = dl > 0.01;
+    this.dust.material.opacity = 0.5 * dl;
+    if (!this.dust.visible) return;
     // Dust in a box round the camera: a mote that leaves the box comes back at the far side.
     const pos = this.dust.geometry.attributes.position;
     const half = DUST_BOX / 2;

@@ -82,6 +82,10 @@ import { HelmSeat } from './seats/helm.mjs';
 import { FighterSeat } from './seats/fighter.mjs';
 import { GunSeat } from './seats/gun.mjs';
 import { CutawaySeat } from './seats/cutaway.mjs';
+import { Beacons } from './beacons.mjs';
+import { Deep } from './deep.mjs';
+import { Aboard } from './aboard.mjs';
+import { glass as GLASS } from '../interiors.mjs';
 
 // The spin-drum carrier (design/CARRIER-REBUILD.md). The first carrier (400 m, three decks, gravity only while her
 // drive burns) is archived in archive/carrier-v1/, with how to bring it back; the code paths for a layout without drums
@@ -150,6 +154,10 @@ const canvas = document.getElementById('view');
 const fadeEl = document.getElementById('fade');
 const view = new View(canvas, q);
 const { renderer, scene, camera, composer, bloom, lightPool, hemi, space, ABOARD, budget } = view;
+// The windows' panes: barely there. A brighter tint read as dusk through the glass, under the tone mapping; out here
+// what is beyond a window is black.
+GLASS.color.set('#5a7896');
+GLASS.opacity = 0.022;
 
 // Somewhere to leave from: the station she was docked at, a kilometre off her port bow.
 const dock = station({ seed: 3 });
@@ -409,6 +417,14 @@ Object.assign(G, { thrusterList, carrierGas });
 const parts = (G.parts = ship.parts = L.integrity.parts ? new CarrierDamage(G) : null);
 const hullRepair = (G.repair = ship.repair = parts ? new HullRepair(G, { crew: q.get('crew') !== '0' }) : null);
 walker.floater = new Floater(G); // weightless: the handholds, pushing off, drifting, the puffer (weightless.mjs)
+// The deep (deep.mjs): how far from home you are, and what that does to the light, the dust, the radio and the crew;
+// and the deep's events. The ship's small signs of life (aboard.mjs): the hull ticking in the sun, the lamps dipping.
+const deep = (G.deep = new Deep(G, {
+  home: () => host?.obj ?? C.obj, world, view, ambience, announcer, sfx,
+  crew: () => (orders?.crew ?? []).map((c) => ({ id: c.id, who: c.who }))
+}));
+const aboard = (G.aboard = new Aboard(G, { view, ambience, lightPool }));
+let beacons = null, hostBeacons = null; // her running lights and her host's (beacons.mjs), once the hulls are built
 const helmSeat = new HelmSeat(G);
 const fighterSeat = fighter && new FighterSeat(G);
 const gunSeat = new GunSeat(G);
@@ -583,6 +599,7 @@ function tick(dt) {
 
   // The main drive's push, what it does to you, and the seat's camera and HUD.
   const push = drive.frame(dt);
+  aboard.frame(dt, { inside: mode !== 'fighter' && mode !== 'cutaway' }); // the hull ticking, the lamps dipping as she lights
   C.push = push; // the gimballed couches swing round for a burn (floating.mjs `gimbal`)
   walk.feel(push, dt);
   seats[mode].frame(dt, drive, f); // (`f`: the helm's outside view orbits on the right button)
@@ -652,9 +669,18 @@ function tick(dt) {
   // The lighting for where you are (render.mjs), the lamps round you, night in the passages, and the render.
   const inside = mode === 'walk' || mode === 'gun' || bridgeView;
   view.light({ mode, dark: mode === 'walk' && !ship.power, inside, look: mode === 'walk' && roomNow ? lookOf(C.rooms.get(roomNow)) : null });
+ // Out in it: the cutter off her cradle, or a fighter flying. Her lamps are lit off the cradle.
+  const outNow = berth ? !['berthed', 'opening', 'launch', 'closing', 'capture'].includes(berth.phase) : mode === 'fighter' && !!fighter?.flying;
+  deep.frame(dt, { camera, out: outNow, quiet: !ship.stations && !fading, mode });
+  if (beacons) {
+    beacons.on = !berth || !['berthed', 'closing'].includes(berth.phase);
+    beacons.frame(time, camera, renderer);
+  }
+  hostBeacons?.frame(time, camera, renderer);
   space.frame(camera, dt);
   const lit = [...C.decks.values()].filter((I) => I.group.visible).concat(walk.lit(), hostHangar?.group.visible ? [hostHangar] : []);
   lightPool.update(camera.position, mode === 'cutaway' ? [] : lit);
+  aboard.lamps();
   routine.light(lightPool, hemi, { mode, room: roomNow }); // night: red lighting in the passages
   gas.setView(camera, renderer.domElement.height);
   carrierGas.setView(camera, renderer.domElement.height);
@@ -735,7 +761,7 @@ window.addEventListener('keydown', wake, { once: true });
 
 window.__carrier = {
   ship_id: SHIP_ID, HAS, world, C, L, K, W, crew, routine, hands, body, helm, thrusters, walker, renderer, camera, cut, fighter, dc, ship, guns, plant, helmSight, sfx, approach, cockpit, career, voices, announcer,
-  gas, carrierGas, puffs, blazes, feel, flightAudio, composer, bloom, ABOARD, ambience, status, input, G, seats, drive, doors, rescue, repairs, parts, hullRepair,
+  gas, carrierGas, puffs, blazes, feel, flightAudio, composer, bloom, ABOARD, ambience, status, input, G, seats, drive, doors, rescue, repairs, parts, hullRepair, deep, aboard, view,
   mode: () => mode,
   tick: (n = 1, dt = 1 / 60) => {
     for (let i = 0; i < n; i++) tick(dt);
@@ -774,6 +800,9 @@ window.__carrier = {
   budget,
   info: () => ({ pr: budget.pr, calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, frameMs: +(avgDt * 1000).toFixed(1), mode, deck: walk.drumNow ? `${walk.drumNow.I.deck.id}:${walk.drumNow.seg}` : walk.deckNow, fighter: fighter?.phase })
 };
+
+// Her running lights (beacons.mjs), on her hull: made before the outside is gathered, so they are part of it.
+beacons = window.__carrier.beacons = new Beacons(C, { sun: view.sun });
 
 // The ship's outside: everything on her frame but the decks, the drums, the machinery (seen through windows) and the
 // cutaway's overlay. Gathered once all of it is built; things added to the frame later (a ladder's trunk) stay out.
@@ -828,6 +857,7 @@ if (HOST_ID) {
   H.obj.quaternion.copy(C.obj.quaternion);
   world.add(H.obj);
   window.__carrier.host = H;
+  hostBeacons = window.__carrier.hostBeacons = new Beacons(H, { sun: view.sun }); // her lamps and her glint, seen from out here
   // ?berth=<id>: she starts carried in that berth of the host's hangar (berth.mjs), the hangar drawn round her and the
   // host's bay doors worked from here. `?berth=1` takes the first berth; a host with a hangar but no `berths` in her
   // layout gets a stand-in.

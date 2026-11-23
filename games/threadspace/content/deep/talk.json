@@ -1,0 +1,41 @@
+{
+  "about": "What a small ship's crew say to each other out in the dark (src/carrier/deep.mjs): the quiet between orders, how far from home she is, and what the deep throws at them. Said only aboard a ship whose crew are named here (the cutter), while she is out of her berth, with no raid on. Each entry is a short exchange: `say` is [who, words] in turn. `when` is what lets it be said: `quiet` (out, nothing happening), `far` (over 3 km from home), `deep` (the deep factor over 0.75, about 5 km), `home` (back inside 1.5 km after being out past 3 km), and the deep's events: `debris` (a wreck fragment in sight), `drive` and `drive-out` (a far drive seen, then gone dark), `ghost` and `ghost-gone` (a return on the plot that comes to nothing), `ping` (grit on the hull), `radio` (flight control breaking up with range). Each entry is said once per page; an event with all its entries said says nothing.",
+  "draft": "WORKING DRAFT, like the career's lines: plain, in the wording of content/glossary.json. The story pass replaces the words and the names. None is recorded yet (node tools/voices.mjs --list).",
+  "gap": [80, 170],
+  "first": [35, 55],
+  "lines": [
+    { "id": "quiet-hum", "when": "quiet", "say": [["cutter-eng", "Listen to her. Pumps, fans, the reactor. That is a happy ship."], ["cutter-gunner", "Until it isn't."], ["cutter-eng", "Until it isn't."]] },
+    { "id": "quiet-scope", "when": "quiet", "say": [["cutter-gunner", "Nothing out there to hit, and I still watch the scope like there is."], ["cutter-cdr", "That is the job."]] },
+    { "id": "quiet-water", "when": "quiet", "say": [["cutter-cdr", "Drink some water. Out here you forget to."]] },
+    { "id": "quiet-hull", "when": "quiet", "say": [["cutter-eng", "Twenty-one degrees in here. Minus a hundred and forty on the shaded plating. Half a metre of us in between."]] },
+
+    { "id": "far-thumbnail", "when": "far", "say": [["cutter-gunner", "Carrier's down to a thumbnail."], ["cutter-cdr", "She will be there. Eyes on your screens."]] },
+    { "id": "far-sums", "when": "far", "say": [["cutter-eng", "Every time we come out I do the sums. Air for sixty days. Water for ninety. Nobody for a long way."]] },
+    { "id": "far-help", "when": "far", "say": [["cutter-cdr", "This far out, nobody is coming in ten minutes. If anything happens, we are the help. Remember that."]] },
+
+    { "id": "deep-lights", "when": "deep", "say": [["cutter-gunner", "Turn the panel lights down sometime. You stop seeing the stars and start seeing how many there are."]] },
+    { "id": "deep-readings", "when": "deep", "say": [["cutter-eng", "My first trip out I checked the hull readings every ten seconds. As if it would help."], ["cutter-gunner", "Did it?"], ["cutter-eng", "No."]] },
+    { "id": "deep-past", "when": "deep", "say": [["cutter-gunner", "What's past the carrier, ma'am?"], ["cutter-cdr", "This. For a very long way."]] },
+    { "id": "deep-moving", "when": "deep", "say": [["cutter-gunner", "You can't tell we're moving. Look at it. We could be doing a thousand. We could be stopped."], ["cutter-cdr", "We are doing what the screen says."]] },
+
+    { "id": "home-there", "when": "home", "say": [["cutter-gunner", "There she is."], ["cutter-cdr", "Home's lit. Let us not keep her waiting."]] },
+    { "id": "home-strobe", "when": "home", "say": [["cutter-eng", "Her strobe in sight. I always breathe out a little, there."]] },
+
+    { "id": "debris-plate", "when": "debris", "say": [["cutter-cdr", "Contact. No transponder, tumbling."], ["cutter-gunner", "That's plating. Hull plate and a frame. Somebody's ship."], ["cutter-cdr", "Log it. Leave it."]] },
+    { "id": "debris-old", "when": "debris", "say": [["cutter-gunner", "Something off the bow. No lights."], ["cutter-eng", "Old wreck. They drift for a hundred years."], ["cutter-cdr", "Log the bearing and keep clear."]] },
+
+    { "id": "drive-flare", "when": "drive", "say": [["cutter-gunner", "Drive flare, way out. Not one of ours."], ["cutter-cdr", "Too far to matter. Log it."]] },
+    { "id": "drive-dark", "when": "drive-out", "say": [["cutter-gunner", "She's cut her drive. Gone dark."], ["cutter-cdr", "Then she does not want to be seen. Keep watching."]] },
+
+    { "id": "ghost-return", "when": "ghost", "say": [["cutter-gunner", "Return on the plot. Long way out. No transponder."], ["cutter-cdr", "Give it time."]] },
+    { "id": "ghost-gone", "when": "ghost-gone", "say": [["cutter-gunner", "Gone. Could have been anything."], ["cutter-cdr", "Could have. Log it."]] },
+    { "id": "ghost-ice", "when": "ghost", "say": [["cutter-gunner", "Faint contact. Fading."], ["cutter-eng", "Ice. A rock. The set chasing its own tail."]] },
+    { "id": "ghost-or-not", "when": "ghost-gone", "say": [["cutter-cdr", "Or not. Log it anyway."]] },
+
+    { "id": "ping-grit", "when": "ping", "say": [["cutter-eng", "Grit. Just grit."]] },
+    { "id": "ping-fine", "when": "ping", "say": [["cutter-cdr", "Engineer?"], ["cutter-eng", "Hull's fine. A grain of sand, faster than a bullet. It leaves a pit you could lose a fingernail in."]] },
+    { "id": "ping-tanks", "when": "ping", "say": [["cutter-gunner", "That one was close to the tanks."], ["cutter-eng", "On a ship this size, everything is close to something."]] },
+
+    { "id": "radio-faint", "when": "radio", "say": [["cutter-cdr", "Flight control is breaking up. We are a long way out."]] }
+  ]
+}

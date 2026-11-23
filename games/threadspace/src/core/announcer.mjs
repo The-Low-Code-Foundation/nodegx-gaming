@@ -155,6 +155,25 @@ export class Announcer {
     /** Where you are and who you are: { mode, room, sealed, depts: Set }. main.mjs sets it. */
     this.you = () => ({ mode: 'walk', room: null, sealed: false, depts: new Set(DEPTS) });
     C.bus?.on('call', (e) => this.call(e.id, e));
+    /** Called as a line starts: `(item)`, where `item.A.who` is the speaker and `item.text` the subtitle. It may return
+     *  the subtitle to show instead (deep.mjs: flight control breaking up with range) and play what goes with it. */
+    this.onStart = null;
+  }
+
+  /** Someone says `text` that is not a ship's call (deep.mjs: the crew talking): queued like a call, with a
+   *  subtitle, and its clip played if `who` has one of exactly these words. `label` names them on the subtitle when
+   *  the announcer has no speaker of that id. Returns whether it was queued. */
+  line(who, text, { label = null, pri = 1, by = 'headset', delay = 0 } = {}) {
+    if (!text) return false;
+    const item = { A: { who, priority: pri }, id: `line:${who}`, words: [text], text, label, by, pri, at: this.now + delay, made: this.now };
+    this.queue.push(item);
+    this.queue.sort((a, b) => b.pri - a.pri || a.made - b.made);
+    return true;
+  }
+
+  /** Whether a line or a call is playing or waiting. */
+  get busy() {
+    return !!this.playing || this.queue.length > 0;
   }
 
   /** The call `id` is made, with `vars` for its slots (`room` a room's id). */
@@ -265,9 +284,10 @@ export class Announcer {
       playing.handle = this.voices.play('broadcast', files, () => this.playing === playing && (playing.end = this.now + 0.4));
     }
     this.playing = playing;
-    if (item.text && this.el) {
+    const shown = this.onStart?.(item, read) ?? item.text;
+    if (shown && this.el) {
       const S = this.speakers[item.A.who];
-      this.el.innerHTML = `<b class="${item.by}">${S?.label ?? item.A.who}</b>${item.text}`;
+      this.el.innerHTML = `<b class="${item.by}">${S?.label ?? item.label ?? item.A.who}</b>${shown}`;
       this.el.hidden = false;
       this.sub.t = Math.max(read, 3);
     }

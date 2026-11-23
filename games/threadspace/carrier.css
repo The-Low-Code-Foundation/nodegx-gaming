@@ -116,6 +116,7 @@
 #c-sub b { font-family: var(--mono); font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; margin-right: 8px; color: #ffc850; }
 #c-sub b.headset { color: #7dffb0; }
 #c-sub b.radio { color: #8fc4ff; }
+#c-sub .radio-far { color: #b4bfc6; font-style: italic; }
 #c-duty .d-watch { font-family: var(--mono); font-size: 11px; margin-top: 3px; }
 #c-bill { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(560px, calc(100% - 32px)); max-height: calc(100% - 100px); overflow-y: auto; background: #ebe6d8; color: #1c1b18; border: 6px solid #3a3226; border-radius: 4px; padding: 14px 18px; font-size: 12px; line-height: 1.45; box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6); pointer-events: none; }
 #c-bill .b-head { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 2px solid #1c1b18; padding-bottom: 4px; margin-bottom: 8px; font-family: var(--mono); }
