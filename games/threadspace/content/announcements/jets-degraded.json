@@ -1,0 +1,17 @@
+{
+  "id": "jets-degraded",
+  "about": "A manoeuvring thruster cluster is down to half its push or less (status-calls.mjs `JETS`).",
+  "who": "ai",
+  "say": [
+    "Manoeuvring thrusters degraded."
+  ],
+  "show": "Manoeuvring thrusters degraded: she turns and slides more slowly.",
+  "to": {
+    "all": "tannoy",
+    "bridge": "headset",
+    "engineering": "headset"
+  },
+  "priority": 3,
+  "delay": 0.5,
+  "again": 15
+}

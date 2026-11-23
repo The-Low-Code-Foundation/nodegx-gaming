@@ -1,6 +1,6 @@
 {
  "weapons": {
-  "about": "The cutter's guns, from the carrier's `weapons` (ships/carrier/weapons.json, whose `about` says what each number is) scaled by tools/cutter.mjs: one dorsal turret (`turrets`, `gun`), two close-in point defence guns (`pdc`), four forward torpedo tubes (`tubes`, `torpedo`), the raider that comes for her (`raider`), the gunnery target (`target`) and brace for impact (`brace`). No broadside, railgun, flak, bandits or fighters.",
+  "about": "The cutter's guns, from the carrier's `weapons` (ships/carrier/weapons.json, whose `about` says what each number is) scaled by tools/cutter.mjs: one dorsal turret (`turrets`, `gun`), two close-in point defence guns (`pdc`), four forward torpedo tubes (`tubes`, `torpedo`), flares (`flares.ship`), the raider that comes for her (`raider`), the gunnery target (`target`) and brace for impact (`brace`). No broadside, railgun, flak, bandits or fighters.",
   "turrets": [
    {
     "mount": "turret-dorsal",
@@ -195,6 +195,19 @@
     9
    ],
    "clear": 2600
+  },
+  "flares": {
+   "about": "Her flares (weapons/missiles.mjs `shipFlares`, `torpLure`). Each is thrown out at `eject` m/s on top of her velocity and burns for `life` s at `ship.heat`, fading. M at the helm throws `ship.salvo` (half from each side), not more often than every `ship.every` s, from `ship.count`, refilled in her berth; with nobody of yours at the helm her crew throw a salvo at a torpedo in its last stretch (`torpedo.terminal` m) every `ship.crewEvery` s. Such a torpedo judges each flare it sees near her once: `ship.lure` of the time it takes the flare for her, goes for it and is spent on it.",
+   "eject": 25,
+   "life": 4,
+   "ship": {
+    "count": 32,
+    "salvo": 4,
+    "every": 1.5,
+    "crewEvery": 3.5,
+    "heat": 600,
+    "lure": 0.18
+   }
   },
   "brace": {
    "about": "Brace for impact. When one of the raider's torpedoes will arrive within `eta` seconds the ship calls brace and counts down (weapons/torpedoes.mjs braceFrame), and the brace straps on the weightless rooms' walls show \"Strap in\"; the countdown stays up `hold` s after the last one. A hit kicks the structure: `kick` m/s at the hit for a torpedo (`shell` for a gun shell, `glance` for one the armour stopped), less with distance (`fade` m halves it). Strapped in, you ride it; a hand on a rail holds below `grip` m/s and your feet in a rail below `feet` m/s; anyone else keeps going. Meeting a wall faster than `hurt` m/s hurts, `per` of an injury for each m/s over; a whole one (1) blacks you out (the damage control party picks you up), and it heals at `heal` a minute.",

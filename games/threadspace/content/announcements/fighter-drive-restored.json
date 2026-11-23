@@ -1,0 +1,14 @@
+{
+  "id": "fighter-drive-restored",
+  "about": "Your fighter's drive works again, mended on her pad (status-calls.mjs).",
+  "who": "ai",
+  "say": [
+    "Main drive restored."
+  ],
+  "to": {
+    "you": "radio"
+  },
+  "priority": 2,
+  "delay": 0.5,
+  "again": 10
+}

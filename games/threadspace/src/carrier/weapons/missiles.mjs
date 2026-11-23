@@ -350,7 +350,7 @@ export const missileParts = {
       sp.position.copy(p);
       halo.position.copy(p);
       this.scene.add(sp, halo);
-      this.flares.push({ sp, halo, pos: p.clone(), vel: v, t: 0, life: F.life * (0.85 + 0.3 * this.rand()), peak: K.heat, I: K.heat, dead: false, ph: Math.random() * 10, big: kind !== 'fighter' && kind !== 'bandit' });
+      this.flares.push({ sp, halo, pos: p.clone(), vel: v, t: 0, life: F.life * (0.85 + 0.3 * this.rand()), peak: K.heat, I: K.heat, dead: false, ph: Math.random() * 10, big: kind !== 'fighter' && kind !== 'bandit', ship: kind === 'ship' });
     }
     // The dispenser's pop: a flash and a puff of its charge (looks only).
     this.flash(p, kind === 'fighter' || kind === 'bandit' ? 1.6 : 5, '#fff0d8', 0.12);
@@ -379,6 +379,69 @@ export const missileParts = {
       if (k <= 0) (f.dead = true), f.sp.removeFromParent(), f.halo.removeFromParent(), f.sp.material.dispose(), f.halo.material.dispose();
     }
     this.flares = this.flares.filter((f) => !f.dead);
+  },
+
+  /** A ship's own flares (the layout's `flares.ship`: the cutter's): a salvo, half out of each side, from 6 m off her
+   *  middle. `by` is 'you' (M at the helm) or 'crew'. Returns why not, or null. */
+  shipFlares(by = 'you') {
+    const K = this.W.flares?.ship;
+    if (!K) return 'her flares are the CIC\'s: they go on their own when a missile comes for her';
+    const st = (this.shipFlareState ??= { left: K.count, t: 0 });
+    if (st.left <= 0) return 'none left';
+    if (st.t > 0) return 'the dispensers are reloading';
+    st.t = by === 'crew' ? K.crewEvery ?? K.every : K.every;
+    const n = Math.min(K.salvo, st.left), a = Math.ceil(n / 2);
+    st.left -= n;
+    const F = this.C.frame;
+    F.updateWorldMatrix(true, false);
+    for (const [sx, m] of [[-1, a], [1, n - a]]) {
+      if (!m) continue;
+      const out = new THREE.Vector3(sx, 0.35, 0.2).normalize().transformDirection(F.matrixWorld);
+      this.flare(this.C.obj.position.clone().addScaledVector(out, 6), this.body.vel, out, m, 'ship');
+    }
+    this.sfx?.play('hit', 30);
+    return null;
+  },
+
+  /** Each frame, on a ship with her own flares: the dispensers' reload, and her crew throwing a salvo at a torpedo in
+   *  its last stretch when nobody of yours is at the helm (`helmFires`, set by the helm seat). */
+  shipFlaresFrame(dt) {
+    const K = this.W.flares?.ship;
+    if (!K) return;
+    const st = (this.shipFlareState ??= { left: K.count, t: 0 });
+    st.t -= dt;
+    if (this.helmFires || st.t > 0 || st.left <= 0 || !this.ship.power) return;
+    const T = this.W.torpedo, me = this.C.obj.position;
+    for (const t of this.torps)
+      if (!t.dead && !t.decoy && t.side === 'theirs' && t.t >= 0 && t.t < T.burn && t.pos.distanceTo(me) < T.terminal) {
+        if (!this.shipFlares('crew')) this.dc?.say(null, 'Flares away: the crew threw a salvo at the torpedo.', 0, 2);
+        return;
+      }
+  },
+
+  /** The raider's torpedoes against a ship's own flares (`flares.ship.lure`): in its last stretch a torpedo judges
+   *  each of her flares it sees near its aim once, and `lure` of the time takes it for her and goes for it. */
+  torpLure() {
+    const K = this.W.flares?.ship;
+    if (!K?.lure || !this.flares.length) return;
+    const T = this.W.torpedo;
+    for (const t of this.torps) {
+      if (t.dead || t.decoy || t.side !== 'theirs' || t.t < 0 || t.t >= T.burn) continue;
+      const aim = this.C.frame.localToWorld(_h.copy(t.aim)), d = t.pos.distanceTo(aim);
+      if (d > T.terminal) continue;
+      const look = _i.subVectors(aim, t.pos).normalize();
+      for (const f of this.flares) {
+        if (f.dead || !f.ship || f.I < f.peak * 0.3) continue;
+        if ((t.judged ??= new Set()).has(f)) continue;
+        const to = _j.subVectors(f.pos, t.pos), r = to.length();
+        if (r < 50 || to.dot(look) / r < Math.cos(0.4)) continue; // too close to turn, or not in its eye
+        t.judged.add(f);
+        if (this.rand() < K.lure) {
+          t.decoy = f;
+          break;
+        }
+      }
+    }
   },
 
   /** G: a pair of flares from your fighter, down and out either side. */

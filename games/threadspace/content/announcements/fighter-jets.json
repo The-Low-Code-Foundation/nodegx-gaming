@@ -1,0 +1,14 @@
+{
+  "id": "fighter-jets",
+  "about": "One of your fighter's jet blocks is under half (fighter-damage.mjs harm.blocks; status-calls.mjs).",
+  "who": "ai",
+  "say": [
+    "Manoeuvring thrusters degraded."
+  ],
+  "to": {
+    "you": "radio"
+  },
+  "priority": 3,
+  "delay": 0.5,
+  "again": 15
+}

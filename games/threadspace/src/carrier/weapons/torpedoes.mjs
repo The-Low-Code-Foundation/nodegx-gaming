@@ -38,7 +38,7 @@ export const torpedoParts = {
     const B = this.W.brace ?? { eta: 6 };
     let eta = Infinity;
     for (const t of this.torps) {
-      if (t.dead || t.side !== 'theirs' || t.t < 0) continue;
+      if (t.dead || t.side !== 'theirs' || t.t < 0 || t.decoy) continue; // one gone after a flare is no threat
       const r = _a.subVectors(this.C.frame.localToWorld(_b.copy(t.aim)), t.pos);
       const dist = r.length();
       const closing = r.dot(_b.subVectors(t.vel, this.body.vel)) / Math.max(1, dist);

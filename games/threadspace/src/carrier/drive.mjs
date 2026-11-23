@@ -1,7 +1,9 @@
 // What the main drive's push feels like aboard (design/CARRIER-POLISH.md). On the spin-drum carrier, from cold (off
 // for `COLD` seconds) the drive is held for a `WARN`-second stand-by the ship calls and the helm counts down. Lit, it
 // is a push toward the stern: the seats use `push` (m/s²) for the lean you feel, `burnTilt` for the first carrier's
-// slope, `lurch` for the shove back into the helm's seat as she lights, and the ship calls the burn once.
+// slope, `lurch` for the shove back into the helm's seat as she lights, and the ship calls the burn once. `spool()` is
+// what her turbopumps are doing, for the sound (spool.mjs, played by ambience.mjs): spinning up through the stand-by,
+// lit and running with the throttle, or winding down.
 
 export const WARN = 3, COLD = 20;
 
@@ -17,6 +19,9 @@ export class Drive {
     this.callT = 0;
     this.burning = false;
     this.held = false;
+    this.asked = false; // the helm asking for the main drive this frame
+    this.frac = 0; // the push as a share of what she has flat out
+    this.full = 0; // m/s² flat out (worked out at the first frame, once the thrusters are all there)
   }
 
   /** Before the helm's frame: from cold the main drive is held until the stand-by has been called and counted down. */
@@ -27,11 +32,20 @@ export class Drive {
 
   /** After the helm's frame: the helm asking for the main drive while it is held starts (or calls off) the stand-by. */
   standBy(dt, helm, atHelm) {
+    this.asked = helm.u[2] < -0.05;
     if (this.held && helm.u[2] < -0.05) {
       if (this.warn === 0) this.dc.C.bus?.emit('call', { id: 'drive-standby' }), this.dc.say(null, `Stand by for main drive: lighting in ${WARN} s. In the weightless spaces, take hold.`, 0, 4);
       this.warn += dt;
       if (atHelm) this.helmSight.say(`MAIN DRIVE LIGHTING · ${Math.max(1, Math.ceil(WARN - this.warn))}`, 0.25);
     } else if (this.held) this.warn = 0; // let go of it before it lit: called off
+  }
+
+  /** What the turbopumps are doing (spool.mjs): `target` spin (through the stand-by, up toward two thirds as it counts
+   *  down; lit, three quarters and the rest with the throttle), and `lit`. */
+  spool() {
+    const lit = this.push > 0.05;
+    const target = lit ? 0.75 + 0.25 * this.frac : this.held && this.warn > 0 ? 0.65 * Math.min(1, this.warn / WARN) : 0;
+    return { target, lit };
   }
 
   /** Seconds before the drive lights if asked now (the nav plot counts it, helmsight.mjs `lightDelay`). */
@@ -45,6 +59,8 @@ export class Drive {
     for (const t of this.thrusters) if (t.kind === 'main') push += t.force * t.throttle * (t.health ?? 1);
     push /= this.body.mass;
     this.push = push;
+    this.full ||= this.thrusters.filter((t) => t.kind === 'main').reduce((s, t) => s + t.force, 0) / this.body.mass;
+    this.frac = this.full ? Math.min(1, push / this.full) : 0;
     this.burnTilt += (Math.atan(push / 9.81) - this.burnTilt) * Math.min(1, dt * 1.5);
     this.callT -= dt;
     if (push > 0.6 && !this.burning && this.callT <= 0) {

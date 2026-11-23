@@ -286,7 +286,7 @@ export class Pilot {
       this.fly({ do: 'hold', secs: Infinity, max: Infinity });
       return say(`${this.who} has the helm: holding her here. J takes her back.`, 5);
     }
-    if (['recover', 'capture', 'closing'].includes(this.berth.phase)) return say('Flight control has her.', 2);
+    if (['tug', 'recover', 'capture', 'closing'].includes(this.berth.phase)) return say('Flight control has her.', 2);
     this.fly(this.circuit());
     return say(`${this.who} has the helm: out 2 km abeam, hold, and home. J takes her back.`, 5);
   }

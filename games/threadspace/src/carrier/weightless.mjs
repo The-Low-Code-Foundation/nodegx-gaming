@@ -32,7 +32,11 @@ import { roomAt } from './layout.mjs';
 import { box, at, mat, glow } from '../util.mjs';
 
 const EYE = 1.6; // the walker's eye above its `pos` (walk.mjs)
-const R = 0.38; // your body's radius against the walls
+const BODY = 0.38; // your body's radius against the walls (HOLD.doorR in a doorway)
+/** The brace straps on the walls: parked (play-testing found them in the way, over the deck plans, and not yet
+ *  needed). True brings them back, with their uses and colliders; brace for impact then works as before. */
+export const BRACE_STRAPS = false;
+
 export const HOLD = {
   reach: 1.45, // m from your eye to a hold you can take (Space)
   catch: 2.5, // m: a hold you look at this far off you can still take: you reach out and pull yourself in to it
@@ -54,6 +58,11 @@ export const HOLD = {
   refill: 4, // s to top the bottle up where there is weight
   swim: [0.25, 0.35], // m/s² and m/s: swimming in air, with the puffer off or empty
   door: 2.1, // m above the deck: your eye's highest through a door (its lintel is at 2.5)
+  floor: 0.95, // m: your eye's lowest over the deck (hands on it, crawling along), so your face never scrapes it
+  head: 0.45, // m: your eye's closest under the deckhead
+  doorR: 0.22, // m: your body's radius in a doorway and just either side of it (you squeeze through; 0.38 elsewhere)
+  funnel: [2.6, 0.8, 0.25], // a door ahead: metres out from it, metres beyond its jambs either side, and m/s toward it, at which a near miss is eased onto its middle
+  aim: 0.55, // a push off whose way is within about 57° of a door's line goes straight through it (cos of the angle)
   legs: 1.5, // m below your eye your feet reach: a foot rail or a deck handle under you
   stand: 1.55, // m: your eye over a foot rail you stand in
   tether: 3.2, // m: the furthest your eye gets from the safety wire you are clipped to (the airless hangar's gangway)
@@ -263,7 +272,7 @@ export function dressHolds(C, I, c, open) {
     const at3 = (u, yy, w) => (alongX ? V(u, yy, line + inward * w) : V(line + inward * w, yy, u));
     const clearOfUses = (u) => { const q = at3(u, y, 0.55); return !busy.some(([x, z, r]) => Math.hypot(q.x - x, q.z - z) < r); };
     const mine = [];
-    for (const [ra, rb] of free) {
+    if (BRACE_STRAPS) for (const [ra, rb] of free) {
       const k = Math.max(1, Math.round((rb - ra) / 9));
       for (let i = 0; i < k; i++) {
         const u = ra + ((i + 0.5) * (rb - ra)) / k;
@@ -679,6 +688,11 @@ export class Floater {
     }
     const grip = _e.copy(H.h.a).lerp(H.h.b, H.t);
     walker.pos.copy(grip).add(H.off).y -= EYE;
+    // On a deck handle your eye stays its padding off the deck (and the deckhead's): arm's length, not face down.
+    const fy = walker.interior.floorY, r = roomAt(this.G.C, this.G.walk?.deckNow, walker.pos.x, walker.pos.z);
+    const lo = fy + HOLD.floor - EYE, hi = fy + (r ? Math.max(HOLD.floor + 0.2, (r.h ?? 3) - HOLD.head) : HOLD.door) - EYE;
+    const py = Math.min(hi, Math.max(lo, walker.pos.y));
+    if (py !== walker.pos.y) (H.off.y += py - walker.pos.y), (walker.pos.y = py);
     // W: a tap is a good push; held, harder when you let go. Shift with it, a big push at once.
     if (!this.charging(dt, { down, pressed, released, shift })) return;
     this.pushOff(walker, H.h.n, H.h.free, shift);
@@ -703,7 +717,10 @@ export class Floater {
     const into = _d.copy(_f).dot(n);
     if (into < 0 && !free) _d.addScaledVector(n, -into * 1.05);
     if (_d.lengthSq() < 0.04) _d.copy(n);
-    walker.vel.copy(_d.normalize()).multiplyScalar(speed);
+    _d.normalize();
+    // Looking toward a door: straight through its middle, not off its jamb onto the other one.
+    if (this.aimDoor(walker, _f2.copy(_f))) _d.copy(_f2);
+    walker.vel.copy(_d).multiplyScalar(speed);
     this.charge = -1;
     this.G.sfx?.cue('clunk', { vol: 0.1 + 0.04 * speed });
   }
@@ -846,6 +863,7 @@ export class Floater {
     }
     if (this.puffing && !this.puffT) (this.puffT = 0.25), this.G.sfx?.cue('hiss', { dur: 0.3, vol: 0.25 });
     this.puffT = Math.max(0, (this.puffT ?? 0) - dt);
+    this.funnel(walker, dt);
     const hit = this.move(walker, v.x * dt, v.y * dt, v.z * dt);
     if (hit.any) {
       const into = hit.into;
@@ -930,27 +948,94 @@ export class Floater {
       if (dz) stop('z');
       r = roomAt(C, deck, p.x, p.z);
     }
-    const lo = I.floorY + 0.45, hi = I.floorY + (r ? (r.h ?? 3) - 0.3 : HOLD.door);
+    const lo = I.floorY + HOLD.floor, hi = I.floorY + (r ? Math.max(HOLD.floor + 0.2, (r.h ?? 3) - HOLD.head) : HOLD.door);
     const y = Math.min(hi, Math.max(lo, eye));
     if (Math.abs(y - eye) > 1e-6 && Math.abs(dy) > 1e-9) stop('y');
     p.y = y - EYE;
     return out;
   }
 
-  /** Whether (x, z) on `deck` is in the doorway between two walkable rooms (the layout's `doors`), from wall to wall. */
-  inDoor(deck, x, z) {
-    const C = this.G.C;
-    const list = ((this.doorways ??= new Map()).get(deck)) ?? this.doorways.set(deck, C.L.doors.flatMap((d) => {
+  /** The doorways between walkable rooms on `deck` (the layout's `doors`): each `{ x, z }` its box from wall to wall,
+   *  `ax` the axis you go through it along, `p` the middle of its wall gap along that axis, `c` its middle across, `hw`
+   *  its half width. */
+  doorsOn(deck) {
+    const C = this.G.C, M = (this.doorways ??= new Map());
+    if (M.has(deck)) return M.get(deck);
+    const list = C.L.doors.flatMap((d) => {
       const [A, B] = d.between.map((id) => C.rooms.get(id));
       if (!A || !B || A.deck !== deck || B.deck !== deck || A.access !== 'walk' || B.access !== 'walk') return [];
-      const w = (d.w ?? 1.6) / 2 + 0.1;
+      const hw = (d.w ?? 1.6) / 2, w = hw + 0.1;
       for (const [P, Q] of [[A, B], [B, A]]) {
-        if (Math.abs(P.x[1] - Q.x[0]) < 1.6) return [{ x: [P.x[1] - 0.5, Q.x[0] + 0.5], z: [d.at - w, d.at + w] }];
-        if (Math.abs(P.z[1] - Q.z[0]) < 1.6) return [{ x: [d.at - w, d.at + w], z: [P.z[1] - 0.5, Q.z[0] + 0.5] }];
+        if (Math.abs(P.x[1] - Q.x[0]) < 1.6) return [{ x: [P.x[1] - 0.5, Q.x[0] + 0.5], z: [d.at - w, d.at + w], ax: 'x', p: (P.x[1] + Q.x[0]) / 2, c: d.at, hw }];
+        if (Math.abs(P.z[1] - Q.z[0]) < 1.6) return [{ x: [d.at - w, d.at + w], z: [P.z[1] - 0.5, Q.z[0] + 0.5], ax: 'z', p: (P.z[1] + Q.z[0]) / 2, c: d.at, hw }];
       }
       return [];
-    })).get(deck);
-    return list.some((g) => x >= g.x[0] && x <= g.x[1] && z >= g.z[0] && z <= g.z[1]);
+    });
+    M.set(deck, list);
+    return list;
+  }
+
+  /** Whether (x, z) on `deck` is in the doorway between two walkable rooms (the layout's `doors`), from wall to wall. */
+  inDoor(deck, x, z, pad = 0) {
+    return this.doorsOn(deck).some((g) => x >= g.x[0] - pad && x <= g.x[1] + pad && z >= g.z[0] - pad && z <= g.z[1] + pad);
+  }
+
+  /** The door `dir` (a unit vector, the way you are going or pushing) leads you into from `eye`: within
+   *  `HOLD.funnel` of it, toward it within `HOLD.aim`'s angle. `{ g, along, lat, s }` (`along`: metres to its middle
+   *  line along its axis, `lat` metres off its middle across it, `s` +1 or -1 the way through), or null. */
+  doorAhead(eye, dir) {
+    const deck = this.G.walk?.deckNow;
+    if (deck === undefined || deck === null || typeof deck === 'string') return null; // the fixed hull's decks only
+    const [out, side] = HOLD.funnel;
+    let best = null, bd = Infinity;
+    for (const g of this.doorsOn(deck)) {
+      const a = g.ax === 'x' ? eye.x : eye.z, l = g.ax === 'x' ? eye.z : eye.x;
+      const along = g.p - a, lat = l - g.c;
+      if (Math.abs(along) > out || Math.abs(lat) > g.hw + side) continue;
+      // In the doorway itself (and just past it) the way through is the way you are going.
+      const da = g.ax === 'x' ? dir.x : dir.z, s = Math.abs(along) > 0.8 ? Math.sign(along) : Math.sign(da) || 1;
+      const h = Math.hypot(dir.x, dir.z);
+      if (h < 0.3 || (da * s) / h < HOLD.aim) continue; // not toward it, or mostly up or down
+      const d = Math.abs(along) + Math.abs(lat);
+      if (d < bd) (bd = d), (best = { g, along, lat, s });
+    }
+    return best;
+  }
+
+  /** A push off toward a door (`dir`, changed in place) goes through its middle: aimed at a point on its line past
+   *  the wall, at a height under the lintel. */
+  aimDoor(walker, dir) {
+    const eye = walker.eye(_e), A = this.doorAhead(eye, dir);
+    if (!A) return false;
+    const { g, s } = A, fy = walker.interior.floorY;
+    const past = g.p + s * 1.2, y = Math.min(fy + HOLD.door - 0.25, Math.max(fy + HOLD.floor + 0.25, eye.y));
+    const tx = g.ax === 'x' ? past : g.c, tz = g.ax === 'x' ? g.c : past;
+    dir.set(tx - eye.x, y - eye.y, tz - eye.z).normalize();
+    return true;
+  }
+
+  /** Drifting toward a door: eased onto its middle (across it and under its lintel) so you float through instead of
+   *  meeting a jamb. Only when you are already going its way. */
+  funnel(walker, dt) {
+    const v = walker.vel, sp = Math.hypot(v.x, v.z);
+    if (sp < HOLD.funnel[2]) return;
+    _dir.set(v.x / sp, 0, v.z / sp);
+    const eye = walker.eye(_e), A = this.doorAhead(eye, _dir);
+    if (!A) return;
+    const { g, along, lat, s } = A, toward = (g.ax === 'x' ? v.x : v.z) * s, vlat = g.ax === 'x' ? v.z : v.x;
+    if (toward < HOLD.funnel[2]) return;
+    // Only a near miss: where your drift meets the door's wall, within a short way of its jambs. Drifting past a door
+    // you were not making for, you go on past it.
+    if (Math.abs(along) > 0.8 && Math.abs(lat + (vlat * Math.abs(along)) / toward) > g.hw + 0.45) return;
+    const k = Math.min(1, dt * 5);
+    // Across: toward the middle, gently (never more than 0.6 of the speed you are coming at it).
+    const want = Math.max(-0.6 * toward, Math.min(0.6 * toward, -lat * 2));
+    if (g.ax === 'x') v.z += (want - v.z) * k;
+    else v.x += (want - v.x) * k;
+    // Up and down: under the lintel, over the deck's padding.
+    const fy = walker.interior.floorY, top = fy + HOLD.door - 0.2, bot = fy + HOLD.floor + 0.15;
+    const wy = eye.y > top ? (top - eye.y) * 2.5 : eye.y < bot ? (bot - eye.y) * 2.5 : v.y * 0.5;
+    v.y += (wy - v.y) * k;
   }
 
   /** Walker.slide with the walls met at your eye's height, not your feet's (weightless, you may be anywhere between the
@@ -961,6 +1046,7 @@ export class Floater {
     p.z += dz;
     const want = { x: p.x, z: p.z };
     const y = p.y + EYE;
+    const deck = this.G.walk?.deckNow, R = typeof deck === 'number' && this.inDoor(deck, p.x, p.z, 0.6) ? HOLD.doorR : BODY;
     for (const c of walker.interior.colliders) {
       if (y < c.min.y - 0.25 || y > c.max.y + 0.25) continue;
       const nx = Math.min(c.max.x, Math.max(c.min.x, p.x)), nz = Math.min(c.max.z, Math.max(c.min.z, p.z));

@@ -1,8 +1,10 @@
 // Rescue craft: a tanker or a tug, launched from the hangar to a fighter that has run dry out in space. From the
 // cockpit, 1 calls the tanker and 2 the tug (seats/fighter.mjs); the same key again recalls it before it has you.
 //
-// Both launch from your own pad (it is empty while you are out): the lift, the run down the lane and out through the
-// bay door, as a fighter does (fighter.mjs `launch`), and then into the world with the carrier's velocity. Out there
+// Both live on stands in the hangar (rescue-craft.mjs `parkCraft`, `C.craft`: a tanker and a tug a side) and launch
+// from there: up off the stand to its `ride` height, along the hangar on its jets to its side's bay door (`legsOut`),
+// nose out, and the run out through the door, as a fighter does (fighter.mjs `launch`), then into the world with the
+// carrier's velocity. (A layout with no stands: from your own pad, empty while you are out, as before.) Out there
 // they fly Newton's way, as everything here does: point the drive along the change of velocity wanted and burn (a
 // flip and burn to stop), the jets for the last few metres. A straight line through the carrier is broken by a point
 // clear of her hull (`detour`, her lofts slice by slice: fighter.mjs `hullSpan`).
@@ -25,33 +27,36 @@
 //   carries on (or turns back out), a tanker out goes home and the tug follows it out (`queue`). The tanker is no use
 //   to her then, and 1 says so.
 //
-// Home: each goes back in through the bay on your side, `bay` metres along from your pad (so it never meets you on
-// it), and is stowed once it is through the door. Says `rescue` on the bus ({ kind, state }) and the calls
+// Home: each comes back to the gate off its own stretch of door at its ride height, in through the door (the tug
+// stern first, so it parks nose out, ready), along the hangar and down onto its stand (`legsIn`), where it stays.
+// The same flying is the cutter's tug's (tow.mjs `Tow` extends this): the helpers take the carrier from `this.C` and
+// `this.body`, the world from `this.scene` and the craft's charge from `this.her()`. Says `rescue` on the bus ({ kind, state }) and the calls
 // `rescue-launch`, `rescue-on`, `rescue-done`, `rescue-recall`. Every number is the layout's `fighter.rescue`
 // (tools/carrier-v2.mjs). Looks use unseeded randoms; what happens uses none, so a scripted run is unchanged.
 
 import * as THREE from 'three';
 import { clamp } from '../util.mjs';
-import { craftMesh, craftThrust } from './rescue-craft.mjs';
+import { craftMesh, craftThrust, PARK } from './rescue-craft.mjs';
+import { Fighter } from './fighter.mjs';
 
 const FWD = new THREE.Vector3(0, 0, -1);
 const UP = new THREE.Vector3(0, 1, 0);
 const _a = new THREE.Vector3(), _b = new THREE.Vector3(), _c = new THREE.Vector3(), _d = new THREE.Vector3();
 const _e = new THREE.Vector3(), _f = new THREE.Vector3(), _g = new THREE.Vector3(), _h = new THREE.Vector3();
 const _q = new THREE.Quaternion(), _q2 = new THREE.Quaternion(), _m = new THREE.Matrix4();
-const _eu = new THREE.Euler();
+const _j = new THREE.Vector3(), _jd = new THREE.Vector3(), _jq = new THREE.Quaternion(), _lv = new THREE.Vector3();
 const smooth = (k) => k * k * (3 - 2 * k);
 
 /** The words for each kind (the HUD and damage control's card). */
 const NAMES = { tanker: 'Tanker', tug: 'Tug' };
 
 /** The hose or the cable: a thin cylinder between two world points, stretched each frame. */
-function lineMesh(color, r) {
+export function lineMesh(color, r) {
   const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, 1, 6, 1, true), new THREE.MeshBasicMaterial({ color, toneMapped: false }));
   m.frustumCulled = false;
   return m;
 }
-function stretch(m, a, b) {
+export function stretch(m, a, b) {
   m.position.lerpVectors(a, b, 0.5);
   const d = _h.subVectors(b, a), L = d.length();
   m.scale.set(1, Math.max(0.01, L), 1);
@@ -59,10 +64,12 @@ function stretch(m, a, b) {
 }
 
 export class Rescue {
-  /** `G` the game in hand (main.mjs): its fighter, guns, carrier `body`, doors, bus and damage control. */
-  constructor(G) {
-    this.G = G;
-    this.S = G.L.fighter.rescue;
+  /** `G` the game in hand (main.mjs): its fighter, guns, carrier `body`, doors, bus and damage control. The rest say
+   *  whose craft they are (tow.mjs gives the host's): `C` the carrier they live in, `body` her motion ({ vel, ang }),
+   *  `scene` where they fly once out, `doors` her bay doors, `her()` what they go out to. */
+  constructor(G, { C = G.C, body = G.body, scene = G.fighter?.scene, doors = G.doors, her = () => G.fighter?.obj } = {}) {
+    Object.assign(this, { G, C, body, scene, doors, her });
+    this.S = C.L.fighter.rescue;
     this.craft = null; // the one out, if any
     this.done = []; // what each sortie came to (tests)
     this.queue = null; // a kind to launch once the craft out is stowed (the tug, after a tanker, for a fighter shot dead)
@@ -90,15 +97,8 @@ export class Rescue {
       if (c.kind === kind && ['launch', 'out'].includes(c.state)) return this.recall();
       return this.say(`Flight control: the ${NAMES[c.kind].toLowerCase()} is already out to you.`);
     }
-    // Out of your pad, which is empty while you fly.
-    const obj = craftMesh(kind);
-    const berth = fighter.berth, home = fighter.home;
-    berth.add(obj);
-    obj.position.copy(home.pos);
-    obj.quaternion.copy(home.quat);
-    const out = fighter.out;
-    const zIn = home.pos.z + (home.pos.z < (S.bayMid ?? 33) ? 1 : -1) * S.bay;
-    this.craft = { kind, K: S.kinds[kind], obj, berth, out, zIn, pad: home.pos.clone(), padQ: home.quat.clone(), state: 'launch', t: 0, vel: new THREE.Vector3(), vLocal: new THREE.Vector3(), line: null, main: 0, hoseT: 0, beaconT: 0, grabDir: null, grabbed: false };
+    // Off its stand on your side; or, with none, out of your pad, which is empty while you fly.
+    this.launch(kind, this.spot(kind, fighter.out) ?? this.padSpot(kind));
     doors.setBay(1);
     C.bus?.emit('rescue', { kind, state: 'launch', auto });
     C.bus?.emit('call', { id: 'rescue-launch', kind });
@@ -141,6 +141,81 @@ export class Rescue {
     return text;
   }
 
+  /** The stand of a `kind` on side `out` with its craft on it, or null. */
+  spot(kind, out) {
+    return (this.C.craft ?? []).find((s) => s.kind === kind && s.out === out && s.home) ?? null;
+  }
+
+  /** No stands: a stand-in on your fighter's pad, the craft built there and taken away again when it is home. */
+  padSpot(kind) {
+    const fi = this.G.fighter, S = this.S, home = fi.home, obj = craftMesh(kind);
+    fi.berth.add(obj);
+    obj.position.copy(home.pos);
+    obj.quaternion.copy(home.quat);
+    const exitZ = home.pos.z + (home.pos.z < (S.bayMid ?? 33) ? 1 : -1) * S.bay;
+    return { kind, side: fi.out < 0 ? 'port' : 'starboard', out: fi.out, at: home.pos.clone(), q: home.quat.clone(), qOut: home.quat.clone(), qIn: fi.inbound(), back: false, exitZ, ride: home.pos.y + this.C.L.fighter.launch.lift, obj, parent: fi.berth, home: true, temp: true };
+  }
+
+  /** The craft off stand `spot`: up to its ride height, along to its door, nose out (`legsOut`), then the run out. */
+  launch(kind, spot) {
+    spot.home = false;
+    const c = (this.craft = { kind, K: this.S.kinds[kind], spot, obj: spot.obj, berth: spot.parent, out: spot.out, zIn: spot.exitZ, state: 'launch', t: 0, vel: new THREE.Vector3(), vLocal: new THREE.Vector3(), line: null, main: 0, hoseT: 0, beaconT: 0, grabDir: null, grabbed: false, legs: this.legsOut(spot), leg: null, run: false });
+    return c;
+  }
+
+  /** Stand to door, in the hangar's frame: up, along the hangar to the door's stretch for it, nose out. */
+  legsOut(s) {
+    const up = s.at.clone().setY(s.ride), ex = up.clone().setZ(s.exitZ);
+    return [{ p: up, q: s.q }, { p: ex, q: s.q }, { p: ex, q: s.qOut }];
+  }
+
+  /** Door to stand: in through the door (stern first if it parks nose out), round to its parked heading, along the
+   *  hangar over its stand, and down onto it. */
+  legsIn(s) {
+    const up = s.at.clone().setY(s.ride), ex = up.clone().setZ(s.exitZ);
+    return [{ p: ex, q: s.back ? s.qOut : s.qIn, door: true }, { p: ex, q: s.q }, { p: up, q: s.q }, { p: s.at.clone(), q: s.q }];
+  }
+
+  /** One step along its legs inside the hangar (eased in and out, at `PARK.speed` and `PARK.turn`), its jets puffing
+   *  as it starts and stops. A `door` leg waits for its side's door. True when the last leg is done. */
+  legFrame(c, dt) {
+    const o = c.obj;
+    if (!c.leg) {
+      const L = c.legs.shift();
+      if (!L) return true;
+      const p0 = o.position.clone(), q0 = o.quaternion.clone();
+      const T = Math.max(0.6, p0.distanceTo(L.p) / PARK.speed, q0.angleTo(L.q) / PARK.turn);
+      c.leg = { ...L, p0, q0, t: 0, T };
+      c.legV = c.legV ?? new THREE.Vector3();
+    }
+    const L = c.leg;
+    if (L.door && !this.doors.openOn(c.spot.side)) return false;
+    L.t += dt;
+    const k = Math.min(1, L.t / L.T), was = _lv.copy(o.position);
+    o.position.lerpVectors(L.p0, L.p, smooth(k));
+    o.quaternion.slerpQuaternions(L.q0, L.q, smooth(k));
+    // Its jets: by the change in its velocity this step (looks only).
+    const v = was.subVectors(o.position, was).multiplyScalar(1 / Math.max(dt, 1e-4));
+    const acc = _j.subVectors(v, c.legV).multiplyScalar(1 / Math.max(dt, 1e-4));
+    c.legV.copy(v);
+    c.berth.updateWorldMatrix(true, false);
+    const n = acc.length();
+    this.jets(c, acc.transformDirection(c.berth.matrixWorld).multiplyScalar(n), 3, dt);
+    craftThrust(o, 0, c.t);
+    if (k >= 1) c.leg = null;
+    return false;
+  }
+
+  /** Its quads puffing for acceleration `a` (world, m/s²) out of `full`: gas the other way. Looks only. */
+  jets(c, a, full, dt) {
+    const P = this.G.guns?.puffs, o = c.obj, quads = o.userData.quads;
+    if (!P || !quads) return;
+    const n = a.length(), k = Math.min(1, n / full);
+    const dir = _jd.copy(a).multiplyScalar(n > 1e-6 ? -1 / n : 0);
+    o.updateWorldMatrix(true, false);
+    quads.forEach((q, i) => P.jet(`${o.uuid}-${i}`, o.localToWorld(_j.copy(q)), dir, k < 0.08 ? 0 : k, dt, 0.22));
+  }
+
   /** What the cockpit shows of her: where she is, her name and what she is doing; null with none out. */
   mark(out = {}) {
     const c = this.craft, fi = this.G.fighter;
@@ -159,7 +234,7 @@ export class Rescue {
     const n = NAMES[c.kind];
     const r = c.state === 'launch' ? null : c.obj.getWorldPosition(_a).distanceTo(fi.obj.getWorldPosition(_b));
     const rng = r == null ? '' : r < 1000 ? ` ${Math.round(r)} m` : ` ${(r / 1000).toFixed(1)} km`;
-    if (c.state === 'launch') return { key: c.kind === 'tanker' ? '1' : '2', label: `${n} launching from your pad (again: recall her)` };
+    if (c.state === 'launch') return { key: c.kind === 'tanker' ? '1' : '2', label: `${n} launching from the hangar (again: recall her)` };
     if (c.state === 'out') return { key: c.kind === 'tanker' ? '1' : '2', label: `${n} inbound,${rng} out (again: recall her)` };
     if (c.state === 'dock' && this.tumbling(c)) return { key: '', label: `${n} closing:${rng}. You are tumbling: hands off, she will put a line on you.` };
     if (c.state === 'grab') return { key: '', label: `${n}'s line is on you: steadying your spin, ${fi.body.ang.length() < 0.1 ? 'nearly there' : `${Math.round(fi.body.ang.length() * 57.3)}°/s`}. Hands off.` };
@@ -193,35 +268,42 @@ export class Rescue {
     if (c.state === 'launch') this.launchFrame(c, dt);
     else if (c.state === 'in') this.inFrame(c, dt);
     else this.flyFrame(c, dt);
-    if (!this.craft) return;
-    // Her beacon: an amber flash every second and a bit, big enough to find from kilometres off.
+    if (this.craft) this.beacon(c, dt);
+  }
+
+  /** Her beacon: an amber flash every second and a bit, big enough to find from kilometres off. */
+  beacon(c, dt) {
     const B = c.obj.userData.beacon, cam = this.G.camera;
     c.beaconT += dt;
     B.visible = c.beaconT % 1.2 < 0.12;
     B.scale.setScalar(cam ? clamp(cam.position.distanceTo(c.obj.getWorldPosition(_a)) * 0.01, 2, 40) : 3);
   }
 
-  /** Up off your pad and out down the lane, in the carrier's frame, then into the world as a fighter is. */
+  /** Off its stand and along the hangar to its door (`legFrame`), then out through it, in the carrier's frame, and into
+   *  the world as a fighter is. */
   launchFrame(c, dt) {
-    const S = this.S, L = this.G.L.fighter.launch, o = c.obj;
-    const lift = 1.2;
-    const ahead = _a.set(0, 0, -1).applyQuaternion(c.padQ);
-    if (c.t < lift) o.position.set(c.pad.x, c.pad.y + L.lift * smooth(c.t / lift), c.pad.z);
-    else {
-      const tt = c.t - lift;
-      o.position.copy(c.pad).add(_b.set(0, L.lift, 0)).addScaledVector(ahead, 0.5 * S.launch * tt * tt);
-      c.vLocal.copy(ahead).multiplyScalar(S.launch * tt);
-      craftThrust(o, 0.6, c.t);
-      this.exhaust(c, 0.6, dt);
+    const S = this.S, L = this.C.L.fighter.launch, o = c.obj;
+    if (!c.run) {
+      if (!this.legFrame(c, dt)) return;
+      if (!this.doors.openOn(c.spot.side)) return; // nose out at the door, waiting for it
+      c.run = true;
+      c.t = 0;
+      c.from = o.position.clone();
+      c.ahead = new THREE.Vector3(0, 0, -1).applyQuaternion(o.quaternion);
     }
+    const tt = c.t;
+    o.position.copy(c.from).addScaledVector(c.ahead, 0.5 * S.launch * tt * tt);
+    c.vLocal.copy(c.ahead).multiplyScalar(S.launch * tt);
+    craftThrust(o, 0.6, c.t);
+    this.exhaust(c, 0.6, dt);
     if (o.position.x * c.out > Math.abs(L.clear)) {
-      const { C, body } = this.G;
+      const { C, body } = this;
       C.obj.updateMatrixWorld(true);
       const cq = C.obj.getWorldQuaternion(_q);
       const spin = _b.copy(body.ang).applyQuaternion(cq);
       const r = o.getWorldPosition(_c).sub(C.obj.getWorldPosition(_d));
       c.vel.copy(body.vel).add(spin.cross(r)).add(_e.copy(c.vLocal).applyQuaternion(c.berth.getWorldQuaternion(_q2)));
-      this.G.fighter.scene.attach(o);
+      this.scene.attach(o);
       c.state = c.home ? 'home' : 'out';
       c.t = 0;
     }
@@ -229,8 +311,8 @@ export class Rescue {
 
   /** Out in the world: to her, alongside, the hose or the cable, and home. */
   flyFrame(c, dt) {
-    const { fighter: fi, body } = this.G, S = this.S, K = c.K, o = c.obj;
-    const fw = fi.obj;
+    const fi = this.G.fighter, S = this.S, K = c.K, o = c.obj;
+    const fw = fi?.obj;
     if (fw) fw.updateWorldMatrix(true, false);
     const tp = _f, tv = _g;
     let brake = true, cruise = S.cruise, accel = S.accel, face = null, profile = null;
@@ -286,14 +368,15 @@ export class Rescue {
       // Let go inside flight control's range and slow enough: they bring you in.
       if (fp.distanceTo(gate) < fi.S.landing.range * 0.8 && _c.subVectors(fi.body.vel, this.G.body.vel).length() < fi.S.landing.speed * 0.6) this.letGo(c);
     } else if (c.state === 'home') {
-      this.gateOf(c, c.zIn, S.home, tp);
+      // To the gate off its own stretch of door, at the height it rides in the hangar.
+      this.gateOf(c, c.zIn, S.home, tp, c.spot.ride);
       this.shipVel(tp, tv);
       const d = o.position.distanceTo(tp);
       if (d < S.near) {
-        // The last metres on her jets, nose already turned in toward the bay.
+        // The last metres on her jets, turned as she goes in: nose in, or (a tug, to park nose out) stern first.
         profile = S.jets;
         cruise = S.near * 0.5;
-        face = (c.qWorld ??= new THREE.Quaternion()).setFromEuler(_eu.set(0, c.out * (Math.PI / 2), 0)).premultiply(this.G.C.obj.getWorldQuaternion(_q2));
+        face = (c.qWorld ??= new THREE.Quaternion()).copy(c.spot.back ? c.spot.qOut : c.spot.qIn).premultiply(this.C.obj.getWorldQuaternion(_q2));
       }
       if (d < S.dock.dist * 3 && _a.subVectors(c.vel, tv).length() < 4) this.stowing(c);
     }
@@ -302,15 +385,16 @@ export class Rescue {
     if (c.state === 'tow') this.towFrame(c, dt);
   }
 
-  /** Point `out` (world) off the bay on her side, `beyond` metres out past the gate, at `z` along the hangar. */
-  gateOf(c, z, beyond, out) {
-    const [gx, gy] = this.G.L.fighter.landing.gate;
-    return this.G.C.frame.localToWorld(out.set(c.out * (Math.abs(gx) + beyond), gy, z));
+  /** Point `out` (world) off the bay on her side, `beyond` metres out past the gate, at `z` along the hangar (and at
+   *  height `y`, else the landing gate's). */
+  gateOf(c, z, beyond, out, y = null) {
+    const [gx, gy] = this.C.L.fighter.landing.gate;
+    return this.C.frame.localToWorld(out.set(c.out * (Math.abs(gx) + beyond), y ?? gy, z));
   }
 
   /** The velocity of the carrier's own point `p` (world): hers, plus her turn carrying it round. */
   shipVel(p, out) {
-    const { C, body } = this.G;
+    const { C, body } = this;
     const cq = C.obj.getWorldQuaternion(_q);
     const spin = _c.copy(body.ang).applyQuaternion(cq);
     return out.copy(body.vel).add(spin.cross(_d.subVectors(p, C.obj.getWorldPosition(_d))));
@@ -321,12 +405,13 @@ export class Rescue {
    *  (fighter.mjs `hullSpan`: the lofts' half-width and half-height, the island and the drum sleeve too), grown by
    *  `clear` metres. A line that starts or ends inside that (off the bay door) is left alone. */
   detour(from, to, out) {
-    const { C, fighter } = this.G, M = this.S.clear;
+    const C = this.C, M = this.S.clear;
     out.copy(to);
     if (!this.slices) {
-      const all = fighter.hullSpan(-1e5, 1e5);
+      const span = (a, b) => Fighter.prototype.hullSpan.call({ C }, a, b); // her lofts: the layout's, whichever ship has it
+      const all = span(-1e5, 1e5);
       this.slices = { z0: all.bow - M, step: 10, list: [] };
-      for (let z = all.bow - M; z <= all.stern + M; z += 10) this.slices.list.push(fighter.hullSpan(z - 10, z + 20));
+      for (let z = all.bow - M; z <= all.stern + M; z += 10) this.slices.list.push(span(z - 10, z + 20));
     }
     const S = this.slices;
     const sliceAt = (z) => S.list[Math.floor((z - S.z0) / S.step)];
@@ -366,24 +451,28 @@ export class Rescue {
     if (a.length() > accel) a.setLength(accel);
     const nose = _e.copy(FWD).applyQuaternion(o.quaternion);
     let main = 0;
+    const jet = _f; // what her jets give (the rest is the drive along her nose)
     if (face === 'away') {
       // Towing: the bar is off her stern, so she cannot turn and burn; she brakes on her bow jets, as hard as she pulls.
       main = Math.max(0, a.dot(nose));
+      jet.copy(a).addScaledVector(nose, -main);
       c.vel.addScaledVector(a, dt);
     } else if (a.length() > S.jets) {
       // The drive pushes only along her nose; the jets take what they can of the rest.
       main = Math.max(0, a.dot(nose));
       const side = a.addScaledVector(nose, -main); // what the drive cannot give (sideways, or astern): the jets
       if (side.length() > S.jets) side.setLength(S.jets);
+      jet.copy(side);
       c.vel.addScaledVector(nose, main * dt).addScaledVector(side, dt);
-    } else c.vel.addScaledVector(a, dt);
+    } else (jet.copy(a), c.vel.addScaledVector(a, dt));
     o.position.addScaledVector(c.vel, dt);
+    this.jets(c, jet, S.jets, dt);
     // Her nose: along the burn while it is a hard one, else where `face` says.
     const hard = _d.subVectors(want, vr).length() > S.jets * 2 && face !== 'away';
     let look = null;
     if (hard) look = _d.normalize();
-    else if (face === 'away') look = _d.subVectors(o.position, this.G.fighter.obj.getWorldPosition(_g)).normalize();
-    else if (face === 'her') look = _d.subVectors(this.G.fighter.obj.getWorldPosition(_g), o.position).normalize();
+    else if (face === 'away') look = _d.subVectors(o.position, this.her().getWorldPosition(_g)).normalize();
+    else if (face === 'her') look = _d.subVectors(this.her().getWorldPosition(_g), o.position).normalize();
     else if (face) _q.copy(face);
     else if (dist > 2) look = _d.copy(rel).normalize();
     if (look) _q.setFromRotationMatrix(_m.lookAt(_g.set(0, 0, 0), look, _h.copy(UP).applyQuaternion(o.quaternion)));
@@ -514,36 +603,42 @@ export class Rescue {
   goHome(c, why) {
     const fi = this.G.fighter;
     if (c.line) (c.line.removeFromParent(), (c.line = null));
-    if (fi.towed) fi.towed = false; // the bar, the hose or the grab line comes off
+    if (fi?.towed) fi.towed = false; // the bar, the hose or the grab line comes off
     c.home = why;
-    if (c.state !== 'launch') c.state = 'home';
+    if (c.state === 'launch' && !c.run) {
+      // Still in the hangar: straight back to its stand.
+      c.state = 'in';
+      const s = c.spot, up = s.at.clone().setY(s.ride);
+      c.leg = null;
+      c.legs = [{ p: c.obj.position.clone(), q: s.q }, { p: up, q: s.q }, { p: s.at.clone(), q: s.q }];
+    } else if (c.state !== 'launch') c.state = 'home';
     c.t = 0;
     this.G.C.bus?.emit('rescue', { kind: c.kind, state: 'home', why });
   }
 
-  /** At her own gate off the bay: back into the carrier's frame, nose in, and in through the door. */
+  /** At her own gate off the bay: back into the carrier's frame, and in through the door to her stand (`legsIn`). */
   stowing(c) {
-    this.G.C.obj.updateMatrixWorld(true);
+    this.C.obj.updateMatrixWorld(true);
     c.berth.attach(c.obj);
     c.state = 'in';
     c.t = 0;
-    c.from = c.obj.position.clone();
-    c.q0 = c.obj.quaternion.clone();
-    c.qIn = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, c.out * (Math.PI / 2), 0));
-    this.G.doors.setBay(1);
+    c.leg = null;
+    c.legV = null;
+    c.legs = this.legsIn(c.spot);
+    this.doors.setBay(1);
   }
 
+  /** In the hangar, along its legs, down onto its stand: there it stays (one built on a pad is taken away). */
   inFrame(c, dt) {
-    const o = c.obj, S = this.S;
-    const to = _a.set(c.out * S.stow, c.pad.y + this.G.L.fighter.launch.lift, c.zIn);
-    const k = Math.min(1, c.t / S.inT);
-    o.position.lerpVectors(c.from, to, smooth(k));
-    o.quaternion.slerpQuaternions(c.q0, c.qIn, smooth(Math.min(1, k * 2)));
+    if (!this.legFrame(c, dt)) return;
+    const o = c.obj, s = c.spot;
+    o.position.copy(s.at);
+    o.quaternion.copy(s.q);
     craftThrust(o, 0, c.t);
-    if (k >= 1) {
-      o.removeFromParent();
-      this.G.C.bus?.emit('rescue', { kind: c.kind, state: 'stowed' });
-      this.craft = null;
-    }
+    o.userData.beacon.visible = false;
+    if (s.temp) o.removeFromParent();
+    else s.home = true;
+    this.G.C.bus?.emit('rescue', { kind: c.kind, state: 'stowed' });
+    this.craft = null;
   }
 }

@@ -1,0 +1,16 @@
+{
+  "id": "power-lost",
+  "about": "The reactor or the switchboards are under integrity.power.below: the ship is on emergency power and the main drive is out (status-calls.mjs).",
+  "who": "ai",
+  "say": [
+    "Main power lost. Emergency power only."
+  ],
+  "to": {
+    "all": "tannoy",
+    "bridge": "headset",
+    "engineering": "headset"
+  },
+  "priority": 4,
+  "delay": 0.5,
+  "again": 10
+}

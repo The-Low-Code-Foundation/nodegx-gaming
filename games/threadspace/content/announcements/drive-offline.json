@@ -1,0 +1,16 @@
+{
+  "id": "drive-offline",
+  "about": "The main drive cannot light: hurt below working, or no power to it (status-calls.mjs, on the change and when you press W at the helm with it out).",
+  "who": "ai",
+  "say": [
+    "Main drive offline."
+  ],
+  "to": {
+    "all": "tannoy",
+    "bridge": "headset",
+    "engineering": "headset"
+  },
+  "priority": 3,
+  "delay": 0.5,
+  "again": 5
+}

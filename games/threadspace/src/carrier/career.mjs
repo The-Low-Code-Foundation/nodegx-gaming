@@ -38,6 +38,7 @@ import { frameOf, sideOf } from './wayfinding.mjs';
 import { fmt as fmtTime } from './watch.mjs';
 import { drumToShip } from './drum.mjs';
 import { loadVoyage, saveVoyage, setShip } from '../core/voyage.mjs';
+import { kitIn } from './guide.mjs';
 
 const KEY = 'threadspace.carrier.career'; // the spin-drum carrier's; another ship's career saves under its own (`Career.key`)
 const ALL = ['guns', 'raids', 'fighters', 'helm'];
@@ -205,6 +206,13 @@ export class Career {
     const K = this.K, v = loadVoyage();
     const s = fresh ? null : Career.saved(K);
     const where = s?.i ? v.aboard : K.start.ship;
+    if (!s) {
+      // A fresh career: you are where it starts, and every carried ship on her cradle (a voyage left saying you were
+      // aboard a cutter, out, hid her from the hangar). Her damage stays: the hangar crew are already on it.
+      v.aboard = where;
+      for (const e of Object.values(v.ships)) delete e.out;
+      saveVoyage(v);
+    }
     if (where !== this.here && K.ships[where]) {
       if (!s) delete v.career; // a fresh start begins on the other page
       delete v.roam;
@@ -760,8 +768,11 @@ export class Career {
         return room(st.rooms.find((r) => !this.s?.seen?.has(r)) ?? st.rooms[0]);
       case 'drill':
         return this.s?.job ? null : room(st.room); // once it is called, damage control's own red marker has it
-      case 'suit':
-        return room(st.room ?? 'damage-control');
+      case 'suit': {
+        // The SUIT AIR locker itself, not the middle of the room (guide.mjs `kitIn`).
+        const t = room(st.room ?? 'damage-control'), at = t && kitIn(this.C, 'suit', t.room);
+        return at ? { ...t, x: at.x, z: at.z, label: 'SUIT AIR locker' } : t;
+      }
       case 'man':
       case 'shoot':
       case 'obey':

@@ -235,7 +235,8 @@ export class Weapons {
     this.turretsFrame(dt, f, mode);
     if (fi) this.cannonFrame(dt);
     if (fi && W.missile) this.railsFrame(dt);
-    if (W.missile) this.missilesFrame(dt), this.flareAI(dt), this.flaresFrame(dt);
+    if (W.missile) this.missilesFrame(dt), this.flareAI(dt);
+    if (W.missile || W.flares?.ship) this.shipFlaresFrame(dt), this.flaresFrame(dt), this.torpLure();
     if (W.railgun) this.railFrame(dt);
     this.shellsFrame(dt);
     this.roundsFrame(dt);

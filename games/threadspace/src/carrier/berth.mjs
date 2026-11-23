@@ -14,7 +14,12 @@
 //   out       yours. L in the recovery lane's catchment asks to fly her in yourself (recovery.mjs: the lane, the
 //             door, the capture or the wave-off); L again there, or L anywhere else within `recover.range` of the gate
 //             and slower than `recover.speed` against the host, hands her to flight control (`takeIn`).
-//   recover   flown in along a path in the host's frame: to the gate off her door, then sideways onto the cradle.
+//   tug       flight control's tug (tow.mjs, `berth.tug`, set by main.mjs) is on its way out to her from its stand in
+//             the hangar: she holds where she is, hands off, her drift taken off at `HOLD` m/s². Without a tug (or none
+//             on its stand) `takeIn` goes straight to `recover`.
+//   recover   flown in along a path in the host's frame: to the gate off her door, then sideways onto the cradle. With
+//             the tug on her (`towed()`), it is the tug that has her, clamped to her outboard flank, until she reaches
+//             the cradle's arms off the door (`offU` along the path), where it lets go and goes home.
 //   capture   you flew her to the cradle's arms (`capture`): drawn onto the cradle from the place and speed she had.
 //   closing   down on the cradle, the door coming shut; then berthed.
 //
@@ -23,7 +28,7 @@
 // hangar but no `berths` yet gets a stand-in from `standIn()`.
 //
 // `lastRecovery` is how she last came home, for a career to read (with `crew: who` when the crew's pilot had her at
-// the time): { manual: false } from flight control, or the grade
+// the time): { manual: false } from flight control (`tug: true` when the tug brought her), or the grade
 // of your own approach (recovery.mjs `grade`: closing speed, offset, alignment, seconds from the holding point).
 //
 // Not here yet (ROADMAP phase 12's second half): the cutter against the carrier's hull as solids, the host under way
@@ -36,6 +41,7 @@ const PUSH = 2.2; // m/s the cradle's arms reach
 const PUSH_ACC = 0.5; // m/s² they push at
 const GATE = 30; // metres beyond `clear` where a recovery lines up
 const RECOVER = { range: 900, speed: 20, cruise: 14 }; // flight control takes her inside this, slower than this; flies her in at this
+const HOLD = 0.5; // m/s² her drift is taken off at while she waits for the tug
 const smooth = (k) => k * k * (3 - 2 * k);
 const _p = new THREE.Vector3(), _q = new THREE.Quaternion(), _v = new THREE.Vector3(), _w = new THREE.Vector3();
 const _h = new THREE.Quaternion();
@@ -110,6 +116,7 @@ export class Berth {
       const said = this.lane?.request();
       return said ? this.tell(said, 5) : this.takeIn();
     }
+    if (this.phase === 'tug') return this.tell('Flight control has her: the tug is on its way. Hands off.', 2);
     return this.tell(this.phase === 'recover' || this.phase === 'closing' || this.phase === 'capture' ? 'Flight control has her.' : 'Launching.', 2);
   }
 
@@ -121,6 +128,7 @@ export class Berth {
       const v = _v.copy(this.body.vel).sub(this.hostVel).length();
       if (d > RECOVER.range) return this.tell(`Flight control: too far out to take you. Close to within ${RECOVER.range} m of the bay (${Math.round(d)} m now).`, 4);
       if (v > RECOVER.speed) return this.tell(`Flight control: too fast to take you. Slow to under ${RECOVER.speed} m/s against her (${Math.round(v)} now).`, 4);
+      if (this.startTug()) return this.tell('Flight control has her: the tug is coming out to bring her in. Hands off, hold where you are.', 5);
       this.startRecover();
       return this.tell('Flight control has her. Hands off: coming aboard.', 4);
     }
@@ -163,6 +171,27 @@ export class Berth {
     this.C.bus?.emit('berth-phase', { phase, was }); // every change, for whoever follows her (pilot.mjs, a career)
   }
 
+  /** Flight control's tug out to her (tow.mjs): she holds where she is until it has her. False with no tug to send. */
+  startTug() {
+    if (!this.tug?.send(this)) return false;
+    const { C, H } = this;
+    H.obj.updateMatrixWorld(true);
+    const hq = H.obj.getWorldQuaternion(new THREE.Quaternion());
+    this.p0 = H.frame.worldToLocal(C.obj.position.clone());
+    this.q0 = hq.clone().invert().multiply(C.obj.quaternion);
+    this.drift = this.body.vel.clone().sub(this.hostVel).applyQuaternion(hq.invert()); // against the host, her frame
+    this.tugged = true;
+    this.lastRecovery = { manual: false, tug: true, ...this.flownBy() };
+    this.hostDoors.setBay(1);
+    this.set('tug');
+    return true;
+  }
+
+  /** The tug has her (tow.mjs): flight control's path from where she is, the tug clamped on. */
+  towed() {
+    if (this.phase === 'tug') this.startRecover();
+  }
+
   startRecover() {
     const { C, H, spec } = this;
     H.obj.updateMatrixWorld(true);
@@ -179,9 +208,14 @@ export class Berth {
     }
     pts.push(gate, off, this.home.clone());
     this.path = new THREE.CatmullRomCurve3(pts, false, 'centripetal');
-    this.pathT = clamp(this.path.getLength() / RECOVER.cruise, 12, 90);
-    this.gateU = clamp(1 - (GATE + this.run) / this.path.getLength(), 0, 1); // how far along the path the gate is
-    this.lastRecovery = { manual: false, ...this.flownBy() };
+    const len = this.path.getLength();
+    this.pathT = clamp(len / RECOVER.cruise, 12, 90);
+    // How far along the path (by length: `getPointAt`) the gate is, and the point off the door where the cradle's arms
+    // take her (and the tug lets her go).
+    this.gateU = clamp(1 - (GATE + this.run) / len, 0, 1);
+    this.offU = clamp(1 - off.distanceTo(this.home) / len, 0, 1);
+    this.u = 0;
+    this.lastRecovery = { manual: false, ...(this.tugged ? { tug: true } : {}), ...this.flownBy() };
     this.hostDoors.setBay(1);
     this.set('recover');
   }
@@ -192,6 +226,7 @@ export class Berth {
     if (this.phase === 'out') return;
     if (this.phase === 'berthed' || this.phase === 'closing') {
       this.place(this.home, this.qBerth);
+      if (this.phase === 'closing') hostDoors.setBay(this.tug?.outside ? 1 : 0); // not shut on the tug coming home
       if (this.phase === 'closing' && hostDoors.kOf(spec.door) <= 0) {
         this.set('berthed');
         this.say('On the cradle. Bay door shut.', 3);
@@ -220,9 +255,18 @@ export class Berth {
       _w.copy(this.p0).multiplyScalar(2 * k3 - 3 * k2 + 1).addScaledVector(this.v0, (k3 - 2 * k2 + k) * this.capT).addScaledVector(this.home, -2 * k3 + 3 * k2);
       this.place(_w, _q.copy(this.q0).slerp(this.qBerth, smooth(clamp(k * 2.5, 0, 1))));
       if (k >= 1) {
-        hostDoors.setBay(0);
+        hostDoors.setBay(this.tug?.outside ? 1 : 0);
         this.set('closing');
       }
+      return;
+    }
+    if (this.phase === 'tug') {
+      // Hands off, waiting for the tug: her own jets take her drift off and hold her where she is.
+      const v = this.drift.length();
+      if (v > 0) this.drift.setLength(Math.max(0, v - HOLD * dt));
+      this.p0.addScaledVector(this.drift, dt);
+      this.place(this.p0, this.q0);
+      this.body.vel.add(_v.copy(this.drift).applyQuaternion(this.H.obj.getWorldQuaternion(_h)));
       return;
     }
     if (this.phase === 'recover') {
@@ -232,9 +276,11 @@ export class Berth {
         this.t -= dt; // holding at the gate until the door is up
         k = clamp(this.t / this.pathT, 0, 1);
       }
-      this.place(this.path.getPoint(smooth(k)), _q.copy(this.q0).slerp(this.qBerth, smooth(clamp(k * 1.6, 0, 1))));
+      this.u = smooth(k);
+      this.place(this.path.getPointAt(this.u), _q.copy(this.q0).slerp(this.qBerth, smooth(clamp(k * 1.6, 0, 1))));
       if (k >= 1) {
-        hostDoors.setBay(0);
+        hostDoors.setBay(this.tug?.outside ? 1 : 0);
+        this.tugged = false;
         this.set('closing');
       }
     }
@@ -260,6 +306,7 @@ export class Berth {
       const d = this.C.obj.position.distanceTo(this.gateWorld(_p));
       return d < RECOVER.range * 3 ? `bay ${Math.round(d)} m` : '';
     }
+    if (this.phase === 'tug') return this.tug?.status?.() ?? 'the tug is coming out to her';
     return { berthed: 'on the cradle · L launches', opening: 'bay door opening', launch: `cradle pushing her out · ${Math.max(0, Math.round(this.run - this.s))} m to clear`, recover: 'flight control has her', capture: 'the cradle has her', closing: 'on the cradle · bay door closing' }[this.phase];
   }
 }

@@ -1,0 +1,20 @@
+{
+  "id": "fighter-leak",
+  "about": "One of your fighter's tanks is holed and leaking (fighter-damage.mjs harm.leaks; status-calls.mjs).",
+  "who": "ai",
+  "say": [
+    "{what}"
+  ],
+  "slots": {
+    "what": [
+      "Propellant leak.",
+      "Jet gas leak."
+    ]
+  },
+  "to": {
+    "you": "radio"
+  },
+  "priority": 3,
+  "delay": 0.5,
+  "again": 15
+}

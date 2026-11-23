@@ -131,7 +131,7 @@
     "guns": "The turret hatches.",
     "helm": "The helm (aboard the cutter, the pilot's couch).",
     "launch": "Launch and recovery by your own hand: L at the helm of a carried ship.",
-    "firecontrol": "Giving fire control orders (the weapons state, the designated target). Nothing in the game asks for it yet.",
+    "firecontrol": "Giving fire control orders (the weapons state, the designated target): the FIRE CONTROL selector at the gunner's station on the cutter's flight deck.",
     "fighters": "Climbing into a fighter.",
     "raids": "Raiders come by themselves."
   },

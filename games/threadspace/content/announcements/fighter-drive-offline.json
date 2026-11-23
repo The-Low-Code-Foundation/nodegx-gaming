@@ -1,0 +1,14 @@
+{
+  "id": "fighter-drive-offline",
+  "about": "Your fighter's drive is out (fighter-damage.mjs harm.drive 0): on the change, and when you press W with it out (status-calls.mjs).",
+  "who": "ai",
+  "say": [
+    "Main drive offline."
+  ],
+  "to": {
+    "you": "radio"
+  },
+  "priority": 3,
+  "delay": 0.5,
+  "again": 5
+}

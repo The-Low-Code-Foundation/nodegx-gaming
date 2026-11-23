@@ -328,23 +328,82 @@ function furnish(C, I, c, hooks, open) {
     default:
       if (c.fit) fit(I, c, open, signColor);
   }
-  // A sign over every door into this room, on the far side (in the passage, or in the room next door). A room with a
-  // ladder in it says where the ladder goes.
+  // A sign over every door into this room, on the far side (in the passage, or in the room next door). In a passage's
+  // side wall it is a blade: a lit block standing out from the wall over the door's head, square to it, its name on
+  // both faces, so it reads as you come along the passage looking ahead (flat on the wall it is only seen once you are
+  // beside it). Anywhere you face the door as you come to it, it is flat over the door.
+  // A room with a ladder in it says where the ladder goes, on a second line.
   const ladders = C.ways.portals.get(c.id).filter((p) => p.kind === 'ladder').map((p) => `${p.deck < c.deck ? '▲' : '▼'} DECK ${p.deck}`);
-  const text = [c.name.toUpperCase(), ...ladders].join(' · ');
+  const lines = [c.name.toUpperCase(), ...(ladders.length ? [ladders.join(' · ')] : [])];
   for (const d of C.L.doors) {
     if (!d.between.includes(c.id) || c.system === 'corridor' && !ladders.length) continue;
     const other = C.rooms.get(d.between[0] === c.id ? d.between[1] : d.between[0]);
     const rel = facing(other, c);
-    const x = rel.along === 'x' ? (rel.a === 'e' ? other.x[1] - 0.12 : other.x[0] + 0.12) : d.at;
-    const z = rel.along === 'z' ? (rel.a === 's' ? other.z[1] - 0.12 : other.z[0] + 0.12) : d.at;
-    const ry = rel.along === 'x' ? (rel.a === 'e' ? -Math.PI / 2 : Math.PI / 2) : rel.a === 's' ? Math.PI : 0;
+    // The wall the door is in, and the way out of it into `other` (where the sign stands).
+    const wx = rel.along === 'x' ? (rel.a === 'e' ? other.x[1] : other.x[0]) : d.at;
+    const wz = rel.along === 'z' ? (rel.a === 's' ? other.z[1] : other.z[0]) : d.at;
+    const nx = rel.along === 'x' ? (rel.a === 'e' ? -1 : 1) : 0, nz = rel.along === 'z' ? (rel.a === 's' ? -1 : 1) : 0;
     // Into a tall room (the hangar) the sign is twice the size and higher, so it reads from across the deck.
     const k = (other.h ?? H) > 6 ? 2.2 : 1;
-    const w = Math.min(2.6, 0.5 + text.length * 0.095) * k, h = 0.3 * k;
-    const m = C.atlas.plane(w, h, (g, pw, ph) => drawSign(g, pw, ph, text, signColor), 180 / k);
-    I.group.add(at(m, x, I.floorY + (k > 1 ? 3.4 : 2.7), z, 0, ry, 0));
+    // A blade only where you come at the door along a passage (a door in its side wall). A door you face as you come
+    // to it (in a passage's end wall, or from a room: the cutter's flight deck) gets a sign flat over it.
+    const xs = other.x[1] - other.x[0], zs = other.z[1] - other.z[0];
+    const side = other.system === 'corridor' && (rel.along === 'x' ? zs > xs : xs > zs);
+    if (!side) {
+      const h = (lines.length > 1 ? 0.46 : 0.3) * k, oh = other.h ?? H, wall = rel.along === 'x' ? zs : xs;
+      const w = Math.min(2.6 * k, wall - 0.3, (0.5 + Math.max(...lines.map((t) => t.length)) * 0.1) * k);
+      const y = Math.min(I.floorY + (k > 1 ? 3.4 : 2.56) + h / 2, I.floorY + oh - 0.1 - h / 2);
+      const m = C.atlas.plane(w, h, (g, pw, ph) => drawBlade(g, pw, ph, lines, signColor), 180 / k);
+      I.group.add(at(m, wx + nx * 0.12, y, wz + nz * 0.12, 0, Math.atan2(nx, nz), 0));
+      continue;
+    }
+    const across = rel.along === 'x' ? other.x[1] - other.x[0] : other.z[1] - other.z[0]; // never more than 45% of the way across
+    const len = Math.max(0.7, Math.min(0.42 * across - BLADE_GAP, 1.5 * k, (0.35 + Math.max(...lines.map((t) => t.length)) * 0.07) * k));
+    const h = (lines.length > 1 ? 0.46 : 0.3) * k, oh = other.h ?? H;
+    const y = Math.min(I.floorY + (k > 1 ? 3.4 : 2.56) + h / 2, I.floorY + oh - 0.1 - h / 2);
+    // Stood off the wall by `BLADE_GAP` on an arm, clear of the wall's panels, frames and pipes (flush, the end of the
+    // name was buried in them).
+    const off = BLADE_GAP + len / 2, cx = wx + nx * off, cz = wz + nz * off;
+    // A face each side, facing along the wall (each reads the right way round from its own side).
+    const tx = rel.along === 'x' ? 0 : 1, tz = rel.along === 'x' ? 1 : 0;
+    for (const side of [1, -1]) {
+      const m = C.atlas.plane(len, h, (g, pw, ph) => drawBlade(g, pw, ph, lines, signColor), 170 / k);
+      I.group.add(at(m, cx + tx * side * 0.026, y, cz + tz * side * 0.026, 0, Math.atan2(tx * side, tz * side), 0));
+    }
+    // The block between the faces, and the bracket it hangs from at the wall.
+    const blk = box(rel.along === 'x' ? len : 0.045, h + 0.04, rel.along === 'x' ? 0.045 : len, BLADE);
+    I.group.add(at(blk, cx, y, cz));
+    I.group.add(at(box(rel.along === 'x' ? 0.05 : 0.12, h + 0.14, rel.along === 'x' ? 0.12 : 0.05, BLADE), wx + nx * 0.03, y, wz + nz * 0.03));
+    // The arm from the bracket to the blade, along its top and its foot.
+    for (const dy of [h / 2 - 0.03, -h / 2 + 0.03]) {
+      const am = BLADE_GAP + 0.04;
+      I.group.add(at(box(rel.along === 'x' ? am : 0.035, 0.035, rel.along === 'x' ? 0.035 : am, BLADE), wx + nx * am / 2, y + dy, wz + nz * am / 2));
+    }
   }
+}
+
+const BLADE = new THREE.MeshLambertMaterial({ color: '#1a1f27' });
+const BLADE_GAP = 0.3; // m from the wall to a blade sign's near edge
+
+/** A blade sign's face: the room's name, and under it where its ladders go, lit on a dark plate. */
+function drawBlade(g, cw, ch, lines, color) {
+  g.fillStyle = '#0b1018';
+  g.fillRect(0, 0, cw, ch);
+  g.strokeStyle = color;
+  g.lineWidth = Math.max(2, ch * 0.05);
+  g.strokeRect(g.lineWidth, g.lineWidth, cw - g.lineWidth * 2, ch - g.lineWidth * 2);
+  g.fillStyle = color;
+  g.textAlign = 'center';
+  g.textBaseline = 'middle';
+  const room = cw * 0.82 - ch * 0.3; // a clear margin at both ends: the text never runs to the edge
+  const one = lines.length === 1;
+  lines.forEach((t, i) => {
+    const size = Math.round(ch * (one ? 0.5 : i ? 0.26 : 0.34));
+    g.font = `600 ${size}px ui-monospace, Menlo, monospace`;
+    const wide = g.measureText(t).width;
+    if (wide > room) g.font = `600 ${Math.floor((size * room) / wide)}px ui-monospace, Menlo, monospace`;
+    g.fillText(t, cw / 2, ch * (one ? 0.5 : i ? 0.72 : 0.34) + 2);
+  });
 }
 
 /** Furniture by kind, for any room whose layout entry has `fit`: tables, cabins, washroom, shelves, workshop, gym,
@@ -710,12 +769,21 @@ function ladder(C, I, l, end, hooks) {
   if (up) for (let y = 0.3; y < top; y += 0.3) g.add(at(box(0.7, 0.04, 0.06, rail), 0, y, 0));
   // At the foot, a hazard plate; the hatch overhead (or underfoot, going down) is a real opening with a lid
   // (`hatches()`), so a climb goes through the deck instead of through a solid slab.
-  if (up) g.add(at(box(1.3, 0.03, 1.3, hazardMat()), 0, 0.02, 0));
+  // (Not where a ladder down has its hatch in this deck nearby: the plate lay over that hatch, and you climbed down
+  // through it.)
+  const floorOf = (id) => C.L.decks.find((d) => d.id === id).floor;
+  const downNear = C.L.ladders.some((m) => m !== l && ['a', 'b'].some((e) => {
+    const q = m[e], o = m[e === 'a' ? 'b' : 'a'];
+    return q.deck === p.deck && floorOf(o.deck) < floorOf(q.deck) && Math.hypot(q.at[0] - x, q.at[1] - z) < 2.4;
+  }));
+  if (up && !downNear) g.add(at(box(1.3, 0.03, 1.3, hazardMat()), 0, 0.02, 0));
   g.position.set(x, I.floorY, z);
   g.rotation.y = p.yaw ?? 0;
   I.group.add(g);
   const name = C.L.decks.find((d) => d.id === other.deck).name;
-  I.use(`${l.id}-${end}`, `${up ? 'Climb up' : 'Climb down'} to the ${name.toLowerCase()}`, x, z, () => hooks.ladder?.(l, end), { r: 2 });
+  // The use is where your hand goes: up by the hatch overhead, down by the one underfoot. Where an up and a down ladder
+  // stand side by side, looking up picks the one going up and looking down the one going down.
+  I.use(`${l.id}-${end}`, `${up ? '▲ Climb up' : '▼ Climb down'} to the ${name.toLowerCase()}`, x, z, () => hooks.ladder?.(l, end), { r: 2.3, y: I.floorY + (up ? 2.15 : 0.55) });
 }
 
 // --- sealed compartments: machinery you see but do not walk into -----------------------------------------------------

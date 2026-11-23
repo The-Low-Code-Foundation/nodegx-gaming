@@ -5,6 +5,7 @@ import { box, cyl, at, mat } from '../../util.mjs';
 import { P, G, place } from './parts.mjs';
 import { poster } from './paper.mjs';
 import { hold, refillPoint } from '../weightless.mjs';
+import { parkCraft } from '../rescue-craft.mjs';
 
 /** The hangar's dressing, after layout.mjs has put the fighters, the lanes, the bay door and the crates in. */
 export function dressHangar(C, I, c) {
@@ -106,9 +107,12 @@ function zeroG(C, I, c, { yellow }) {
     for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) g.add(at(box(0.06, 0.02, 1.2, strap), sx * (W / 2 + 0.4), 0.02, sz * (D / 2 + 0.5)), at(box(0.06, H * 0.9, 0.06, strap), sx * (W / 2 + 0.02), H * 0.45, sz * (D / 2 + 0.03)));
     place(I, g, x, z, ry);
   };
+  // The rescue craft's stands (rescue-craft.mjs `parkCraft`): a tanker a side forward of the doors, a tug a side aft
+  // of them. With them, the after crates go hard against the after bulkhead, behind the tugs.
+  const craft = C.L.fighter?.rescue ? parkCraft(C, I, c, { yellow, steel: P.steel, dark: P.dark }) : null;
   for (const s of [-1, 1]) {
     netted(s * 12.5, z1 + 6, 0);
-    if (z2 - (padZ.at(-1) ?? z2) > 10) netted(s * 12.5, z2 - 6, 0);
+    if (z2 - (padZ.at(-1) ?? z2) > 10) netted(s * 12.5, craft ? z2 - 2.8 : z2 - 6, 0);
   }
   // A tool chest clamped to the deck by each pad, toward the walkway, a tool on a tether from it to a deck ring.
   const chest = () => {

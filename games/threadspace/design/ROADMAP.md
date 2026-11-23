@@ -857,7 +857,7 @@ apprentice" in `watches.json`).
 **Left in phase 12:**
 
 - **Flying her in yourself**: a lane to the gate and a capture, as `approach.mjs` and `Fighter.capture` do for a
-  fighter. Today only flight control brings her in.
+  fighter. Today flight control's tug tows her in (`tow.mjs`).
 - **Solids**: the cutter passes through the carrier's hull, and a fighter through a berthed cutter (only her cradle
   is solid to it). `collide.mjs` is written round one fighter and one ship; it needs "this body against that ship".
 - **The host under way**: the carrier stands still in the world while you are out (`berth.hostVel` is zero). She
@@ -875,6 +875,59 @@ apprentice" in `watches.json`).
 - **Looks**: the cutter has no Blender hull (`assets/cutter/hull.glb` would be picked up), the hangar is dim round
   the berths, the cradles are plain.
 - **Voices**: five new room names and the earlier unrecorded calls have no clip (`node tools/voices.mjs --list`).
+
+### After the third play (22 November 2026)
+
+The player flew the cutter story and sent fourteen points. What was done:
+
+1. **Where to go.** A gold diamond hangs at the next door, ladder, hatch or lift on the way to the order in hand,
+   and an arrow at the screen's edge points to it when it is out of sight (`guide.mjs`; `?guide=0` turns it off).
+   The suit order points at the SUIT AIR locker itself.
+2. **No cutters in the hangar.** A voyage save from an earlier run still had them out. A berth now brings home a ship
+   that is marked out, and a new career clears every `out`.
+3. **Doorways.** Weightless, a push-off near a door aims through it, a near miss is eased into the doorway
+   (`Floater.funnel`), and the body is thinner in a doorway (`HOLD.doorR`), so W no longer bounces you between the
+   frame's sides.
+4. **Turret cabs** are rebuilt: seat, grips, sight, breech, a fire-control screen (`turret-cab.mjs`).
+5. **The hiss is gone.** The ambience is fan and electrical hum, crew voices far off, and beeps for good and bad
+   (`ambience.mjs`).
+6. **The tug** brings the cutter in when you ask for docking in the lane (`tow.mjs`, the berth's `tug` phase).
+7. **Tankers and tugs** have their own stands in the hangar: tankers along the sides forward, tugs aft. They go
+   back to them after a job and never vanish (`rescue-craft.mjs` `PARK`).
+8. **The drive spools**: a whirring spin-up and spin-down on the cutter's and the fighter's main drive
+   (`spool.mjs`).
+9. **Padding.** Weightless, your eye stays 0.95 m off the deck and 0.45 m under the deckhead (`HOLD.floor`,
+   `HOLD.head`).
+10. **Door signs.** Over a corridor's side doors, signs stand out from the wall as blades, clear of it. A door you
+    only meet head on has a flat sign on the wall.
+11. **Brace straps** are parked (`BRACE_STRAPS = false` in `weightless.mjs`).
+12. **The cutter's bridge** has live screens and working uses: the fire-control selector, the nav plot, crew
+    orders, the radiators (`sets/flight-deck.mjs`).
+13. **The ship calls out faults**: drive offline and back, power lost and back, a tank leak, jets degraded, and the
+    same for a fighter (`status-calls.mjs`, ten new announcements).
+14. **Ladders.** The forward trunk's three ladders are spread apart. Each use says "▲ Climb up" or "▼ Climb down".
+    There is no hazard plate next to a down hatch. A turret's hatch lid slides open as you climb, and the cab hides
+    whatever would be in your face.
+
+And two quick fixes after it:
+
+- **The cutter's drive is heard burning**, not only spooling: the fighter's engine voice, deeper and heavier
+  (`spool.mjs` `SHIP_BURN`, played by `ambience.mjs`). The carrier's drive gets it too, fainter (she is big).
+- **The cutter has flares**: M at the helm, her crew's own when you are not there, and a torpedo in its last stretch
+  can take one for her (`weapons.flares.ship`, `lure` 0.18 a flare). In a test raid of about 280 s, four salvos
+  turned four torpedoes, and two went off on flares 50 m out.
+
+Left over:
+
+- A fighter still floats home under flight control: the tug is only for the cutter.
+- The parked tankers and tugs are not solid.
+- The tug overshoots by about 45 m before it settles on the line.
+- The ten new calls have no clips yet: `GEMINI_API_KEY=... node tools/voices.mjs --only ai`.
+- The new sounds' levels have not been listened to.
+- The bridge panels' lamps do not change, and the selector's labels are small.
+- The `brace` check fails while the straps are parked: it wants a new form (holding a rail, or the floor padding)
+  before it means anything again. `raid`, `walk`, `float` and `cutter` have new baselines (CLAUDE.md); the rest
+  held.
 
 ### What comes over from the first ThreadSpace (for phases 15 and 16)
 

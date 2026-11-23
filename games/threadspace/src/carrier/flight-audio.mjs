@@ -12,6 +12,12 @@
 // ambience "Alive", power-up "Spin-up".
 //
 // It shares the page's AudioContext (sfx.mjs), so the browser's "click first" rule is met by the same click.
+//
+// On top of the lab's engine, the turbopump's spool (spool.mjs, `SPOOL.fighter`): lighting the drive, a whine climbs
+// with a "wub wub" throb speeding up under it, then settles into the burn; cutting it, the whine falls away and the
+// throb slows. `driveFail()` is W pressed with the drive out: the pump kicks and dies.
+
+import { Spool, SPOOL, loadDsp } from './spool.mjs';
 
 const ENGINE = { size: 1, whine: 0.18, harmony: 0.67, grit: 0, hull: 0.74, wub: 0.3 };
 const JETS = { tone: 0.62, thump: 0.83, release: 96, pop: 0.51, level: 0.23 };
@@ -53,12 +59,9 @@ export class FlightAudio {
       this.bus.connect(ls).connect(pk).connect(lp).connect(helmet);
       lp.connect(room).connect(wet).connect(helmet);
       helmet.connect(this.out);
-      try {
-        await C.audioWorklet.addModule(new URL('./dsp.js', import.meta.url));
-      } catch (e) {
-        console.warn('Fighter sound: the sound engine did not load', e);
-        return false;
-      }
+      this.spool = new Spool(C, this.bus, this.sfx.noise, SPOOL.fighter);
+      this.spoolT = C.currentTime;
+      if (!(await loadDsp(C))) return false;
       const node = (name) => new AudioWorkletNode(C, name, { numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2] });
       this.engine = node('engine');
       this.jets = node('jets');
@@ -118,6 +121,7 @@ export class FlightAudio {
       for (const t of this.timers) clearTimeout(t);
       this.timers = [];
       this.send(this.engine, { online: 0, prime: 0, power: 0, spool: 0, strain: 0 });
+      this.spool?.reset();
       this.send(this.jets, { v: [0, 1, 2, 3].map(() => ({ open: 0, p: 0, pan: 0 })) });
     }
   }
@@ -193,9 +197,17 @@ export class FlightAudio {
     next();
   }
 
-  /** Every frame, from the fighter's `Flight`: the drive, the four jet blocks, the body. */
+  /** W with the drive out (status-calls.mjs): the turbopump kicks, stutters and dies. */
+  driveFail() {
+    if (this.ready && this.active) this.spool?.fail();
+  }
+
+  /** Every frame, from the fighter's `Flight`: the drive, the four jet blocks, the body, the turbopump. */
   frame(fl) {
     if (!this.ready || !this.active) return;
+    const now = this.ctx.currentTime, dt = Math.min(0.1, Math.max(0, now - this.spoolT));
+    this.spoolT = now;
+    this.spool?.frame(dt, fl.burning ? 0.7 + 0.3 * fl.power : 0, 1, !!fl.burning);
     this.send(this.engine, { power: fl.power, spool: fl.spool, strain: fl.strain });
     this.send(this.jets, { v: fl.blockState });
     this.send(this.body, { set: { load: fl.load, vib: fl.vib, servo: clamp(fl.servo * AIRFRAME.servo, 0, 1), beam: 0 } });

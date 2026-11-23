@@ -44,6 +44,11 @@ export class HelmSeat {
     }
     else if (code === 'KeyG') helmSight.say(plant.toggleRadiators());
     else if (code === 'KeyN') helmSight.toggleNav();
+    else if (code === 'KeyM') {
+      // Flares (weapons/missiles.mjs `shipFlares`): a salvo out of both sides.
+      const why = guns.shipFlares('you');
+      helmSight.say(why ? `Flares: ${why}.` : `FLARES AWAY · ${guns.shipFlareState.left} left`, why ? 2.5 : 1.5);
+    }
     else if (code === 'KeyL') this.G.berth?.key(); // carried in a berth, or out from one (berth.mjs)
     else if (code === 'KeyK') this.G.berth?.lane?.toggleDock(); // docking mode, out from a berth (recovery.mjs)
     else if (code === 'KeyH') this.G.berth?.lane?.toggleHold(); // and its hold on the berth's heading

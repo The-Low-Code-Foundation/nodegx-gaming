@@ -1,0 +1,16 @@
+{
+  "id": "power-restored",
+  "about": "Main power is back (status-calls.mjs).",
+  "who": "ai",
+  "say": [
+    "Main power restored."
+  ],
+  "to": {
+    "all": "tannoy",
+    "bridge": "headset",
+    "engineering": "headset"
+  },
+  "priority": 2,
+  "delay": 0.5,
+  "again": 10
+}

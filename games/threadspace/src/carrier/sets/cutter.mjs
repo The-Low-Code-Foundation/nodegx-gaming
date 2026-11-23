@@ -6,31 +6,9 @@
 import * as THREE from 'three';
 import { box, cyl, at, mat, glow } from '../../util.mjs';
 import { P, couch, desk, locker, messTable, place } from './parts.mjs';
-import { wallScreen } from './paper.mjs';
 
-/** The flight deck: the pilot's couch and console under the forward windows (the helm: E takes it), the gunner's to
- *  starboard, the commander's behind. */
-export function flightDeck(C, I, c, hooks) {
-  const [x1, x2] = c.x, [, z2] = c.z, y = I.floorY, L = C.L;
-  const [hx, hz] = L.helm?.at ?? [0, c.z[0] + 2];
-  const K = L.couches ?? {};
-  // The pilot: a low console under the windows, the couch behind it.
-  place(I, desk(1.5, '#58b0ff', ['nav', 'target'], { low: true }), hx, hz - 1.25);
-  place(I, couch(P.pad, { low: true }), hx, hz);
-  I.use('helm', 'Take the helm', hx, hz - 0.3, () => hooks.helm?.(), { r: 1.6 });
-  // The gunner and sensors, and the commander: a couch each, a console on the wall beside it.
-  if (K.gunner) {
-    place(I, couch(P.pad, { low: true }), K.gunner[0], K.gunner[1]);
-    place(I, desk(1.3, '#ff6a50', ['radar', 'target'], { low: true }), x2 - 0.45, K.gunner[1] - 0.2, -Math.PI / 2);
-  }
-  if (K.commander) {
-    place(I, couch(mat('#5a4a30'), { low: true }), K.commander[0], K.commander[1]);
-    place(I, desk(1.3, '#39d27a', ['status', 'nav'], { low: true }), x1 + 0.45, K.commander[1] - 0.2, Math.PI / 2);
-  }
-  // Overhead repeaters over the pilot, clear of the windows; the plot on the after bulkhead beside the door.
-  I.group.add(at(box(1.8, 0.05, 0.4, P.dark), hx, y + 2.72, hz - 0.2));
-  wallScreen(I, 'map', x2 - 1.0, 1.7, z2 - 0.13, Math.PI, '#58b0ff', 1.2, 0.7);
-}
+// The flight deck: its stations, live screens and switches are a module of their own (sets/flight-deck.mjs).
+export { flightDeck } from './flight-deck.mjs';
 
 /** The crew space: four bunks (weightless: sleeping bags on boards, two a wall bay) down the outboard wall, a locker
  *  each on the end wall. */

@@ -167,10 +167,18 @@ const mounts = [
 
 // ---- weapons: the carrier's numbers, scaled ----
 const weapons = structuredClone(carrier.weapons);
-// What she does not carry: no broadside, railguns or flak; no fighters, so no cannon of theirs, heat-seekers or flares;
+// What she does not carry: no broadside, railguns or flak; no fighters, so no cannon of theirs or heat-seekers;
 // and no bandits come with her raider (they fly on the layout's `fighter`, which she does not have).
-for (const k of ['broadside', 'railgun', 'flak', 'bandit', 'fighter', 'missile', 'flares', 'heat']) delete weapons[k];
-weapons.about = 'The cutter\'s guns, from the carrier\'s `weapons` (ships/carrier/weapons.json, whose `about` says what each number is) scaled by tools/cutter.mjs: one dorsal turret (`turrets`, `gun`), two close-in point defence guns (`pdc`), four forward torpedo tubes (`tubes`, `torpedo`), the raider that comes for her (`raider`), the gunnery target (`target`) and brace for impact (`brace`). No broadside, railgun, flak, bandits or fighters.';
+for (const k of ['broadside', 'railgun', 'flak', 'bandit', 'fighter', 'missile', 'heat']) delete weapons[k];
+// Her flares (weapons/missiles.mjs `shipFlares`): M at the helm throws a salvo, half out of each side; with nobody of
+// yours at the helm her crew throw one at a torpedo in its last stretch, every `crewEvery` s. A torpedo in its last
+// stretch that sees a flare by her judges it once: `lure` of the time it takes it for her and goes for it instead.
+{
+  const { eject, life } = weapons.flares;
+  const about = 'Her flares (weapons/missiles.mjs `shipFlares`, `torpLure`). Each is thrown out at `eject` m/s on top of her velocity and burns for `life` s at `ship.heat`, fading. M at the helm throws `ship.salvo` (half from each side), not more often than every `ship.every` s, from `ship.count` (full again when the page loads: the voyage save does not keep them yet); with nobody of yours at the helm her crew throw a salvo at a torpedo in its last stretch (`torpedo.terminal` m) every `ship.crewEvery` s. Such a torpedo judges each flare it sees near her once: `ship.lure` of the time it takes the flare for her, goes for it and is spent on it.';
+  weapons.flares = { about, eject, life, ship: { count: 32, salvo: 4, every: 1.5, crewEvery: 3.5, heat: 600, lure: 0.18 } };
+}
+weapons.about = 'The cutter\'s guns, from the carrier\'s `weapons` (ships/carrier/weapons.json, whose `about` says what each number is) scaled by tools/cutter.mjs: one dorsal turret (`turrets`, `gun`), two close-in point defence guns (`pdc`), four forward torpedo tubes (`tubes`, `torpedo`), flares (`flares.ship`), the raider that comes for her (`raider`), the gunnery target (`target`) and brace for impact (`brace`). No broadside, railgun, flak, bandits or fighters.';
 weapons.turrets = [
   // Manned from a hatch in the passage's deckhead, under the barbette.
   { mount: 'turret-dorsal', name: 'Dorsal turret', barbette: 'barbette', magazine: 'magazine', from: { deck: 1, at: [-0.5, -4.45], yaw: 1.5708, label: 'Up into the dorsal turret' } },

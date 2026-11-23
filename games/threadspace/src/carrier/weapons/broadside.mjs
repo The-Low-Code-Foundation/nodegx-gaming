@@ -113,7 +113,8 @@ export const broadsideParts = {
       t.prev.copy(t.pos);
       // The target: a point in the carrier, or the raider.
       let tp, tv;
-      if (t.side === 'theirs') (tp = this.C.frame.localToWorld(_a.copy(t.aim))), (tv = this.body.vel);
+      if (t.decoy) (tp = _a.copy(t.decoy.pos)), (tv = t.decoy.vel); // it took one of her flares for her (missiles.mjs `torpLure`)
+      else if (t.side === 'theirs') (tp = this.C.frame.localToWorld(_a.copy(t.aim))), (tv = this.body.vel);
       else if (raiderLive) (tp = _a.copy(R.obj.position)), (tv = _d.copy(R.v).add(this.body.vel));
       else tp = null;
       const burning = t.t >= 0 && t.t < T.burn && tp; // a torpedo launched cold coasts first (t.t < 0)
@@ -163,7 +164,8 @@ export const broadsideParts = {
       flameFrame(t.obj.userData.flame, !!burning, 1, t.t);
       if (burning) this.trail(_tp.copy(t.pos).addScaledVector(nose, -3.4), nose, t.vel, 30, dt, 2);
       // What it meets.
-      if (t.side === 'theirs') {
+      if (t.decoy && t.pos.distanceTo(t.decoy.pos) < T.fuse + 4) this.killTorp(t, 'flare');
+      else if (t.side === 'theirs') {
         if (t.pos.distanceTo(this.C.obj.position) < 300) {
           const s = { torpedo: true };
           if (this.hitsCarrier(s, t.prev, t.pos)) this.detonate(t, true);
@@ -207,6 +209,7 @@ export const broadsideParts = {
     this.sfx?.play('boom', this.ear ? Math.min(900, this.ear.distanceTo(t.pos) * 0.5) : 600, 14);
     this.log.push({ t: this.time, kill: t.side, by });
     if (t.side === 'theirs' && by === 'you') this.dc?.say(null, 'You shot down a torpedo.', 0, 3);
+    else if (by === 'flare') this.dc?.say(null, `The torpedo took a flare and went off on it, ${Math.round(t.pos.distanceTo(this.C.obj.position))} m out. No hit.`, 0, 3);
     else if (t.side === 'theirs') {
       // Killed close in, its flash and bang look like a hit: say it was not one. Far out, nobody aboard would notice.
       const d = Math.round(t.pos.distanceTo(this.C.obj.position));

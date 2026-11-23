@@ -1,0 +1,17 @@
+{
+  "id": "tank-leak",
+  "about": "A propellant tank is holed and venting (plant.mjs `leaking`, said by status-calls.mjs; the engineer's propellant-leak goes on the headsets beside it).",
+  "who": "ai",
+  "say": [
+    "Propellant leak."
+  ],
+  "show": "Propellant leak: a holed tank is venting reaction mass.",
+  "to": {
+    "all": "tannoy",
+    "bridge": "headset",
+    "engineering": "headset"
+  },
+  "priority": 3,
+  "delay": 0.5,
+  "again": 20
+}

@@ -75,6 +75,16 @@
     "pilot-home",
     "pilot-line",
     "pilot-waveoff",
-    "pilot-captured"
+    "pilot-captured",
+    "drive-offline",
+    "drive-restored",
+    "power-lost",
+    "power-restored",
+    "tank-leak",
+    "jets-degraded",
+    "fighter-drive-offline",
+    "fighter-drive-restored",
+    "fighter-leak",
+    "fighter-jets"
   ]
 }

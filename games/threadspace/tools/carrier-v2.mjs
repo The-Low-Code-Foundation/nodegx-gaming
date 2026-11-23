@@ -325,9 +325,11 @@ const lad = (id, a, b) => ({ id, a: { deck: a[0], at: a[1], yaw: a[2] ?? 0 }, b:
 const ladders = [
   lad('ladder-bow-up', [4, [0, bow.z[0] + 62]], [3, [0, bow.z[0] + 62]]),
   lad('ladder-bow-down', [4, [0, bow.z[0] + 60]], [5, [0, bow.z[0] + 60]]),
-  lad('ladder-fwd-trunk', [4, [0, hz0 + 2]], [2, [0, hz0 + 2]]),
-  lad('ladder-hangar-lock', [4, [0, hz0 + 1]], [6, [0, hz0 + 1]]),
-  lad('ladder-keel-fwd', [4, [0, hz0 + 3]], [7, [0, hz0 + 2]]),
+  // The forward trunk's three: the one up at the forward end, the two down side by side aft of it, so no two hatches
+  // overlap and the way up is a hatch overhead, the ways down two hatches underfoot a metre and a half apart.
+  lad('ladder-fwd-trunk', [4, [0, hz0 + 0.9]], [2, [0, hz0 + 0.9]]),
+  lad('ladder-hangar-lock', [4, [-0.76, hz0 + 2]], [6, [-0.76, hz0 + 2]]),
+  lad('ladder-keel-fwd', [4, [0.76, hz0 + 2]], [7, [0.76, hz0 + 2]]),
   lad('ladder-aft', [7, [0, sz0 + 2.5]], [2, [0, sz0 + 2]]),
   lad('ladder-tower', [2, [0, sz0 + 30]], [1, [0, sz0 + 30]]),
 ];

@@ -67,37 +67,41 @@ function roomOn(C, deck, x, z) {
  *  `THROUGH` for cutting across a room that is not a passage, and `ONE_WAY` for a passage walked against the rule. */
 export function plan(C) {
   const P = portals(C);
-  const routes = (C.L.routes?.lines ?? []).map((r, i) => {
-    const next = new Map();
-    const cost = new Map([[r.to, 0]]);
-    const leave = new Map([[r.to, null]]); // where each room is left by, toward the route's room
-    const done = new Set();
-    for (;;) {
-      let id = null, best = Infinity;
-      for (const [k, v] of cost) if (!done.has(k) && v < best) (best = v), (id = k);
-      if (id === null) break;
-      done.add(id);
-      const out = leave.get(id), R = C.rooms.get(id);
-      for (const p of P.get(id) ?? []) { // p: a way into `id` from p.to (its point is on id's side)
-        if (done.has(p.to)) continue;
-        const back = P.get(p.to)?.find((b) => b.to === id && b.kind === p.kind);
-        if (!back) continue;
-        let c = best + (p.kind === 'ladder' ? 6 : 1);
-        if (out) {
-          c += Math.hypot(p.x - out.x, p.z - out.z);
-          if (R.system !== 'corridor') c += THROUGH;
-          else c += against(R, p, out);
-        }
-        if (c < (cost.get(p.to) ?? Infinity)) {
-          cost.set(p.to, c);
-          leave.set(p.to, back);
-          next.set(p.to, back);
-        }
+  const routes = (C.L.routes?.lines ?? []).map((r, i) => ({ ...r, i, next: toward(C, P, r.to) }));
+  return { portals: P, routes };
+}
+
+/** room id → the way out of that room toward room `to` (a door or a ladder end, from `portals`), by the costs above.
+ *  The floor lines use it per route; guide.mjs per order. */
+export function toward(C, P, to) {
+  const next = new Map();
+  const cost = new Map([[to, 0]]);
+  const leave = new Map([[to, null]]); // where each room is left by, toward `to`
+  const done = new Set();
+  for (;;) {
+    let id = null, best = Infinity;
+    for (const [k, v] of cost) if (!done.has(k) && v < best) (best = v), (id = k);
+    if (id === null) break;
+    done.add(id);
+    const out = leave.get(id), R = C.rooms.get(id);
+    for (const p of P.get(id) ?? []) { // p: a way into `id` from p.to (its point is on id's side)
+      if (done.has(p.to)) continue;
+      const back = P.get(p.to)?.find((b) => b.to === id && b.kind === p.kind);
+      if (!back) continue;
+      let c = best + (p.kind === 'ladder' ? 6 : 1);
+      if (out) {
+        c += Math.hypot(p.x - out.x, p.z - out.z);
+        if (R.system !== 'corridor') c += THROUGH;
+        else c += against(R, p, out);
+      }
+      if (c < (cost.get(p.to) ?? Infinity)) {
+        cost.set(p.to, c);
+        leave.set(p.to, back);
+        next.set(p.to, back);
       }
     }
-    return { ...r, i, next };
-  });
-  return { portals: P, routes };
+  }
+  return next;
 }
 
 /** What walking passage `R` from `a` to `b` costs against the one-way rule: forward on the port side, aft on the

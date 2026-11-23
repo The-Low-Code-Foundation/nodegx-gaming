@@ -10,8 +10,14 @@
 //   boom under her, one bell on the centre line.
 //
 // -z is her nose, x starboard, y up, metres. `craftMesh(kind)` returns the group; `craftThrust(o, k, t)` lights her
-// drive (k 0 to 1); `o.userData.nozzles` are her bells' mouths (local), for the exhaust gas; `userData.beacon` her
-// strobe. Looks only.
+// drive (k 0 to 1); `o.userData.nozzles` are her bells' mouths (local), for the exhaust gas; `userData.quads` her
+// manoeuvring quads (local), for her jets' puffs; `userData.beacon` her strobe. The tug's nose carries a hard-dock
+// clamp (two arms and a padded push plate) for taking a ship by her flank (tow.mjs). Looks only.
+//
+// Where they live: `parkCraft(C, I, c)` (sets/hangar.mjs, the airless hangar of a layout with `fighter.rescue`) puts a
+// tanker and a tug a side on stands in the hangar, for good, in `C.craft`: the tankers forward of the bay doors, fore
+// and aft beside the gangway, nose aft; the tugs aft of the doors, athwartships, nose out to their door. `PARK` has the
+// numbers. A craft that flies (rescue.mjs, tow.mjs) is that very mesh, and comes back to its stand.
 
 import * as THREE from 'three';
 import { metal } from '../ships.mjs';
@@ -56,6 +62,7 @@ function truss(g, w, y, z0, z1, bays, m) {
 
 /** A manoeuvring quad: a small block with four nozzles, at `p`, facing out along x by `side`. */
 function quad(g, x, y, z, side, m, dark) {
+  (g.userData.quads ??= []).push(new THREE.Vector3(x, y, z));
   const q = new THREE.Group();
   q.add(box(0.34, 0.34, 0.34, m));
   for (const [dx, dy, dz, rx, rz] of [[0.24 * side, 0, 0, 0, Math.PI / 2], [0, 0.24, 0, 0, 0], [0, -0.24, 0, 0, 0], [0, 0, 0.24, Math.PI / 2, 0], [0, 0, -0.24, Math.PI / 2, 0]]) {
@@ -138,6 +145,12 @@ function tug(g) {
   for (const s of [-1, 1]) for (const y of [-1, 1]) g.add(strut(new THREE.Vector3(s * 1.1, y * 1.1, 4.7), new THREE.Vector3(0, 0.1, 5.15), 0.11, hz));
   g.add(at(cyl(0.42, 0.42, 1.8, dark, 12), 0, 0.1, 4.95, 0, 0, Math.PI / 2));
   g.add(at(cyl(0.25, 0.35, 0.4, metal('#c8c8c8', { metalness: 0.8, plated: false }), 12), 0, 0.1, 5.25, Math.PI / 2));
+  // The hard-dock clamp on her nose (tow.mjs): a padded push plate on two rams, and a clamp arm either side folded back
+  // along the cab, which swings out to grip a ship's flank.
+  const plate = metal('#3a3e44', { rough: 0.8, metalness: 0.3, plated: false });
+  for (const s of [-1, 1]) g.add(at(cyl(0.12, 0.12, 0.7, grey, 8), s * 0.8, -0.6, -8.0, Math.PI / 2));
+  g.add(at(box(2.6, 1.0, 0.25, plate), 0, -0.6, -8.4), at(box(2.7, 0.12, 0.27, hz), 0, -0.05, -8.4));
+  for (const s of [-1, 1]) g.add(at(box(0.22, 0.3, 2.2, hz), s * 1.72, -0.6, -7.2), at(box(0.3, 0.4, 0.4, dark), s * 1.72, -0.6, -8.25));
 }
 
 function tanker(g) {
@@ -179,4 +192,94 @@ export function craftMesh(kind) {
 /** Her drive lit at `k` (0 to 1), flickering with `t`. */
 export function craftThrust(o, k, t) {
   for (const f of o.userData.flames ?? []) flameFrame(f, k > 0.03, Math.min(1, 0.35 + k), t);
+}
+
+// --- parked in the hangar ---------------------------------------------------------------------------------------------
+
+/** Where the craft park and how they move inside the hangar (metres, seconds, in the hangar deck's frame, which is the
+ *  carrier's). `gap` is the air under a parked craft; `ride` the height over the deck it moves at inside (the tanker
+ *  over the fighters, the tug over a berthed cutter: both under the 18 m door); `speed` and `turn` its pace there (eased
+ *  in and out, so the peak is 1.5 times); `door` how far inside a door's ends it goes out. The tankers stand `tanker.x`
+ *  off the centre line, their noses `tanker.nose` forward of the doors' forward end (clear of the drones' racks and the
+ *  first fighter's spur); the tugs `tug.wall` in from the side wall at the nose, `tug.aft` aft of the doors' after end. */
+export const PARK = {
+  gap: 0.6,
+  ride: { tanker: 11, tug: 14.5 },
+  speed: 3,
+  turn: 0.5,
+  door: 1.5,
+  tanker: { x: 10.5, nose: 7 },
+  tug: { wall: 1.2, aft: 6.5 },
+};
+
+const BOUNDS = {};
+/** A kind's own box (its frame, no flames, no beacon), worked out once. */
+export function craftBounds(kind) {
+  if (BOUNDS[kind]) return BOUNDS[kind];
+  const g = craftMesh(kind), skip = new Set([...g.userData.flames, g.userData.beacon]), b = new THREE.Box3(), t = new THREE.Box3();
+  g.updateMatrixWorld(true);
+  g.traverse((o) => {
+    if (!o.isMesh) return;
+    for (let p = o; p; p = p.parent) if (skip.has(p)) return;
+    o.geometry.computeBoundingBox();
+    b.union(t.copy(o.geometry.boundingBox).applyMatrix4(o.matrixWorld));
+  });
+  return (BOUNDS[kind] = b);
+}
+
+const yawQ = (a) => new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), a);
+
+/** The stands, from the hangar `c` (its compartment) and its floor `y`: a tanker and a tug a side, each { id, kind,
+ *  side, out, at (its centre parked), q (parked), qOut (nose out of its door), qIn (nose in), back (it comes home
+ *  stern first), exitZ (where it goes out through the door), ride (the height it moves at) }. Null without bay doors. */
+export function craftParking(c, y) {
+  const doors = c.bayDoors ?? [];
+  if (!doors.length) return null;
+  const spots = [];
+  for (const [side, out, key] of [['port', -1, 'w'], ['starboard', 1, 'e']]) {
+    const d = doors.find((q) => q.side === key);
+    if (!d) continue;
+    const wall = out < 0 ? c.x[0] : c.x[1];
+    // The tanker: fore and aft, nose aft (toward the doors), forward of them.
+    const T = craftBounds('tanker'), tz = d.from - PARK.tanker.nose + T.min.z; // nose aft: its -z end is aft
+    spots.push({ id: `tanker-${side}`, kind: 'tanker', side, out, at: new THREE.Vector3(out * PARK.tanker.x, y + PARK.gap - T.min.y, tz), q: yawQ(Math.PI), qOut: yawQ(-out * Math.PI / 2), qIn: yawQ(out * Math.PI / 2), back: false, exitZ: d.from + PARK.door + T.max.x, ride: y + PARK.ride.tanker });
+    // The tug: athwartships, nose out to its door, aft of the doors.
+    const U = craftBounds('tug'), ux = wall - out * (PARK.tug.wall - U.min.z); // nose out: its -z end at the wall
+    spots.push({ id: `tug-${side}`, kind: 'tug', side, out, at: new THREE.Vector3(ux, y + PARK.gap - U.min.y, d.to + PARK.tug.aft), q: yawQ(-out * Math.PI / 2), qOut: yawQ(-out * Math.PI / 2), qIn: yawQ(out * Math.PI / 2), back: true, exitZ: d.to - PARK.door - U.max.x, ride: y + PARK.ride.tug });
+  }
+  return spots;
+}
+
+/** Each stand drawn on deck `I` of hangar `c`, with its craft on it, for good: `C.craft` (the spots, each with its
+ *  `obj` and `parent`, and `home` while it sits there). The stand is two saddles under her on pillars, padded, and her
+ *  outline painted on the deck. */
+export function parkCraft(C, I, c, { yellow, steel, dark }) {
+  const y = I.floorY, spots = craftParking(c, y);
+  if (!spots) return null;
+  const hz = hazardMat(), pad = metal('#2a2d22', { rough: 0.9, metalness: 0.1, plated: false });
+  for (const s of spots) {
+    const B = craftBounds(s.kind);
+    const stand = new THREE.Group();
+    stand.position.set(s.at.x, y, s.at.z);
+    stand.quaternion.copy(s.q);
+    // The saddles: under two of her truss's frames, across her, the lower longerons resting on the pads.
+    const tk = s.kind === 'tanker', top = s.at.y - y + (tk ? -1.86 : -1.27), w = tk ? 4.0 : 3.0;
+    for (const z of tk ? [-3.73, 4.53] : [-1.75, 2.35]) {
+      stand.add(at(box(w, 0.35, 0.8, steel), 0, top - 0.175, z), at(box(w * 0.7, 0.12, 0.9, pad), 0, top + 0.02, z), at(box(w + 0.1, 0.06, 0.82, hz), 0, top - 0.38, z));
+      for (const x of [-w / 2 + 0.25, w / 2 - 0.25]) stand.add(at(box(0.3, top - 0.35, 0.3, steel), x, (top - 0.35) / 2, z), at(box(0.7, 0.04, 0.7, dark), x, 0.02, z));
+    }
+    // Her outline on the deck, a metre round her.
+    const [x0, x1, z0, z1] = [B.min.x - 1, B.max.x + 1, B.min.z - 1, B.max.z + 1];
+    for (const z of [z0, z1]) stand.add(at(box(x1 - x0, 0.012, 0.14, yellow), (x0 + x1) / 2, 0.008, z));
+    for (const x of [x0, x1]) stand.add(at(box(0.14, 0.012, z1 - z0, yellow), x, 0.008, (z0 + z1) / 2));
+    I.group.add(stand);
+    const o = craftMesh(s.kind);
+    o.position.copy(s.at);
+    o.quaternion.copy(s.q);
+    o.userData.live = true; // flown, so not baked into the deck
+    o.userData.beacon.visible = false;
+    I.group.add(o);
+    Object.assign(s, { obj: o, parent: I.group, home: true });
+  }
+  return (C.craft = spots);
 }

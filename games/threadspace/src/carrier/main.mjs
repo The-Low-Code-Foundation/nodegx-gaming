@@ -27,6 +27,7 @@ import { buildCarrier, loadHull, machineryFrame } from './layout.mjs';
 import { drumsFrame } from './drum.mjs';
 import { setsFrame, lookOf } from './sets.mjs';
 import { Ambience } from './ambience.mjs';
+import { StatusCalls } from './status-calls.mjs';
 import { Rigid, Thrusters, Helm, thrustersFromLayout, buildThrusterMeshes, updatePlumes } from './newton.mjs';
 import { Puffs } from './puff.mjs';
 import { Cutaway } from './cutaway.mjs';
@@ -70,11 +71,13 @@ import { Repairs } from './fighter-repair.mjs';
 import { CarrierDamage } from './carrier-damage.mjs';
 import { HullRepair } from './carrier-repair.mjs';
 import { Rescue } from './rescue.mjs';
+import { Tow } from './tow.mjs';
 import { loadLayout, fetchJson } from '../core/ship.mjs';
 import { loadPeople, peopleNamed, joinPeople } from '../core/people.mjs';
 import { Announcer, loadCalls, DEPTS } from '../core/announcer.mjs';
 import { WalkSeat } from './seats/walk.mjs';
 import { Floater } from './weightless.mjs';
+import { Guide } from './guide.mjs';
 import { HelmSeat } from './seats/helm.mjs';
 import { FighterSeat } from './seats/fighter.mjs';
 import { GunSeat } from './seats/gun.mjs';
@@ -183,7 +186,9 @@ const hooks = {
   drum: (kind, a) => walk.drum(kind, a),
   // The lockers by each drum's lift (drum.mjs `suitLockers`): into or out of your duty suit.
   change: () => ship.change(),
-  suited: () => ship.suit
+  suited: () => ship.suit,
+  // The game in hand, for a set whose screens show it and whose switches work it (sets/flight-deck.mjs).
+  game: () => G
 };
 
 const C = buildCarrier(L, hooks);
@@ -385,6 +390,8 @@ const cut = new Cutaway(C, camera, canvas, document.getElementById('c-labels'));
 const hud = new CarrierHud(cut);
 hud.onLevel = (i) => cut.setLevel(i);
 const drive = new Drive({ thrusters: thrusterList, body, dc, helmSight, spin: G.SPIN }); // what the drive's push feels like aboard
+// The ship's voice on what breaks and comes back: the drive, power, a leak, the jets (status-calls.mjs).
+const status = new StatusCalls(C, { ship, plant, thrusters: thrusterList, fighter, guns, flightAudio, ambience, sfx, carried: () => !!berth?.carried });
 helmSight.lightDelay = () => drive.delay();
 
 Object.assign(G, {
@@ -392,6 +399,7 @@ Object.assign(G, {
   hands, doors, drive, deckOf, blenderFighters, helmDeck: BRIDGE_DECK
 });
 const walk = (G.walk = new WalkSeat(G));
+const guide = new Guide(C, walker, { on: q.get('guide') !== '0' }); // the gold diamond on the way to your order (guide.mjs)
 const rescue = (G.rescue = fighter && new Rescue(G)); // the tanker and the tug, called from the cockpit (rescue.mjs)
 // A damaged fighter on her pad is mended by drones and the deck crew, and held until she is (fighter-repair.mjs).
 const repairs = (G.repairs = guns.fdmg && L.fighter.repair ? new Repairs(G, { crew: q.get('crew') !== '0' }) : null);
@@ -493,6 +501,7 @@ function tick(dt) {
     berth.frame(dt);
   } else helm.frame(crewCmd ?? (mode === 'helm' ? f : IDLE), dt, !!crewCmd || mode === 'helm');
   hostDoors?.frame(dt);
+  G.tow?.frame(dt); // flight control's tug, after the berth has placed her (tow.mjs)
   berth?.lane?.frame(dt, mode === 'helm' && !fading); // the recovery lane: where she is on it, the capture or the wave-off (recovery.mjs)
   drive.standBy(dt, helm, mode === 'helm');
   if (fighter) {
@@ -611,9 +620,10 @@ function tick(dt) {
   const hearRoom = roomNow ?? (mode === 'helm' ? HELM_ROOM : null);
   ambience.frame(dt, {
     room: hearRoom ? C.rooms.get(hearRoom) : null, air: hearRoom ? ship.airOf(hearRoom) / L.integrity.air.nominal : 1, power: ship.power,
-    drive: Math.min(1, push / 15), inside: mode !== 'fighter' && mode !== 'cutaway',
+    drive: Math.min(1, push / 15), inside: mode !== 'fighter' && mode !== 'cutaway', engine: drive, ship,
     suit: mode === 'walk' && ship.helmet, moved: mode === 'walk' ? Math.min(0.5, Math.hypot(walker.pos.x - (ambLast.x ?? walker.pos.x), walker.pos.z - (ambLast.z ?? walker.pos.z))) : 0 // the suit's room tone (ambience.mjs); a jump is not a step
   });
+  status.frame(dt, f, mode); // the ship's voice on the drive, power, leaks and jets, as they change (status-calls.mjs)
   ambLast.x = walker.pos.x;
   ambLast.z = walker.pos.z;
   routine.rankName = career.on ? career.rank : null;
@@ -621,6 +631,7 @@ function tick(dt) {
   hands?.frame(dt, { mode, drum: walk.drumNow, ride: walk.ride, room: roomNow, x: walker.pos.x, z: walker.pos.z });
   if (mode !== 'walk') routine.closeBill();
   career.frame(dt, { mode, deck: placeNow, seg: walk.drumNow?.seg, room: roomNow });
+  guide.frame(career.on ? career.target() : null, mode, walk, camera);
   announcer.frame(dt);
   // The clock is kept with the career, now and then as well as at each order.
   if (career.on && (saveT -= dt) <= 0) (saveT = 15), career.save();
@@ -724,7 +735,7 @@ window.addEventListener('keydown', wake, { once: true });
 
 window.__carrier = {
   ship_id: SHIP_ID, HAS, world, C, L, K, W, crew, routine, hands, body, helm, thrusters, walker, renderer, camera, cut, fighter, dc, ship, guns, plant, helmSight, sfx, approach, cockpit, career, voices, announcer,
-  gas, carrierGas, puffs, blazes, feel, flightAudio, composer, bloom, ABOARD, ambience, input, G, seats, drive, doors, rescue, repairs, parts, hullRepair,
+  gas, carrierGas, puffs, blazes, feel, flightAudio, composer, bloom, ABOARD, ambience, status, input, G, seats, drive, doors, rescue, repairs, parts, hullRepair,
   mode: () => mode,
   tick: (n = 1, dt = 1 / 60) => {
     for (let i = 0; i < n; i++) tick(dt);
@@ -773,6 +784,7 @@ C.frame.add(C.exterior);
 // What the fighter can hit (collide.mjs): the outside's meshes, the hangar from inside, the parked fighters.
 if (fighter) collide = new Collisions(C, { fighter, guns, ship, doors, spec: L.fighter.collide });
 window.__carrier.collide = collide;
+window.__carrier.guide = guide;
 
 // The ships she carries, on their cradles in her hangar (berths.mjs): E at one's docking port takes you aboard her.
 // `?at=berth:<id>` is how you arrive from one: by her port, on the platform at the end of her spur, suited.
@@ -860,6 +872,9 @@ if (HOST_ID) {
     }
     window.__carrier.berth = berth;
     window.__carrier.hostDoors = hostDoors;
+    // Flight control's tug (tow.mjs): one of the host's own, off its stand in her hangar, brings her in when she is
+    // handed to flight control (`takeIn`), in place of the path alone.
+    berth.tug = G.tow = window.__carrier.tow = new Tow(G, { H, berth, doors: hostDoors, scene: world });
     // What her last sortie did to her, from the voyage, and the hangar crew on her while she is on her cradle.
     upkeep = G.upkeep = window.__carrier.upkeep = new Upkeep({ L, key: berthKey(HOST_ID, spec.id), live: { ship, plant, guns }, say: (t) => helmSight.say(t, 4) });
   }

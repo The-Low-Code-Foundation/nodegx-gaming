@@ -18,7 +18,7 @@ import * as THREE from 'three';
 import { buildCarrier, loadHull } from './layout.mjs';
 import { buildThrusterMeshes, thrustersFromLayout } from './newton.mjs';
 import { loadLayout, fetchJson } from '../core/ship.mjs';
-import { loadVoyage, goAboard } from '../core/voyage.mjs';
+import { loadVoyage, goAboard, setShip } from '../core/voyage.mjs';
 import { berthSpurs } from './sets/hangar.mjs';
 import { Upkeep, UpkeepLook } from './upkeep.mjs';
 
@@ -44,9 +44,12 @@ export class Berths {
     this.lines();
     const layouts = new Map();
     for (const spec of L.berths ?? []) {
-      // Out: only while you are aboard her (nothing else flies her). A voyage left saying "out" by a page shut in
-      // flight, with you aboard this ship, has her back on her cradle.
-      if (!spec.ship || (voyage.ships[berthKey(this.id, spec.id)]?.out && voyage.aboard === spec.ship)) continue;
+      // Out: only while you are aboard her, and you are aboard this ship (this page), so she is on her cradle. A
+      // voyage left saying "out" (a page shut in flight, or a page opened by hand) has her back on it: nothing else
+      // flies her yet. (It once hid her whenever the voyage still said you were aboard her: both cutters gone.)
+      if (!spec.ship) continue;
+      const key = berthKey(this.id, spec.id);
+      if (voyage.ships[key]?.out) setShip(key, { ship: spec.ship });
       if (!layouts.has(spec.ship)) layouts.set(spec.ship, await loadLayout(`ships/${spec.ship}`, fetchJson));
       const SL = layouts.get(spec.ship);
       const P = buildCarrier(SL);

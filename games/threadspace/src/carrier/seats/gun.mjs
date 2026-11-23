@@ -2,8 +2,9 @@
 // the cab you sit in). Here: getting in and out, and its keys.
 //
 // Getting in is a move you see, not a cut: from the hatch (main.mjs fades as it shuts behind you) you come up the
-// hoist trunk hand over hand, head through the hatch in the cab's floor, over the seat's back and down onto the sight
-// (`ENTER` seconds; turret-cab.mjs `pose`). A ventral turret is the same cab the other way up, so there you go "up"
+// hoist trunk hand over hand, head through the hatch in the cab's floor (its armoured lid slides clear under the deck
+// before you reach it and shuts behind you as you sit), over the seat's back and down onto the sight (`ENTER` seconds;
+// turret-cab.mjs `pose`). A ventral turret is the same cab the other way up, so there you go "up"
 // the trunk away from the hull. Getting out (E) is the first part of that backwards, into the dark of the trunk, and
 // then you are standing at the hatch you came in by.
 //
@@ -90,7 +91,7 @@ export class GunSeat {
     const cab = guns.cab;
     if (cab && guns.seatP) {
       cab.frame(dt, guns, guns.seatP, guns.seatQ);
-      if (!seated) cab.pose(p, camera, guns.seatP, guns.seatQ);
+      cab.pose(p, camera, guns.seatP, guns.seatQ); // seated, it only sees the hatch's lid shut behind you
     }
     hud.where(guns.where());
     hud.use(null);
