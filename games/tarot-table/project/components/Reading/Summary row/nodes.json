@@ -1,0 +1,123 @@
+{
+  "$schema": "https://opennoodl.dev/schemas/nodes-v2.json",
+  "componentId": "8bc872e8-8134-52f3-8371-8a5ebeef5ede",
+  "version": 1,
+  "nodes": [
+    {
+      "id": "srIn",
+      "type": "Component Inputs",
+      "x": 460,
+      "y": 40,
+      "ports": [
+        {
+          "name": "position",
+          "plug": "output",
+          "type": "string"
+        },
+        {
+          "name": "name",
+          "plug": "output",
+          "type": "string"
+        },
+        {
+          "name": "keywords",
+          "plug": "output",
+          "type": "string"
+        },
+        {
+          "name": "ask",
+          "plug": "output",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "id": "srRow",
+      "type": "Group",
+      "label": "Summary row",
+      "x": 40,
+      "y": 40,
+      "children": [
+        "srPos",
+        "srName",
+        "srKeywords",
+        "srAsk"
+      ],
+      "parameters": {
+        "width": {
+          "value": 100,
+          "unit": "%"
+        },
+        "sizeMode": "contentHeight",
+        "flexDirection": "column",
+        "rowGap": "var(--space-1)",
+        "backgroundColor": "var(--surface)",
+        "borderStyle": "solid",
+        "borderWidth": "var(--border-1)",
+        "borderColor": "var(--border)",
+        "borderRadius": "var(--radius-xl)",
+        "paddingTop": "var(--space-4)",
+        "paddingBottom": "var(--space-4)",
+        "paddingLeft": "var(--space-4)",
+        "paddingRight": "var(--space-4)"
+      }
+    },
+    {
+      "id": "srPos",
+      "type": "Text",
+      "label": "Position",
+      "x": 60,
+      "y": 140,
+      "parent": "srRow",
+      "parameters": {
+        "fontSize": "var(--text-xs)",
+        "fontWeight": "var(--font-semibold)",
+        "letterSpacing": "var(--tracking-widest)",
+        "textTransform": "uppercase",
+        "color": "var(--primary)"
+      }
+    },
+    {
+      "id": "srName",
+      "type": "Text",
+      "label": "Card",
+      "x": 60,
+      "y": 200,
+      "parent": "srRow",
+      "parameters": {
+        "fontFamily": "var(--font-serif)",
+        "fontSize": "var(--text-xl)",
+        "color": "var(--foreground)"
+      }
+    },
+    {
+      "id": "srKeywords",
+      "type": "Text",
+      "label": "Keywords",
+      "x": 60,
+      "y": 260,
+      "parent": "srRow",
+      "parameters": {
+        "fontSize": "var(--text-sm)",
+        "color": "var(--muted-foreground)"
+      }
+    },
+    {
+      "id": "srAsk",
+      "type": "Text",
+      "label": "Question",
+      "x": 60,
+      "y": 320,
+      "parent": "srRow",
+      "parameters": {
+        "fontSize": "var(--text-base)",
+        "fontStyle": "italic",
+        "color": "var(--foreground)",
+        "marginTop": "var(--space-1)"
+      }
+    }
+  ],
+  "visualRoots": [
+    "srRow"
+  ]
+}

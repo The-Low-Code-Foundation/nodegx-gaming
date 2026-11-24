@@ -1,0 +1,151 @@
+{
+  "$schema": "https://opennoodl.dev/schemas/nodes-v2.json",
+  "componentId": "5ce7db7b-ed10-5de4-8611-c3915368228e",
+  "version": 1,
+  "nodes": [
+    {
+      "id": "scIn",
+      "type": "Component Inputs",
+      "x": 460,
+      "y": 40,
+      "ports": [
+        {
+          "name": "id",
+          "plug": "output",
+          "type": "string"
+        },
+        {
+          "name": "name",
+          "plug": "output",
+          "type": "string"
+        },
+        {
+          "name": "count",
+          "plug": "output",
+          "type": "string"
+        },
+        {
+          "name": "blurb",
+          "plug": "output",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "id": "scCard",
+      "type": "Group",
+      "label": "Spread card",
+      "x": 40,
+      "y": 40,
+      "children": [
+        "scTop",
+        "scBlurb"
+      ],
+      "parameters": {
+        "width": {
+          "value": 100,
+          "unit": "%"
+        },
+        "sizeMode": "contentHeight",
+        "flexDirection": "column",
+        "rowGap": "var(--space-1)",
+        "backgroundColor": "var(--surface)",
+        "borderStyle": "solid",
+        "borderWidth": "var(--border-1)",
+        "borderColor": "var(--border-strong)",
+        "borderRadius": "var(--radius-xl)",
+        "paddingTop": "var(--space-4)",
+        "paddingBottom": "var(--space-4)",
+        "paddingLeft": "var(--space-5)",
+        "paddingRight": "var(--space-5)"
+      }
+    },
+    {
+      "id": "scTop",
+      "type": "Group",
+      "label": "Name and count",
+      "x": 60,
+      "y": 140,
+      "parent": "scCard",
+      "children": [
+        "scName",
+        "scCount"
+      ],
+      "parameters": {
+        "width": {
+          "value": 100,
+          "unit": "%"
+        },
+        "sizeMode": "contentHeight",
+        "flexDirection": "row",
+        "alignItems": "center",
+        "justifyContent": "space-between",
+        "columnGap": "var(--space-3)"
+      }
+    },
+    {
+      "id": "scName",
+      "type": "Text",
+      "label": "Spread name",
+      "x": 80,
+      "y": 220,
+      "parent": "scTop",
+      "parameters": {
+        "sizeMode": "contentSize",
+        "fontFamily": "var(--font-serif)",
+        "fontSize": "var(--text-xl)",
+        "color": "var(--foreground)"
+      }
+    },
+    {
+      "id": "scCount",
+      "type": "Text",
+      "label": "How many cards",
+      "x": 80,
+      "y": 280,
+      "parent": "scTop",
+      "parameters": {
+        "sizeMode": "contentSize",
+        "fontSize": "var(--text-xs)",
+        "fontWeight": "var(--font-semibold)",
+        "letterSpacing": "var(--tracking-wider)",
+        "textTransform": "uppercase",
+        "color": "var(--primary)"
+      }
+    },
+    {
+      "id": "scBlurb",
+      "type": "Text",
+      "label": "What it is for",
+      "x": 60,
+      "y": 340,
+      "parent": "scCard",
+      "parameters": {
+        "fontSize": "var(--text-sm)",
+        "color": "var(--muted-foreground)",
+        "lineHeight": "var(--leading-snug)"
+      }
+    },
+    {
+      "id": "scOut",
+      "type": "Component Outputs",
+      "x": 460,
+      "y": 240,
+      "ports": [
+        {
+          "name": "tapped",
+          "plug": "input",
+          "type": "signal"
+        },
+        {
+          "name": "id",
+          "plug": "input",
+          "type": "string"
+        }
+      ]
+    }
+  ],
+  "visualRoots": [
+    "scCard"
+  ]
+}

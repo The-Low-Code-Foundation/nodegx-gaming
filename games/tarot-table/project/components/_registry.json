@@ -1,0 +1,124 @@
+{
+  "$schema": "https://opennoodl.dev/schemas/registry-v2.json",
+  "version": 1,
+  "lastUpdated": "2026-11-24T08:21:41.166Z",
+  "components": {
+    "App": {
+      "path": "App",
+      "type": "root",
+      "nodeCount": 1,
+      "connectionCount": 0,
+      "modified": "2026-11-24T08:20:19.457Z",
+      "created": "2026-11-24T08:10:08.926Z"
+    },
+    "Pages/Home": {
+      "path": "Pages/Home",
+      "type": "page",
+      "nodeCount": 20,
+      "connectionCount": 6,
+      "modified": "2026-11-24T08:21:41.125Z",
+      "created": "2026-11-24T08:10:08.926Z"
+    },
+    "Data/Cards": {
+      "path": "Data/Cards",
+      "type": "visual",
+      "nodeCount": 2,
+      "connectionCount": 1,
+      "modified": "2026-11-24T08:20:19.441Z",
+      "created": "2026-11-24T08:20:19.441Z"
+    },
+    "Data/Suits": {
+      "path": "Data/Suits",
+      "type": "visual",
+      "nodeCount": 2,
+      "connectionCount": 1,
+      "modified": "2026-11-24T08:20:19.442Z",
+      "created": "2026-11-24T08:20:19.442Z"
+    },
+    "Data/Spreads": {
+      "path": "Data/Spreads",
+      "type": "visual",
+      "nodeCount": 2,
+      "connectionCount": 1,
+      "modified": "2026-11-24T08:20:19.443Z",
+      "created": "2026-11-24T08:20:19.443Z"
+    },
+    "Cards/Chip": {
+      "path": "Cards/Chip",
+      "type": "visual",
+      "nodeCount": 5,
+      "connectionCount": 4,
+      "modified": "2026-11-24T08:21:41.166Z",
+      "created": "2026-11-24T08:20:19.444Z"
+    },
+    "Cards/Suit tab": {
+      "path": "Cards/Suit tab",
+      "type": "visual",
+      "nodeCount": 6,
+      "connectionCount": 8,
+      "modified": "2026-11-24T08:20:19.445Z",
+      "created": "2026-11-24T08:20:19.445Z"
+    },
+    "Cards/Picker": {
+      "path": "Cards/Picker",
+      "type": "visual",
+      "nodeCount": 12,
+      "connectionCount": 10,
+      "modified": "2026-11-24T08:20:31.999Z",
+      "created": "2026-11-24T08:20:19.446Z"
+    },
+    "Cards/Face": {
+      "path": "Cards/Face",
+      "type": "visual",
+      "nodeCount": 9,
+      "connectionCount": 6,
+      "modified": "2026-11-24T08:20:31.959Z",
+      "created": "2026-11-24T08:20:19.447Z"
+    },
+    "Cards/Meaning": {
+      "path": "Cards/Meaning",
+      "type": "visual",
+      "nodeCount": 11,
+      "connectionCount": 9,
+      "modified": "2026-11-24T08:20:19.448Z",
+      "created": "2026-11-24T08:20:19.448Z"
+    },
+    "Reading/Summary row": {
+      "path": "Reading/Summary row",
+      "type": "visual",
+      "nodeCount": 6,
+      "connectionCount": 4,
+      "modified": "2026-11-24T08:20:19.449Z",
+      "created": "2026-11-24T08:20:19.449Z"
+    },
+    "Home/Spread card": {
+      "path": "Home/Spread card",
+      "type": "visual",
+      "nodeCount": 7,
+      "connectionCount": 5,
+      "modified": "2026-11-24T08:20:19.449Z",
+      "created": "2026-11-24T08:20:19.449Z"
+    },
+    "Pages/Reading": {
+      "path": "Pages/Reading",
+      "type": "page",
+      "nodeCount": 54,
+      "connectionCount": 52,
+      "modified": "2026-11-24T08:20:32.040Z",
+      "created": "2026-11-24T08:20:19.450Z"
+    },
+    "Pages/Deck": {
+      "path": "Pages/Deck",
+      "type": "page",
+      "nodeCount": 31,
+      "connectionCount": 22,
+      "modified": "2026-11-24T08:20:19.452Z",
+      "created": "2026-11-24T08:20:19.452Z"
+    }
+  },
+  "stats": {
+    "totalComponents": 14,
+    "totalNodes": 168,
+    "totalConnections": 129
+  }
+}

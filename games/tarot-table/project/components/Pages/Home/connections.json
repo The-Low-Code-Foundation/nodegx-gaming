@@ -1,0 +1,43 @@
+{
+  "$schema": "https://opennoodl.dev/schemas/connections-v2.json",
+  "componentId": "3b34f440-6a39-5298-8275-d1e846c5727d",
+  "version": 1,
+  "connections": [
+    {
+      "fromId": "hmData",
+      "fromProperty": "spreads",
+      "toId": "hmSpreadsFE",
+      "toProperty": "items"
+    },
+    {
+      "fromId": "hmSpreadsFE",
+      "fromProperty": "itemOutput-id",
+      "toId": "hmSetSpread",
+      "toProperty": "value"
+    },
+    {
+      "fromId": "hmSpreadsFE",
+      "fromProperty": "itemOutputSignal-tapped",
+      "toId": "hmSetSpread",
+      "toProperty": "do"
+    },
+    {
+      "fromId": "hmSpreadsFE",
+      "fromProperty": "itemOutputSignal-tapped",
+      "toId": "hmReset",
+      "toProperty": "run"
+    },
+    {
+      "fromId": "hmReset",
+      "fromProperty": "done",
+      "toId": "hmGoReading",
+      "toProperty": "navigate"
+    },
+    {
+      "fromId": "hmDeckBtn",
+      "fromProperty": "onClick",
+      "toId": "hmGoDeck",
+      "toProperty": "navigate"
+    }
+  ]
+}

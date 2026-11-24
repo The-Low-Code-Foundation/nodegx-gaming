@@ -1,0 +1,43 @@
+{
+  "$schema": "https://opennoodl.dev/schemas/connections-v2.json",
+  "componentId": "95f39c1b-997b-5d0c-8344-14c4595f59f2",
+  "version": 1,
+  "connections": [
+    {
+      "fromId": "fcIn",
+      "fromProperty": "chip",
+      "toId": "fcChip",
+      "toProperty": "text"
+    },
+    {
+      "fromId": "fcIn",
+      "fromProperty": "name",
+      "toId": "fcName",
+      "toProperty": "text"
+    },
+    {
+      "fromId": "fcIn",
+      "fromProperty": "suitName",
+      "toId": "fcSuit",
+      "toProperty": "text"
+    },
+    {
+      "fromId": "fcIn",
+      "fromProperty": "reversed",
+      "toId": "fcWay",
+      "toProperty": "reversed"
+    },
+    {
+      "fromId": "fcWay",
+      "fromProperty": "result",
+      "toId": "fcTurn",
+      "toProperty": "currentState"
+    },
+    {
+      "fromId": "fcTurn",
+      "fromProperty": "turn",
+      "toId": "fcCard",
+      "toProperty": "transformRotation"
+    }
+  ]
+}

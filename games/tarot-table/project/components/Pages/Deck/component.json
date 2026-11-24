@@ -1,0 +1,10 @@
+{
+  "$schema": "https://opennoodl.dev/schemas/component-v2.json",
+  "id": "229dc959-407b-5f2f-8391-4dba3f66882b",
+  "name": "Deck",
+  "path": "/Pages/Deck",
+  "type": "page",
+  "created": "2026-11-24T08:19:39.887Z",
+  "modified": "2026-11-24T08:19:39.887Z",
+  "modifiedBy": "noodl-mcp"
+}

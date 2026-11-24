@@ -1,0 +1,11 @@
+{
+  "$schema": "https://opennoodl.dev/schemas/component-v2.json",
+  "id": "39b3de93-0ab2-5fb2-86b5-8f0af0494550",
+  "name": "Meaning",
+  "path": "/Cards/Meaning",
+  "type": "visual",
+  "created": "2026-11-24T08:19:39.845Z",
+  "modified": "2026-11-24T08:19:39.845Z",
+  "modifiedBy": "noodl-mcp",
+  "description": "What a card says in one place: a small heading, its keywords, the meaning, and the question to ask in a gold box."
+}

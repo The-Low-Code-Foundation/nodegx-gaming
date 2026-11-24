@@ -1,0 +1,11 @@
+{
+  "$schema": "https://opennoodl.dev/schemas/component-v2.json",
+  "id": "c3879170-c9f0-59c3-85dc-ccd3dddc1470",
+  "name": "Chip",
+  "path": "/Cards/Chip",
+  "type": "visual",
+  "created": "2026-11-24T08:15:43.149Z",
+  "modified": "2026-11-24T08:21:41.137Z",
+  "modifiedBy": "noodl-mcp",
+  "description": "One small card in the picker grid. Tapping it picks that card."
+}

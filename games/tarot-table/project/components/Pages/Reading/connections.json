@@ -1,0 +1,319 @@
+{
+  "$schema": "https://opennoodl.dev/schemas/connections-v2.json",
+  "componentId": "63598714-c190-593b-8580-8ec6a58242ad",
+  "version": 1,
+  "connections": [
+    {
+      "fromId": "rdSpreads",
+      "fromProperty": "spreads",
+      "toId": "rdPos",
+      "toProperty": "in-spreads"
+    },
+    {
+      "fromId": "rdVSpread",
+      "fromProperty": "value",
+      "toId": "rdPos",
+      "toProperty": "in-spreadId"
+    },
+    {
+      "fromId": "rdVStep",
+      "fromProperty": "value",
+      "toId": "rdPos",
+      "toProperty": "in-step"
+    },
+    {
+      "fromId": "rdPos",
+      "fromProperty": "out-spreadName",
+      "toId": "rdPickSpread",
+      "toProperty": "text"
+    },
+    {
+      "fromId": "rdPos",
+      "fromProperty": "out-spreadName",
+      "toId": "rdDoneSpread",
+      "toProperty": "text"
+    },
+    {
+      "fromId": "rdPos",
+      "fromProperty": "out-posName",
+      "toId": "rdPickPos",
+      "toProperty": "text"
+    },
+    {
+      "fromId": "rdPos",
+      "fromProperty": "out-posLead",
+      "toId": "rdPickLead",
+      "toProperty": "text"
+    },
+    {
+      "fromId": "rdPos",
+      "fromProperty": "out-posName",
+      "toId": "rdMeaning",
+      "toProperty": "eyebrow"
+    },
+    {
+      "fromId": "rdPos",
+      "fromProperty": "out-posLead",
+      "toId": "rdMeaning",
+      "toProperty": "lead"
+    },
+    {
+      "fromId": "rdPos",
+      "fromProperty": "out-stepLabel",
+      "toId": "rdStepLabel",
+      "toProperty": "text"
+    },
+    {
+      "fromId": "rdPos",
+      "fromProperty": "out-keepLabel",
+      "toId": "rdKeepBtn",
+      "toProperty": "label"
+    },
+    {
+      "fromId": "rdPos",
+      "fromProperty": "out-total",
+      "toId": "rdVTotal",
+      "toProperty": "value"
+    },
+    {
+      "fromId": "rdVPhase",
+      "fromProperty": "value",
+      "toId": "rdPhase",
+      "toProperty": "currentState"
+    },
+    {
+      "fromId": "rdPhase",
+      "fromProperty": "at-pick",
+      "toId": "rdPick",
+      "toProperty": "mounted"
+    },
+    {
+      "fromId": "rdPhase",
+      "fromProperty": "at-show",
+      "toId": "rdShow",
+      "toProperty": "mounted"
+    },
+    {
+      "fromId": "rdPhase",
+      "fromProperty": "at-done",
+      "toId": "rdDone",
+      "toProperty": "mounted"
+    },
+    {
+      "fromId": "rdCards",
+      "fromProperty": "cards",
+      "toId": "rdCard",
+      "toProperty": "in-cards"
+    },
+    {
+      "fromId": "rdVCard",
+      "fromProperty": "value",
+      "toId": "rdCard",
+      "toProperty": "in-cardId"
+    },
+    {
+      "fromId": "rdVUp",
+      "fromProperty": "value",
+      "toId": "rdCard",
+      "toProperty": "in-upsideDown"
+    },
+    {
+      "fromId": "rdCard",
+      "fromProperty": "out-chip",
+      "toId": "rdFace",
+      "toProperty": "chip"
+    },
+    {
+      "fromId": "rdCard",
+      "fromProperty": "out-name",
+      "toId": "rdFace",
+      "toProperty": "name"
+    },
+    {
+      "fromId": "rdCard",
+      "fromProperty": "out-suitName",
+      "toId": "rdFace",
+      "toProperty": "suitName"
+    },
+    {
+      "fromId": "rdCard",
+      "fromProperty": "out-reversed",
+      "toId": "rdFace",
+      "toProperty": "reversed"
+    },
+    {
+      "fromId": "rdCard",
+      "fromProperty": "out-keywords",
+      "toId": "rdMeaning",
+      "toProperty": "keywords"
+    },
+    {
+      "fromId": "rdCard",
+      "fromProperty": "out-text",
+      "toId": "rdMeaning",
+      "toProperty": "text"
+    },
+    {
+      "fromId": "rdCard",
+      "fromProperty": "out-ask",
+      "toId": "rdMeaning",
+      "toProperty": "ask"
+    },
+    {
+      "fromId": "rdVUp",
+      "fromProperty": "value",
+      "toId": "rdFlipLook",
+      "toProperty": "upsideDown"
+    },
+    {
+      "fromId": "rdFlipLook",
+      "fromProperty": "result",
+      "toId": "rdFlipStates",
+      "toProperty": "currentState"
+    },
+    {
+      "fromId": "rdFlipStates",
+      "fromProperty": "upBg",
+      "toId": "rdUpBtn",
+      "toProperty": "backgroundColor"
+    },
+    {
+      "fromId": "rdFlipStates",
+      "fromProperty": "upInk",
+      "toId": "rdUpBtn",
+      "toProperty": "color"
+    },
+    {
+      "fromId": "rdFlipStates",
+      "fromProperty": "downBg",
+      "toId": "rdDownBtn",
+      "toProperty": "backgroundColor"
+    },
+    {
+      "fromId": "rdFlipStates",
+      "fromProperty": "downInk",
+      "toId": "rdDownBtn",
+      "toProperty": "color"
+    },
+    {
+      "fromId": "rdUpBtn",
+      "fromProperty": "onClick",
+      "toId": "rdSetUp",
+      "toProperty": "do"
+    },
+    {
+      "fromId": "rdDownBtn",
+      "fromProperty": "onClick",
+      "toId": "rdSetDown",
+      "toProperty": "do"
+    },
+    {
+      "fromId": "rdPicker",
+      "fromProperty": "cardId",
+      "toId": "rdSetCard",
+      "toProperty": "value"
+    },
+    {
+      "fromId": "rdPicker",
+      "fromProperty": "picked",
+      "toId": "rdSetCard",
+      "toProperty": "do"
+    },
+    {
+      "fromId": "rdPicker",
+      "fromProperty": "picked",
+      "toId": "rdSetFresh",
+      "toProperty": "do"
+    },
+    {
+      "fromId": "rdPicker",
+      "fromProperty": "picked",
+      "toId": "rdSetShow",
+      "toProperty": "do"
+    },
+    {
+      "fromId": "rdPicker",
+      "fromProperty": "picked",
+      "toId": "rdTopOfPage",
+      "toProperty": "run"
+    },
+    {
+      "fromId": "rdWrongBtn",
+      "fromProperty": "onClick",
+      "toId": "rdSetPick",
+      "toProperty": "do"
+    },
+    {
+      "fromId": "rdWrongBtn",
+      "fromProperty": "onClick",
+      "toId": "rdTopOfPage",
+      "toProperty": "run"
+    },
+    {
+      "fromId": "rdDrawBtn",
+      "fromProperty": "onClick",
+      "toId": "rdDraw",
+      "toProperty": "run"
+    },
+    {
+      "fromId": "rdDrawBtn",
+      "fromProperty": "onClick",
+      "toId": "rdTopOfPage",
+      "toProperty": "run"
+    },
+    {
+      "fromId": "rdKeepBtn",
+      "fromProperty": "onClick",
+      "toId": "rdKeep",
+      "toProperty": "run"
+    },
+    {
+      "fromId": "rdKeepBtn",
+      "fromProperty": "onClick",
+      "toId": "rdTopOfPage",
+      "toProperty": "run"
+    },
+    {
+      "fromId": "rdSpreads",
+      "fromProperty": "spreads",
+      "toId": "rdSummary",
+      "toProperty": "in-spreads"
+    },
+    {
+      "fromId": "rdVSpread",
+      "fromProperty": "value",
+      "toId": "rdSummary",
+      "toProperty": "in-spreadId"
+    },
+    {
+      "fromId": "rdCards",
+      "fromProperty": "cards",
+      "toId": "rdSummary",
+      "toProperty": "in-cards"
+    },
+    {
+      "fromId": "rdVDrawn",
+      "fromProperty": "value",
+      "toId": "rdSummary",
+      "toProperty": "in-drawn"
+    },
+    {
+      "fromId": "rdSummary",
+      "fromProperty": "out-rows",
+      "toId": "rdRows",
+      "toProperty": "items"
+    },
+    {
+      "fromId": "rdHomeBtn",
+      "fromProperty": "onClick",
+      "toId": "rdGoHome",
+      "toProperty": "navigate"
+    },
+    {
+      "fromId": "rdAgainBtn",
+      "fromProperty": "onClick",
+      "toId": "rdGoHome",
+      "toProperty": "navigate"
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "$schema": "https://opennoodl.dev/schemas/component-v2.json",
+  "id": "5ce7db7b-ed10-5de4-8611-c3915368228e",
+  "name": "Spread card",
+  "path": "/Home/Spread card",
+  "type": "visual",
+  "created": "2026-11-24T08:16:50.080Z",
+  "modified": "2026-11-24T08:16:50.080Z",
+  "modifiedBy": "noodl-mcp",
+  "description": "One spread on the home page. Tapping it starts a reading with that spread."
+}

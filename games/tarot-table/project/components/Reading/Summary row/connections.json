@@ -1,0 +1,31 @@
+{
+  "$schema": "https://opennoodl.dev/schemas/connections-v2.json",
+  "componentId": "8bc872e8-8134-52f3-8371-8a5ebeef5ede",
+  "version": 1,
+  "connections": [
+    {
+      "fromId": "srIn",
+      "fromProperty": "position",
+      "toId": "srPos",
+      "toProperty": "text"
+    },
+    {
+      "fromId": "srIn",
+      "fromProperty": "name",
+      "toId": "srName",
+      "toProperty": "text"
+    },
+    {
+      "fromId": "srIn",
+      "fromProperty": "keywords",
+      "toId": "srKeywords",
+      "toProperty": "text"
+    },
+    {
+      "fromId": "srIn",
+      "fromProperty": "ask",
+      "toId": "srAsk",
+      "toProperty": "text"
+    }
+  ]
+}

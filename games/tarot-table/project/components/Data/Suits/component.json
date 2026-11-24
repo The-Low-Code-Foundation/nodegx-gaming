@@ -1,0 +1,11 @@
+{
+  "$schema": "https://opennoodl.dev/schemas/component-v2.json",
+  "id": "93b793df-bb45-5ea4-8645-1acfc09b042b",
+  "name": "Suits",
+  "path": "/Data/Suits",
+  "type": "visual",
+  "created": "2026-11-24T08:15:26.903Z",
+  "modified": "2026-11-24T08:15:26.903Z",
+  "modifiedBy": "noodl-mcp",
+  "description": "The picker's five tabs and one line on what each suit is about."
+}

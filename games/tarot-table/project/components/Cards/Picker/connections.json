@@ -1,0 +1,67 @@
+{
+  "$schema": "https://opennoodl.dev/schemas/connections-v2.json",
+  "componentId": "198a3987-0f28-547d-831c-16c30571f7d8",
+  "version": 1,
+  "connections": [
+    {
+      "fromId": "pkCards",
+      "fromProperty": "cards",
+      "toId": "pkShow",
+      "toProperty": "in-cards"
+    },
+    {
+      "fromId": "pkSuits",
+      "fromProperty": "suits",
+      "toId": "pkShow",
+      "toProperty": "in-suits"
+    },
+    {
+      "fromId": "pkSuit",
+      "fromProperty": "value",
+      "toId": "pkShow",
+      "toProperty": "in-suit"
+    },
+    {
+      "fromId": "pkShow",
+      "fromProperty": "out-tabs",
+      "toId": "pkTabsFE",
+      "toProperty": "items"
+    },
+    {
+      "fromId": "pkShow",
+      "fromProperty": "out-list",
+      "toId": "pkGridFE",
+      "toProperty": "items"
+    },
+    {
+      "fromId": "pkShow",
+      "fromProperty": "out-about",
+      "toId": "pkAbout",
+      "toProperty": "text"
+    },
+    {
+      "fromId": "pkTabsFE",
+      "fromProperty": "itemOutput-id",
+      "toId": "pkSetSuit",
+      "toProperty": "value"
+    },
+    {
+      "fromId": "pkTabsFE",
+      "fromProperty": "itemOutputSignal-tapped",
+      "toId": "pkSetSuit",
+      "toProperty": "do"
+    },
+    {
+      "fromId": "pkGridFE",
+      "fromProperty": "itemOutput-id",
+      "toId": "pkOut",
+      "toProperty": "cardId"
+    },
+    {
+      "fromId": "pkGridFE",
+      "fromProperty": "itemOutputSignal-tapped",
+      "toId": "pkOut",
+      "toProperty": "picked"
+    }
+  ]
+}

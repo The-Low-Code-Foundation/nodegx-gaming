@@ -1,0 +1,16 @@
+{
+  "slug": "tarot-table",
+  "title": "Tarot Table",
+  "tagline": "A phone companion for a real tarot deck: tap in the card you drew, read what it means there, and ask the question it gives you.",
+  "category": "casual",
+  "kind": "nodegx",
+  "play": "play/index.html",
+  "readiness": "A",
+  "readinessNote": "The whole deck is data: 78 cards in one JSON list (Data/Cards), each with keywords, a meaning right way up and upside down, and a question for each. The spreads and their positions are another list (Data/Spreads). Rewrite the voice or add a spread without touching the graph. It installs on a phone and works offline (pwa/).",
+  "buildYourOwn": "Your own voice for the cards, new spreads, another language, a different deck's names (Thoth, Marseille).",
+  "controls": "Touch or mouse",
+  "devices": ["phone", "tablet", "desktop"],
+  "languages": ["en"],
+  "tags": ["tarot", "cards", "conversation", "pwa", "offline", "nodegx"],
+  "licence": "GPL-3.0 for the project (as in the NodeGX repository it came from); MIT for the NodeGX runtime in play/; assets as listed in CREDITS.md"
+}

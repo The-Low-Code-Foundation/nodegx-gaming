@@ -1,0 +1,11 @@
+{
+  "$schema": "https://opennoodl.dev/schemas/component-v2.json",
+  "id": "69a9d4e5-de82-5b63-8d0e-eaaae3e56edb",
+  "name": "Cards",
+  "path": "/Data/Cards",
+  "type": "visual",
+  "created": "2026-11-24T08:15:26.847Z",
+  "modified": "2026-11-24T08:15:26.847Z",
+  "modifiedBy": "noodl-mcp",
+  "description": "The whole deck as data: 78 cards, each with its keywords, its meaning right way up and upside down, and a question for each. Edit the words here."
+}

@@ -1,0 +1,11 @@
+{
+  "$schema": "https://opennoodl.dev/schemas/component-v2.json",
+  "id": "a8004b95-61c6-5da9-87fa-d4fae4501169",
+  "name": "Suit tab",
+  "path": "/Cards/Suit tab",
+  "type": "visual",
+  "created": "2026-11-24T08:15:43.189Z",
+  "modified": "2026-11-24T08:15:43.189Z",
+  "modifiedBy": "noodl-mcp",
+  "description": "One suit tab in the picker. Gold when it is the suit on show."
+}

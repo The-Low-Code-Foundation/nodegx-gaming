@@ -1,0 +1,206 @@
+{
+  "$schema": "https://opennoodl.dev/schemas/nodes-v2.json",
+  "componentId": "95f39c1b-997b-5d0c-8344-14c4595f59f2",
+  "version": 1,
+  "nodes": [
+    {
+      "id": "fcIn",
+      "type": "Component Inputs",
+      "x": 520,
+      "y": 40,
+      "ports": [
+        {
+          "name": "chip",
+          "plug": "output",
+          "type": "string"
+        },
+        {
+          "name": "name",
+          "plug": "output",
+          "type": "string"
+        },
+        {
+          "name": "suitName",
+          "plug": "output",
+          "type": "string"
+        },
+        {
+          "name": "reversed",
+          "plug": "output",
+          "type": "boolean"
+        }
+      ]
+    },
+    {
+      "id": "fcWay",
+      "type": "Expression",
+      "label": "Which way up",
+      "x": 520,
+      "y": 220,
+      "parameters": {
+        "expression": "reversed ? 'down' : 'up'"
+      }
+    },
+    {
+      "id": "fcTurn",
+      "type": "States",
+      "label": "Turn the card",
+      "x": 520,
+      "y": 340,
+      "parameters": {
+        "states": "up,down",
+        "values": "turn",
+        "useTransitions": true,
+        "type-turn": "number",
+        "value-up-turn": 0,
+        "value-down-turn": 180
+      }
+    },
+    {
+      "id": "fcWrap",
+      "type": "Group",
+      "label": "Centre the card",
+      "x": 40,
+      "y": 40,
+      "children": [
+        "fcCard"
+      ],
+      "parameters": {
+        "width": {
+          "value": 100,
+          "unit": "%"
+        },
+        "sizeMode": "contentHeight",
+        "flexDirection": "column",
+        "alignItems": "center",
+        "paddingTop": "var(--space-2)",
+        "paddingBottom": "var(--space-2)"
+      }
+    },
+    {
+      "id": "fcCard",
+      "type": "Group",
+      "label": "Card",
+      "x": 60,
+      "y": 140,
+      "parent": "fcWrap",
+      "children": [
+        "fcFrame"
+      ],
+      "parameters": {
+        "sizeMode": "explicit",
+        "width": {
+          "value": 190,
+          "unit": "px"
+        },
+        "height": {
+          "value": 300,
+          "unit": "px"
+        },
+        "flexDirection": "column",
+        "backgroundGradient": "linear-gradient(160deg, var(--surface-raised) 0%, var(--background) 100%)",
+        "borderStyle": "solid",
+        "borderWidth": "var(--border-2)",
+        "borderColor": "var(--primary)",
+        "borderRadius": "var(--radius-xl)",
+        "paddingTop": "var(--space-2)",
+        "paddingBottom": "var(--space-2)",
+        "paddingLeft": "var(--space-2)",
+        "paddingRight": "var(--space-2)",
+        "boxShadowEnabled": true,
+        "boxShadowOffsetY": {
+          "value": 10,
+          "unit": "px"
+        },
+        "boxShadowBlurRadius": {
+          "value": 30,
+          "unit": "px"
+        },
+        "boxShadowColor": "var(--muted)"
+      }
+    },
+    {
+      "id": "fcFrame",
+      "type": "Group",
+      "label": "Inner frame",
+      "x": 80,
+      "y": 220,
+      "parent": "fcCard",
+      "children": [
+        "fcChip",
+        "fcName",
+        "fcSuit"
+      ],
+      "parameters": {
+        "width": {
+          "value": 100,
+          "unit": "%"
+        },
+        "height": {
+          "value": 100,
+          "unit": "%"
+        },
+        "sizeMode": "explicit",
+        "flexDirection": "column",
+        "alignItems": "center",
+        "justifyContent": "space-between",
+        "borderStyle": "solid",
+        "borderWidth": "var(--border-1)",
+        "borderColor": "var(--border-strong)",
+        "borderRadius": "var(--radius-lg)",
+        "paddingTop": "var(--space-4)",
+        "paddingBottom": "var(--space-4)",
+        "paddingLeft": "var(--space-3)",
+        "paddingRight": "var(--space-3)"
+      }
+    },
+    {
+      "id": "fcChip",
+      "type": "Text",
+      "label": "Numeral or rank",
+      "x": 100,
+      "y": 300,
+      "parent": "fcFrame",
+      "parameters": {
+        "fontFamily": "var(--font-serif)",
+        "fontSize": "var(--text-2xl)",
+        "color": "var(--primary)",
+        "textAlignX": "center"
+      }
+    },
+    {
+      "id": "fcName",
+      "type": "Text",
+      "label": "Card name",
+      "x": 100,
+      "y": 380,
+      "parent": "fcFrame",
+      "parameters": {
+        "fontFamily": "var(--font-serif)",
+        "fontSize": "var(--text-2xl)",
+        "lineHeight": "var(--leading-tight)",
+        "color": "var(--foreground)",
+        "textAlignX": "center"
+      }
+    },
+    {
+      "id": "fcSuit",
+      "type": "Text",
+      "label": "Suit",
+      "x": 100,
+      "y": 460,
+      "parent": "fcFrame",
+      "parameters": {
+        "fontSize": "var(--text-xs)",
+        "fontWeight": "var(--font-semibold)",
+        "letterSpacing": "var(--tracking-widest)",
+        "textTransform": "uppercase",
+        "color": "var(--muted-foreground)",
+        "textAlignX": "center"
+      }
+    }
+  ],
+  "visualRoots": [
+    "fcWrap"
+  ]
+}

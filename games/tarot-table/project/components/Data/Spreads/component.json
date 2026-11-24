@@ -1,0 +1,11 @@
+{
+  "$schema": "https://opennoodl.dev/schemas/component-v2.json",
+  "id": "c8fb8c7b-aae0-5665-8b0f-06f0a4ee1755",
+  "name": "Spreads",
+  "path": "/Data/Spreads",
+  "type": "visual",
+  "created": "2026-11-24T08:15:26.925Z",
+  "modified": "2026-11-24T08:15:26.925Z",
+  "modifiedBy": "noodl-mcp",
+  "description": "The spreads: each has a name, a one-line description and its positions in order."
+}

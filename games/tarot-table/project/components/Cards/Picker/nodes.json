@@ -1,0 +1,225 @@
+{
+  "$schema": "https://opennoodl.dev/schemas/nodes-v2.json",
+  "componentId": "198a3987-0f28-547d-831c-16c30571f7d8",
+  "version": 1,
+  "nodes": [
+    {
+      "id": "pkRoot",
+      "type": "Group",
+      "label": "Picker",
+      "x": 40,
+      "y": 40,
+      "children": [
+        "pkTabs",
+        "pkAbout",
+        "pkGrid"
+      ],
+      "parameters": {
+        "width": {
+          "value": 100,
+          "unit": "%"
+        },
+        "sizeMode": "contentHeight",
+        "flexDirection": "column",
+        "rowGap": "var(--space-4)"
+      }
+    },
+    {
+      "id": "pkTabs",
+      "type": "Group",
+      "label": "Suit tabs",
+      "x": 60,
+      "y": 140,
+      "parent": "pkRoot",
+      "children": [
+        "pkTabsFE"
+      ],
+      "parameters": {
+        "width": {
+          "value": 100,
+          "unit": "%"
+        },
+        "sizeMode": "contentHeight",
+        "flexDirection": "row",
+        "flexWrap": "wrap",
+        "columnGap": "var(--space-2)",
+        "rowGap": "var(--space-2)"
+      }
+    },
+    {
+      "id": "pkTabsFE",
+      "type": "For Each",
+      "label": "One tab per suit",
+      "x": 80,
+      "y": 220,
+      "parent": "pkTabs",
+      "parameters": {
+        "template": "/Cards/Suit tab",
+        "templateType": "explicit"
+      }
+    },
+    {
+      "id": "pkAbout",
+      "type": "Text",
+      "label": "What this suit is about",
+      "x": 60,
+      "y": 300,
+      "parent": "pkRoot",
+      "parameters": {
+        "fontSize": "var(--text-sm)",
+        "color": "var(--muted-foreground)",
+        "lineHeight": "var(--leading-snug)"
+      }
+    },
+    {
+      "id": "pkGrid",
+      "type": "Group",
+      "label": "Card grid",
+      "x": 60,
+      "y": 380,
+      "parent": "pkRoot",
+      "children": [
+        "pkGridFE"
+      ],
+      "parameters": {
+        "width": {
+          "value": 100,
+          "unit": "%"
+        },
+        "sizeMode": "contentHeight",
+        "flexDirection": "row",
+        "flexWrap": "wrap",
+        "columnGap": "var(--space-2)",
+        "rowGap": "var(--space-2)"
+      }
+    },
+    {
+      "id": "pkGridFE",
+      "type": "For Each",
+      "label": "One mini card per card in the suit",
+      "x": 80,
+      "y": 460,
+      "parent": "pkGrid",
+      "parameters": {
+        "template": "/Cards/Chip",
+        "templateType": "explicit"
+      }
+    },
+    {
+      "id": "pkCards",
+      "type": "/Data/Cards",
+      "label": "The deck",
+      "x": 520,
+      "y": 40
+    },
+    {
+      "id": "pkSuits",
+      "type": "/Data/Suits",
+      "label": "The suits",
+      "x": 520,
+      "y": 140
+    },
+    {
+      "id": "pkSuit",
+      "type": "Variable2",
+      "label": "Suit on show",
+      "x": 520,
+      "y": 240,
+      "parameters": {
+        "name": "pickSuit"
+      },
+      "metadata": {
+        "comment": "Shared on purpose: the Reading and Deck pickers are never on screen together, and the suit last looked at stays open in both."
+      }
+    },
+    {
+      "id": "pkShow",
+      "type": "JavaScriptFunction",
+      "label": "Tabs and the cards of the suit on show",
+      "x": 820,
+      "y": 40,
+      "parameters": {
+        "functionScript": "const suit = Inputs.suit || 'major';\nconst suits = Inputs.suits || [];\nconst cards = Inputs.cards || [];\nconst here = suits.find(s => s.id === suit) || suits[0] || {};\nOutputs.tabs = suits.map(s => ({ id: s.id, name: s.name, selected: s.id === suit }));\nOutputs.list = cards\n  .filter(c => c.suit === suit)\n  .map(c => ({ id: c.id, chip: c.chip, sub: c.suit === 'major' ? c.name : here.name }));\nOutputs.about = here.about || '';\n"
+      },
+      "metadata": {
+        "comment": "Major is the first tab until someone picks another suit. A major's mini card shows its name; a minor's shows the suit."
+      },
+      "ports": [
+        {
+          "name": "in-suit",
+          "displayName": "suit",
+          "plug": "input",
+          "type": "*",
+          "group": "Inputs"
+        },
+        {
+          "name": "in-suits",
+          "displayName": "suits",
+          "plug": "input",
+          "type": "*",
+          "group": "Inputs"
+        },
+        {
+          "name": "in-cards",
+          "displayName": "cards",
+          "plug": "input",
+          "type": "*",
+          "group": "Inputs"
+        },
+        {
+          "name": "out-tabs",
+          "displayName": "tabs",
+          "plug": "output",
+          "type": "*",
+          "group": "Outputs"
+        },
+        {
+          "name": "out-list",
+          "displayName": "list",
+          "plug": "output",
+          "type": "*",
+          "group": "Outputs"
+        },
+        {
+          "name": "out-about",
+          "displayName": "about",
+          "plug": "output",
+          "type": "*",
+          "group": "Outputs"
+        }
+      ]
+    },
+    {
+      "id": "pkSetSuit",
+      "type": "Set Variable",
+      "label": "Show the tapped suit",
+      "x": 820,
+      "y": 300,
+      "parameters": {
+        "name": "pickSuit",
+        "setWith": "string"
+      }
+    },
+    {
+      "id": "pkOut",
+      "type": "Component Outputs",
+      "x": 820,
+      "y": 440,
+      "ports": [
+        {
+          "name": "picked",
+          "plug": "input",
+          "type": "signal"
+        },
+        {
+          "name": "cardId",
+          "plug": "input",
+          "type": "string"
+        }
+      ]
+    }
+  ],
+  "visualRoots": [
+    "pkRoot"
+  ]
+}

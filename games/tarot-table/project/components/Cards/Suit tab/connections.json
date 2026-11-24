@@ -1,0 +1,55 @@
+{
+  "$schema": "https://opennoodl.dev/schemas/connections-v2.json",
+  "componentId": "a8004b95-61c6-5da9-87fa-d4fae4501169",
+  "version": 1,
+  "connections": [
+    {
+      "fromId": "stIn",
+      "fromProperty": "name",
+      "toId": "stName",
+      "toProperty": "text"
+    },
+    {
+      "fromId": "stIn",
+      "fromProperty": "selected",
+      "toId": "stLook",
+      "toProperty": "selected"
+    },
+    {
+      "fromId": "stLook",
+      "fromProperty": "result",
+      "toId": "stStates",
+      "toProperty": "currentState"
+    },
+    {
+      "fromId": "stStates",
+      "fromProperty": "ground",
+      "toId": "stTab",
+      "toProperty": "backgroundColor"
+    },
+    {
+      "fromId": "stStates",
+      "fromProperty": "edge",
+      "toId": "stTab",
+      "toProperty": "borderColor"
+    },
+    {
+      "fromId": "stStates",
+      "fromProperty": "ink",
+      "toId": "stName",
+      "toProperty": "color"
+    },
+    {
+      "fromId": "stIn",
+      "fromProperty": "id",
+      "toId": "stOut",
+      "toProperty": "id"
+    },
+    {
+      "fromId": "stTab",
+      "fromProperty": "onClick",
+      "toId": "stOut",
+      "toProperty": "tapped"
+    }
+  ]
+}

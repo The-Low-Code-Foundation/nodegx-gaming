@@ -1,0 +1,339 @@
+{
+  "$schema": "https://opennoodl.dev/schemas/nodes-v2.json",
+  "componentId": "3b34f440-6a39-5298-8275-d1e846c5727d",
+  "version": 1,
+  "nodes": [
+    {
+      "id": "d46bf219-20a6-4e80-be5a-4894664d2ba9",
+      "type": "Page",
+      "label": "Home",
+      "x": 40,
+      "y": 40,
+      "children": [
+        "hmGround"
+      ],
+      "parameters": {
+        "title": "Tarot Table",
+        "urlPath": "home"
+      }
+    },
+    {
+      "id": "hmGround",
+      "type": "Group",
+      "label": "Night ground",
+      "x": 60,
+      "y": 120,
+      "parent": "d46bf219-20a6-4e80-be5a-4894664d2ba9",
+      "children": [
+        "hmShell"
+      ],
+      "parameters": {
+        "width": {
+          "value": 100,
+          "unit": "%"
+        },
+        "sizeMode": "contentHeight",
+        "minHeight": {
+          "value": 100,
+          "unit": "vh"
+        },
+        "flexDirection": "column",
+        "alignItems": "center",
+        "backgroundGradient": "radial-gradient(120% 60% at 50% 0%, var(--secondary) 0%, var(--background) 70%)",
+        "backgroundColor": "var(--background)",
+        "paddingTop": "var(--space-12)",
+        "paddingBottom": "var(--space-16)"
+      }
+    },
+    {
+      "id": "hmShell",
+      "type": "Group",
+      "label": "Column",
+      "x": 80,
+      "y": 200,
+      "parent": "hmGround",
+      "children": [
+        "hmEyebrow",
+        "hmTitle",
+        "hmLead",
+        "hmTip",
+        "hmChoose",
+        "hmSpreads",
+        "hmDeckBtn",
+        "hmFoot"
+      ],
+      "parameters": {
+        "width": {
+          "value": 100,
+          "unit": "%"
+        },
+        "maxWidth": {
+          "value": 560,
+          "unit": "px"
+        },
+        "sizeMode": "contentHeight",
+        "flexDirection": "column",
+        "rowGap": "var(--space-5)",
+        "paddingLeft": "var(--space-4)",
+        "paddingRight": "var(--space-4)"
+      }
+    },
+    {
+      "id": "hmEyebrow",
+      "type": "Text",
+      "label": "Eyebrow",
+      "x": 100,
+      "y": 280,
+      "parent": "hmShell",
+      "parameters": {
+        "text": "Tarot for the table",
+        "fontSize": "var(--text-xs)",
+        "fontWeight": "var(--font-semibold)",
+        "letterSpacing": "var(--tracking-widest)",
+        "textTransform": "uppercase",
+        "color": "var(--primary)"
+      }
+    },
+    {
+      "id": "hmTitle",
+      "type": "Text",
+      "label": "Title",
+      "x": 100,
+      "y": 340,
+      "parent": "hmShell",
+      "parameters": {
+        "text": "Tarot Table",
+        "fontFamily": "var(--font-serif)",
+        "fontSize": "var(--text-5xl)",
+        "lineHeight": "var(--leading-none)",
+        "color": "var(--foreground)"
+      }
+    },
+    {
+      "id": "hmLead",
+      "type": "Text",
+      "label": "What it is",
+      "x": 100,
+      "y": 400,
+      "parent": "hmShell",
+      "parameters": {
+        "text": "Lay out real tarot cards and tap in each one you draw. The app says what the card is about and gives you a question to ask.",
+        "fontSize": "var(--text-lg)",
+        "lineHeight": "var(--leading-relaxed)",
+        "color": "var(--muted-foreground)"
+      }
+    },
+    {
+      "id": "hmTip",
+      "type": "Group",
+      "label": "Before you shuffle",
+      "x": 100,
+      "y": 460,
+      "parent": "hmShell",
+      "children": [
+        "hmTipHead",
+        "hmTipAsk",
+        "hmTipWhy"
+      ],
+      "parameters": {
+        "width": {
+          "value": 100,
+          "unit": "%"
+        },
+        "sizeMode": "contentHeight",
+        "flexDirection": "column",
+        "rowGap": "var(--space-2)",
+        "backgroundColor": "var(--accent)",
+        "borderStyle": "solid",
+        "borderWidth": "var(--border-1)",
+        "borderColor": "var(--border)",
+        "borderRadius": "var(--radius-xl)",
+        "paddingTop": "var(--space-4)",
+        "paddingBottom": "var(--space-4)",
+        "paddingLeft": "var(--space-5)",
+        "paddingRight": "var(--space-5)"
+      }
+    },
+    {
+      "id": "hmTipHead",
+      "type": "Text",
+      "label": "Tip heading",
+      "x": 120,
+      "y": 540,
+      "parent": "hmTip",
+      "parameters": {
+        "text": "Before you shuffle",
+        "fontSize": "var(--text-xs)",
+        "fontWeight": "var(--font-semibold)",
+        "letterSpacing": "var(--tracking-widest)",
+        "textTransform": "uppercase",
+        "color": "var(--primary)"
+      }
+    },
+    {
+      "id": "hmTipAsk",
+      "type": "Text",
+      "label": "Ask an open question",
+      "x": 120,
+      "y": 600,
+      "parent": "hmTip",
+      "parameters": {
+        "text": "Ask an open question, like “What should I focus on this month?” A yes-or-no question such as “Will I get the job?” gives the cards less to work with.",
+        "fontSize": "var(--text-base)",
+        "lineHeight": "var(--leading-relaxed)",
+        "color": "var(--foreground)"
+      }
+    },
+    {
+      "id": "hmTipWhy",
+      "type": "Text",
+      "label": "What the cards are for",
+      "x": 120,
+      "y": 660,
+      "parent": "hmTip",
+      "parameters": {
+        "text": "The cards don't predict anything. They give the table something to talk about.",
+        "fontSize": "var(--text-sm)",
+        "lineHeight": "var(--leading-relaxed)",
+        "color": "var(--muted-foreground)"
+      }
+    },
+    {
+      "id": "hmChoose",
+      "type": "Text",
+      "label": "Choose a spread",
+      "x": 100,
+      "y": 720,
+      "parent": "hmShell",
+      "parameters": {
+        "text": "Choose a spread",
+        "fontFamily": "var(--font-serif)",
+        "fontSize": "var(--text-2xl)",
+        "color": "var(--foreground)",
+        "marginTop": "var(--space-2)"
+      }
+    },
+    {
+      "id": "hmSpreads",
+      "type": "Group",
+      "label": "The spreads",
+      "x": 100,
+      "y": 780,
+      "parent": "hmShell",
+      "children": [
+        "hmSpreadsFE"
+      ],
+      "parameters": {
+        "width": {
+          "value": 100,
+          "unit": "%"
+        },
+        "sizeMode": "contentHeight",
+        "flexDirection": "column",
+        "rowGap": "var(--space-3)"
+      }
+    },
+    {
+      "id": "hmSpreadsFE",
+      "type": "For Each",
+      "label": "One card per spread",
+      "x": 120,
+      "y": 840,
+      "parent": "hmSpreads",
+      "parameters": {
+        "template": "/Home/Spread card",
+        "templateType": "explicit"
+      }
+    },
+    {
+      "id": "hmDeckBtn",
+      "type": "net.noodl.controls.button",
+      "label": "Look up a card",
+      "x": 100,
+      "y": 900,
+      "parent": "hmShell",
+      "parameters": {
+        "label": "How the deck works, and every card",
+        "backgroundColor": "transparent",
+        "color": "var(--foreground)",
+        "borderRadius": "var(--radius-full)",
+        "borderStyle": "solid",
+        "borderWidth": "var(--border-1)",
+        "borderColor": "var(--border-control)",
+        "paddingLeft": "var(--space-6)",
+        "paddingRight": "var(--space-6)",
+        "paddingTop": "var(--space-3)",
+        "paddingBottom": "var(--space-3)",
+        "fontSize": "var(--text-sm)",
+        "fontWeight": "var(--font-semibold)",
+        "sizeMode": "contentSize",
+        "marginTop": "var(--space-2)"
+      }
+    },
+    {
+      "id": "hmFoot",
+      "type": "Text",
+      "label": "Made with",
+      "x": 100,
+      "y": 960,
+      "parent": "hmShell",
+      "parameters": {
+        "text": "Made with NodeGX · nodegx.io",
+        "fontSize": "var(--text-xs)",
+        "color": "var(--muted-foreground)",
+        "marginTop": "var(--space-8)"
+      }
+    },
+    {
+      "id": "hmData",
+      "type": "/Data/Spreads",
+      "label": "The spreads",
+      "x": 600,
+      "y": 40
+    },
+    {
+      "id": "hmSetSpread",
+      "type": "Set Variable",
+      "label": "Remember the spread chosen",
+      "x": 600,
+      "y": 200,
+      "parameters": {
+        "name": "readSpread",
+        "setWith": "string"
+      }
+    },
+    {
+      "id": "hmReset",
+      "type": "JavaScriptFunction",
+      "label": "Start a fresh reading",
+      "x": 600,
+      "y": 320,
+      "parameters": {
+        "functionScript": "Noodl.Variables.readStep = 0;\nNoodl.Variables.readDrawn = [];\nNoodl.Variables.readCard = '';\nNoodl.Variables.readUpsideDown = false;\nNoodl.Variables.readPhase = 'pick';\nwindow.scrollTo(0, 0);\n"
+      }
+    },
+    {
+      "id": "hmGoReading",
+      "type": "RouterNavigate",
+      "label": "To the reading",
+      "x": 900,
+      "y": 320,
+      "parameters": {
+        "target": "/Pages/Reading"
+      }
+    },
+    {
+      "id": "hmGoDeck",
+      "type": "RouterNavigate",
+      "label": "To the deck",
+      "x": 900,
+      "y": 440,
+      "parameters": {
+        "target": "/Pages/Deck"
+      }
+    }
+  ],
+  "visualRoots": [
+    "d46bf219-20a6-4e80-be5a-4894664d2ba9"
+  ]
+}

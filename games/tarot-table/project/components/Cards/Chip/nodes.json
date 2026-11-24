@@ -1,0 +1,114 @@
+{
+  "$schema": "https://opennoodl.dev/schemas/nodes-v2.json",
+  "componentId": "c3879170-c9f0-59c3-85dc-ccd3dddc1470",
+  "version": 1,
+  "nodes": [
+    {
+      "id": "chIn",
+      "type": "Component Inputs",
+      "x": 420,
+      "y": 40,
+      "ports": [
+        {
+          "name": "id",
+          "plug": "output",
+          "type": "string"
+        },
+        {
+          "name": "chip",
+          "plug": "output",
+          "type": "string"
+        },
+        {
+          "name": "sub",
+          "plug": "output",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "id": "chCard",
+      "type": "Group",
+      "label": "Mini card",
+      "x": 40,
+      "y": 40,
+      "children": [
+        "chChip",
+        "chSub"
+      ],
+      "parameters": {
+        "sizeMode": "explicit",
+        "width": {
+          "value": 82,
+          "unit": "px"
+        },
+        "height": {
+          "value": 112,
+          "unit": "px"
+        },
+        "flexDirection": "column",
+        "alignItems": "center",
+        "justifyContent": "center",
+        "rowGap": "var(--space-1)",
+        "backgroundColor": "var(--surface)",
+        "borderStyle": "solid",
+        "borderWidth": "var(--border-1)",
+        "borderColor": "var(--border-strong)",
+        "borderRadius": "var(--radius-lg)",
+        "paddingLeft": "0",
+        "paddingRight": "0"
+      }
+    },
+    {
+      "id": "chChip",
+      "type": "Text",
+      "label": "Numeral or rank",
+      "x": 60,
+      "y": 140,
+      "parent": "chCard",
+      "parameters": {
+        "fontFamily": "var(--font-serif)",
+        "fontSize": "var(--text-xl)",
+        "fontWeight": "var(--font-semibold)",
+        "color": "var(--primary)",
+        "textAlignX": "center",
+        "lineHeight": "var(--leading-tight)"
+      }
+    },
+    {
+      "id": "chSub",
+      "type": "Text",
+      "label": "Name or suit",
+      "x": 60,
+      "y": 220,
+      "parent": "chCard",
+      "parameters": {
+        "fontSize": "var(--text-xs)",
+        "color": "var(--muted-foreground)",
+        "textAlignX": "center",
+        "lineHeight": "var(--leading-tight)"
+      }
+    },
+    {
+      "id": "chOut",
+      "type": "Component Outputs",
+      "x": 420,
+      "y": 200,
+      "ports": [
+        {
+          "name": "tapped",
+          "plug": "input",
+          "type": "signal"
+        },
+        {
+          "name": "id",
+          "plug": "input",
+          "type": "string"
+        }
+      ]
+    }
+  ],
+  "visualRoots": [
+    "chCard"
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "$schema": "https://opennoodl.dev/schemas/component-v2.json",
+  "id": "198a3987-0f28-547d-831c-16c30571f7d8",
+  "name": "Picker",
+  "path": "/Cards/Picker",
+  "type": "visual",
+  "created": "2026-11-24T08:16:04.224Z",
+  "modified": "2026-11-24T08:20:31.969Z",
+  "modifiedBy": "noodl-mcp",
+  "description": "Find any of the 78 cards in two taps: choose the suit, then the card. Sends picked with the card's id."
+}

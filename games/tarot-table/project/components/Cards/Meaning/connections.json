@@ -1,0 +1,61 @@
+{
+  "$schema": "https://opennoodl.dev/schemas/connections-v2.json",
+  "componentId": "39b3de93-0ab2-5fb2-86b5-8f0af0494550",
+  "version": 1,
+  "connections": [
+    {
+      "fromId": "mnIn",
+      "fromProperty": "eyebrow",
+      "toId": "mnEyebrow",
+      "toProperty": "text"
+    },
+    {
+      "fromId": "mnIn",
+      "fromProperty": "lead",
+      "toId": "mnLead",
+      "toProperty": "text"
+    },
+    {
+      "fromId": "mnIn",
+      "fromProperty": "lead",
+      "toId": "mnHasLead",
+      "toProperty": "lead"
+    },
+    {
+      "fromId": "mnHasLead",
+      "fromProperty": "asBoolean",
+      "toId": "mnLead",
+      "toProperty": "mounted"
+    },
+    {
+      "fromId": "mnIn",
+      "fromProperty": "keywords",
+      "toId": "mnKeywords",
+      "toProperty": "text"
+    },
+    {
+      "fromId": "mnIn",
+      "fromProperty": "keywords",
+      "toId": "mnHasKw",
+      "toProperty": "keywords"
+    },
+    {
+      "fromId": "mnHasKw",
+      "fromProperty": "asBoolean",
+      "toId": "mnKeywords",
+      "toProperty": "mounted"
+    },
+    {
+      "fromId": "mnIn",
+      "fromProperty": "text",
+      "toId": "mnText",
+      "toProperty": "text"
+    },
+    {
+      "fromId": "mnIn",
+      "fromProperty": "ask",
+      "toId": "mnAsk",
+      "toProperty": "text"
+    }
+  ]
+}

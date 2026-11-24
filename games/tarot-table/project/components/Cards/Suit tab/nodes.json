@@ -1,0 +1,117 @@
+{
+  "$schema": "https://opennoodl.dev/schemas/nodes-v2.json",
+  "componentId": "a8004b95-61c6-5da9-87fa-d4fae4501169",
+  "version": 1,
+  "nodes": [
+    {
+      "id": "stIn",
+      "type": "Component Inputs",
+      "x": 420,
+      "y": 40,
+      "ports": [
+        {
+          "name": "id",
+          "plug": "output",
+          "type": "string"
+        },
+        {
+          "name": "name",
+          "plug": "output",
+          "type": "string"
+        },
+        {
+          "name": "selected",
+          "plug": "output",
+          "type": "boolean"
+        }
+      ]
+    },
+    {
+      "id": "stLook",
+      "type": "Expression",
+      "label": "Selected or not",
+      "x": 420,
+      "y": 200,
+      "parameters": {
+        "expression": "selected ? 'on' : 'off'"
+      }
+    },
+    {
+      "id": "stStates",
+      "type": "States",
+      "label": "Tab colours",
+      "x": 420,
+      "y": 320,
+      "parameters": {
+        "states": "off,on",
+        "values": "ground,ink,edge",
+        "useTransitions": false,
+        "type-ground": "color",
+        "type-ink": "color",
+        "type-edge": "color",
+        "value-off-ground": "transparent",
+        "value-on-ground": "var(--primary)",
+        "value-off-ink": "var(--foreground)",
+        "value-on-ink": "var(--primary-foreground)",
+        "value-off-edge": "var(--border-strong)",
+        "value-on-edge": "var(--primary)"
+      }
+    },
+    {
+      "id": "stTab",
+      "type": "Group",
+      "label": "Tab",
+      "x": 40,
+      "y": 40,
+      "children": [
+        "stName"
+      ],
+      "parameters": {
+        "sizeMode": "contentSize",
+        "flexDirection": "row",
+        "alignItems": "center",
+        "borderStyle": "solid",
+        "borderWidth": "var(--border-1)",
+        "borderRadius": "var(--radius-full)",
+        "paddingLeft": "var(--space-3)",
+        "paddingRight": "var(--space-3)",
+        "paddingTop": "var(--space-2)",
+        "paddingBottom": "var(--space-2)"
+      }
+    },
+    {
+      "id": "stName",
+      "type": "Text",
+      "label": "Suit name",
+      "x": 60,
+      "y": 140,
+      "parent": "stTab",
+      "parameters": {
+        "sizeMode": "contentSize",
+        "fontSize": "var(--text-sm)",
+        "fontWeight": "var(--font-semibold)"
+      }
+    },
+    {
+      "id": "stOut",
+      "type": "Component Outputs",
+      "x": 700,
+      "y": 40,
+      "ports": [
+        {
+          "name": "tapped",
+          "plug": "input",
+          "type": "signal"
+        },
+        {
+          "name": "id",
+          "plug": "input",
+          "type": "string"
+        }
+      ]
+    }
+  ],
+  "visualRoots": [
+    "stTab"
+  ]
+}

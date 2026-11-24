@@ -1,0 +1,31 @@
+{
+  "$schema": "https://opennoodl.dev/schemas/nodes-v2.json",
+  "componentId": "93b793df-bb45-5ea4-8645-1acfc09b042b",
+  "version": 1,
+  "nodes": [
+    {
+      "id": "dsData",
+      "type": "Static Data",
+      "label": "EDIT: the suits",
+      "x": 40,
+      "y": 40,
+      "parameters": {
+        "type": "json",
+        "json": "[\n  {\n    \"id\": \"major\",\n    \"name\": \"Major\",\n    \"title\": \"Major Arcana\",\n    \"about\": \"The 22 named cards. When one comes up, the reading is about something big.\"\n  },\n  {\n    \"id\": \"wands\",\n    \"name\": \"Wands\",\n    \"title\": \"Wands\",\n    \"about\": \"Drive, ambition, projects and energy.\"\n  },\n  {\n    \"id\": \"cups\",\n    \"name\": \"Cups\",\n    \"title\": \"Cups\",\n    \"about\": \"Feelings, love, friends and family.\"\n  },\n  {\n    \"id\": \"swords\",\n    \"name\": \"Swords\",\n    \"title\": \"Swords\",\n    \"about\": \"Thoughts, worries, arguments and decisions.\"\n  },\n  {\n    \"id\": \"pentacles\",\n    \"name\": \"Pentacles\",\n    \"title\": \"Pentacles\",\n    \"about\": \"Money, work, home and the body.\"\n  }\n]"
+      }
+    },
+    {
+      "id": "dsOut",
+      "type": "Component Outputs",
+      "x": 360,
+      "y": 40,
+      "ports": [
+        {
+          "name": "suits",
+          "plug": "input",
+          "type": "array"
+        }
+      ]
+    }
+  ]
+}

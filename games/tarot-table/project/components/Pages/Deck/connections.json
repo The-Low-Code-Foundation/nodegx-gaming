@@ -1,0 +1,139 @@
+{
+  "$schema": "https://opennoodl.dev/schemas/connections-v2.json",
+  "componentId": "229dc959-407b-5f2f-8391-4dba3f66882b",
+  "version": 1,
+  "connections": [
+    {
+      "fromId": "dkCards",
+      "fromProperty": "cards",
+      "toId": "dkCard",
+      "toProperty": "in-cards"
+    },
+    {
+      "fromId": "dkVCard",
+      "fromProperty": "value",
+      "toId": "dkCard",
+      "toProperty": "in-cardId"
+    },
+    {
+      "fromId": "dkVCard",
+      "fromProperty": "value",
+      "toId": "dkHas",
+      "toProperty": "card"
+    },
+    {
+      "fromId": "dkHas",
+      "fromProperty": "isTrue",
+      "toId": "dkOne",
+      "toProperty": "mounted"
+    },
+    {
+      "fromId": "dkHas",
+      "fromProperty": "isFalse",
+      "toId": "dkBrowse",
+      "toProperty": "mounted"
+    },
+    {
+      "fromId": "dkCard",
+      "fromProperty": "out-chip",
+      "toId": "dkFace",
+      "toProperty": "chip"
+    },
+    {
+      "fromId": "dkCard",
+      "fromProperty": "out-name",
+      "toId": "dkFace",
+      "toProperty": "name"
+    },
+    {
+      "fromId": "dkCard",
+      "fromProperty": "out-suitName",
+      "toId": "dkFace",
+      "toProperty": "suitName"
+    },
+    {
+      "fromId": "dkCard",
+      "fromProperty": "out-keywords",
+      "toId": "dkUp",
+      "toProperty": "keywords"
+    },
+    {
+      "fromId": "dkCard",
+      "fromProperty": "out-up",
+      "toId": "dkUp",
+      "toProperty": "text"
+    },
+    {
+      "fromId": "dkCard",
+      "fromProperty": "out-askUp",
+      "toId": "dkUp",
+      "toProperty": "ask"
+    },
+    {
+      "fromId": "dkCard",
+      "fromProperty": "out-rev",
+      "toId": "dkDown",
+      "toProperty": "text"
+    },
+    {
+      "fromId": "dkCard",
+      "fromProperty": "out-askRev",
+      "toId": "dkDown",
+      "toProperty": "ask"
+    },
+    {
+      "fromId": "dkPicker",
+      "fromProperty": "cardId",
+      "toId": "dkSetCard",
+      "toProperty": "value"
+    },
+    {
+      "fromId": "dkPicker",
+      "fromProperty": "picked",
+      "toId": "dkSetCard",
+      "toProperty": "do"
+    },
+    {
+      "fromId": "dkPicker",
+      "fromProperty": "picked",
+      "toId": "dkTop",
+      "toProperty": "run"
+    },
+    {
+      "fromId": "dkRandomBtn",
+      "fromProperty": "onClick",
+      "toId": "dkRandom",
+      "toProperty": "run"
+    },
+    {
+      "fromId": "dkRandomBtn",
+      "fromProperty": "onClick",
+      "toId": "dkTop",
+      "toProperty": "run"
+    },
+    {
+      "fromId": "dkAnotherBtn",
+      "fromProperty": "onClick",
+      "toId": "dkRandom",
+      "toProperty": "run"
+    },
+    {
+      "fromId": "dkAnotherBtn",
+      "fromProperty": "onClick",
+      "toId": "dkTop",
+      "toProperty": "run"
+    },
+    {
+      "fromId": "dkBackBtn",
+      "fromProperty": "onClick",
+      "toId": "dkClose",
+      "toProperty": "do"
+    },
+    {
+      "fromId": "dkHomeBtn",
+      "fromProperty": "onClick",
+      "toId": "dkGoHome",
+      "toProperty": "navigate"
+    }
+  ]
+}

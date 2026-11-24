@@ -1,0 +1,11 @@
+{
+  "$schema": "https://opennoodl.dev/schemas/component-v2.json",
+  "id": "95f39c1b-997b-5d0c-8344-14c4595f59f2",
+  "name": "Face",
+  "path": "/Cards/Face",
+  "type": "visual",
+  "created": "2026-11-24T08:16:31.555Z",
+  "modified": "2026-11-24T08:20:31.927Z",
+  "modifiedBy": "noodl-mcp",
+  "description": "The card that was drawn, drawn as a tarot card. It turns upside down when the card is reversed."
+}

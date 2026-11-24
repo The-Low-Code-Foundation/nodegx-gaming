@@ -1,0 +1,37 @@
+{
+  "$schema": "https://opennoodl.dev/schemas/connections-v2.json",
+  "componentId": "5ce7db7b-ed10-5de4-8611-c3915368228e",
+  "version": 1,
+  "connections": [
+    {
+      "fromId": "scIn",
+      "fromProperty": "name",
+      "toId": "scName",
+      "toProperty": "text"
+    },
+    {
+      "fromId": "scIn",
+      "fromProperty": "count",
+      "toId": "scCount",
+      "toProperty": "text"
+    },
+    {
+      "fromId": "scIn",
+      "fromProperty": "blurb",
+      "toId": "scBlurb",
+      "toProperty": "text"
+    },
+    {
+      "fromId": "scIn",
+      "fromProperty": "id",
+      "toId": "scOut",
+      "toProperty": "id"
+    },
+    {
+      "fromId": "scCard",
+      "fromProperty": "onClick",
+      "toId": "scOut",
+      "toProperty": "tapped"
+    }
+  ]
+}

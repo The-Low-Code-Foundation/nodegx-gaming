@@ -1,0 +1,13 @@
+{
+  "$schema": "https://opennoodl.dev/schemas/connections-v2.json",
+  "componentId": "93b793df-bb45-5ea4-8645-1acfc09b042b",
+  "version": 1,
+  "connections": [
+    {
+      "fromId": "dsData",
+      "fromProperty": "items",
+      "toId": "dsOut",
+      "toProperty": "suits"
+    }
+  ]
+}

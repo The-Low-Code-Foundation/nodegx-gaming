@@ -1,0 +1,570 @@
+{
+  "$schema": "https://opennoodl.dev/schemas/nodes-v2.json",
+  "componentId": "229dc959-407b-5f2f-8391-4dba3f66882b",
+  "version": 1,
+  "nodes": [
+    {
+      "id": "dkPage",
+      "type": "Page",
+      "label": "Deck",
+      "x": 40,
+      "y": 40,
+      "children": [
+        "dkGround"
+      ],
+      "parameters": {
+        "title": "The deck",
+        "urlPath": "deck"
+      }
+    },
+    {
+      "id": "dkGround",
+      "type": "Group",
+      "label": "Night ground",
+      "x": 60,
+      "y": 120,
+      "parent": "dkPage",
+      "children": [
+        "dkShell"
+      ],
+      "parameters": {
+        "width": {
+          "value": 100,
+          "unit": "%"
+        },
+        "sizeMode": "contentHeight",
+        "minHeight": {
+          "value": 100,
+          "unit": "vh"
+        },
+        "flexDirection": "column",
+        "alignItems": "center",
+        "backgroundColor": "var(--background)",
+        "paddingTop": "var(--space-4)",
+        "paddingBottom": "var(--space-16)"
+      }
+    },
+    {
+      "id": "dkShell",
+      "type": "Group",
+      "label": "Column",
+      "x": 80,
+      "y": 200,
+      "parent": "dkGround",
+      "children": [
+        "dkHomeBtn",
+        "dkBrowse",
+        "dkOne"
+      ],
+      "parameters": {
+        "width": {
+          "value": 100,
+          "unit": "%"
+        },
+        "maxWidth": {
+          "value": 560,
+          "unit": "px"
+        },
+        "sizeMode": "contentHeight",
+        "flexDirection": "column",
+        "rowGap": "var(--space-5)",
+        "paddingLeft": "var(--space-4)",
+        "paddingRight": "var(--space-4)"
+      }
+    },
+    {
+      "id": "dkHomeBtn",
+      "type": "net.noodl.controls.button",
+      "label": "Back to the spreads",
+      "x": 100,
+      "y": 280,
+      "parent": "dkShell",
+      "parameters": {
+        "label": "← Spreads",
+        "backgroundColor": "transparent",
+        "color": "var(--muted-foreground)",
+        "borderStyle": "none",
+        "paddingLeft": "0",
+        "paddingRight": "var(--space-2)",
+        "paddingTop": "var(--space-2)",
+        "paddingBottom": "var(--space-2)",
+        "fontSize": "var(--text-sm)",
+        "fontWeight": "var(--font-medium)",
+        "sizeMode": "contentSize"
+      }
+    },
+    {
+      "id": "dkBrowse",
+      "type": "Group",
+      "label": "How the deck works, and the picker",
+      "x": 100,
+      "y": 360,
+      "parent": "dkShell",
+      "children": [
+        "dkEyebrow",
+        "dkTitle",
+        "dkP1",
+        "dkP2",
+        "dkP3",
+        "dkP4",
+        "dkP5",
+        "dkLookTitle",
+        "dkPicker",
+        "dkRandomBtn"
+      ],
+      "parameters": {
+        "width": {
+          "value": 100,
+          "unit": "%"
+        },
+        "sizeMode": "contentHeight",
+        "flexDirection": "column",
+        "rowGap": "var(--space-4)"
+      }
+    },
+    {
+      "id": "dkEyebrow",
+      "type": "Text",
+      "label": "Eyebrow",
+      "x": 120,
+      "y": 440,
+      "parent": "dkBrowse",
+      "parameters": {
+        "text": "The deck",
+        "fontSize": "var(--text-xs)",
+        "fontWeight": "var(--font-semibold)",
+        "letterSpacing": "var(--tracking-widest)",
+        "textTransform": "uppercase",
+        "color": "var(--primary)"
+      }
+    },
+    {
+      "id": "dkTitle",
+      "type": "Text",
+      "label": "Title",
+      "x": 120,
+      "y": 500,
+      "parent": "dkBrowse",
+      "parameters": {
+        "text": "How the deck works",
+        "fontFamily": "var(--font-serif)",
+        "fontSize": "var(--text-3xl)",
+        "lineHeight": "var(--leading-tight)",
+        "color": "var(--foreground)"
+      }
+    },
+    {
+      "id": "dkP1",
+      "type": "Text",
+      "label": "The Major Arcana",
+      "x": 120,
+      "y": 560,
+      "parent": "dkBrowse",
+      "parameters": {
+        "text": "A tarot deck has 78 cards. 22 of them are the Major Arcana: named cards like The Fool, The Lovers and Death. They stand for the big themes in a life.",
+        "fontSize": "var(--text-base)",
+        "lineHeight": "var(--leading-relaxed)",
+        "color": "var(--foreground)"
+      }
+    },
+    {
+      "id": "dkP2",
+      "type": "Text",
+      "label": "The four suits",
+      "x": 120,
+      "y": 620,
+      "parent": "dkBrowse",
+      "parameters": {
+        "text": "The other 56 are four suits of 14, like playing cards: Wands, Cups, Swords and Pentacles. Each suit covers one part of life, and the picker below says which.",
+        "fontSize": "var(--text-base)",
+        "lineHeight": "var(--leading-relaxed)",
+        "color": "var(--foreground)"
+      }
+    },
+    {
+      "id": "dkP3",
+      "type": "Text",
+      "label": "Numbers and court cards",
+      "x": 120,
+      "y": 680,
+      "parent": "dkBrowse",
+      "parameters": {
+        "text": "The numbers mean roughly the same in every suit. An Ace is a start, a Five is a struggle, and a Ten is the end of something, or too much of it. The Page, Knight, Queen and King are people, or ways of handling things.",
+        "fontSize": "var(--text-base)",
+        "lineHeight": "var(--leading-relaxed)",
+        "color": "var(--foreground)"
+      }
+    },
+    {
+      "id": "dkP4",
+      "type": "Text",
+      "label": "Upside down",
+      "x": 120,
+      "y": 740,
+      "parent": "dkBrowse",
+      "parameters": {
+        "text": "A card that comes out upside down usually means the blocked or inward side of it.",
+        "fontSize": "var(--text-base)",
+        "lineHeight": "var(--leading-relaxed)",
+        "color": "var(--foreground)"
+      }
+    },
+    {
+      "id": "dkP5",
+      "type": "Text",
+      "label": "What it is for",
+      "x": 120,
+      "y": 800,
+      "parent": "dkBrowse",
+      "parameters": {
+        "text": "None of it predicts anything. A card gives the person a theme to talk about.",
+        "fontSize": "var(--text-base)",
+        "lineHeight": "var(--leading-relaxed)",
+        "color": "var(--muted-foreground)"
+      }
+    },
+    {
+      "id": "dkLookTitle",
+      "type": "Text",
+      "label": "Look up a card",
+      "x": 120,
+      "y": 860,
+      "parent": "dkBrowse",
+      "parameters": {
+        "text": "Look up a card",
+        "fontFamily": "var(--font-serif)",
+        "fontSize": "var(--text-2xl)",
+        "color": "var(--foreground)",
+        "marginTop": "var(--space-4)"
+      }
+    },
+    {
+      "id": "dkPicker",
+      "type": "/Cards/Picker",
+      "label": "Card picker",
+      "x": 120,
+      "y": 920,
+      "parent": "dkBrowse"
+    },
+    {
+      "id": "dkRandomBtn",
+      "type": "net.noodl.controls.button",
+      "label": "Draw a random card",
+      "x": 120,
+      "y": 980,
+      "parent": "dkBrowse",
+      "parameters": {
+        "label": "Draw a random card",
+        "backgroundColor": "transparent",
+        "color": "var(--foreground)",
+        "borderRadius": "var(--radius-full)",
+        "borderStyle": "solid",
+        "borderWidth": "var(--border-1)",
+        "borderColor": "var(--border-control)",
+        "paddingLeft": "var(--space-6)",
+        "paddingRight": "var(--space-6)",
+        "paddingTop": "var(--space-3)",
+        "paddingBottom": "var(--space-3)",
+        "fontSize": "var(--text-sm)",
+        "fontWeight": "var(--font-semibold)",
+        "sizeMode": "contentSize",
+        "marginTop": "var(--space-2)"
+      }
+    },
+    {
+      "id": "dkOne",
+      "type": "Group",
+      "label": "One card, both ways up",
+      "x": 100,
+      "y": 1060,
+      "parent": "dkShell",
+      "children": [
+        "dkFace",
+        "dkUp",
+        "dkDown",
+        "dkOneActions"
+      ],
+      "parameters": {
+        "mounted": false,
+        "width": {
+          "value": 100,
+          "unit": "%"
+        },
+        "sizeMode": "contentHeight",
+        "flexDirection": "column",
+        "rowGap": "var(--space-6)"
+      }
+    },
+    {
+      "id": "dkFace",
+      "type": "/Cards/Face",
+      "label": "The card",
+      "x": 120,
+      "y": 1140,
+      "parent": "dkOne",
+      "parameters": {
+        "reversed": false
+      }
+    },
+    {
+      "id": "dkUp",
+      "type": "/Cards/Meaning",
+      "label": "Right way up",
+      "x": 120,
+      "y": 1200,
+      "parent": "dkOne",
+      "parameters": {
+        "eyebrow": "Right way up",
+        "lead": ""
+      }
+    },
+    {
+      "id": "dkDown",
+      "type": "/Cards/Meaning",
+      "label": "Upside down",
+      "x": 120,
+      "y": 1260,
+      "parent": "dkOne",
+      "parameters": {
+        "eyebrow": "Upside down",
+        "lead": "",
+        "keywords": ""
+      }
+    },
+    {
+      "id": "dkOneActions",
+      "type": "Group",
+      "label": "Back or another",
+      "x": 120,
+      "y": 1320,
+      "parent": "dkOne",
+      "children": [
+        "dkBackBtn",
+        "dkAnotherBtn"
+      ],
+      "parameters": {
+        "width": {
+          "value": 100,
+          "unit": "%"
+        },
+        "sizeMode": "contentHeight",
+        "flexDirection": "row",
+        "flexWrap": "wrap",
+        "alignItems": "center",
+        "columnGap": "var(--space-3)",
+        "rowGap": "var(--space-3)"
+      }
+    },
+    {
+      "id": "dkBackBtn",
+      "type": "net.noodl.controls.button",
+      "label": "Back to the deck",
+      "x": 140,
+      "y": 1380,
+      "parent": "dkOneActions",
+      "parameters": {
+        "label": "Back to the deck",
+        "backgroundColor": "var(--primary)",
+        "color": "var(--primary-foreground)",
+        "borderRadius": "var(--radius-full)",
+        "borderStyle": "none",
+        "paddingLeft": "var(--space-6)",
+        "paddingRight": "var(--space-6)",
+        "paddingTop": "var(--space-3)",
+        "paddingBottom": "var(--space-3)",
+        "fontSize": "var(--text-base)",
+        "fontWeight": "var(--font-semibold)",
+        "sizeMode": "contentSize"
+      }
+    },
+    {
+      "id": "dkAnotherBtn",
+      "type": "net.noodl.controls.button",
+      "label": "Draw another",
+      "x": 140,
+      "y": 1440,
+      "parent": "dkOneActions",
+      "parameters": {
+        "label": "Draw another",
+        "backgroundColor": "transparent",
+        "color": "var(--foreground)",
+        "borderRadius": "var(--radius-full)",
+        "borderStyle": "solid",
+        "borderWidth": "var(--border-1)",
+        "borderColor": "var(--border-control)",
+        "paddingLeft": "var(--space-6)",
+        "paddingRight": "var(--space-6)",
+        "paddingTop": "var(--space-3)",
+        "paddingBottom": "var(--space-3)",
+        "fontSize": "var(--text-sm)",
+        "fontWeight": "var(--font-semibold)",
+        "sizeMode": "contentSize"
+      }
+    },
+    {
+      "id": "dkCards",
+      "type": "/Data/Cards",
+      "label": "The deck",
+      "x": 700,
+      "y": 40
+    },
+    {
+      "id": "dkVCard",
+      "type": "Variable2",
+      "label": "Card being looked at",
+      "x": 700,
+      "y": 140,
+      "parameters": {
+        "name": "deckCard"
+      }
+    },
+    {
+      "id": "dkHas",
+      "type": "Expression",
+      "label": "Is a card open?",
+      "x": 700,
+      "y": 240,
+      "parameters": {
+        "expression": "!!card"
+      }
+    },
+    {
+      "id": "dkCard",
+      "type": "JavaScriptFunction",
+      "label": "The card being looked at",
+      "x": 1000,
+      "y": 40,
+      "parameters": {
+        "functionScript": "const c = (Inputs.cards || []).find(x => x.id === Inputs.cardId);\nif (!c) return;\nOutputs.chip = c.chip;\nOutputs.name = c.name;\nOutputs.suitName = c.suit === 'major' ? 'Major Arcana' : c.suit.charAt(0).toUpperCase() + c.suit.slice(1);\nOutputs.keywords = c.keywords;\nOutputs.up = c.up;\nOutputs.askUp = c.askUp;\nOutputs.rev = c.rev;\nOutputs.askRev = c.askRev;\n"
+      },
+      "ports": [
+        {
+          "name": "in-cards",
+          "displayName": "cards",
+          "plug": "input",
+          "type": "*",
+          "group": "Inputs"
+        },
+        {
+          "name": "in-cardId",
+          "displayName": "cardId",
+          "plug": "input",
+          "type": "*",
+          "group": "Inputs"
+        },
+        {
+          "name": "out-chip",
+          "displayName": "chip",
+          "plug": "output",
+          "type": "*",
+          "group": "Outputs"
+        },
+        {
+          "name": "out-name",
+          "displayName": "name",
+          "plug": "output",
+          "type": "*",
+          "group": "Outputs"
+        },
+        {
+          "name": "out-suitName",
+          "displayName": "suitName",
+          "plug": "output",
+          "type": "*",
+          "group": "Outputs"
+        },
+        {
+          "name": "out-keywords",
+          "displayName": "keywords",
+          "plug": "output",
+          "type": "*",
+          "group": "Outputs"
+        },
+        {
+          "name": "out-up",
+          "displayName": "up",
+          "plug": "output",
+          "type": "*",
+          "group": "Outputs"
+        },
+        {
+          "name": "out-askUp",
+          "displayName": "askUp",
+          "plug": "output",
+          "type": "*",
+          "group": "Outputs"
+        },
+        {
+          "name": "out-rev",
+          "displayName": "rev",
+          "plug": "output",
+          "type": "*",
+          "group": "Outputs"
+        },
+        {
+          "name": "out-askRev",
+          "displayName": "askRev",
+          "plug": "output",
+          "type": "*",
+          "group": "Outputs"
+        }
+      ]
+    },
+    {
+      "id": "dkSetCard",
+      "type": "Set Variable",
+      "label": "Open the picked card",
+      "x": 1000,
+      "y": 400,
+      "parameters": {
+        "name": "deckCard",
+        "setWith": "string"
+      }
+    },
+    {
+      "id": "dkClose",
+      "type": "Set Variable",
+      "label": "Close the card",
+      "x": 1000,
+      "y": 480,
+      "parameters": {
+        "name": "deckCard",
+        "setWith": "string",
+        "value": ""
+      }
+    },
+    {
+      "id": "dkRandom",
+      "type": "JavaScriptFunction",
+      "label": "Open a random card",
+      "x": 1000,
+      "y": 560,
+      "parameters": {
+        "functionScript": "const ids = [];\nfor (let i = 0; i < 22; i++) ids.push('major-' + String(i).padStart(2, '0'));\nfor (const s of ['wands', 'cups', 'swords', 'pentacles'])\n  for (let i = 1; i <= 14; i++) ids.push(s + '-' + String(i).padStart(2, '0'));\nconst left = ids.filter(id => id !== Noodl.Variables.deckCard);\nNoodl.Variables.deckCard = left[Math.floor(Math.random() * left.length)];\n"
+      }
+    },
+    {
+      "id": "dkTop",
+      "type": "JavaScriptFunction",
+      "label": "Back to the top of the page",
+      "x": 1000,
+      "y": 680,
+      "parameters": {
+        "functionScript": "window.scrollTo(0, 0);\n"
+      }
+    },
+    {
+      "id": "dkGoHome",
+      "type": "RouterNavigate",
+      "label": "To the spreads",
+      "x": 1000,
+      "y": 780,
+      "parameters": {
+        "target": "/Pages/Home"
+      }
+    }
+  ],
+  "visualRoots": [
+    "dkPage"
+  ]
+}

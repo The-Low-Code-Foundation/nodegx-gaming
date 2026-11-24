@@ -1,0 +1,1002 @@
+{
+  "$schema": "https://opennoodl.dev/schemas/nodes-v2.json",
+  "componentId": "63598714-c190-593b-8580-8ec6a58242ad",
+  "version": 1,
+  "nodes": [
+    {
+      "id": "rdPage",
+      "type": "Page",
+      "label": "Reading",
+      "x": 40,
+      "y": 40,
+      "children": [
+        "rdGround"
+      ],
+      "parameters": {
+        "title": "Reading",
+        "urlPath": "reading"
+      }
+    },
+    {
+      "id": "rdGround",
+      "type": "Group",
+      "label": "Night ground",
+      "x": 60,
+      "y": 120,
+      "parent": "rdPage",
+      "children": [
+        "rdShell"
+      ],
+      "parameters": {
+        "width": {
+          "value": 100,
+          "unit": "%"
+        },
+        "sizeMode": "contentHeight",
+        "minHeight": {
+          "value": 100,
+          "unit": "vh"
+        },
+        "flexDirection": "column",
+        "alignItems": "center",
+        "backgroundColor": "var(--background)",
+        "paddingTop": "var(--space-4)",
+        "paddingBottom": "var(--space-16)"
+      }
+    },
+    {
+      "id": "rdShell",
+      "type": "Group",
+      "label": "Column",
+      "x": 80,
+      "y": 200,
+      "parent": "rdGround",
+      "children": [
+        "rdTop",
+        "rdPick",
+        "rdShow",
+        "rdDone"
+      ],
+      "parameters": {
+        "width": {
+          "value": 100,
+          "unit": "%"
+        },
+        "maxWidth": {
+          "value": 560,
+          "unit": "px"
+        },
+        "sizeMode": "contentHeight",
+        "flexDirection": "column",
+        "rowGap": "var(--space-5)",
+        "paddingLeft": "var(--space-4)",
+        "paddingRight": "var(--space-4)"
+      }
+    },
+    {
+      "id": "rdTop",
+      "type": "Group",
+      "label": "Top bar",
+      "x": 100,
+      "y": 280,
+      "parent": "rdShell",
+      "children": [
+        "rdHomeBtn",
+        "rdStepLabel"
+      ],
+      "parameters": {
+        "width": {
+          "value": 100,
+          "unit": "%"
+        },
+        "sizeMode": "contentHeight",
+        "flexDirection": "row",
+        "alignItems": "center",
+        "justifyContent": "space-between"
+      }
+    },
+    {
+      "id": "rdHomeBtn",
+      "type": "net.noodl.controls.button",
+      "label": "Back to the spreads",
+      "x": 120,
+      "y": 360,
+      "parent": "rdTop",
+      "parameters": {
+        "label": "← Spreads",
+        "backgroundColor": "transparent",
+        "color": "var(--muted-foreground)",
+        "borderStyle": "none",
+        "paddingLeft": "0",
+        "paddingRight": "var(--space-2)",
+        "paddingTop": "var(--space-2)",
+        "paddingBottom": "var(--space-2)",
+        "fontSize": "var(--text-sm)",
+        "fontWeight": "var(--font-medium)",
+        "sizeMode": "contentSize"
+      }
+    },
+    {
+      "id": "rdStepLabel",
+      "type": "Text",
+      "label": "Card 2 of 3",
+      "x": 120,
+      "y": 420,
+      "parent": "rdTop",
+      "parameters": {
+        "sizeMode": "contentSize",
+        "fontSize": "var(--text-xs)",
+        "fontWeight": "var(--font-semibold)",
+        "letterSpacing": "var(--tracking-wider)",
+        "textTransform": "uppercase",
+        "color": "var(--muted-foreground)"
+      }
+    },
+    {
+      "id": "rdPick",
+      "type": "Group",
+      "label": "Step 1: find the card",
+      "x": 100,
+      "y": 500,
+      "parent": "rdShell",
+      "children": [
+        "rdPickSpread",
+        "rdPickPos",
+        "rdPickLead",
+        "rdPickHow",
+        "rdPicker",
+        "rdDrawBtn"
+      ],
+      "parameters": {
+        "width": {
+          "value": 100,
+          "unit": "%"
+        },
+        "sizeMode": "contentHeight",
+        "flexDirection": "column",
+        "rowGap": "var(--space-4)"
+      }
+    },
+    {
+      "id": "rdPickSpread",
+      "type": "Text",
+      "label": "Spread name",
+      "x": 120,
+      "y": 580,
+      "parent": "rdPick",
+      "parameters": {
+        "fontSize": "var(--text-xs)",
+        "fontWeight": "var(--font-semibold)",
+        "letterSpacing": "var(--tracking-widest)",
+        "textTransform": "uppercase",
+        "color": "var(--primary)"
+      }
+    },
+    {
+      "id": "rdPickPos",
+      "type": "Text",
+      "label": "Position name",
+      "x": 120,
+      "y": 640,
+      "parent": "rdPick",
+      "parameters": {
+        "fontFamily": "var(--font-serif)",
+        "fontSize": "var(--text-3xl)",
+        "lineHeight": "var(--leading-tight)",
+        "color": "var(--foreground)"
+      }
+    },
+    {
+      "id": "rdPickLead",
+      "type": "Text",
+      "label": "Position lead",
+      "x": 120,
+      "y": 700,
+      "parent": "rdPick",
+      "parameters": {
+        "fontSize": "var(--text-base)",
+        "fontStyle": "italic",
+        "color": "var(--muted-foreground)"
+      }
+    },
+    {
+      "id": "rdPickHow",
+      "type": "Text",
+      "label": "What to do",
+      "x": 120,
+      "y": 760,
+      "parent": "rdPick",
+      "parameters": {
+        "text": "Take the top card from your deck and lay it face up. Keep it the way it came out. Then find it here.",
+        "fontSize": "var(--text-base)",
+        "lineHeight": "var(--leading-relaxed)",
+        "color": "var(--foreground)"
+      }
+    },
+    {
+      "id": "rdPicker",
+      "type": "/Cards/Picker",
+      "label": "Card picker",
+      "x": 120,
+      "y": 820,
+      "parent": "rdPick"
+    },
+    {
+      "id": "rdDrawBtn",
+      "type": "net.noodl.controls.button",
+      "label": "Draw for me",
+      "x": 120,
+      "y": 880,
+      "parent": "rdPick",
+      "parameters": {
+        "label": "No deck to hand? Draw one for me",
+        "backgroundColor": "transparent",
+        "color": "var(--foreground)",
+        "borderRadius": "var(--radius-full)",
+        "borderStyle": "solid",
+        "borderWidth": "var(--border-1)",
+        "borderColor": "var(--border-control)",
+        "paddingLeft": "var(--space-6)",
+        "paddingRight": "var(--space-6)",
+        "paddingTop": "var(--space-3)",
+        "paddingBottom": "var(--space-3)",
+        "fontSize": "var(--text-sm)",
+        "fontWeight": "var(--font-semibold)",
+        "sizeMode": "contentSize",
+        "marginTop": "var(--space-2)"
+      }
+    },
+    {
+      "id": "rdShow",
+      "type": "Group",
+      "label": "Step 2: what the card says here",
+      "x": 100,
+      "y": 960,
+      "parent": "rdShell",
+      "children": [
+        "rdFace",
+        "rdFlip",
+        "rdMeaning",
+        "rdShowActions"
+      ],
+      "parameters": {
+        "width": {
+          "value": 100,
+          "unit": "%"
+        },
+        "sizeMode": "contentHeight",
+        "flexDirection": "column",
+        "rowGap": "var(--space-5)",
+        "mounted": false
+      }
+    },
+    {
+      "id": "rdFace",
+      "type": "/Cards/Face",
+      "label": "The card",
+      "x": 120,
+      "y": 1040,
+      "parent": "rdShow"
+    },
+    {
+      "id": "rdFlip",
+      "type": "Group",
+      "label": "Which way up",
+      "x": 120,
+      "y": 1100,
+      "parent": "rdShow",
+      "children": [
+        "rdUpBtn",
+        "rdDownBtn"
+      ],
+      "parameters": {
+        "width": {
+          "value": 100,
+          "unit": "%"
+        },
+        "sizeMode": "contentHeight",
+        "flexDirection": "row",
+        "justifyContent": "center",
+        "columnGap": "var(--space-2)"
+      }
+    },
+    {
+      "id": "rdUpBtn",
+      "type": "net.noodl.controls.button",
+      "label": "Right way up",
+      "x": 140,
+      "y": 1160,
+      "parent": "rdFlip",
+      "parameters": {
+        "label": "Right way up",
+        "borderRadius": "var(--radius-full)",
+        "borderStyle": "solid",
+        "borderWidth": "var(--border-1)",
+        "borderColor": "var(--border-control)",
+        "paddingLeft": "var(--space-4)",
+        "paddingRight": "var(--space-4)",
+        "paddingTop": "var(--space-2)",
+        "paddingBottom": "var(--space-2)",
+        "fontSize": "var(--text-sm)",
+        "fontWeight": "var(--font-semibold)",
+        "sizeMode": "contentSize"
+      }
+    },
+    {
+      "id": "rdDownBtn",
+      "type": "net.noodl.controls.button",
+      "label": "Upside down",
+      "x": 140,
+      "y": 1220,
+      "parent": "rdFlip",
+      "parameters": {
+        "label": "Upside down",
+        "borderRadius": "var(--radius-full)",
+        "borderStyle": "solid",
+        "borderWidth": "var(--border-1)",
+        "borderColor": "var(--border-control)",
+        "paddingLeft": "var(--space-4)",
+        "paddingRight": "var(--space-4)",
+        "paddingTop": "var(--space-2)",
+        "paddingBottom": "var(--space-2)",
+        "fontSize": "var(--text-sm)",
+        "fontWeight": "var(--font-semibold)",
+        "sizeMode": "contentSize"
+      }
+    },
+    {
+      "id": "rdMeaning",
+      "type": "/Cards/Meaning",
+      "label": "What it says here",
+      "x": 120,
+      "y": 1280,
+      "parent": "rdShow"
+    },
+    {
+      "id": "rdShowActions",
+      "type": "Group",
+      "label": "Keep or change",
+      "x": 120,
+      "y": 1340,
+      "parent": "rdShow",
+      "children": [
+        "rdKeepBtn",
+        "rdWrongBtn"
+      ],
+      "parameters": {
+        "width": {
+          "value": 100,
+          "unit": "%"
+        },
+        "sizeMode": "contentHeight",
+        "flexDirection": "row",
+        "flexWrap": "wrap",
+        "alignItems": "center",
+        "columnGap": "var(--space-3)",
+        "rowGap": "var(--space-3)"
+      }
+    },
+    {
+      "id": "rdKeepBtn",
+      "type": "net.noodl.controls.button",
+      "label": "Next card",
+      "x": 140,
+      "y": 1400,
+      "parent": "rdShowActions",
+      "parameters": {
+        "backgroundColor": "var(--primary)",
+        "color": "var(--primary-foreground)",
+        "borderRadius": "var(--radius-full)",
+        "borderStyle": "none",
+        "paddingLeft": "var(--space-6)",
+        "paddingRight": "var(--space-6)",
+        "paddingTop": "var(--space-3)",
+        "paddingBottom": "var(--space-3)",
+        "fontSize": "var(--text-base)",
+        "fontWeight": "var(--font-semibold)",
+        "sizeMode": "contentSize"
+      }
+    },
+    {
+      "id": "rdWrongBtn",
+      "type": "net.noodl.controls.button",
+      "label": "Wrong card",
+      "x": 140,
+      "y": 1460,
+      "parent": "rdShowActions",
+      "parameters": {
+        "label": "Wrong card",
+        "backgroundColor": "transparent",
+        "color": "var(--muted-foreground)",
+        "borderStyle": "none",
+        "paddingLeft": "var(--space-3)",
+        "paddingRight": "var(--space-3)",
+        "paddingTop": "var(--space-3)",
+        "paddingBottom": "var(--space-3)",
+        "fontSize": "var(--text-sm)",
+        "fontWeight": "var(--font-medium)",
+        "sizeMode": "contentSize"
+      }
+    },
+    {
+      "id": "rdDone",
+      "type": "Group",
+      "label": "Step 3: the whole reading",
+      "x": 100,
+      "y": 1540,
+      "parent": "rdShell",
+      "children": [
+        "rdDoneSpread",
+        "rdDoneTitle",
+        "rdDoneHow",
+        "rdRowsBox",
+        "rdAgainBtn"
+      ],
+      "parameters": {
+        "width": {
+          "value": 100,
+          "unit": "%"
+        },
+        "sizeMode": "contentHeight",
+        "flexDirection": "column",
+        "rowGap": "var(--space-4)",
+        "mounted": false
+      }
+    },
+    {
+      "id": "rdDoneSpread",
+      "type": "Text",
+      "label": "Spread name",
+      "x": 120,
+      "y": 1620,
+      "parent": "rdDone",
+      "parameters": {
+        "fontSize": "var(--text-xs)",
+        "fontWeight": "var(--font-semibold)",
+        "letterSpacing": "var(--tracking-widest)",
+        "textTransform": "uppercase",
+        "color": "var(--primary)"
+      }
+    },
+    {
+      "id": "rdDoneTitle",
+      "type": "Text",
+      "label": "Your reading",
+      "x": 120,
+      "y": 1680,
+      "parent": "rdDone",
+      "parameters": {
+        "text": "Your reading",
+        "fontFamily": "var(--font-serif)",
+        "fontSize": "var(--text-3xl)",
+        "color": "var(--foreground)"
+      }
+    },
+    {
+      "id": "rdDoneHow",
+      "type": "Text",
+      "label": "What to do now",
+      "x": 120,
+      "y": 1740,
+      "parent": "rdDone",
+      "parameters": {
+        "text": "Look at all the cards together. Read each question out and see where the talk goes.",
+        "fontSize": "var(--text-base)",
+        "lineHeight": "var(--leading-relaxed)",
+        "color": "var(--muted-foreground)"
+      }
+    },
+    {
+      "id": "rdRowsBox",
+      "type": "Group",
+      "label": "The cards drawn",
+      "x": 120,
+      "y": 1800,
+      "parent": "rdDone",
+      "children": [
+        "rdRows"
+      ],
+      "parameters": {
+        "width": {
+          "value": 100,
+          "unit": "%"
+        },
+        "sizeMode": "contentHeight",
+        "flexDirection": "column",
+        "rowGap": "var(--space-3)"
+      }
+    },
+    {
+      "id": "rdRows",
+      "type": "For Each",
+      "label": "One row per card drawn",
+      "x": 140,
+      "y": 1860,
+      "parent": "rdRowsBox",
+      "parameters": {
+        "template": "/Reading/Summary row",
+        "templateType": "explicit"
+      }
+    },
+    {
+      "id": "rdAgainBtn",
+      "type": "net.noodl.controls.button",
+      "label": "Another reading",
+      "x": 120,
+      "y": 1920,
+      "parent": "rdDone",
+      "parameters": {
+        "label": "Another reading",
+        "backgroundColor": "var(--primary)",
+        "color": "var(--primary-foreground)",
+        "borderRadius": "var(--radius-full)",
+        "borderStyle": "none",
+        "paddingLeft": "var(--space-6)",
+        "paddingRight": "var(--space-6)",
+        "paddingTop": "var(--space-3)",
+        "paddingBottom": "var(--space-3)",
+        "fontSize": "var(--text-base)",
+        "fontWeight": "var(--font-semibold)",
+        "sizeMode": "contentSize",
+        "marginTop": "var(--space-2)"
+      }
+    },
+    {
+      "id": "rdSpreads",
+      "type": "/Data/Spreads",
+      "label": "The spreads",
+      "x": 700,
+      "y": 40
+    },
+    {
+      "id": "rdCards",
+      "type": "/Data/Cards",
+      "label": "The deck",
+      "x": 700,
+      "y": 120
+    },
+    {
+      "id": "rdVSpread",
+      "type": "Variable2",
+      "label": "Spread chosen",
+      "x": 700,
+      "y": 200,
+      "parameters": {
+        "name": "readSpread"
+      }
+    },
+    {
+      "id": "rdVStep",
+      "type": "Variable2",
+      "label": "Which position (0 = first)",
+      "x": 700,
+      "y": 280,
+      "parameters": {
+        "name": "readStep"
+      }
+    },
+    {
+      "id": "rdVPhase",
+      "type": "Variable2",
+      "label": "pick, show or done",
+      "x": 700,
+      "y": 360,
+      "parameters": {
+        "name": "readPhase"
+      }
+    },
+    {
+      "id": "rdVCard",
+      "type": "Variable2",
+      "label": "Card on the table",
+      "x": 700,
+      "y": 440,
+      "parameters": {
+        "name": "readCard"
+      }
+    },
+    {
+      "id": "rdVUp",
+      "type": "Variable2",
+      "label": "Is it upside down?",
+      "x": 700,
+      "y": 520,
+      "parameters": {
+        "name": "readUpsideDown"
+      }
+    },
+    {
+      "id": "rdVDrawn",
+      "type": "Variable2",
+      "label": "Cards kept so far",
+      "x": 700,
+      "y": 600,
+      "parameters": {
+        "name": "readDrawn"
+      }
+    },
+    {
+      "id": "rdVTotal",
+      "type": "Variable2",
+      "label": "How many positions",
+      "x": 1300,
+      "y": 40,
+      "parameters": {
+        "name": "readTotal"
+      }
+    },
+    {
+      "id": "rdPhase",
+      "type": "States",
+      "label": "Which step is on show",
+      "x": 1000,
+      "y": 360,
+      "parameters": {
+        "states": "pick,show,done",
+        "values": "x",
+        "useTransitions": false
+      }
+    },
+    {
+      "id": "rdPos",
+      "type": "JavaScriptFunction",
+      "label": "Where we are in the spread",
+      "x": 1000,
+      "y": 40,
+      "parameters": {
+        "functionScript": "const spreads = Inputs.spreads || [];\nconst s = spreads.find(x => x.id === Inputs.spreadId) || spreads[0];\nif (!s) return;\nconst total = s.positions.length;\nconst step = Math.min(Inputs.step || 0, total - 1);\nconst p = s.positions[step];\nOutputs.spreadName = s.name;\nOutputs.posName = p.name;\nOutputs.posLead = p.lead;\nOutputs.total = total;\nOutputs.stepLabel = total > 1 ? 'Card ' + (step + 1) + ' of ' + total : '';\nOutputs.keepLabel = total === 1 ? 'Done' : (step + 1 >= total ? 'See the whole reading' : 'Next card');\n"
+      },
+      "metadata": {
+        "comment": "With no spread chosen (the page opened directly) it falls back to the first spread."
+      },
+      "ports": [
+        {
+          "name": "in-spreads",
+          "displayName": "spreads",
+          "plug": "input",
+          "type": "*",
+          "group": "Inputs"
+        },
+        {
+          "name": "in-spreadId",
+          "displayName": "spreadId",
+          "plug": "input",
+          "type": "*",
+          "group": "Inputs"
+        },
+        {
+          "name": "in-step",
+          "displayName": "step",
+          "plug": "input",
+          "type": "*",
+          "group": "Inputs"
+        },
+        {
+          "name": "out-spreadName",
+          "displayName": "spreadName",
+          "plug": "output",
+          "type": "*",
+          "group": "Outputs"
+        },
+        {
+          "name": "out-posName",
+          "displayName": "posName",
+          "plug": "output",
+          "type": "*",
+          "group": "Outputs"
+        },
+        {
+          "name": "out-posLead",
+          "displayName": "posLead",
+          "plug": "output",
+          "type": "*",
+          "group": "Outputs"
+        },
+        {
+          "name": "out-total",
+          "displayName": "total",
+          "plug": "output",
+          "type": "*",
+          "group": "Outputs"
+        },
+        {
+          "name": "out-stepLabel",
+          "displayName": "stepLabel",
+          "plug": "output",
+          "type": "*",
+          "group": "Outputs"
+        },
+        {
+          "name": "out-keepLabel",
+          "displayName": "keepLabel",
+          "plug": "output",
+          "type": "*",
+          "group": "Outputs"
+        }
+      ]
+    },
+    {
+      "id": "rdCard",
+      "type": "JavaScriptFunction",
+      "label": "The card on the table, right way up or upside down",
+      "x": 1000,
+      "y": 480,
+      "parameters": {
+        "functionScript": "const c = (Inputs.cards || []).find(x => x.id === Inputs.cardId);\nif (!c) return;\nconst down = !!Inputs.upsideDown;\nOutputs.chip = c.chip;\nOutputs.name = c.name;\nOutputs.suitName = c.suit === 'major' ? 'Major Arcana' : c.suit.charAt(0).toUpperCase() + c.suit.slice(1);\nOutputs.keywords = c.keywords;\nOutputs.text = down ? c.rev : c.up;\nOutputs.ask = down ? c.askRev : c.askUp;\nOutputs.reversed = down;\n"
+      },
+      "ports": [
+        {
+          "name": "in-cards",
+          "displayName": "cards",
+          "plug": "input",
+          "type": "*",
+          "group": "Inputs"
+        },
+        {
+          "name": "in-cardId",
+          "displayName": "cardId",
+          "plug": "input",
+          "type": "*",
+          "group": "Inputs"
+        },
+        {
+          "name": "in-upsideDown",
+          "displayName": "upsideDown",
+          "plug": "input",
+          "type": "*",
+          "group": "Inputs"
+        },
+        {
+          "name": "out-chip",
+          "displayName": "chip",
+          "plug": "output",
+          "type": "*",
+          "group": "Outputs"
+        },
+        {
+          "name": "out-name",
+          "displayName": "name",
+          "plug": "output",
+          "type": "*",
+          "group": "Outputs"
+        },
+        {
+          "name": "out-suitName",
+          "displayName": "suitName",
+          "plug": "output",
+          "type": "*",
+          "group": "Outputs"
+        },
+        {
+          "name": "out-keywords",
+          "displayName": "keywords",
+          "plug": "output",
+          "type": "*",
+          "group": "Outputs"
+        },
+        {
+          "name": "out-text",
+          "displayName": "text",
+          "plug": "output",
+          "type": "*",
+          "group": "Outputs"
+        },
+        {
+          "name": "out-ask",
+          "displayName": "ask",
+          "plug": "output",
+          "type": "*",
+          "group": "Outputs"
+        },
+        {
+          "name": "out-reversed",
+          "displayName": "reversed",
+          "plug": "output",
+          "type": "*",
+          "group": "Outputs"
+        }
+      ]
+    },
+    {
+      "id": "rdFlipLook",
+      "type": "Expression",
+      "label": "Which way button is lit",
+      "x": 1000,
+      "y": 760,
+      "parameters": {
+        "expression": "upsideDown ? 'down' : 'up'"
+      }
+    },
+    {
+      "id": "rdFlipStates",
+      "type": "States",
+      "label": "Way-up button colours",
+      "x": 1000,
+      "y": 860,
+      "parameters": {
+        "states": "up,down",
+        "values": "upBg,upInk,downBg,downInk",
+        "useTransitions": false,
+        "type-upBg": "color",
+        "type-upInk": "color",
+        "type-downBg": "color",
+        "type-downInk": "color",
+        "value-up-upBg": "var(--primary)",
+        "value-up-upInk": "var(--primary-foreground)",
+        "value-up-downBg": "transparent",
+        "value-up-downInk": "var(--foreground)",
+        "value-down-upBg": "transparent",
+        "value-down-upInk": "var(--foreground)",
+        "value-down-downBg": "var(--primary)",
+        "value-down-downInk": "var(--primary-foreground)"
+      }
+    },
+    {
+      "id": "rdSetUp",
+      "type": "Set Variable",
+      "label": "Right way up",
+      "x": 1300,
+      "y": 760,
+      "parameters": {
+        "name": "readUpsideDown",
+        "setWith": "boolean",
+        "value": false
+      }
+    },
+    {
+      "id": "rdSetDown",
+      "type": "Set Variable",
+      "label": "Upside down",
+      "x": 1300,
+      "y": 840,
+      "parameters": {
+        "name": "readUpsideDown",
+        "setWith": "boolean",
+        "value": true
+      }
+    },
+    {
+      "id": "rdSetCard",
+      "type": "Set Variable",
+      "label": "Lay down the picked card",
+      "x": 1300,
+      "y": 200,
+      "parameters": {
+        "name": "readCard",
+        "setWith": "string"
+      }
+    },
+    {
+      "id": "rdSetFresh",
+      "type": "Set Variable",
+      "label": "A picked card starts right way up",
+      "x": 1300,
+      "y": 280,
+      "parameters": {
+        "name": "readUpsideDown",
+        "setWith": "boolean",
+        "value": false
+      }
+    },
+    {
+      "id": "rdSetShow",
+      "type": "Set Variable",
+      "label": "Show what it says",
+      "x": 1300,
+      "y": 360,
+      "parameters": {
+        "name": "readPhase",
+        "setWith": "string",
+        "value": "show"
+      }
+    },
+    {
+      "id": "rdSetPick",
+      "type": "Set Variable",
+      "label": "Back to finding the card",
+      "x": 1300,
+      "y": 440,
+      "parameters": {
+        "name": "readPhase",
+        "setWith": "string",
+        "value": "pick"
+      }
+    },
+    {
+      "id": "rdDraw",
+      "type": "JavaScriptFunction",
+      "label": "Draw one for me",
+      "x": 1600,
+      "y": 200,
+      "parameters": {
+        "functionScript": "const ids = [];\nfor (let i = 0; i < 22; i++) ids.push('major-' + String(i).padStart(2, '0'));\nfor (const s of ['wands', 'cups', 'swords', 'pentacles'])\n  for (let i = 1; i <= 14; i++) ids.push(s + '-' + String(i).padStart(2, '0'));\nconst used = (Noodl.Variables.readDrawn || []).map(d => d.cardId);\nconst left = ids.filter(id => used.indexOf(id) < 0);\nNoodl.Variables.readCard = left[Math.floor(Math.random() * left.length)];\nNoodl.Variables.readUpsideDown = Math.random() < 0.5;\nNoodl.Variables.readPhase = 'show';\n"
+      },
+      "metadata": {
+        "comment": "Picks at random from the cards not yet on the table, upside down half the time, as a shuffled deck would."
+      }
+    },
+    {
+      "id": "rdKeep",
+      "type": "JavaScriptFunction",
+      "label": "Keep this card and move on",
+      "x": 1600,
+      "y": 360,
+      "parameters": {
+        "functionScript": "const step = Noodl.Variables.readStep || 0;\nconst total = Noodl.Variables.readTotal || 1;\nconst drawn = (Noodl.Variables.readDrawn || []).slice();\ndrawn.push({ id: 'pos' + step, step: step, cardId: Noodl.Variables.readCard, reversed: !!Noodl.Variables.readUpsideDown });\nNoodl.Variables.readDrawn = drawn;\nif (step + 1 >= total) {\n  Noodl.Variables.readPhase = 'done';\n} else {\n  Noodl.Variables.readStep = step + 1;\n  Noodl.Variables.readCard = '';\n  Noodl.Variables.readPhase = 'pick';\n}\n"
+      }
+    },
+    {
+      "id": "rdTopOfPage",
+      "type": "JavaScriptFunction",
+      "label": "Back to the top of the page",
+      "x": 1600,
+      "y": 520,
+      "parameters": {
+        "functionScript": "window.scrollTo(0, 0);\n"
+      },
+      "metadata": {
+        "comment": "Each step replaces the screen, so start it at the top rather than where the last one was scrolled to."
+      }
+    },
+    {
+      "id": "rdSummary",
+      "type": "JavaScriptFunction",
+      "label": "The summary rows",
+      "x": 1000,
+      "y": 1000,
+      "parameters": {
+        "functionScript": "const spreads = Inputs.spreads || [];\nconst s = spreads.find(x => x.id === Inputs.spreadId) || spreads[0];\nconst cards = Inputs.cards || [];\nOutputs.rows = (Inputs.drawn || []).map(d => {\n  const c = cards.find(x => x.id === d.cardId) || {};\n  const p = (s && s.positions[d.step]) || {};\n  return {\n    id: d.id,\n    position: p.name || '',\n    name: d.reversed ? c.name + ', upside down' : c.name,\n    keywords: c.keywords,\n    ask: d.reversed ? c.askRev : c.askUp\n  };\n});\n"
+      },
+      "ports": [
+        {
+          "name": "in-spreads",
+          "displayName": "spreads",
+          "plug": "input",
+          "type": "*",
+          "group": "Inputs"
+        },
+        {
+          "name": "in-spreadId",
+          "displayName": "spreadId",
+          "plug": "input",
+          "type": "*",
+          "group": "Inputs"
+        },
+        {
+          "name": "in-cards",
+          "displayName": "cards",
+          "plug": "input",
+          "type": "*",
+          "group": "Inputs"
+        },
+        {
+          "name": "in-drawn",
+          "displayName": "drawn",
+          "plug": "input",
+          "type": "*",
+          "group": "Inputs"
+        },
+        {
+          "name": "out-rows",
+          "displayName": "rows",
+          "plug": "output",
+          "type": "*",
+          "group": "Outputs"
+        }
+      ]
+    },
+    {
+      "id": "rdGoHome",
+      "type": "RouterNavigate",
+      "label": "To the spreads",
+      "x": 1600,
+      "y": 640,
+      "parameters": {
+        "target": "/Pages/Home"
+      }
+    }
+  ],
+  "visualRoots": [
+    "rdPage"
+  ]
+}
