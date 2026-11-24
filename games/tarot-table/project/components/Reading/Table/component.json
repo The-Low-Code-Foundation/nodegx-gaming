@@ -1,0 +1,11 @@
+{
+  "$schema": "https://opennoodl.dev/schemas/component-v2.json",
+  "id": "dde277b3-b823-5d68-81cd-4a2c363d2464",
+  "name": "Table",
+  "path": "/Reading/Table",
+  "type": "visual",
+  "created": "2026-11-24T08:49:24.851Z",
+  "modified": "2026-11-24T08:49:24.851Z",
+  "modifiedBy": "noodl-mcp",
+  "description": "The spread laid out the way the cards go on a real table: one place per position, at the size and spot the page works out. Sends `tapped` with the `index` of the place that was tapped."
+}

@@ -26,6 +26,24 @@
       "fromProperty": "ask",
       "toId": "srAsk",
       "toProperty": "text"
+    },
+    {
+      "fromId": "srIn",
+      "fromProperty": "src",
+      "toId": "srThumb",
+      "toProperty": "src"
+    },
+    {
+      "fromId": "srIn",
+      "fromProperty": "name",
+      "toId": "srThumb",
+      "toProperty": "alt"
+    },
+    {
+      "fromId": "srIn",
+      "fromProperty": "turn",
+      "toId": "srThumb",
+      "toProperty": "transformRotation"
     }
   ]
 }

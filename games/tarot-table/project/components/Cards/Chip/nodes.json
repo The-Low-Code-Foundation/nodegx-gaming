@@ -15,7 +15,7 @@
           "type": "string"
         },
         {
-          "name": "chip",
+          "name": "src",
           "plug": "output",
           "type": "string"
         },
@@ -33,22 +33,22 @@
       "x": 40,
       "y": 40,
       "children": [
-        "chChip",
+        "chPic",
         "chSub"
       ],
       "parameters": {
         "sizeMode": "explicit",
         "width": {
-          "value": 82,
+          "value": 76,
           "unit": "px"
         },
         "height": {
-          "value": 112,
+          "value": 142,
           "unit": "px"
         },
         "flexDirection": "column",
         "alignItems": "center",
-        "justifyContent": "center",
+        "justifyContent": "flex-start",
         "rowGap": "var(--space-1)",
         "backgroundColor": "var(--surface)",
         "borderStyle": "solid",
@@ -56,23 +56,8 @@
         "borderColor": "var(--border-strong)",
         "borderRadius": "var(--radius-lg)",
         "paddingLeft": "0",
-        "paddingRight": "0"
-      }
-    },
-    {
-      "id": "chChip",
-      "type": "Text",
-      "label": "Numeral or rank",
-      "x": 60,
-      "y": 140,
-      "parent": "chCard",
-      "parameters": {
-        "fontFamily": "var(--font-serif)",
-        "fontSize": "var(--text-xl)",
-        "fontWeight": "var(--font-semibold)",
-        "color": "var(--primary)",
-        "textAlignX": "center",
-        "lineHeight": "var(--leading-tight)"
+        "paddingRight": "0",
+        "paddingTop": "var(--space-2)"
       }
     },
     {
@@ -106,6 +91,26 @@
           "type": "string"
         }
       ]
+    },
+    {
+      "id": "chPic",
+      "type": "Image",
+      "label": "The card's picture",
+      "parent": "chCard",
+      "parameters": {
+        "sizeMode": "explicit",
+        "width": {
+          "value": 58,
+          "unit": "px"
+        },
+        "height": {
+          "value": 99,
+          "unit": "px"
+        },
+        "objectFit": "fill"
+      },
+      "x": 100,
+      "y": 160
     }
   ],
   "visualRoots": [

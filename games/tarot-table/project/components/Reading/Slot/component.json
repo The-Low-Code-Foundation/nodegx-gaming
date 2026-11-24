@@ -1,0 +1,11 @@
+{
+  "$schema": "https://opennoodl.dev/schemas/component-v2.json",
+  "id": "78dd8bbd-5fbe-53b2-82a4-c07a0e66d579",
+  "name": "Slot",
+  "path": "/Reading/Slot",
+  "type": "visual",
+  "created": "2026-11-24T08:49:16.613Z",
+  "modified": "2026-11-24T08:53:59.933Z",
+  "modifiedBy": "noodl-mcp",
+  "description": "One place on the table where a card goes. Empty, it is a dashed outline with its number; the place to lay the next card glows; once a card is kept there it shows the card's picture, turned the way it lies. Tap it to go to that place."
+}

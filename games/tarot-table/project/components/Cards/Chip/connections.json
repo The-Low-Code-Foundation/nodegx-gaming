@@ -5,12 +5,6 @@
   "connections": [
     {
       "fromId": "chIn",
-      "fromProperty": "chip",
-      "toId": "chChip",
-      "toProperty": "text"
-    },
-    {
-      "fromId": "chIn",
       "fromProperty": "sub",
       "toId": "chSub",
       "toProperty": "text"
@@ -26,6 +20,18 @@
       "fromProperty": "onClick",
       "toId": "chOut",
       "toProperty": "tapped"
+    },
+    {
+      "fromId": "chIn",
+      "fromProperty": "src",
+      "toId": "chPic",
+      "toProperty": "src"
+    },
+    {
+      "fromId": "chIn",
+      "fromProperty": "sub",
+      "toId": "chPic",
+      "toProperty": "alt"
     }
   ]
 }

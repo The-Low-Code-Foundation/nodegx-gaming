@@ -5,24 +5,6 @@
   "connections": [
     {
       "fromId": "fcIn",
-      "fromProperty": "chip",
-      "toId": "fcChip",
-      "toProperty": "text"
-    },
-    {
-      "fromId": "fcIn",
-      "fromProperty": "name",
-      "toId": "fcName",
-      "toProperty": "text"
-    },
-    {
-      "fromId": "fcIn",
-      "fromProperty": "suitName",
-      "toId": "fcSuit",
-      "toProperty": "text"
-    },
-    {
-      "fromId": "fcIn",
       "fromProperty": "reversed",
       "toId": "fcWay",
       "toProperty": "reversed"
@@ -38,6 +20,18 @@
       "fromProperty": "turn",
       "toId": "fcCard",
       "toProperty": "transformRotation"
+    },
+    {
+      "fromId": "fcIn",
+      "fromProperty": "src",
+      "toId": "fcPic",
+      "toProperty": "src"
+    },
+    {
+      "fromId": "fcIn",
+      "fromProperty": "name",
+      "toId": "fcPic",
+      "toProperty": "alt"
     }
   ]
 }

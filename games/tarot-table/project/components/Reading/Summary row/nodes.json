@@ -20,6 +20,16 @@
           "type": "string"
         },
         {
+          "name": "src",
+          "plug": "output",
+          "type": "string"
+        },
+        {
+          "name": "turn",
+          "plug": "output",
+          "type": "number"
+        },
+        {
           "name": "keywords",
           "plug": "output",
           "type": "string"
@@ -38,10 +48,8 @@
       "x": 40,
       "y": 40,
       "children": [
-        "srPos",
-        "srName",
-        "srKeywords",
-        "srAsk"
+        "srThumb",
+        "srText"
       ],
       "parameters": {
         "width": {
@@ -49,8 +57,7 @@
           "unit": "%"
         },
         "sizeMode": "contentHeight",
-        "flexDirection": "column",
-        "rowGap": "var(--space-1)",
+        "flexDirection": "row",
         "backgroundColor": "var(--surface)",
         "borderStyle": "solid",
         "borderWidth": "var(--border-1)",
@@ -59,7 +66,9 @@
         "paddingTop": "var(--space-4)",
         "paddingBottom": "var(--space-4)",
         "paddingLeft": "var(--space-4)",
-        "paddingRight": "var(--space-4)"
+        "paddingRight": "var(--space-4)",
+        "alignItems": "flex-start",
+        "columnGap": "var(--space-4)"
       }
     },
     {
@@ -68,7 +77,7 @@
       "label": "Position",
       "x": 60,
       "y": 140,
-      "parent": "srRow",
+      "parent": "srText",
       "parameters": {
         "fontSize": "var(--text-xs)",
         "fontWeight": "var(--font-semibold)",
@@ -83,7 +92,7 @@
       "label": "Card",
       "x": 60,
       "y": 200,
-      "parent": "srRow",
+      "parent": "srText",
       "parameters": {
         "fontFamily": "var(--font-serif)",
         "fontSize": "var(--text-xl)",
@@ -96,7 +105,7 @@
       "label": "Keywords",
       "x": 60,
       "y": 260,
-      "parent": "srRow",
+      "parent": "srText",
       "parameters": {
         "fontSize": "var(--text-sm)",
         "color": "var(--muted-foreground)"
@@ -108,12 +117,60 @@
       "label": "Question",
       "x": 60,
       "y": 320,
-      "parent": "srRow",
+      "parent": "srText",
       "parameters": {
         "fontSize": "var(--text-base)",
         "fontStyle": "italic",
         "color": "var(--foreground)",
         "marginTop": "var(--space-1)"
+      }
+    },
+    {
+      "id": "srThumb",
+      "type": "Image",
+      "label": "The card, small",
+      "parent": "srRow",
+      "parameters": {
+        "sizeMode": "explicit",
+        "width": {
+          "value": 52,
+          "unit": "px"
+        },
+        "height": {
+          "value": 89,
+          "unit": "px"
+        },
+        "objectFit": "fill",
+        "transformRotation": 0
+      },
+      "x": 100,
+      "y": 160
+    },
+    {
+      "id": "srText",
+      "type": "Group",
+      "label": "Where, what, and the question",
+      "parent": "srRow",
+      "parameters": {
+        "sizeMode": "contentHeight",
+        "flexDirection": "column",
+        "rowGap": "var(--space-1)",
+        "width": {
+          "value": 100,
+          "unit": "%"
+        },
+        "styleCss": "flex: 1 1 0%;\nmin-width: 0;"
+      },
+      "children": [
+        "srPos",
+        "srName",
+        "srKeywords",
+        "srAsk"
+      ],
+      "x": 100,
+      "y": 280,
+      "metadata": {
+        "comment": "Group has no grow/shrink port, so the CSS says it: take the width the picture leaves, and let the words wrap."
       }
     }
   ],

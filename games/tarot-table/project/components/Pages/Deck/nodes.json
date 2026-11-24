@@ -435,7 +435,7 @@
       "x": 1000,
       "y": 40,
       "parameters": {
-        "functionScript": "const c = (Inputs.cards || []).find(x => x.id === Inputs.cardId);\nif (!c) return;\nOutputs.chip = c.chip;\nOutputs.name = c.name;\nOutputs.suitName = c.suit === 'major' ? 'Major Arcana' : c.suit.charAt(0).toUpperCase() + c.suit.slice(1);\nOutputs.keywords = c.keywords;\nOutputs.up = c.up;\nOutputs.askUp = c.askUp;\nOutputs.rev = c.rev;\nOutputs.askRev = c.askRev;\n"
+        "functionScript": "const c = (Inputs.cards || []).find(x => x.id === Inputs.cardId);\nif (!c) return;\nOutputs.src = 'cards/' + c.id + '.svg';\nOutputs.name = c.name;\nOutputs.keywords = c.keywords;\nOutputs.up = c.up;\nOutputs.askUp = c.askUp;\nOutputs.rev = c.rev;\nOutputs.askRev = c.askRev;\n"
       },
       "ports": [
         {

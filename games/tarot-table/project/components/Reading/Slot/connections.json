@@ -1,0 +1,127 @@
+{
+  "$schema": "https://opennoodl.dev/schemas/connections-v2.json",
+  "componentId": "78dd8bbd-5fbe-53b2-82a4-c07a0e66d579",
+  "version": 1,
+  "connections": [
+    {
+      "fromId": "slIn",
+      "fromProperty": "state",
+      "toId": "slLook",
+      "toProperty": "currentState"
+    },
+    {
+      "fromId": "slLook",
+      "fromProperty": "edge",
+      "toId": "slBox",
+      "toProperty": "borderColor"
+    },
+    {
+      "fromId": "slLook",
+      "fromProperty": "line",
+      "toId": "slBox",
+      "toProperty": "borderStyle"
+    },
+    {
+      "fromId": "slLook",
+      "fromProperty": "ground",
+      "toId": "slBox",
+      "toProperty": "backgroundColor"
+    },
+    {
+      "fromId": "slLook",
+      "fromProperty": "glow",
+      "toId": "slBox",
+      "toProperty": "boxShadowEnabled"
+    },
+    {
+      "fromId": "slLook",
+      "fromProperty": "num",
+      "toId": "slNum",
+      "toProperty": "mounted"
+    },
+    {
+      "fromId": "slLook",
+      "fromProperty": "pic",
+      "toId": "slPic",
+      "toProperty": "mounted"
+    },
+    {
+      "fromId": "slLook",
+      "fromProperty": "ink",
+      "toId": "slNum",
+      "toProperty": "color"
+    },
+    {
+      "fromId": "slIn",
+      "fromProperty": "label",
+      "toId": "slNum",
+      "toProperty": "text"
+    },
+    {
+      "fromId": "slIn",
+      "fromProperty": "src",
+      "toId": "slPic",
+      "toProperty": "src"
+    },
+    {
+      "fromId": "slIn",
+      "fromProperty": "name",
+      "toId": "slPic",
+      "toProperty": "alt"
+    },
+    {
+      "fromId": "slIn",
+      "fromProperty": "w",
+      "toId": "slBox",
+      "toProperty": "width"
+    },
+    {
+      "fromId": "slIn",
+      "fromProperty": "h",
+      "toId": "slBox",
+      "toProperty": "height"
+    },
+    {
+      "fromId": "slIn",
+      "fromProperty": "left",
+      "toId": "slBox",
+      "toProperty": "transformX"
+    },
+    {
+      "fromId": "slIn",
+      "fromProperty": "top",
+      "toId": "slBox",
+      "toProperty": "transformY"
+    },
+    {
+      "fromId": "slIn",
+      "fromProperty": "turn",
+      "toId": "slBox",
+      "toProperty": "transformRotation"
+    },
+    {
+      "fromId": "slIn",
+      "fromProperty": "z",
+      "toId": "slBox",
+      "toProperty": "zIndex"
+    },
+    {
+      "fromId": "slBox",
+      "fromProperty": "onClick",
+      "toId": "slOut",
+      "toProperty": "tapped"
+    },
+    {
+      "fromId": "slIn",
+      "fromProperty": "index",
+      "toId": "slOut",
+      "toProperty": "index"
+    },
+    {
+      "fromId": "slIn",
+      "fromProperty": "align",
+      "toId": "slBox",
+      "toProperty": "justifyContent"
+    }
+  ]
+}

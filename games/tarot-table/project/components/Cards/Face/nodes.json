@@ -10,17 +10,12 @@
       "y": 40,
       "ports": [
         {
-          "name": "chip",
+          "name": "src",
           "plug": "output",
           "type": "string"
         },
         {
           "name": "name",
-          "plug": "output",
-          "type": "string"
-        },
-        {
-          "name": "suitName",
           "plug": "output",
           "type": "string"
         },
@@ -84,9 +79,6 @@
       "x": 60,
       "y": 140,
       "parent": "fcWrap",
-      "children": [
-        "fcFrame"
-      ],
       "parameters": {
         "sizeMode": "explicit",
         "width": {
@@ -94,19 +86,11 @@
           "unit": "px"
         },
         "height": {
-          "value": 300,
+          "value": 326,
           "unit": "px"
         },
         "flexDirection": "column",
-        "backgroundGradient": "linear-gradient(160deg, var(--surface-raised) 0%, var(--background) 100%)",
-        "borderStyle": "solid",
-        "borderWidth": "var(--border-2)",
-        "borderColor": "var(--primary)",
-        "borderRadius": "var(--radius-xl)",
-        "paddingTop": "var(--space-2)",
-        "paddingBottom": "var(--space-2)",
-        "paddingLeft": "var(--space-2)",
-        "paddingRight": "var(--space-2)",
+        "borderRadius": "var(--radius-lg)",
         "boxShadowEnabled": true,
         "boxShadowOffsetY": {
           "value": 10,
@@ -116,22 +100,22 @@
           "value": 30,
           "unit": "px"
         },
-        "boxShadowColor": "var(--muted)"
-      }
+        "boxShadowColor": "var(--muted)",
+        "backgroundColor": "var(--background)"
+      },
+      "children": [
+        "fcPic"
+      ]
     },
     {
-      "id": "fcFrame",
-      "type": "Group",
-      "label": "Inner frame",
+      "id": "fcPic",
+      "type": "Image",
+      "label": "The card's picture",
       "x": 80,
       "y": 220,
       "parent": "fcCard",
-      "children": [
-        "fcChip",
-        "fcName",
-        "fcSuit"
-      ],
       "parameters": {
+        "sizeMode": "explicit",
         "width": {
           "value": 100,
           "unit": "%"
@@ -140,63 +124,10 @@
           "value": 100,
           "unit": "%"
         },
-        "sizeMode": "explicit",
-        "flexDirection": "column",
-        "alignItems": "center",
-        "justifyContent": "space-between",
-        "borderStyle": "solid",
-        "borderWidth": "var(--border-1)",
-        "borderColor": "var(--border-strong)",
-        "borderRadius": "var(--radius-lg)",
-        "paddingTop": "var(--space-4)",
-        "paddingBottom": "var(--space-4)",
-        "paddingLeft": "var(--space-3)",
-        "paddingRight": "var(--space-3)"
-      }
-    },
-    {
-      "id": "fcChip",
-      "type": "Text",
-      "label": "Numeral or rank",
-      "x": 100,
-      "y": 300,
-      "parent": "fcFrame",
-      "parameters": {
-        "fontFamily": "var(--font-serif)",
-        "fontSize": "var(--text-2xl)",
-        "color": "var(--primary)",
-        "textAlignX": "center"
-      }
-    },
-    {
-      "id": "fcName",
-      "type": "Text",
-      "label": "Card name",
-      "x": 100,
-      "y": 380,
-      "parent": "fcFrame",
-      "parameters": {
-        "fontFamily": "var(--font-serif)",
-        "fontSize": "var(--text-2xl)",
-        "lineHeight": "var(--leading-tight)",
-        "color": "var(--foreground)",
-        "textAlignX": "center"
-      }
-    },
-    {
-      "id": "fcSuit",
-      "type": "Text",
-      "label": "Suit",
-      "x": 100,
-      "y": 460,
-      "parent": "fcFrame",
-      "parameters": {
-        "fontSize": "var(--text-xs)",
-        "fontWeight": "var(--font-semibold)",
-        "letterSpacing": "var(--tracking-widest)",
-        "textTransform": "uppercase",
-        "color": "var(--muted-foreground)",
-        "textAlignX": "center"
+        "objectFit": "fill"
+      },
+      "metadata": {
+        "comment": "The pictures are project/cards/<card id>.svg, drawn by tools/draw-cards.mjs. Swap any file for your own picture under the same name."
       }
     }
   ],

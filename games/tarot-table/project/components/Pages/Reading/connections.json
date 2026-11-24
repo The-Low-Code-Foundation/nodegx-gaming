@@ -119,21 +119,9 @@
     },
     {
       "fromId": "rdCard",
-      "fromProperty": "out-chip",
-      "toId": "rdFace",
-      "toProperty": "chip"
-    },
-    {
-      "fromId": "rdCard",
       "fromProperty": "out-name",
       "toId": "rdFace",
       "toProperty": "name"
-    },
-    {
-      "fromId": "rdCard",
-      "fromProperty": "out-suitName",
-      "toId": "rdFace",
-      "toProperty": "suitName"
     },
     {
       "fromId": "rdCard",
@@ -314,6 +302,198 @@
       "fromProperty": "onClick",
       "toId": "rdGoHome",
       "toProperty": "navigate"
+    },
+    {
+      "fromId": "rdCard",
+      "fromProperty": "out-src",
+      "toId": "rdFace",
+      "toProperty": "src"
+    },
+    {
+      "fromId": "rdVDrawn",
+      "fromProperty": "value",
+      "toId": "rdPos",
+      "toProperty": "in-drawn"
+    },
+    {
+      "fromId": "rdSpreads",
+      "fromProperty": "spreads",
+      "toId": "rdLay",
+      "toProperty": "in-spreads"
+    },
+    {
+      "fromId": "rdVSpread",
+      "fromProperty": "value",
+      "toId": "rdLay",
+      "toProperty": "in-spreadId"
+    },
+    {
+      "fromId": "rdCards",
+      "fromProperty": "cards",
+      "toId": "rdLay",
+      "toProperty": "in-cards"
+    },
+    {
+      "fromId": "rdVDrawn",
+      "fromProperty": "value",
+      "toId": "rdLay",
+      "toProperty": "in-drawn"
+    },
+    {
+      "fromId": "rdVStep",
+      "fromProperty": "value",
+      "toId": "rdLay",
+      "toProperty": "in-step"
+    },
+    {
+      "fromId": "rdVPhase",
+      "fromProperty": "value",
+      "toId": "rdLay",
+      "toProperty": "in-phase"
+    },
+    {
+      "fromId": "rdVCard",
+      "fromProperty": "value",
+      "toId": "rdLay",
+      "toProperty": "in-card"
+    },
+    {
+      "fromId": "rdVUp",
+      "fromProperty": "value",
+      "toId": "rdLay",
+      "toProperty": "in-upsideDown"
+    },
+    {
+      "fromId": "rdLay",
+      "fromProperty": "out-slots",
+      "toId": "rdPickTable",
+      "toProperty": "slots"
+    },
+    {
+      "fromId": "rdLay",
+      "fromProperty": "out-width",
+      "toId": "rdPickTable",
+      "toProperty": "width"
+    },
+    {
+      "fromId": "rdLay",
+      "fromProperty": "out-height",
+      "toId": "rdPickTable",
+      "toProperty": "height"
+    },
+    {
+      "fromId": "rdLay",
+      "fromProperty": "out-slots",
+      "toId": "rdShowTable",
+      "toProperty": "slots"
+    },
+    {
+      "fromId": "rdLay",
+      "fromProperty": "out-width",
+      "toId": "rdShowTable",
+      "toProperty": "width"
+    },
+    {
+      "fromId": "rdLay",
+      "fromProperty": "out-height",
+      "toId": "rdShowTable",
+      "toProperty": "height"
+    },
+    {
+      "fromId": "rdLay",
+      "fromProperty": "out-fullSlots",
+      "toId": "rdDoneTable",
+      "toProperty": "slots"
+    },
+    {
+      "fromId": "rdLay",
+      "fromProperty": "out-fullWidth",
+      "toId": "rdDoneTable",
+      "toProperty": "width"
+    },
+    {
+      "fromId": "rdLay",
+      "fromProperty": "out-fullHeight",
+      "toId": "rdDoneTable",
+      "toProperty": "height"
+    },
+    {
+      "fromId": "rdPickTable",
+      "fromProperty": "index",
+      "toId": "rdSetTapped",
+      "toProperty": "value"
+    },
+    {
+      "fromId": "rdShowTable",
+      "fromProperty": "index",
+      "toId": "rdSetTapped",
+      "toProperty": "value"
+    },
+    {
+      "fromId": "rdDoneTable",
+      "fromProperty": "index",
+      "toId": "rdSetTapped",
+      "toProperty": "value"
+    },
+    {
+      "fromId": "rdPickTable",
+      "fromProperty": "tapped",
+      "toId": "rdSetTapped",
+      "toProperty": "do"
+    },
+    {
+      "fromId": "rdShowTable",
+      "fromProperty": "tapped",
+      "toId": "rdSetTapped",
+      "toProperty": "do"
+    },
+    {
+      "fromId": "rdDoneTable",
+      "fromProperty": "tapped",
+      "toId": "rdSetTapped",
+      "toProperty": "do"
+    },
+    {
+      "fromId": "rdPickTable",
+      "fromProperty": "tapped",
+      "toId": "rdGoTo",
+      "toProperty": "run"
+    },
+    {
+      "fromId": "rdShowTable",
+      "fromProperty": "tapped",
+      "toId": "rdGoTo",
+      "toProperty": "run"
+    },
+    {
+      "fromId": "rdDoneTable",
+      "fromProperty": "tapped",
+      "toId": "rdGoTo",
+      "toProperty": "run"
+    },
+    {
+      "fromId": "rdPickTable",
+      "fromProperty": "tapped",
+      "toId": "rdTopOfPage",
+      "toProperty": "run"
+    },
+    {
+      "fromId": "rdShowTable",
+      "fromProperty": "tapped",
+      "toId": "rdTopOfPage",
+      "toProperty": "run"
+    },
+    {
+      "fromId": "rdDoneTable",
+      "fromProperty": "tapped",
+      "toId": "rdTopOfPage",
+      "toProperty": "run"
+    },
+    {
+      "fromId": "rdVPhase",
+      "fromProperty": "value",
+      "toId": "rdPos",
+      "toProperty": "in-phase"
     }
   ]
 }

@@ -1,0 +1,113 @@
+{
+  "$schema": "https://opennoodl.dev/schemas/nodes-v2.json",
+  "componentId": "dde277b3-b823-5d68-81cd-4a2c363d2464",
+  "version": 1,
+  "nodes": [
+    {
+      "id": "tbIn",
+      "type": "Component Inputs",
+      "x": 520,
+      "y": 40,
+      "ports": [
+        {
+          "name": "slots",
+          "plug": "output",
+          "type": "array"
+        },
+        {
+          "name": "width",
+          "plug": "output",
+          "type": "number"
+        },
+        {
+          "name": "height",
+          "plug": "output",
+          "type": "number"
+        }
+      ]
+    },
+    {
+      "id": "tbWrap",
+      "type": "Group",
+      "label": "Centre the table",
+      "x": 40,
+      "y": 40,
+      "children": [
+        "tbCloth"
+      ],
+      "parameters": {
+        "width": {
+          "value": 100,
+          "unit": "%"
+        },
+        "sizeMode": "contentHeight",
+        "flexDirection": "column",
+        "alignItems": "center",
+        "paddingTop": "var(--space-2)",
+        "paddingBottom": "var(--space-2)"
+      }
+    },
+    {
+      "id": "tbCloth",
+      "type": "Group",
+      "label": "The table",
+      "x": 60,
+      "y": 140,
+      "parent": "tbWrap",
+      "children": [
+        "tbPlaces"
+      ],
+      "parameters": {
+        "position": "relative",
+        "sizeMode": "explicit",
+        "width": {
+          "value": 300,
+          "unit": "px"
+        },
+        "height": {
+          "value": 180,
+          "unit": "px"
+        },
+        "flexDirection": "column",
+        "alignItems": "flex-start",
+        "justifyContent": "flex-start"
+      },
+      "metadata": {
+        "comment": "Its places are absolute, so it takes the size the page computed (a bare number is read as px) and sets its children from the top-left corner."
+      }
+    },
+    {
+      "id": "tbPlaces",
+      "type": "For Each",
+      "label": "One place per position",
+      "x": 80,
+      "y": 220,
+      "parent": "tbCloth",
+      "parameters": {
+        "template": "/Reading/Slot",
+        "templateType": "explicit"
+      }
+    },
+    {
+      "id": "tbOut",
+      "type": "Component Outputs",
+      "x": 900,
+      "y": 40,
+      "ports": [
+        {
+          "name": "tapped",
+          "plug": "input",
+          "type": "signal"
+        },
+        {
+          "name": "index",
+          "plug": "input",
+          "type": "number"
+        }
+      ]
+    }
+  ],
+  "visualRoots": [
+    "tbWrap"
+  ]
+}

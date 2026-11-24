@@ -4,7 +4,7 @@ This folder is an app built with NodeGX. Its pages, data and assets are the app'
 built it. NodeGX puts no licence on them.
 
 The NodeGX runtime runs the app: noodl-app.png, load_terminator.js, noodl.deploy.js, serve.js. It is under the MIT licence printed below.
-index-0a96e92ce435d842.js and index.html start the runtime, with the app filled in.
+index-91ed0fdea83082a0.js and index.html start the runtime, with the app filled in.
 react.production.min.js and react-dom.production.min.js are React, under React's own MIT licence, stated at the top of each file.
 noodl.deploy.js.LICENSE.txt lists the other open-source code inside noodl.deploy.js, each under its own licence.
 

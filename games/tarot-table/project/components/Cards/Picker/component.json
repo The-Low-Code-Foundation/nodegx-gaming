@@ -5,7 +5,7 @@
   "path": "/Cards/Picker",
   "type": "visual",
   "created": "2026-11-24T08:16:04.224Z",
-  "modified": "2026-11-24T08:20:31.969Z",
+  "modified": "2026-11-24T08:51:39.611Z",
   "modifiedBy": "noodl-mcp",
   "description": "Find any of the 78 cards in two taps: choose the suit, then the card. Sends picked with the card's id."
 }

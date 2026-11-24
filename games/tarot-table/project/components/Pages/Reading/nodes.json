@@ -141,6 +141,7 @@
       "parent": "rdShell",
       "children": [
         "rdPickSpread",
+        "rdPickTable",
         "rdPickPos",
         "rdPickLead",
         "rdPickHow",
@@ -207,7 +208,7 @@
       "y": 760,
       "parent": "rdPick",
       "parameters": {
-        "text": "Take the top card from your deck and lay it face up. Keep it the way it came out. Then find it here.",
+        "text": "Take the top card from your deck and lay it face up in the glowing place. Keep it the way it came out. Then find it here.",
         "fontSize": "var(--text-base)",
         "lineHeight": "var(--leading-relaxed)",
         "color": "var(--foreground)"
@@ -254,6 +255,7 @@
       "y": 960,
       "parent": "rdShell",
       "children": [
+        "rdShowTable",
         "rdFace",
         "rdFlip",
         "rdMeaning",
@@ -429,6 +431,7 @@
         "rdDoneSpread",
         "rdDoneTitle",
         "rdDoneHow",
+        "rdDoneTable",
         "rdRowsBox",
         "rdAgainBtn"
       ],
@@ -480,7 +483,7 @@
       "y": 1740,
       "parent": "rdDone",
       "parameters": {
-        "text": "Look at all the cards together. Read each question out and see where the talk goes.",
+        "text": "Look at all the cards together. Read each question out and see where the talk goes. Tap a card on the table to read it again.",
         "fontSize": "var(--text-base)",
         "lineHeight": "var(--leading-relaxed)",
         "color": "var(--muted-foreground)"
@@ -644,7 +647,7 @@
       "x": 1000,
       "y": 40,
       "parameters": {
-        "functionScript": "const spreads = Inputs.spreads || [];\nconst s = spreads.find(x => x.id === Inputs.spreadId) || spreads[0];\nif (!s) return;\nconst total = s.positions.length;\nconst step = Math.min(Inputs.step || 0, total - 1);\nconst p = s.positions[step];\nOutputs.spreadName = s.name;\nOutputs.posName = p.name;\nOutputs.posLead = p.lead;\nOutputs.total = total;\nOutputs.stepLabel = total > 1 ? 'Card ' + (step + 1) + ' of ' + total : '';\nOutputs.keepLabel = total === 1 ? 'Done' : (step + 1 >= total ? 'See the whole reading' : 'Next card');\n"
+        "functionScript": "const spreads = Inputs.spreads || [];\nconst s = spreads.find(x => x.id === Inputs.spreadId) || spreads[0];\nif (!s) return;\nconst total = s.positions.length;\nconst step = Math.min(Inputs.step || 0, total - 1);\nconst p = s.positions[step];\nconst drawn = Inputs.drawn || [];\nconst othersLeft = s.positions.some((q, i) => i !== step && !drawn.some(d => d.step === i));\nOutputs.spreadName = s.name;\nOutputs.posName = p.name;\nOutputs.posLead = p.lead;\nOutputs.total = total;\nOutputs.stepLabel = total > 1 && Inputs.phase !== 'done' ? 'Card ' + (step + 1) + ' of ' + total : '';\nOutputs.keepLabel = total === 1 ? 'Done' : (othersLeft ? 'Next card' : 'See the whole reading');\n"
       },
       "metadata": {
         "comment": "With no spread chosen (the page opened directly) it falls back to the first spread."
@@ -722,7 +725,7 @@
       "x": 1000,
       "y": 480,
       "parameters": {
-        "functionScript": "const c = (Inputs.cards || []).find(x => x.id === Inputs.cardId);\nif (!c) return;\nconst down = !!Inputs.upsideDown;\nOutputs.chip = c.chip;\nOutputs.name = c.name;\nOutputs.suitName = c.suit === 'major' ? 'Major Arcana' : c.suit.charAt(0).toUpperCase() + c.suit.slice(1);\nOutputs.keywords = c.keywords;\nOutputs.text = down ? c.rev : c.up;\nOutputs.ask = down ? c.askRev : c.askUp;\nOutputs.reversed = down;\n"
+        "functionScript": "const c = (Inputs.cards || []).find(x => x.id === Inputs.cardId);\nif (!c) return;\nconst down = !!Inputs.upsideDown;\nOutputs.src = 'cards/' + c.id + '.svg';\nOutputs.name = c.name;\nOutputs.keywords = c.keywords;\nOutputs.text = down ? c.rev : c.up;\nOutputs.ask = down ? c.askRev : c.askUp;\nOutputs.reversed = down;\n"
       },
       "ports": [
         {
@@ -909,7 +912,7 @@
       "x": 1600,
       "y": 200,
       "parameters": {
-        "functionScript": "const ids = [];\nfor (let i = 0; i < 22; i++) ids.push('major-' + String(i).padStart(2, '0'));\nfor (const s of ['wands', 'cups', 'swords', 'pentacles'])\n  for (let i = 1; i <= 14; i++) ids.push(s + '-' + String(i).padStart(2, '0'));\nconst used = (Noodl.Variables.readDrawn || []).map(d => d.cardId);\nconst left = ids.filter(id => used.indexOf(id) < 0);\nNoodl.Variables.readCard = left[Math.floor(Math.random() * left.length)];\nNoodl.Variables.readUpsideDown = Math.random() < 0.5;\nNoodl.Variables.readPhase = 'show';\n"
+        "functionScript": "const ids = [];\nfor (let i = 0; i < 22; i++) ids.push('major-' + String(i).padStart(2, '0'));\nfor (const s of ['wands', 'cups', 'swords', 'pentacles'])\n  for (let i = 1; i <= 14; i++) ids.push(s + '-' + String(i).padStart(2, '0'));\nconst step = Noodl.Variables.readStep || 0;\nconst used = (Noodl.Variables.readDrawn || []).filter(d => d.step !== step).map(d => d.cardId);\nconst left = ids.filter(id => used.indexOf(id) < 0);\nNoodl.Variables.readCard = left[Math.floor(Math.random() * left.length)];\nNoodl.Variables.readUpsideDown = Math.random() < 0.5;\nNoodl.Variables.readPhase = 'show';\n"
       },
       "metadata": {
         "comment": "Picks at random from the cards not yet on the table, upside down half the time, as a shuffled deck would."
@@ -922,7 +925,7 @@
       "x": 1600,
       "y": 360,
       "parameters": {
-        "functionScript": "const step = Noodl.Variables.readStep || 0;\nconst total = Noodl.Variables.readTotal || 1;\nconst drawn = (Noodl.Variables.readDrawn || []).slice();\ndrawn.push({ id: 'pos' + step, step: step, cardId: Noodl.Variables.readCard, reversed: !!Noodl.Variables.readUpsideDown });\nNoodl.Variables.readDrawn = drawn;\nif (step + 1 >= total) {\n  Noodl.Variables.readPhase = 'done';\n} else {\n  Noodl.Variables.readStep = step + 1;\n  Noodl.Variables.readCard = '';\n  Noodl.Variables.readPhase = 'pick';\n}\n"
+        "functionScript": "// A second tap on the button (a double tap on a phone) arrives after the card was already kept: nothing to keep.\nif (!Noodl.Variables.readCard || Noodl.Variables.readPhase !== 'show') return;\nconst step = Noodl.Variables.readStep || 0;\nconst total = Noodl.Variables.readTotal || 1;\nconst drawn = (Noodl.Variables.readDrawn || []).filter(d => d.step !== step);\ndrawn.push({ id: 'pos' + step, step: step, cardId: Noodl.Variables.readCard, reversed: !!Noodl.Variables.readUpsideDown });\ndrawn.sort((a, b) => a.step - b.step);\nNoodl.Variables.readDrawn = drawn;\n// The next empty place after this one, going round; none left means the reading is complete.\nlet next = -1;\nfor (let k = 1; k <= total; k++) {\n  const j = (step + k) % total;\n  if (!drawn.some(d => d.step === j)) { next = j; break; }\n}\nif (next < 0) {\n  Noodl.Variables.readPhase = 'done';\n} else {\n  Noodl.Variables.readStep = next;\n  Noodl.Variables.readCard = '';\n  Noodl.Variables.readUpsideDown = false;\n  Noodl.Variables.readPhase = 'pick';\n}\n"
       }
     },
     {
@@ -945,7 +948,7 @@
       "x": 1000,
       "y": 1000,
       "parameters": {
-        "functionScript": "const spreads = Inputs.spreads || [];\nconst s = spreads.find(x => x.id === Inputs.spreadId) || spreads[0];\nconst cards = Inputs.cards || [];\nOutputs.rows = (Inputs.drawn || []).map(d => {\n  const c = cards.find(x => x.id === d.cardId) || {};\n  const p = (s && s.positions[d.step]) || {};\n  return {\n    id: d.id,\n    position: p.name || '',\n    name: d.reversed ? c.name + ', upside down' : c.name,\n    keywords: c.keywords,\n    ask: d.reversed ? c.askRev : c.askUp\n  };\n});\n"
+        "functionScript": "const spreads = Inputs.spreads || [];\nconst s = spreads.find(x => x.id === Inputs.spreadId) || spreads[0];\nconst cards = Inputs.cards || [];\nOutputs.rows = (Inputs.drawn || []).slice().sort((a, b) => a.step - b.step).map(d => {\n  const c = cards.find(x => x.id === d.cardId) || {};\n  const p = (s && s.positions[d.step]) || {};\n  return {\n    id: d.id,\n    position: (d.step + 1) + '. ' + (p.name || ''),\n    name: d.reversed ? c.name + ', upside down' : c.name,\n    src: 'cards/' + d.cardId + '.svg',\n    turn: d.reversed ? 180 : 0,\n    keywords: c.keywords,\n    ask: d.reversed ? c.askRev : c.askUp\n  };\n});\n"
       },
       "ports": [
         {
@@ -993,6 +996,67 @@
       "y": 640,
       "parameters": {
         "target": "/Pages/Home"
+      }
+    },
+    {
+      "id": "rdPickTable",
+      "type": "/Reading/Table",
+      "label": "The table, with the place for this card glowing",
+      "parent": "rdPick",
+      "x": 280,
+      "y": 700
+    },
+    {
+      "id": "rdShowTable",
+      "type": "/Reading/Table",
+      "label": "The table, with this card in its place",
+      "parent": "rdShow",
+      "x": 280,
+      "y": 1080
+    },
+    {
+      "id": "rdDoneTable",
+      "type": "/Reading/Table",
+      "label": "The whole table",
+      "parent": "rdDone",
+      "x": 280,
+      "y": 1860
+    },
+    {
+      "id": "rdLay",
+      "type": "JavaScriptFunction",
+      "label": "Lay out the table",
+      "x": 1000,
+      "y": 1400,
+      "parameters": {
+        "functionScript": "const spreads = Inputs.spreads || [];\nconst s = spreads.find(x => x.id === Inputs.spreadId) || spreads[0];\nif (!s) return;\nconst cards = Inputs.cards || [];\nconst drawn = Inputs.drawn || [];\nconst step = Inputs.step || 0;\nconst looking = Inputs.phase === 'show' && Inputs.card;\nconst RATIO = 1.7;\nlet x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;\nfor (const p of s.positions) {\n  const hw = (p.turn ? RATIO : 1) / 2;\n  const hh = (p.turn ? 1 : RATIO) / 2;\n  x0 = Math.min(x0, (p.x || 0) - hw);\n  x1 = Math.max(x1, (p.x || 0) + hw);\n  y0 = Math.min(y0, (p.y || 0) - hh);\n  y1 = Math.max(y1, (p.y || 0) + hh);\n}\n// A card with another lying across it shows its number at the top, and the crossing card at its end, so both stay readable.\nconst crossed = (p) => !p.turn && s.positions.some(q => q.turn && q.x === p.x && q.y === p.y);\nfunction lay(maxW, maxH, biggest, live) {\n  const u = Math.min(maxW / (x1 - x0), maxH / (y1 - y0), biggest);\n  const w = Math.round(u);\n  const h = Math.round(u * RATIO);\n  const slots = s.positions.map((p, i) => {\n    const kept = drawn.find(d => d.step === i);\n    const here = live && i === step;\n    const cardId = here && looking ? Inputs.card : (kept ? kept.cardId : '');\n    const down = here && looking ? !!Inputs.upsideDown : !!(kept && kept.reversed);\n    const c = cards.find(x => x.id === cardId);\n    return {\n      id: 'place' + i,\n      index: i,\n      label: String(i + 1),\n      state: here ? (cardId ? 'herecard' : 'here') : (cardId ? 'filled' : 'empty'),\n      src: cardId ? 'cards/' + cardId + '.svg' : '',\n      name: c ? c.name : '',\n      w: w,\n      h: h,\n      left: Math.round(((p.x || 0) - x0) * u - w / 2),\n      top: Math.round(((p.y || 0) - y0) * u - h / 2),\n      turn: (p.turn || 0) + (down ? 180 : 0),\n      z: p.turn ? 2 : 1,\n      align: p.turn ? 'flex-end' : (crossed(p) ? 'flex-start' : 'center')\n    };\n  });\n  return { slots: slots, width: Math.round((x1 - x0) * u), height: Math.round((y1 - y0) * u) };\n}\nconst small = lay(300, 230, 64, Inputs.phase !== 'done');\nOutputs.slots = small.slots;\nOutputs.width = small.width;\nOutputs.height = small.height;\nconst big = lay(320, 470, 110, false);\nOutputs.fullSlots = big.slots;\nOutputs.fullWidth = big.width;\nOutputs.fullHeight = big.height;\n"
+      },
+      "metadata": {
+        "comment": "Fits the spread's positions (x, y in card widths, from Data/Spreads) into a box: small on the steps, bigger for the whole reading. A card is 1 wide and 1.7 tall; a turned one swaps the two."
+      }
+    },
+    {
+      "id": "rdSetTapped",
+      "type": "Set Variable",
+      "label": "Remember which place was tapped",
+      "x": 1600,
+      "y": 1400,
+      "parameters": {
+        "name": "readTapped",
+        "setWith": "number"
+      }
+    },
+    {
+      "id": "rdGoTo",
+      "type": "JavaScriptFunction",
+      "label": "Go to the tapped place",
+      "x": 1600,
+      "y": 1520,
+      "parameters": {
+        "functionScript": "const i = Noodl.Variables.readTapped || 0;\nconst kept = (Noodl.Variables.readDrawn || []).find(d => d.step === i);\nNoodl.Variables.readStep = i;\nif (kept) {\n  Noodl.Variables.readCard = kept.cardId;\n  Noodl.Variables.readUpsideDown = !!kept.reversed;\n  Noodl.Variables.readPhase = 'show';\n} else {\n  Noodl.Variables.readCard = '';\n  Noodl.Variables.readUpsideDown = false;\n  Noodl.Variables.readPhase = 'pick';\n}\n"
+      },
+      "metadata": {
+        "comment": "A place with a card kept in it opens that card again; an empty one asks for its card. Cards can go down in any order."
       }
     }
   ],

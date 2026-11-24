@@ -35,21 +35,9 @@
     },
     {
       "fromId": "dkCard",
-      "fromProperty": "out-chip",
-      "toId": "dkFace",
-      "toProperty": "chip"
-    },
-    {
-      "fromId": "dkCard",
       "fromProperty": "out-name",
       "toId": "dkFace",
       "toProperty": "name"
-    },
-    {
-      "fromId": "dkCard",
-      "fromProperty": "out-suitName",
-      "toId": "dkFace",
-      "toProperty": "suitName"
     },
     {
       "fromId": "dkCard",
@@ -134,6 +122,12 @@
       "fromProperty": "onClick",
       "toId": "dkGoHome",
       "toProperty": "navigate"
+    },
+    {
+      "fromId": "dkCard",
+      "fromProperty": "out-src",
+      "toId": "dkFace",
+      "toProperty": "src"
     }
   ]
 }

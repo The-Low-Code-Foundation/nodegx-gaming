@@ -139,10 +139,10 @@
       "x": 820,
       "y": 40,
       "parameters": {
-        "functionScript": "const suit = Inputs.suit || 'major';\nconst suits = Inputs.suits || [];\nconst cards = Inputs.cards || [];\nconst here = suits.find(s => s.id === suit) || suits[0] || {};\nOutputs.tabs = suits.map(s => ({ id: s.id, name: s.name, selected: s.id === suit }));\nOutputs.list = cards\n  .filter(c => c.suit === suit)\n  .map(c => ({ id: c.id, chip: c.chip, sub: c.suit === 'major' ? c.name : here.name }));\nOutputs.about = here.about || '';\n"
+        "functionScript": "const suit = Inputs.suit || 'major';\nconst suits = Inputs.suits || [];\nconst cards = Inputs.cards || [];\nconst here = suits.find(s => s.id === suit) || suits[0] || {};\nOutputs.tabs = suits.map(s => ({ id: s.id, name: s.name, selected: s.id === suit }));\nOutputs.list = cards\n  .filter(c => c.suit === suit)\n  .map(c => ({ id: c.id, src: 'cards/' + c.id + '.svg', sub: c.suit === 'major' ? c.name : c.name.split(' of ')[0] }));\nOutputs.about = here.about || '';\n"
       },
       "metadata": {
-        "comment": "Major is the first tab until someone picks another suit. A major's mini card shows its name; a minor's shows the suit."
+        "comment": "Major is the first tab until someone picks another suit. Each mini card shows its picture; a major is named in full, a minor by its rank (the tab already says the suit)."
       },
       "ports": [
         {

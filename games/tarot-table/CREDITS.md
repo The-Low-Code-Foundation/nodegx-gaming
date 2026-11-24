@@ -2,7 +2,9 @@
 
 Tarot Table was made in NodeGX (<https://nodegx.io>) by The Low Code Foundation. Every card meaning, question and
 spread was written for it. The meanings follow the common reading of the Rider-Waite-Smith deck (1909); no card art
-from any deck is included: the cards are drawn as type.
+from any deck is included. The 78 card pictures in `project/cards/` are simple emblems and pips drawn by
+`tools/draw-cards.mjs` for this app (each Major Arcana card shows the symbol it is known by, such as the Tower's
+lightning or the Hermit's lantern; no deck's artwork was copied or traced).
 
 ## Code
 
@@ -23,4 +25,5 @@ Headings use the system serif (Georgia where there is one).
 
 ## Pictures
 
-`thumb.jpg` and the app icon (`pwa/icon.svg` and its PNGs) were drawn for this app.
+`thumb.jpg`, the app icon (`pwa/icon.svg` and its PNGs) and the card pictures (`project/cards/`, made by
+`tools/draw-cards.mjs`) were drawn for this app. Same licence as the project.

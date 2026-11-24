@@ -1,0 +1,37 @@
+{
+  "$schema": "https://opennoodl.dev/schemas/connections-v2.json",
+  "componentId": "dde277b3-b823-5d68-81cd-4a2c363d2464",
+  "version": 1,
+  "connections": [
+    {
+      "fromId": "tbIn",
+      "fromProperty": "slots",
+      "toId": "tbPlaces",
+      "toProperty": "items"
+    },
+    {
+      "fromId": "tbIn",
+      "fromProperty": "width",
+      "toId": "tbCloth",
+      "toProperty": "width"
+    },
+    {
+      "fromId": "tbIn",
+      "fromProperty": "height",
+      "toId": "tbCloth",
+      "toProperty": "height"
+    },
+    {
+      "fromId": "tbPlaces",
+      "fromProperty": "itemOutput-index",
+      "toId": "tbOut",
+      "toProperty": "index"
+    },
+    {
+      "fromId": "tbPlaces",
+      "fromProperty": "itemOutputSignal-tapped",
+      "toId": "tbOut",
+      "toProperty": "tapped"
+    }
+  ]
+}

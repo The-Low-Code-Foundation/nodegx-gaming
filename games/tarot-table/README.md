@@ -1,8 +1,9 @@
 # Tarot Table
 
-A companion for a real tarot deck, made for the table. Pick a spread, draw a card from your deck, and tap it in: suit,
-then card. The app tells you what the card is about in that position and gives you a question to ask the person.
-Lay it upside down and the meaning changes with it. At the end you get the whole reading on one screen.
+A companion for a real tarot deck, made for the table. Pick a spread and the app shows its layout as places on a
+table, from one card to the ten of the Celtic Cross. Lay your real card in the glowing place, then tap it in: suit,
+then card. The app tells you what the card is about in that position and gives you a question to ask the person. Lay
+it upside down and the meaning changes with it. At the end you get the whole table and the reading on one screen.
 
 Nobody at the table needs to know tarot. The cards don't predict anything here; they give people something to talk
 about.
@@ -37,6 +38,10 @@ npx tiged The-Low-Code-Foundation/nodegx-gaming/games/tarot-table my-tarot
 ## Make it your own
 
 Every word a card says is in `Data/Cards`, in the node "EDIT: the 78 cards (this list IS the deck)". Rewrite them in
-your own voice, or in another language. The spreads are in `Data/Spreads`: add one and it appears on the home page.
+your own voice, or in another language. The spreads are in `Data/Spreads`: add one and it appears on the home page,
+with its own layout on the table (each position has an `x` and `y`).
+
+The card pictures are `project/cards/<card id>.svg`, drawn by `node tools/draw-cards.mjs`. Change the drawing code,
+or drop in your own picture for any card under the same file name.
 
 Credits and licences: [CREDITS.md](CREDITS.md).

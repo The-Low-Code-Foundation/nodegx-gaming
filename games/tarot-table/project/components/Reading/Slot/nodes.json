@@ -1,0 +1,228 @@
+{
+  "$schema": "https://opennoodl.dev/schemas/nodes-v2.json",
+  "componentId": "78dd8bbd-5fbe-53b2-82a4-c07a0e66d579",
+  "version": 1,
+  "nodes": [
+    {
+      "id": "slIn",
+      "type": "Component Inputs",
+      "x": 520,
+      "y": 40,
+      "ports": [
+        {
+          "name": "index",
+          "plug": "output",
+          "type": "number"
+        },
+        {
+          "name": "label",
+          "plug": "output",
+          "type": "string"
+        },
+        {
+          "name": "state",
+          "plug": "output",
+          "type": "string"
+        },
+        {
+          "name": "src",
+          "plug": "output",
+          "type": "string"
+        },
+        {
+          "name": "name",
+          "plug": "output",
+          "type": "string"
+        },
+        {
+          "name": "w",
+          "plug": "output",
+          "type": "number"
+        },
+        {
+          "name": "h",
+          "plug": "output",
+          "type": "number"
+        },
+        {
+          "name": "left",
+          "plug": "output",
+          "type": "number"
+        },
+        {
+          "name": "top",
+          "plug": "output",
+          "type": "number"
+        },
+        {
+          "name": "turn",
+          "plug": "output",
+          "type": "number"
+        },
+        {
+          "name": "z",
+          "plug": "output",
+          "type": "number"
+        },
+        {
+          "name": "align",
+          "plug": "output",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "id": "slLook",
+      "type": "States",
+      "label": "How the place looks",
+      "x": 520,
+      "y": 360,
+      "parameters": {
+        "states": "empty,here,herecard,filled",
+        "values": "edge,line,ground,glow,num,pic,ink",
+        "useTransitions": false,
+        "type-edge": "color",
+        "type-line": "string",
+        "type-ground": "color",
+        "type-glow": "boolean",
+        "type-num": "boolean",
+        "type-pic": "boolean",
+        "type-ink": "color",
+        "value-empty-edge": "var(--border-strong)",
+        "value-empty-line": "dashed",
+        "value-empty-ground": "transparent",
+        "value-empty-glow": false,
+        "value-empty-num": true,
+        "value-empty-pic": false,
+        "value-empty-ink": "var(--muted-foreground)",
+        "value-here-edge": "var(--primary)",
+        "value-here-line": "solid",
+        "value-here-ground": "transparent",
+        "value-here-glow": true,
+        "value-here-num": true,
+        "value-here-pic": false,
+        "value-here-ink": "var(--primary)",
+        "value-herecard-edge": "var(--primary)",
+        "value-herecard-line": "solid",
+        "value-herecard-ground": "transparent",
+        "value-herecard-glow": true,
+        "value-herecard-num": false,
+        "value-herecard-pic": true,
+        "value-herecard-ink": "var(--primary)",
+        "value-filled-edge": "transparent",
+        "value-filled-line": "none",
+        "value-filled-ground": "transparent",
+        "value-filled-glow": false,
+        "value-filled-num": false,
+        "value-filled-pic": true,
+        "value-filled-ink": "var(--muted-foreground)"
+      },
+      "metadata": {
+        "comment": "empty: a dashed outline. here: the place for the next card, glowing (herecard: with the card being looked at in it). filled: the kept card."
+      }
+    },
+    {
+      "id": "slBox",
+      "type": "Group",
+      "label": "The place",
+      "x": 40,
+      "y": 40,
+      "children": [
+        "slNum",
+        "slPic"
+      ],
+      "parameters": {
+        "position": "absolute",
+        "sizeMode": "explicit",
+        "width": {
+          "value": 60,
+          "unit": "px"
+        },
+        "height": {
+          "value": 102,
+          "unit": "px"
+        },
+        "transformX": {
+          "value": 0,
+          "unit": "px"
+        },
+        "transformY": {
+          "value": 0,
+          "unit": "px"
+        },
+        "transformRotation": 0,
+        "flexDirection": "column",
+        "alignItems": "center",
+        "justifyContent": "center",
+        "borderWidth": "var(--border-2)",
+        "borderRadius": "var(--radius-sm)",
+        "boxShadowBlurRadius": {
+          "value": 18,
+          "unit": "px"
+        },
+        "boxShadowColor": "var(--primary)"
+      },
+      "metadata": {
+        "comment": "Absolute inside the table, moved to its spot with Pos X/Y; the table works the numbers out. A crossing card is the same box turned 90 degrees."
+      }
+    },
+    {
+      "id": "slNum",
+      "type": "Text",
+      "label": "Its number",
+      "x": 60,
+      "y": 160,
+      "parent": "slBox",
+      "parameters": {
+        "fontFamily": "var(--font-serif)",
+        "fontSize": "var(--text-sm)",
+        "textAlignX": "center",
+        "sizeMode": "contentSize",
+        "marginTop": "var(--space-0-5)",
+        "marginBottom": "var(--space-0-5)"
+      }
+    },
+    {
+      "id": "slPic",
+      "type": "Image",
+      "label": "The card lying here",
+      "x": 60,
+      "y": 240,
+      "parent": "slBox",
+      "parameters": {
+        "sizeMode": "explicit",
+        "width": {
+          "value": 100,
+          "unit": "%"
+        },
+        "height": {
+          "value": 100,
+          "unit": "%"
+        },
+        "objectFit": "fill",
+        "mounted": false
+      }
+    },
+    {
+      "id": "slOut",
+      "type": "Component Outputs",
+      "x": 900,
+      "y": 40,
+      "ports": [
+        {
+          "name": "tapped",
+          "plug": "input",
+          "type": "signal"
+        },
+        {
+          "name": "index",
+          "plug": "input",
+          "type": "number"
+        }
+      ]
+    }
+  ],
+  "visualRoots": [
+    "slBox"
+  ]
+}
