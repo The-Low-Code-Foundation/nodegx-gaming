@@ -5,7 +5,7 @@
   "path": "/Cards/Meaning",
   "type": "visual",
   "created": "2026-11-24T08:19:39.845Z",
-  "modified": "2026-11-24T08:19:39.845Z",
+  "modified": "2026-11-24T21:13:09.855Z",
   "modifiedBy": "noodl-mcp",
-  "description": "What a card says in one place: a small heading, its keywords, the meaning, and the question to ask in a gold box."
+  "description": "What a card says in one place: a small heading, its keywords, the meaning, the question to ask in a gold box, and a 'More about this card' fold-out (a list of Cards/Section blocks passed in as `more`)."
 }

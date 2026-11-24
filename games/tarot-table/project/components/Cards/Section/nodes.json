@@ -1,0 +1,152 @@
+{
+  "$schema": "https://opennoodl.dev/schemas/nodes-v2.json",
+  "componentId": "7dd7b289-7a48-51c0-8e25-6d8717a83ec1",
+  "version": 1,
+  "nodes": [
+    {
+      "id": "scIn-2",
+      "type": "Component Inputs",
+      "x": 520,
+      "y": 40,
+      "ports": [
+        {
+          "name": "heading",
+          "plug": "output",
+          "type": "string"
+        },
+        {
+          "name": "body",
+          "plug": "output",
+          "type": "string"
+        },
+        {
+          "name": "kind",
+          "plug": "output",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "id": "scHasHead",
+      "type": "Expression",
+      "label": "Is there a heading?",
+      "x": 520,
+      "y": 220,
+      "parameters": {
+        "expression": "!!heading"
+      }
+    },
+    {
+      "id": "scLook",
+      "type": "States",
+      "label": "How this kind of section looks",
+      "x": 520,
+      "y": 320,
+      "parameters": {
+        "states": "text,ask,tip",
+        "values": "bg,rule,ink",
+        "useTransitions": false,
+        "type-bg": "color",
+        "type-rule": "color",
+        "type-ink": "color",
+        "value-text-bg": "transparent",
+        "value-text-rule": "transparent",
+        "value-text-ink": "var(--foreground)",
+        "value-ask-bg": "transparent",
+        "value-ask-rule": "var(--primary)",
+        "value-ask-ink": "var(--foreground)",
+        "value-tip-bg": "var(--surface)",
+        "value-tip-rule": "var(--border-strong)",
+        "value-tip-ink": "var(--muted-foreground)"
+      },
+      "metadata": {
+        "comment": "kind is wired straight to currentState; an unknown or empty kind stays on the first state, plain text."
+      }
+    },
+    {
+      "id": "scRoot",
+      "type": "Group",
+      "label": "Section",
+      "x": 40,
+      "y": 40,
+      "children": [
+        "scHead",
+        "scBody",
+        "scAskBody"
+      ],
+      "parameters": {
+        "width": {
+          "value": 100,
+          "unit": "%"
+        },
+        "sizeMode": "contentHeight",
+        "flexDirection": "column",
+        "rowGap": "var(--space-1)",
+        "borderStyle": "solid",
+        "borderWidth": "0",
+        "borderLeftWidth": "var(--border-2)",
+        "borderRadius": "var(--radius-md)",
+        "paddingTop": "var(--space-2)",
+        "paddingBottom": "var(--space-2)",
+        "paddingLeft": "var(--space-3)",
+        "paddingRight": "var(--space-3)"
+      }
+    },
+    {
+      "id": "scHead",
+      "type": "Text",
+      "label": "Heading",
+      "parent": "scRoot",
+      "parameters": {
+        "mounted": false,
+        "fontSize": "var(--text-xs)",
+        "fontWeight": "var(--font-semibold)",
+        "letterSpacing": "var(--tracking-widest)",
+        "textTransform": "uppercase",
+        "color": "var(--primary)"
+      },
+      "x": 100,
+      "y": 160
+    },
+    {
+      "id": "scBody",
+      "type": "Text",
+      "label": "Paragraph",
+      "parent": "scRoot",
+      "parameters": {
+        "fontSize": "var(--text-base)",
+        "lineHeight": "var(--leading-relaxed)"
+      },
+      "x": 100,
+      "y": 280
+    },
+    {
+      "id": "scAskBody",
+      "type": "Text",
+      "label": "The question, in the serif",
+      "parent": "scRoot",
+      "parameters": {
+        "mounted": false,
+        "fontFamily": "var(--font-serif)",
+        "fontSize": "var(--text-lg)",
+        "lineHeight": "var(--leading-snug)",
+        "color": "var(--foreground)"
+      },
+      "x": 100,
+      "y": 400
+    },
+    {
+      "id": "scNotAsk",
+      "type": "Expression",
+      "label": "Not a question?",
+      "x": 820,
+      "y": 320,
+      "parameters": {
+        "expression": "kind !== 'ask'"
+      }
+    }
+  ],
+  "visualRoots": [
+    "scRoot"
+  ]
+}

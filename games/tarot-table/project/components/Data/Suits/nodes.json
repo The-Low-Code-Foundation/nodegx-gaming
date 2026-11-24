@@ -11,7 +11,7 @@
       "y": 40,
       "parameters": {
         "type": "json",
-        "json": "[\n  {\n    \"id\": \"major\",\n    \"name\": \"Major\",\n    \"title\": \"Major Arcana\",\n    \"about\": \"The 22 named cards. When one comes up, the reading is about something big.\"\n  },\n  {\n    \"id\": \"wands\",\n    \"name\": \"Wands\",\n    \"title\": \"Wands\",\n    \"about\": \"Drive, ambition, projects and energy.\"\n  },\n  {\n    \"id\": \"cups\",\n    \"name\": \"Cups\",\n    \"title\": \"Cups\",\n    \"about\": \"Feelings, love, friends and family.\"\n  },\n  {\n    \"id\": \"swords\",\n    \"name\": \"Swords\",\n    \"title\": \"Swords\",\n    \"about\": \"Thoughts, worries, arguments and decisions.\"\n  },\n  {\n    \"id\": \"pentacles\",\n    \"name\": \"Pentacles\",\n    \"title\": \"Pentacles\",\n    \"about\": \"Money, work, home and the body.\"\n  }\n]"
+        "json": "[\n  {\n    \"id\": \"major\",\n    \"name\": \"Major\",\n    \"title\": \"Major Arcana\",\n    \"about\": \"The 22 named cards. When one comes up, the reading is about something big.\",\n    \"element\": \"\",\n    \"theme\": \"The big themes of a life, read in order as a story from The Fool to The World\"\n  },\n  {\n    \"id\": \"wands\",\n    \"name\": \"Wands\",\n    \"title\": \"Wands\",\n    \"about\": \"Drive, ambition, projects and energy.\",\n    \"element\": \"fire\",\n    \"theme\": \"Drive, ambition, creativity and getting things going\"\n  },\n  {\n    \"id\": \"cups\",\n    \"name\": \"Cups\",\n    \"title\": \"Cups\",\n    \"about\": \"Feelings, love, friends and family.\",\n    \"element\": \"water\",\n    \"theme\": \"Feelings, love, friendship, family and what the heart wants\"\n  },\n  {\n    \"id\": \"swords\",\n    \"name\": \"Swords\",\n    \"title\": \"Swords\",\n    \"about\": \"Thoughts, worries, arguments and decisions.\",\n    \"element\": \"air\",\n    \"theme\": \"Thoughts, words, truth, worry and decisions\"\n  },\n  {\n    \"id\": \"pentacles\",\n    \"name\": \"Pentacles\",\n    \"title\": \"Pentacles\",\n    \"about\": \"Money, work, home and the body.\",\n    \"element\": \"earth\",\n    \"theme\": \"Money, work, home, the body and the things that last\"\n  }\n]"
       }
     },
     {
@@ -24,8 +24,27 @@
           "name": "suits",
           "plug": "input",
           "type": "array"
+        },
+        {
+          "name": "ranks",
+          "plug": "input",
+          "type": "array"
         }
       ]
+    },
+    {
+      "id": "dsRanks",
+      "type": "Static Data",
+      "label": "EDIT: what the numbers and court cards mean",
+      "x": 40,
+      "y": 240,
+      "parameters": {
+        "type": "json",
+        "json": "[\n  { \"id\": \"r1\", \"rank\": 1, \"plural\": \"Aces\", \"meaning\": \"a seed, a fresh start, the suit in its purest form\" },\n  { \"id\": \"r2\", \"rank\": 2, \"plural\": \"Twos\", \"meaning\": \"a choice, a pairing, finding balance\" },\n  { \"id\": \"r3\", \"rank\": 3, \"plural\": \"Threes\", \"meaning\": \"first results, growth and working with others\" },\n  { \"id\": \"r4\", \"rank\": 4, \"plural\": \"Fours\", \"meaning\": \"stability, a pause, holding on (sometimes too tightly)\" },\n  { \"id\": \"r5\", \"rank\": 5, \"plural\": \"Fives\", \"meaning\": \"struggle, loss and a shake-up\" },\n  { \"id\": \"r6\", \"rank\": 6, \"plural\": \"Sixes\", \"meaning\": \"recovery, moving on, give and take\" },\n  { \"id\": \"r7\", \"rank\": 7, \"plural\": \"Sevens\", \"meaning\": \"a test, standing your ground, weighing things up\" },\n  { \"id\": \"r8\", \"rank\": 8, \"plural\": \"Eights\", \"meaning\": \"movement and effort, being caught or breaking free\" },\n  { \"id\": \"r9\", \"rank\": 9, \"plural\": \"Nines\", \"meaning\": \"being nearly there, the suit at its most intense\" },\n  { \"id\": \"r10\", \"rank\": 10, \"plural\": \"Tens\", \"meaning\": \"the end of a cycle: completion, or too much of it\" },\n  { \"id\": \"r11\", \"rank\": 11, \"plural\": \"Pages\", \"meaning\": \"beginners, curiosity and messages\" },\n  { \"id\": \"r12\", \"rank\": 12, \"plural\": \"Knights\", \"meaning\": \"action, pursuit, going all out\" },\n  { \"id\": \"r13\", \"rank\": 13, \"plural\": \"Queens\", \"meaning\": \"mastery from the inside: caring, intuitive and steady\" },\n  { \"id\": \"r14\", \"rank\": 14, \"plural\": \"Kings\", \"meaning\": \"mastery from the outside: leading, deciding, taking responsibility\" }\n]"
+      },
+      "metadata": {
+        "comment": "Used when a whole reading is read together: a number that turns up twice gets its theme named."
+      }
     }
   ]
 }

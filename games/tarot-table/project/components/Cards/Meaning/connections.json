@@ -56,6 +56,60 @@
       "fromProperty": "ask",
       "toId": "mnAsk",
       "toProperty": "text"
+    },
+    {
+      "fromId": "mnIn",
+      "fromProperty": "more",
+      "toId": "mnHasMore",
+      "toProperty": "more"
+    },
+    {
+      "fromId": "mnIn",
+      "fromProperty": "more",
+      "toId": "mnShowMore",
+      "toProperty": "more"
+    },
+    {
+      "fromId": "mnIn",
+      "fromProperty": "more",
+      "toId": "mnMoreFE",
+      "toProperty": "items"
+    },
+    {
+      "fromId": "mnOpen",
+      "fromProperty": "state",
+      "toId": "mnShowMore",
+      "toProperty": "open"
+    },
+    {
+      "fromId": "mnOpen",
+      "fromProperty": "state",
+      "toId": "mnMoreLabel",
+      "toProperty": "open"
+    },
+    {
+      "fromId": "mnHasMore",
+      "fromProperty": "asBoolean",
+      "toId": "mnMoreBtn",
+      "toProperty": "mounted"
+    },
+    {
+      "fromId": "mnShowMore",
+      "fromProperty": "asBoolean",
+      "toId": "mnMoreBox",
+      "toProperty": "mounted"
+    },
+    {
+      "fromId": "mnMoreLabel",
+      "fromProperty": "result",
+      "toId": "mnMoreBtn",
+      "toProperty": "label"
+    },
+    {
+      "fromId": "mnMoreBtn",
+      "fromProperty": "onClick",
+      "toId": "mnOpen",
+      "toProperty": "flip"
     }
   ]
 }

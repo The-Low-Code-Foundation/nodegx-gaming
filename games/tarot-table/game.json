@@ -6,7 +6,7 @@
   "kind": "nodegx",
   "play": "play/index.html",
   "readiness": "A",
-  "readinessNote": "The whole deck is data: 78 cards in one JSON list (Data/Cards), each with keywords, a meaning right way up and upside down, and a question for each. The spreads and their positions, with where each card lies on the table, are another list (Data/Spreads). The 78 card pictures are SVG files drawn by one script (tools/draw-cards.mjs), replaceable one by one. Rewrite the voice or add a spread without touching the graph. It installs on a phone and works offline (pwa/).",
+  "readinessNote": "The whole deck is data: 78 cards in one JSON list (Data/Cards), each with keywords, a meaning and a question both ways up, and a deeper look (the picture, why it means this, love, work and self, the card as a person, more questions). The spreads and their positions, with where each card lies on the table, are another list (Data/Spreads). The 78 card pictures are SVG files drawn by one script (tools/draw-cards.mjs), replaceable one by one. Rewrite the voice or add a spread without touching the graph. It installs on a phone and works offline (pwa/).",
   "buildYourOwn": "Your own voice for the cards, new spreads, another language, a different deck's names (Thoth, Marseille).",
   "controls": "Touch or mouse",
   "devices": ["phone", "tablet", "desktop"],

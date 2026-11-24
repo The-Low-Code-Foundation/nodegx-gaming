@@ -20,6 +20,21 @@
           "type": "string"
         },
         {
+          "name": "keywords",
+          "plug": "output",
+          "type": "string"
+        },
+        {
+          "name": "text",
+          "plug": "output",
+          "type": "string"
+        },
+        {
+          "name": "ask",
+          "plug": "output",
+          "type": "string"
+        },
+        {
           "name": "src",
           "plug": "output",
           "type": "string"
@@ -28,16 +43,6 @@
           "name": "turn",
           "plug": "output",
           "type": "number"
-        },
-        {
-          "name": "keywords",
-          "plug": "output",
-          "type": "string"
-        },
-        {
-          "name": "ask",
-          "plug": "output",
-          "type": "string"
         }
       ]
     },
@@ -165,6 +170,7 @@
         "srPos",
         "srName",
         "srKeywords",
+        "srMeaning",
         "srAsk"
       ],
       "x": 100,
@@ -172,6 +178,19 @@
       "metadata": {
         "comment": "Group has no grow/shrink port, so the CSS says it: take the width the picture leaves, and let the words wrap."
       }
+    },
+    {
+      "id": "srMeaning",
+      "type": "Text",
+      "label": "What it means, the way it lies",
+      "parent": "srText",
+      "parameters": {
+        "fontSize": "var(--text-sm)",
+        "lineHeight": "var(--leading-relaxed)",
+        "color": "var(--foreground)"
+      },
+      "x": 160,
+      "y": 400
     }
   ],
   "visualRoots": [

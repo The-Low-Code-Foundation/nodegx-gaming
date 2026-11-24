@@ -1,0 +1,11 @@
+{
+  "$schema": "https://opennoodl.dev/schemas/component-v2.json",
+  "id": "7dd7b289-7a48-51c0-8e25-6d8717a83ec1",
+  "name": "Section",
+  "path": "/Cards/Section",
+  "type": "visual",
+  "created": "2026-11-24T21:12:57.574Z",
+  "modified": "2026-11-24T21:17:11.986Z",
+  "modifiedBy": "noodl-mcp",
+  "description": "One block of reading text: a small heading and a paragraph. kind 'text' is plain, 'ask' is a question to read out (serif, gold rule at the side), 'tip' is advice in a soft box. Drawn by a Repeater over a list of { id, heading, body, kind }."
+}

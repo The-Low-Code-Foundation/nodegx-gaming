@@ -44,6 +44,12 @@
       "fromProperty": "turn",
       "toId": "srThumb",
       "toProperty": "transformRotation"
+    },
+    {
+      "fromId": "srIn",
+      "fromProperty": "text",
+      "toId": "srMeaning",
+      "toProperty": "text"
     }
   ]
 }

@@ -33,6 +33,11 @@
           "name": "ask",
           "plug": "output",
           "type": "string"
+        },
+        {
+          "name": "more",
+          "plug": "output",
+          "type": "array"
         }
       ]
     },
@@ -67,7 +72,9 @@
         "mnLead",
         "mnKeywords",
         "mnText",
-        "mnAskBox"
+        "mnAskBox",
+        "mnMoreBtn",
+        "mnMoreBox"
       ],
       "parameters": {
         "width": {
@@ -195,6 +202,105 @@
         "fontSize": "var(--text-xl)",
         "lineHeight": "var(--leading-snug)",
         "color": "var(--foreground)"
+      }
+    },
+    {
+      "id": "mnMoreBtn",
+      "type": "net.noodl.controls.button",
+      "label": "More about this card",
+      "parent": "mnRoot",
+      "parameters": {
+        "mounted": false,
+        "label": "More about this card",
+        "backgroundColor": "transparent",
+        "color": "var(--foreground)",
+        "borderRadius": "var(--radius-full)",
+        "borderStyle": "solid",
+        "borderWidth": "var(--border-1)",
+        "borderColor": "var(--border-control)",
+        "paddingLeft": "var(--space-5)",
+        "paddingRight": "var(--space-5)",
+        "paddingTop": "var(--space-2)",
+        "paddingBottom": "var(--space-2)",
+        "fontSize": "var(--text-sm)",
+        "fontWeight": "var(--font-semibold)",
+        "sizeMode": "contentSize",
+        "marginTop": "var(--space-1)"
+      },
+      "x": 100,
+      "y": 640
+    },
+    {
+      "id": "mnMoreBox",
+      "type": "Group",
+      "label": "The deeper look",
+      "parent": "mnRoot",
+      "parameters": {
+        "mounted": false,
+        "width": {
+          "value": 100,
+          "unit": "%"
+        },
+        "sizeMode": "contentHeight",
+        "flexDirection": "column",
+        "rowGap": "var(--space-3)"
+      },
+      "children": [
+        "mnMoreFE"
+      ],
+      "x": 100,
+      "y": 760
+    },
+    {
+      "id": "mnMoreFE",
+      "type": "For Each",
+      "label": "One section per thing to know",
+      "parent": "mnMoreBox",
+      "parameters": {
+        "template": "/Cards/Section",
+        "templateType": "explicit"
+      },
+      "x": 160,
+      "y": 880
+    },
+    {
+      "id": "mnOpen",
+      "type": "Switch",
+      "label": "Is the deeper look open?",
+      "x": 820,
+      "y": 40,
+      "metadata": {
+        "comment": "Per instance, so it stays open from one card to the next once someone has opened it."
+      }
+    },
+    {
+      "id": "mnHasMore",
+      "type": "Expression",
+      "label": "Is there more to show?",
+      "x": 820,
+      "y": 160,
+      "parameters": {
+        "expression": "!!(more && more.length)"
+      }
+    },
+    {
+      "id": "mnShowMore",
+      "type": "Expression",
+      "label": "Show the deeper look?",
+      "x": 820,
+      "y": 260,
+      "parameters": {
+        "expression": "!!(open && more && more.length)"
+      }
+    },
+    {
+      "id": "mnMoreLabel",
+      "type": "Expression",
+      "label": "Open or close",
+      "x": 820,
+      "y": 360,
+      "parameters": {
+        "expression": "open ? 'Less about this card  ▴' : 'More about this card  ▾'"
       }
     }
   ],

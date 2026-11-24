@@ -8,6 +8,12 @@
       "fromProperty": "items",
       "toId": "dsOut",
       "toProperty": "suits"
+    },
+    {
+      "fromId": "dsRanks",
+      "fromProperty": "items",
+      "toId": "dsOut",
+      "toProperty": "ranks"
     }
   ]
 }

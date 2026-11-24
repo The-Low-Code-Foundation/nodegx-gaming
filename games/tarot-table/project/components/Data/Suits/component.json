@@ -5,7 +5,7 @@
   "path": "/Data/Suits",
   "type": "visual",
   "created": "2026-11-24T08:15:26.903Z",
-  "modified": "2026-11-24T08:15:26.903Z",
+  "modified": "2026-11-24T21:15:07.315Z",
   "modifiedBy": "noodl-mcp",
-  "description": "The picker's five tabs and one line on what each suit is about."
+  "description": "The suits (the picker's five tabs, what each is about, its element and theme) and what each number and court rank means."
 }

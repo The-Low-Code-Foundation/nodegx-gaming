@@ -1,5 +1,5 @@
 // Written by pwa/install.mjs; rebuilt with every build. Keeps this build's files for offline use.
-const CACHE = 'tarot-table-c1a63de7bc1f';
+const CACHE = 'tarot-table-206f403d093d';
 const FILES = [
   "./",
   "NODEGX-LICENSE.txt",
@@ -85,7 +85,7 @@ const FILES = [
   "icon-180.png",
   "icon-192.png",
   "icon-512.png",
-  "index-91ed0fdea83082a0.js",
+  "index-040c287995568811.js",
   "index.html",
   "load_terminator.js",
   "manifest.json",
@@ -94,9 +94,9 @@ const FILES = [
   "noodl.deploy.js",
   "noodl.deploy.js.LICENSE.txt",
   "noodl_bundles/b1-f2ce60e2c9ef80df.json",
-  "noodl_bundles/b2-2f809d54e1bbe8e3.json",
-  "noodl_bundles/b3-daa2076ee7d1bd50.json",
-  "noodl_bundles/b4-273bb4870c155f34.json",
+  "noodl_bundles/b2-c8f32667e74ad7c2.json",
+  "noodl_bundles/b3-3a76a256e963514a.json",
+  "noodl_bundles/b4-22d28c4a2916ac24.json",
   "noodl_modules/inter/Inter-Bold.woff2",
   "noodl_modules/inter/Inter-Medium.woff2",
   "noodl_modules/inter/Inter-Regular.woff2",

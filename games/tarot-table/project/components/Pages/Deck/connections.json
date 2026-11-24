@@ -128,6 +128,24 @@
       "fromProperty": "out-src",
       "toId": "dkFace",
       "toProperty": "src"
+    },
+    {
+      "fromId": "dkCard",
+      "fromProperty": "out-moreUp",
+      "toId": "dkUp",
+      "toProperty": "more"
+    },
+    {
+      "fromId": "dkCard",
+      "fromProperty": "out-revKeywords",
+      "toId": "dkDown",
+      "toProperty": "keywords"
+    },
+    {
+      "fromId": "dkCard",
+      "fromProperty": "out-moreRev",
+      "toId": "dkDown",
+      "toProperty": "more"
     }
   ]
 }

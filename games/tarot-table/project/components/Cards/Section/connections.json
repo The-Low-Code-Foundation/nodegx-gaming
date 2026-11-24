@@ -1,0 +1,79 @@
+{
+  "$schema": "https://opennoodl.dev/schemas/connections-v2.json",
+  "componentId": "7dd7b289-7a48-51c0-8e25-6d8717a83ec1",
+  "version": 1,
+  "connections": [
+    {
+      "fromId": "scIn-2",
+      "fromProperty": "heading",
+      "toId": "scHasHead",
+      "toProperty": "heading"
+    },
+    {
+      "fromId": "scHasHead",
+      "fromProperty": "asBoolean",
+      "toId": "scHead",
+      "toProperty": "mounted"
+    },
+    {
+      "fromId": "scIn-2",
+      "fromProperty": "heading",
+      "toId": "scHead",
+      "toProperty": "text"
+    },
+    {
+      "fromId": "scIn-2",
+      "fromProperty": "body",
+      "toId": "scBody",
+      "toProperty": "text"
+    },
+    {
+      "fromId": "scIn-2",
+      "fromProperty": "kind",
+      "toId": "scLook",
+      "toProperty": "currentState"
+    },
+    {
+      "fromId": "scLook",
+      "fromProperty": "bg",
+      "toId": "scRoot",
+      "toProperty": "backgroundColor"
+    },
+    {
+      "fromId": "scLook",
+      "fromProperty": "rule",
+      "toId": "scRoot",
+      "toProperty": "borderColor"
+    },
+    {
+      "fromId": "scLook",
+      "fromProperty": "ink",
+      "toId": "scBody",
+      "toProperty": "color"
+    },
+    {
+      "fromId": "scIn-2",
+      "fromProperty": "body",
+      "toId": "scAskBody",
+      "toProperty": "text"
+    },
+    {
+      "fromId": "scLook",
+      "fromProperty": "at-ask",
+      "toId": "scAskBody",
+      "toProperty": "mounted"
+    },
+    {
+      "fromId": "scIn-2",
+      "fromProperty": "kind",
+      "toId": "scNotAsk",
+      "toProperty": "kind"
+    },
+    {
+      "fromId": "scNotAsk",
+      "fromProperty": "asBoolean",
+      "toId": "scBody",
+      "toProperty": "mounted"
+    }
+  ]
+}

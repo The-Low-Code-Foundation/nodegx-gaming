@@ -184,52 +184,10 @@
       "toProperty": "color"
     },
     {
-      "fromId": "rdUpBtn",
-      "fromProperty": "onClick",
-      "toId": "rdSetUp",
-      "toProperty": "do"
-    },
-    {
-      "fromId": "rdDownBtn",
-      "fromProperty": "onClick",
-      "toId": "rdSetDown",
-      "toProperty": "do"
-    },
-    {
-      "fromId": "rdPicker",
-      "fromProperty": "cardId",
-      "toId": "rdSetCard",
-      "toProperty": "value"
-    },
-    {
-      "fromId": "rdPicker",
-      "fromProperty": "picked",
-      "toId": "rdSetCard",
-      "toProperty": "do"
-    },
-    {
-      "fromId": "rdPicker",
-      "fromProperty": "picked",
-      "toId": "rdSetFresh",
-      "toProperty": "do"
-    },
-    {
-      "fromId": "rdPicker",
-      "fromProperty": "picked",
-      "toId": "rdSetShow",
-      "toProperty": "do"
-    },
-    {
       "fromId": "rdPicker",
       "fromProperty": "picked",
       "toId": "rdTopOfPage",
       "toProperty": "run"
-    },
-    {
-      "fromId": "rdWrongBtn",
-      "fromProperty": "onClick",
-      "toId": "rdSetPick",
-      "toProperty": "do"
     },
     {
       "fromId": "rdWrongBtn",
@@ -494,6 +452,84 @@
       "fromProperty": "value",
       "toId": "rdPos",
       "toProperty": "in-phase"
+    },
+    {
+      "fromId": "rdPicker",
+      "fromProperty": "cardId",
+      "toId": "rdPlace",
+      "toProperty": "in-cardId"
+    },
+    {
+      "fromId": "rdPicker",
+      "fromProperty": "picked",
+      "toId": "rdPlace",
+      "toProperty": "run"
+    },
+    {
+      "fromId": "rdUpBtn",
+      "fromProperty": "onClick",
+      "toId": "rdTurnUp",
+      "toProperty": "run"
+    },
+    {
+      "fromId": "rdDownBtn",
+      "fromProperty": "onClick",
+      "toId": "rdTurnDown",
+      "toProperty": "run"
+    },
+    {
+      "fromId": "rdWrongBtn",
+      "fromProperty": "onClick",
+      "toId": "rdWrong",
+      "toProperty": "run"
+    },
+    {
+      "fromId": "rdCard",
+      "fromProperty": "out-more",
+      "toId": "rdMeaning",
+      "toProperty": "more"
+    },
+    {
+      "fromId": "rdSpreads",
+      "fromProperty": "spreads",
+      "toId": "rdTogether",
+      "toProperty": "in-spreads"
+    },
+    {
+      "fromId": "rdVSpread",
+      "fromProperty": "value",
+      "toId": "rdTogether",
+      "toProperty": "in-spreadId"
+    },
+    {
+      "fromId": "rdVDrawn",
+      "fromProperty": "value",
+      "toId": "rdTogether",
+      "toProperty": "in-drawn"
+    },
+    {
+      "fromId": "rdCards",
+      "fromProperty": "cards",
+      "toId": "rdTogether",
+      "toProperty": "in-cards"
+    },
+    {
+      "fromId": "rdSuits",
+      "fromProperty": "suits",
+      "toId": "rdTogether",
+      "toProperty": "in-suits"
+    },
+    {
+      "fromId": "rdSuits",
+      "fromProperty": "ranks",
+      "toId": "rdTogether",
+      "toProperty": "in-ranks"
+    },
+    {
+      "fromId": "rdTogether",
+      "fromProperty": "out-sections",
+      "toId": "rdTogetherFE",
+      "toProperty": "items"
     }
   ]
 }

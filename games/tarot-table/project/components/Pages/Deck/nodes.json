@@ -203,7 +203,7 @@
       "y": 740,
       "parent": "dkBrowse",
       "parameters": {
-        "text": "A card that comes out upside down usually means the blocked or inward side of it.",
+        "text": "A card that comes out upside down (reversed) shows the other side of it: the same energy blocked, turned inward, overdone, or only just starting. It isn't a bad card, just a different angle.",
         "fontSize": "var(--text-base)",
         "lineHeight": "var(--leading-relaxed)",
         "color": "var(--foreground)"
@@ -217,7 +217,7 @@
       "y": 800,
       "parent": "dkBrowse",
       "parameters": {
-        "text": "None of it predicts anything. A card gives the person a theme to talk about.",
+        "text": "None of it predicts anything. A card gives the person a theme to talk about. If the first meaning doesn't fit, open “More about this card”: every card can show up in love, in work or inside you, or as a person in your life, and one of those usually does.",
         "fontSize": "var(--text-base)",
         "lineHeight": "var(--leading-relaxed)",
         "color": "var(--muted-foreground)"
@@ -327,8 +327,7 @@
       "parent": "dkOne",
       "parameters": {
         "eyebrow": "Upside down",
-        "lead": "",
-        "keywords": ""
+        "lead": ""
       }
     },
     {
@@ -435,7 +434,8 @@
       "x": 1000,
       "y": 40,
       "parameters": {
-        "functionScript": "const c = (Inputs.cards || []).find(x => x.id === Inputs.cardId);\nif (!c) return;\nOutputs.src = 'cards/' + c.id + '.svg';\nOutputs.name = c.name;\nOutputs.keywords = c.keywords;\nOutputs.up = c.up;\nOutputs.askUp = c.askUp;\nOutputs.rev = c.rev;\nOutputs.askRev = c.askRev;\n"
+        "functionScript": "const c = (Inputs.cards || []).find(x => x.id === Inputs.cardId);\nif (!c) return;\nOutputs.src = 'cards/' + c.id + '.svg';\nOutputs.name = c.name;\nOutputs.keywords = c.keywords;\nOutputs.up = c.up;\nOutputs.askUp = c.askUp;\nOutputs.moreUp = Scripts.reading.moreFor(c, false, 'u-');\nOutputs.revKeywords = Scripts.reading.keywordsFor(c, true);\nOutputs.rev = c.rev;\nOutputs.askRev = c.askRev;\n// The picture, why, the person and the tip are the same both ways up: shown once, with the right way up.\nOutputs.moreRev = Scripts.reading.moreFor(c, true, 'd-', { shared: false });\n",
+        "uses": "reading.js"
       },
       "ports": [
         {
