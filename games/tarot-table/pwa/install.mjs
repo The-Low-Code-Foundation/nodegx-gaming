@@ -20,13 +20,13 @@ if (!play) {
   process.exit(1);
 }
 
-for (const f of ['manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'icon-180.png']) {
+for (const f of ['manifest.json', 'icon-192.png', 'icon-512.png', 'icon-180.png']) {
   copyFileSync(join(here, f), join(play, f));
 }
 
 const MARK = '<!-- pwa -->';
 const head = `${MARK}
-    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="manifest" href="manifest.json" />
     <link rel="apple-touch-icon" href="icon-180.png" />
     <link rel="icon" type="image/png" href="icon-192.png" />
     <meta name="theme-color" content="#14112a" />
